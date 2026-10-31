@@ -100,9 +100,9 @@ Xtra Extreme. **Harness:** `story_flow` (the real game end to end; many named ca
 
 ## The secrets: secret exits, splinters, the Groove and the Mashup
 
-Built 2026-10-29 from the user's design (`FlappyMonster_pruebas/secretos/diseno.md`) and lore decisions
+Built 2026-10-29 from the user's design ([secrets-design](../design/archive/secrets-design.md)) and lore decisions
 ([story](story.md#the-secrets-the-splinters-the-groove-and-the-true-ending)). Everything is data; a new secret is one
-line in `Worlds.lua`, its branch in the map generator and, if it gives something, one entry in `collectibles.json`.
+line in `Worlds.lua`, its branch in the map generator and, if it gives something, one entry in `collectibles.json`. Secret bosses planned but not built: [future-secret-bosses](../bosses/future-secret-bosses.md).
 
 - **Secret levels** — `Worlds.LIST[w].secrets = { { level, from, exit, after, collect, scene } }`. On the map: a red
   node with a keyhole on a branch from `from` (a level, `'bonus'` or another secret). Locked = it does not exist on the

@@ -196,7 +196,7 @@ it is meant for are in [water-and-floods](../gameplay/water-and-floods.md). Harn
 
 ## Avalanche and Cable car (Frozen Mountains, 2026-10-29)
 
-Approved by the user in `FlappyMonster_pruebas/islas_heladas/diseno.md` §A 4-5 (design: "the snow chute" and "a
+Approved by the user in [frozen-islands-design](../design/archive/frozen-islands-design.md) §A 4-5 (design: "the snow chute" and "a
 generic moving platform on a cable"). Both generic: any island can use them. Harnesses `avalanche_rules` and
 `cablecar_rules`; online: `online_smoke LEVEL=tools/tests/avalanche_rules/montana.json WATCH=avalanche|cablecar`.
 

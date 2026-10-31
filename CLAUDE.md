@@ -66,6 +66,9 @@ when asked. The user writes in Spanish. This does not apply to code, comments, c
     doc paths and links).
   - After adding or changing a type, a level or a track: `run.sh docs_reference` (regenerates `docs/reference/`; the
     battery fails when it is stale).
+- **Design documents live in the repo, never only in `FlappyMonster_pruebas/`** (that folder is for previews): new
+  proposals, plans and ideas saved for later go to `docs/design/` from the first draft, indexed in `docs/design/README.md`.
+  Asked what was planned or saved for later? Read that index first.
 - **Docs: when you change a system, update its page in `docs/` in the same commit.** New system → new page from the
   usual skeleton (what · files · data · SP / server / client · how to extend · tests · decisions) + a line in
   `docs/README.md`. Record the user's verdicts and rejected attempts in the page's history section: they are the
@@ -130,6 +133,7 @@ Large files are split into parts that add methods to the same table (`Level`, `P
 | Languages | `docs/architecture/i18n.md` |
 | What is saved | `docs/architecture/save-data.md` |
 | Audit findings, open items, **Google Play readiness** | `docs/architecture/known-debt.md` |
+| **Plans, proposals, ideas saved for later**, old designs | `docs/design/README.md` |
 | Player | `docs/gameplay/player.md` |
 | Tiles, terrain, special blocks, subtiles | `docs/gameplay/tiles-and-blocks.md` |
 | Water, air, floods | `docs/gameplay/water-and-floods.md` |

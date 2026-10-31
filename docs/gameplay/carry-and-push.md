@@ -84,7 +84,7 @@ concrete type.
 
 ## The Iceberg (floating ice)
 
-The Frozen Coast's floe (2026-10-29; the user's approved design, `FlappyMonster_pruebas/islas_heladas/diseno.md` §A 1,
+The Frozen Coast's floe (2026-10-29; the user's approved design, [frozen-islands-design](../design/archive/frozen-islands-design.md) §A 1,
 with his corrections: icebergs do NOT crack and do NOT drift on their own). `mechanisms/iceberg.lua`, placed on its
 TOP-LEFT cell; props `width` 1-8, `height` 1-3 (tiles), `capacity` (weight it holds, default 1.5: a player floats, a
 player + a small box / a carried beetle sinks it), `float` (tiles above the water when empty, 0.3), `sinkDepth` (tiles

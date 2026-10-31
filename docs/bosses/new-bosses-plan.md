@@ -22,7 +22,7 @@ giant by touching a mirror shard ("La Furia del Espejo").
 - Giant Pufferfish fight (proposed, from the coast's systems): a tidal cove with a `flood` that rises and falls — at
   high tide it swims after the player (water, air), at low tide it is stranded and flops: the window to hit it; it
   inflates spiky when hit and deflates to attack; spine volleys on the 3+3+2; sucks / blows water currents.
-- Which levels get the secret exits, what the secret collectible is and where it is shown.
+- More secret bosses (the user wants at least 5): [future-secret-bosses](future-secret-bosses.md).
 
 ## Steps
 
@@ -69,6 +69,7 @@ giant by touching a mirror shard ("La Furia del Espejo").
 - [x] (2026-10-29) Story text: the splinters, the theft, the true ending ([story](../story/story.md)). The Collection
       screen and its art: the Collection agent's work.
 - [ ] The user's verdict on the secret exits' places, the map scenes and the ending's secret additions (not played).
+- [ ] At least 3 more secret bosses, each with its splinter: [future-secret-bosses](future-secret-bosses.md).
 
 ### 4. The Groove (secret, after the game) — not in the original plan
 - [x] (0.5.45) A third new boss born from its music (`groove`): [groovecrab](groovecrab.md), level `isla_del_groove`,

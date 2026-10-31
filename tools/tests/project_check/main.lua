@@ -156,7 +156,9 @@ function love.load()
         for _, f in ipairs(love.filesystem.getDirectoryItems(dir .. '/.')) do
             local p = dir .. '/' .. f
             local info = love.filesystem.getInfo(p)
-            if info and info.type == 'directory' then walkMd(p) elseif f:match('%.md$') then pages[#pages + 1] = p end
+            -- (docs/design/archive es historia: sus rutas son las de entonces)
+            if info and info.type == 'directory' then if p ~= 'docs/design/archive' then walkMd(p) end
+            elseif f:match('%.md$') then pages[#pages + 1] = p end
         end
     end
     walkMd('docs')

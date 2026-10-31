@@ -1,6 +1,6 @@
 # Giant Pufferfish (Pez Globo Gigante) — `giantpuffer`
 
-The Coast boss since 0.5.30 (rebalanced in 0.5.31: the user found it "almost impossible") (it replaces Mega Crabby, now a future secret boss: [new-bosses-plan](new-bosses-plan.md)).
+The Coast boss since 0.5.30 (rebalanced in 0.5.31: the user found it "almost impossible") (it replaces Mega Crabby, now a secret boss: [new-bosses-plan](new-bosses-plan.md)).
 The normal pufferfish (design A "Arena") at scale 13, fought in a cove whose **tide** rises and falls during the fight.
 **File:** `src/world/entities/types/bosses/giantpuffer.lua`. **Art:** the pufferfish sheet
 (`tools/art/enemies/make_pufferfish.py`, same animations `assets/anim/enemies/pufferfish.json`) + its spine

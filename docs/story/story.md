@@ -109,7 +109,7 @@ more of them (`plus` in films.json); the times below are for today's 7 bosses + 
 
 ## The secrets: the splinters, the Groove and the true ending
 
-The user's design and decisions of 2026-10-29 (analysis: `FlappyMonster_pruebas/secretos/lore_analisis.md`). How it is
+The user's design and decisions of 2026-10-29 (analysis: [secrets-lore-analysis](../design/archive/secrets-lore-analysis.md)). How it is
 built: [story-mode](story-mode.md#the-secrets-secret-exits-splinters-the-groove-and-the-mashup),
 [world-map](world-map.md#the-secret-nodes).
 

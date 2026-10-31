@@ -126,7 +126,7 @@ kept unique (`Model:fixFloodIds`); warnings for dangling links. Harness `flood_c
   harness numbers are identical before / after. Captures: `FlappyMonster_pruebas/marea_olas/` (`antes_*` / `despues_*`).
   Side effect: a block sticking out of the water (its top cell holds the surface) is no longer tinted below the water
   line — the water is drawn around it, not in front of it. Not yet seen by the user in game.
-- 2026-10-29 (the Frozen Coast, the user's approved design `FlappyMonster_pruebas/islas_heladas/diseno.md` §A 2-3):
+- 2026-10-29 (the Frozen Coast, the user's approved design [frozen-islands-design](../design/archive/frozen-islands-design.md) §A 2-3):
   tide and freezing water as options of the existing flood / level water, not new tiles. Not yet felt by the user.
 - 0.5.11 (review): oxygen bubbles (gameplay: they give air) no longer depend on the bubble images having loaded, and
   every bubble's zigzag uses the level's own clock (`level.waterT`), not the wall clock (rule 1: the pause no longer

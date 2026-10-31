@@ -3,19 +3,19 @@
 A boss is an entity derived from `src/world/entities/base/Boss.lua` placed inside a **boss zone**. The zone walls
 players in, runs the intro, starts and ends the fight, moves the camera and the respawn point, and owns the music.
 Recipe for a new boss: [how-to-add-a-boss](how-to-add-a-boss.md).
-In progress: two new bosses replace Mega Crabby and Mega Gloomy, which become secret bosses —
-[new-bosses-plan](new-bosses-plan.md). The four crabs as an event boss rush with adaptive music: [crab-mashup](crab-mashup.md).
+Two new bosses replaced Mega Crabby and Mega Gloomy, now secret bosses: [new-bosses-plan](new-bosses-plan.md). Saved for
+later, NOT built: [future-secret-bosses](future-secret-bosses.md). The four crabs as an event boss rush with adaptive music: [crab-mashup](crab-mashup.md).
 
 | Boss | Type id | Doc | Story level | Shard |
 |---|---|---|---|---|
 | Gummy King (Rey Gummy) | `megagummy` | [megagummy](megagummy.md) | `reino_gummy` | 1 |
 | Giant Pufferfish (Pez Globo Gigante) | `giantpuffer` | [giantpuffer](giantpuffer.md) | `cala_resaca` | 2 |
-| Mega Crabby (future secret boss) | `megacrabby` | [megacrabby](megacrabby.md) | `guarida_cangrejo_rey` (out of the story) | — |
+| Mega Crabby (SECRET, drops the Shell Crown) | `megacrabby` | [megacrabby](megacrabby.md) | `guarida_cangrejo_rey` (secret exit of `arrecife_globo`) | — |
 | Evil Ship (Nave Malvada) | `miniboss1` | [miniboss1](miniboss1.md) | `fortaleza_malvada` | 3 |
 | Snowball Boss (Gran Bola de Nieve) + Verity | `snowboss` | [snowboss](snowboss.md) | `lago_helado` (mid-island) | 4 |
 | Icy Mega Crabby | `megacrabby_ice` | [megacrabby-ice](megacrabby-ice.md) | `glaciar_cangrejo` | 5 |
 | Giant Hopper (Saltarín Gigante) | `gianthopper` | [gianthopper](gianthopper.md) | `gruta_del_farol` | 6 |
-| Mega Gloomy Crabby (future secret boss) | `megagloomy` | [megagloomy](megagloomy.md) | `gruta_lugubre` (out of the story) | — |
+| Mega Gloomy Crabby (SECRET, drops the Gloomy Amulet) | `megagloomy` | [megagloomy](megagloomy.md) | `gruta_lugubre` (secret exit of `templo_del_eco`) | — |
 | Giant Rhino Beetle (Escarabajo Rinoceronte Gigante; the jungle, world 3) | `giantbeetle` | [giantbeetle](giantbeetle.md) | `templo_escarabajo` | 8 (third in story order: `assets/story/shards.json`) |
 | The Mirror | `mirror` | [mirror](mirror.md) | `ruta_del_espejo` | 7 |
 | Mirror chase (not a fight) | `mirrorchase` | [mirror-chase](mirror-chase.md) | `huida_del_espejo` | — |
