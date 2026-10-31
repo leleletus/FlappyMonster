@@ -19,6 +19,10 @@
 --              se usa la instalada; con `base` = la instalada sí se monta
 --   updater    un manifiesto con una entrada sin sha256 válido no se instala; el Updater no reinstala la versión activa y, tras 2
 --              instalaciones sin confirmar de la misma versión, para
+--   copia      2ª actualización por superposición: lo que no cambia y solo está en la versión activa se copia a la
+--              nueva, y lo que falta aunque su manifiesto lo apunte se vuelve a bajar
+--   a_medias   game.lua de verdad: una versión recién instalada a la que le faltan archivos se deja y se reinicia
+--              (una vez por versión); entera o ya confirmada sigue adelante
 --
 --   tools/tests/run.sh update_boot
 io.stdout:setvbuf('no')
@@ -179,6 +183,65 @@ function love.load()
         and d3 == 'failed' and d4 == 'hashing',
         ('servidor = activa → %s; 2 intentos sin confirmar → %s; 1 intento → %s; manifiesto sin hash → %s, hash raro → %s, ruta con .. → %s, bien → %s'):format(
          a, b, c, d1, d2, d3, d4))
+
+    restore()
+
+    -- 2ª actualización por SUPERPOSICIÓN (la Switch): lo que no cambia y solo está en la versión activa se copia a la
+    -- nueva; lo que el manifiesto de la activa dice tener pero no está en ningún sitio se vuelve a bajar
+    prepare({ active = V })
+    local HSOLO = love.data.encode('string', 'hex', love.data.hash('sha256', fs.read(SLOT .. '/zz_solo_nueva.lua')))
+    fs.write(SLOT .. '/.manifest.lua', ('return {\n  ["zz_solo_nueva.lua"] = %q,\n  ["zz_perdido.lua"] = %q,\n}\n'):format(HSOLO, H))
+    boot('fail')
+    local u = setmetatable({ status = 'connecting', t = 0, bytesDone = 0, bytesTotal = 0, filesDone = 0, filesTotal = 0 }, Updater)
+    u:_onManifest({ version = '9.9.12', files = { { 'zz_solo_nueva.lua', 10, HSOLO }, { 'zz_perdido.lua', 10, H } } })
+    while u.status == 'hashing' do u:_hashStep() end
+    local perdido = #u.queue == 1 and u.queue[1].path == 'zz_perdido.lua'
+    u.files = { u.files[1] }
+    u:_install()
+    check('copia', u.status == 'done' and perdido and fs.read('update/slots/9.9.12/zz_solo_nueva.lua') ~= nil,
+        ('estado %s; se copia lo que solo está en la activa: %s; se vuelve a bajar lo perdido: %s'):format(u.status,
+         tostring(fs.getInfo('update/slots/9.9.12/zz_solo_nueva.lua') ~= nil), tostring(perdido)))
+    restore()
+
+    -- game.lua de verdad (sin cargar el juego: su primer require corta) con la versión recién instalada a medias: la
+    -- deja, olvida los fallos y reinicia (una sola vez por versión); entera sigue adelante
+    local function runGame()
+        local realRequire, realQuit, loadBefore = require, love.event.quit, love.load
+        local reinicia = false
+        require = function() error('SIGUE', 0) end
+        love.event.quit = function(a) reinicia = a == 'restart' end
+        local ok, err = pcall(assert(fs.load('boot_game.lua')))
+        if ok and love.load ~= loadBefore then love.load() end
+        require, love.event.quit, love.load = realRequire, realQuit, loadBefore
+        return (not ok and err == 'SIGUE') and 'sigue' or (reinicia and 'reinicia' or tostring(err))
+    end
+    local INCOMPLETA = 'return {\n  ["zz_solo_nueva.lua"] = "x",\n  ["zz_no_esta.lua"] = "x",\n}\n'
+    prepare({ active = V, previous = '9.9.8', pending = true, boots = 0, bad = '9.9.9', tryVer = V, tries = 2 })
+    fs.createDirectory('update/slots/9.9.8')
+    fs.write('update/slots/9.9.8/version.txt', '9.9.8\n')
+    fs.write(SLOT .. '/.manifest.lua', INCOMPLETA)
+    boot('fail')
+    local r1 = runGame()
+    local s1 = UPDATE_READ_STATE()
+    local rep1 = r1 == 'reinicia' and s1.active == nil and s1.previous == nil and s1.pending == nil and s1.trash == V
+        and s1.bad == nil and s1.tryVer == nil and s1.tries == nil and s1.repairVer == V and fs.getInfo('update/slots/9.9.8') == nil
+    restore()
+    prepare({ active = V, pending = true, boots = 0, repairVer = V })      -- (ya se intentó con esta versión: sin bucle)
+    fs.write(SLOT .. '/.manifest.lua', INCOMPLETA)
+    boot('fail')
+    local r2 = runGame()
+    restore()
+    prepare({ active = V, pending = true, boots = 0 })                     -- (entera)
+    fs.write(SLOT .. '/.manifest.lua', 'return {\n  ["zz_solo_nueva.lua"] = "x",\n  ["version.txt"] = "x",\n}\n')
+    boot('fail')
+    local r3 = runGame()
+    restore()
+    prepare({ active = V, boots = 0 })                                     -- (ya confirmada: no se comprueba)
+    fs.write(SLOT .. '/.manifest.lua', INCOMPLETA)
+    boot('fail')
+    local r4 = runGame()
+    check('a_medias', rep1 and r2 == 'sigue' and r3 == 'sigue' and r4 == 'sigue',
+        ('a medias → %s (estado limpio: %s); 2ª vez → %s; entera → %s; confirmada → %s'):format(r1, tostring(rep1), r2, r3, r4))
 
     restore()
     pcall(realUnmount, SLOT)

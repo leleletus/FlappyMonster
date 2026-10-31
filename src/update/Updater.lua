@@ -152,14 +152,17 @@ function Updater:_hashStep()
     while #self.hashQueue > 0 and love.timer.getTime() - t0 < HASH_BUDGET do
         local f = table.remove(self.hashQueue)
         local have = self.known[f.path]
-        if not have and fs.getInfo(f.path, 'file') then
+        local exists = fs.getInfo(f.path, 'file')
+        if not exists then have = nil end                   -- (el manifiesto lo apunta, pero no está: se vuelve a bajar)
+        if not have and exists then
             local ok, data = pcall(fs.read, f.path)
             have = ok and data and sha256(data)
         end
         if have == f.hash then
-            -- Igual que lo que hay: si viene de la versión activa, se copia
-            local real = fs.getRealDirectory(f.path) or ''
-            if activeDir and real:sub(-#activeDir) == activeDir then f.copy = true end
+            -- Igual que lo que hay: si está en la versión activa, se copia. Se mira la carpeta y no getRealDirectory:
+            -- por superposición (Switch) este da la carpeta de guardado, nunca se copiaba nada y la versión nueva se
+            -- quedaba sin lo que solo traía la anterior (src/audio/Music.lua, 0.5.113)
+            if activeDir and fs.getInfo(activeDir .. '/' .. f.path, 'file') then f.copy = true end
         else
             f.download = true
         end

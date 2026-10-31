@@ -80,6 +80,19 @@ numbers (3.x.y = beta before the renumbering). `Protocol.VERSION` is a separate 
   no_tapa now expect overlay (new module, new level file, directory union, 2nd boot the same), `ilegible`, `viejo`.
   NOT verified on a real Switch — `update/boot.log` in the save dir says which mode was used.
 
+- **Incomplete versions on Switch (fixed in 0.5.114):** the Updater chose what to copy from the active slot with
+  `getRealDirectory`, which in overlay mode returns the save dir, so nothing was ever copied. From the second update on,
+  a new slot lacked every unchanged file that only the previous slot had. Real crash: a Switch with a build older than
+  the 2026-10-07 `src/` reorganisation updated to 0.5.113 and stopped at line 2 of the sound module with its music module
+  not found. The bootstrap's error handler is installed after `require 'game'`, so load errors do not roll back until
+  `MAX_BOOTS`, and moving it would need a reinstall. Two fixes: the Updater now looks in the active slot's folder and
+  downloads again anything its manifest lists but cannot be found; and because old Updaters stay on devices, the top
+  of `game.lua` checks a `pending` version against its `.manifest.lua` before any `require`. If a file is missing it
+  drops that version and restarts, so the Updater downloads everything that differs from the installed game
+  (`repairVer` allows one attempt per version). This logic must stay inline in `game.lua`: a new module could be the
+  missing file. A device already stuck on a broken version gets there only after `MAX_BOOTS` rolls it back, or by
+  deleting `update/` from the save dir. Harness `update_boot` (`copia`, `a_medias`). Not verified on a real Switch.
+
 - Server `server/updates.lua`: publishes a snapshot of `git ls-files` (game.lua,
   input.lua, settings.lua, version.txt, src/, libs/, assets/) into
   `server/published/current/` ONLY when `version.txt` changes (checked at start

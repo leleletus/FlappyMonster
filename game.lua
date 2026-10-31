@@ -1,4 +1,34 @@
 -- game.lua  (el juego; main.lua es solo el arranque con las actualizaciones)
+
+-- Versión recién instalada a la que le faltan archivos: la dejaba así el Updater de antes de 0.5.114 por superposición
+-- (Switch), y como ese Updater sigue en los aparatos, se comprueba aquí, antes de cualquier require (un módulo nuevo
+-- podría faltar él mismo; game.lua siempre llega, porque cambió). Se deja la versión y se reinicia: sin versión activa,
+-- el Updater baja todo lo que difiere del juego instalado. Una sola vez por versión (sin bucle).
+if UPDATE_ENABLED and UPDATE_READ_STATE then
+    local fs, st = love.filesystem, UPDATE_READ_STATE()
+    if st.active and st.pending and st.repairVer ~= st.active then
+        local ok, src = pcall(fs.read, 'update/slots/' .. st.active .. '/.manifest.lua')
+        local chunk = ok and src and loadstring(src)
+        local okm, files = false, nil
+        if chunk then okm, files = pcall(setfenv(chunk, {})) end
+        local missing
+        if okm and type(files) == 'table' then
+            for path in pairs(files) do
+                if not fs.getInfo(path, 'file') then missing = path; break end
+            end
+        end
+        if missing then
+            print('[update] a ' .. st.active .. ' le falta ' .. missing .. ': se deja')
+            if st.previous and UPDATE_RMRF then UPDATE_RMRF('update/slots/' .. st.previous) end
+            st.repairVer, st.trash = st.active, st.active
+            st.active, st.previous, st.pending, st.boots, st.base, st.bad, st.tryVer, st.tries = nil, nil, nil, nil, nil, nil, nil, nil
+            UPDATE_WRITE_STATE(st)
+            love.load = function() love.event.quit('restart') end
+            return
+        end
+    end
+end
+
 lovesize     = require 'libs/lovesize'
 Timer        = require 'libs/timer'
 
