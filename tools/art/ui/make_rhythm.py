@@ -4,6 +4,7 @@
 #   strums-Sheet.png      las 4 quietas, grises (huecas: se ve lo que llega a través)
 #   strums_hit-Sheet.png  las mismas al pulsar, encendidas con el color de su carril
 #   notes-Sheet.png       las 4 que se mueven, una de cada color
+#   splash-Sheet.png      el impacto al acertar: 3 cuadros de 48x48 por carril (una fila por carril)
 # python3 tools/art/ui/make_rhythm.py   → assets/images/ui/rhythm/ y una previa en FlappyMonster_pruebas/groove_duelo/
 import os
 from PIL import Image, ImageDraw
@@ -46,6 +47,24 @@ def sheet(frames):
     return out
 
 
+def splash():
+    """chispas que se abren desde el centro; cada cuadro, más lejos y más pequeñas"""
+    out = Image.new('RGBA', (48 * 3, 48 * 4), (0, 0, 0, 0))
+    d = ImageDraw.Draw(out)
+    for r, (fill, light, _) in enumerate(COLS):
+        for f, (rad, size) in enumerate(((9, 5), (15, 4), (20, 2))):
+            cx, cy = f * 48 + 24, r * 48 + 24
+            if f == 0: d.rectangle([cx - 6, cy - 6, cx + 6, cy + 6], fill=(255, 255, 255, 255))
+            for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                x, y = cx + dx * rad, cy + dy * rad
+                d.rectangle([x - size, y - size, x + size, y + size], fill=light if f == 0 else fill)
+            q = int(rad * 0.7)
+            for dx, dy in ((1, 1), (-1, 1), (1, -1), (-1, -1)):
+                x, y = cx + dx * q, cy + dy * q
+                d.rectangle([x - size // 2, y - size // 2, x + size // 2, y + size // 2], fill=light)
+    return out
+
+
 if __name__ == '__main__':
     os.makedirs(OUT, exist_ok=True)
     sts = sheet([arrow(GRAY, True)] * 4)
@@ -54,6 +73,7 @@ if __name__ == '__main__':
     sts.save(os.path.join(OUT, 'strums-Sheet.png'))
     hit.save(os.path.join(OUT, 'strums_hit-Sheet.png'))
     nts.save(os.path.join(OUT, 'notes-Sheet.png'))
+    splash().save(os.path.join(OUT, 'splash-Sheet.png'))
     os.makedirs(os.path.dirname(PREV), exist_ok=True)
     pv = Image.new('RGBA', (S * 4 * 6 + 20, S * 3 * 6 + 40), (70, 90, 130, 255))
     for r, s in enumerate((sts, hit, nts)):

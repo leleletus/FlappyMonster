@@ -184,7 +184,7 @@ function CASES.shot()
     boss.songT = 48 * GC.BAR + 2
     R.update(DT, level, who, nil, function() end)
     local c = R.current()
-    c.clock = boss.songT; c.lit[3] = 0.1; c.text, c.textT = 'rhythm.perfect', 0.5; c.meter = 72
+    c.clock = boss.songT; c.lit[3] = 0.1; c.hit[3] = 0.1; c.text, c.textT = 'rhythm.perfect', 0.5; c.meter = 72
     local cv = love.graphics.newCanvas(1280, 720)
     love.graphics.setCanvas(cv)
     love.graphics.clear(0.35, 0.5, 0.7, 1)

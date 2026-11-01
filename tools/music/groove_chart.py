@@ -153,7 +153,8 @@ def build():
         ev = {st: (n, d, v) for st, n, d, v in G.BL(t)}
         # (el usuario: en Difícil "no tiene nada que ver con lo que suena": las flechas por manos no seguían el bajo. Como en Normal, la
         # flecha sigue a la nota; jack alto: el mismo carril a 100 ms sale carísimo)
-        charts['full'][b] = thin_lanes(t, ev, sorted(ev), 12)
+        # (y sin fantasmas — velocidad 48 —: apenas suenan; el usuario oía "2 o 3 notas donde solo iría una")
+        charts['full'][b] = thin_lanes(t, ev, sorted(st for st in ev if ev[st][2] != GHOST), 12)
         if name == 'D':                                               # el gancho, el otro instrumento principal
             if hk is None:                                            # (el compás 16 de la pista no lleva gancho: descanso)
                 charts['normal'][b] = charts['easy'][b] = []
@@ -274,8 +275,7 @@ def check(charts):
     for name, b, t, hk in rows:
         ev = sorted(G.BL(t))
         total += len(ev)
-        assert [st for st, _ in charts['full'][b]] == [st for st, n, d, v in ev], 'full debe ser 1:1 (compás %d)' % b
-    assert sum(len(v) for v in charts['full'].values()) == total, 'full debe ser 1:1'
+        assert [st for st, _ in charts['full'][b]] == [st for st, n, d, v in ev if v != GHOST], 'full: el bajo sin fantasmas (compás %d)' % b
     nbars = len(rows)
     for name, chart in charts.items():
         same100, hand100, *_ = stats(chart, nbars)
@@ -314,19 +314,21 @@ def from_midi(data):
     """El usuario: el chart son DOS pistas del MIDI (tools/music/mid/groove.mid) y nada más: el slap en toda la canción y, en la pista,
     el otro instrumento (el gancho), también en Difícil y más. Lo comprueba nota a nota contra el archivo."""
     import mido
-    tr = {}
+    tr, ghosts = {}, set()
     for t in mido.MidiFile(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'mid', 'groove.mid')).tracks[1:]:
         x, on = 0, set()
         for e in t:
             x += e.time
-            if e.type == 'note_on' and e.velocity > 0: on.add(x // 120)
+            if e.type == 'note_on' and e.velocity > 0:
+                on.add(x // 120)
+                if e.velocity == GHOST: ghosts.add(x // 120)
         tr[t.name] = on
     slap, hook = tr['Slap bass'], tr['Gancho (sierra)']
     ch = data['charts']
     for b in D_BARS:                                       # (mismas flechas que el gancho de Normal)
         if str(b) in ch['normal']: ch['full'][str(b)] = ch['normal'][str(b)]
         else: ch['full'].pop(str(b), None)
-    want = {s for s in slap if s // 16 not in D_BARS} | {s for s in hook if s // 16 in D_BARS}
+    want = {s for s in slap if s // 16 not in D_BARS and s not in ghosts} | {s for s in hook if s // 16 in D_BARS}
     got = {int(b) * 16 + r[i] for b, r in ch['full'].items() for i in range(0, len(r), 2)}
     assert got == want, 'full debe ser las dos pistas del MIDI, 1:1 (sobran %d, faltan %d)' % (len(got - want), len(want - got))
     for name in ('easy', 'normal'):

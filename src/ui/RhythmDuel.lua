@@ -11,6 +11,7 @@ local chartData
 local sprites
 local touchDown = {}
 local NAMES = { 'rhythm_left', 'rhythm_down', 'rhythm_up', 'rhythm_right' }
+local SPLASH_T = 0.16                       -- s del impacto al acertar
 local SWING = 150                           -- % del medidor que se pierde fallándolas todas en una duración entera (por eso acaba a 1/3)
 
 local function chart()
@@ -46,7 +47,7 @@ function R.start(boss, info, diff, playing)
     local lose = SWING / n
     cur = { diff = diff, boss = boss, bar = info.bar, bars = info.bars, cfg = cfg, notes = notes, n = n, first = 1, meter = 50,
             lose = lose, gain = lose * (1 - cfg.failAt) / cfg.failAt, hits = 0, misses = 0, playing = playing,
-            clock = boss.songT or 0, endT = (info.bar + info.bars) * boss.BAR, lit = { 0, 0, 0, 0 }, text = nil, textT = 0 }
+            clock = boss.songT or 0, endT = (info.bar + info.bars) * boss.BAR, lit = { 0, 0, 0, 0 }, hit = { 0, 0, 0, 0 }, text = nil, textT = 0 }
     return cur
 end
 
@@ -95,6 +96,7 @@ function R.press(lane)
         if n.t > c.clock + W then break end
         if not n.judged and n.lane == lane and math.abs(n.t - c.clock) <= W then
             n.judged, n.hit = true, true
+            c.hit[lane] = SPLASH_T
             c.hits = c.hits + 1
             c.meter = math.min(100, c.meter + c.gain)
             c.text, c.textT = (math.abs(n.t - c.clock) <= W / 2) and 'rhythm.perfect' or 'rhythm.good', 0.5
@@ -152,7 +154,7 @@ function R.update(dt, level, who, report, press)
     local target = (a or boss.songT or c.clock) - offset()
     if math.abs(target - c.clock) > 0.25 then c.clock = target
     else c.clock = c.clock + (target - c.clock) * math.min(1, dt * 8) end
-    for l = 1, 4 do c.lit[l] = math.max(0, c.lit[l] - dt) end
+    for l = 1, 4 do c.lit[l] = math.max(0, c.lit[l] - dt); c.hit[l] = math.max(0, c.hit[l] - dt) end
     if c.textT > 0 then c.textT = c.textT - dt end
     -- Si moría o reaparecía justo al empezar, entra ahora: lo que ya pasó no cuenta
     if not c.playing and not c.done and who and not who.dying and who.alive ~= false then
@@ -214,8 +216,13 @@ local function load()
     if sprites then return end
     sprites = { strums = love.graphics.newImage('assets/images/ui/rhythm/strums-Sheet.png'),
                 hit = love.graphics.newImage('assets/images/ui/rhythm/strums_hit-Sheet.png'),
-                notes = love.graphics.newImage('assets/images/ui/rhythm/notes-Sheet.png'), q = {} }
-    for _, k in ipairs({ 'strums', 'hit', 'notes' }) do sprites[k]:setFilter('nearest', 'nearest') end
+                notes = love.graphics.newImage('assets/images/ui/rhythm/notes-Sheet.png'),
+                splash = love.graphics.newImage('assets/images/ui/rhythm/splash-Sheet.png'), q = {}, sq = {} }
+    for l = 1, 4 do
+        sprites.sq[l] = {}
+        for f = 1, 3 do sprites.sq[l][f] = love.graphics.newQuad((f - 1) * 48, (l - 1) * 48, 48, 48, 144, 192) end
+    end
+    for _, k in ipairs({ 'strums', 'hit', 'notes', 'splash' }) do sprites[k]:setFilter('nearest', 'nearest') end
     for i = 1, 4 do sprites.q[i] = love.graphics.newQuad((i - 1) * 24, 0, 24, 24, 96, 24) end
 end
 
@@ -233,7 +240,10 @@ function R.draw()
     -- Quietas
     for l = 1, 4 do
         g.setColor(1, 1, 1, 1)
-        g.draw(c.lit[l] > 0 and sprites.hit or sprites.strums, sprites.q[l], x0 + (l - 1) * GAP + 6, y0 - 36, 0, SCALE, SCALE)
+        -- (al pulsar se encoge; al acertar, además, salta: que se note)
+        local k = (c.hit[l] > 0) and (SCALE + 1) or ((c.lit[l] > 0) and (SCALE - 0.5) or SCALE)
+        local cxl = x0 + (l - 1) * GAP + 42
+        g.draw(c.lit[l] > 0 and sprites.hit or sprites.strums, sprites.q[l], cxl, y0, 0, k, k, 12, 12)
     end
     -- Las que suben
     local speed = (WINDOW_H - y0 + 40) / c.cfg.scroll
@@ -246,6 +256,14 @@ function R.draw()
                 g.setColor(1, 1, 1, 1)
                 g.draw(sprites.notes, sprites.q[n.lane], x0 + (n.lane - 1) * GAP + 6, math.floor(y) - 36, 0, SCALE, SCALE)
             end
+        end
+    end
+    -- El impacto, encima de todo
+    g.setColor(1, 1, 1, 1)
+    for l = 1, 4 do
+        if c.hit[l] > 0 then
+            local f = math.min(3, math.floor((1 - c.hit[l] / SPLASH_T) * 3) + 1)
+            g.draw(sprites.splash, sprites.sq[l][f], x0 + (l - 1) * GAP + 42, y0, 0, 3, 3, 24, 24)
         end
     end
     -- El medidor

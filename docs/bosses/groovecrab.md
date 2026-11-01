@@ -199,11 +199,13 @@ Friday Night Funkin' style. The player stands still, invulnerable; the crab keep
 |---|---|---|---|---|---|---|---|
 | Easy | `easy`: pops and strong beats, 400 ms apart; hook in D | 1.9 | ±160 ms | 1.6 s | 50 % | 70 % | no |
 | Normal | `normal`: 200 ms apart; hook in D | 4.5 | ±130 ms | 1.3 s | 60 % | 80 % | no |
-| Hard | `full`: the two MIDI tracks 1:1: slap bass, and the hook in D (the user: must be 1:1, and only these 2 instruments) | 6.4 | ±110 ms | 1.1 s | 65 % | 85 % | yes |
-| Extreme | `full` | 6.4 | ±85 ms | 0.85 s | 70 % | 90 % | yes |
-| Xtra Extreme | `full` | 6.4 | ±65 ms | 0.65 s | 75 % | 92 % | yes |
+| Hard | `full`: the slap bass without ghost notes, and the hook in D | 5.7 | ±110 ms | 1.1 s | 65 % | 85 % | yes |
+| Extreme | `full` | 5.7 | ±85 ms | 0.85 s | 70 % | 90 % | yes |
+| Xtra Extreme | `full` | 5.7 | ±65 ms | 0.65 s | 75 % | 92 % | yes |
 
 **The chart** (`tools/music/groove_chart.py`) was hand-authored per distinct bar by an agent with no earlier context, from the score: repeated phrases keep their arrows and pops mostly land on outer lanes. Its first Hard chart forced alternating hands, and only 76 % of arrows moved with the pitch (Normal 97 %); the user: on Hard "it has nothing to do with what the bass plays", and uncomfortable. Hard now follows the pitch with the same method as Normal (`contour`). On Normal and Easy, bar 16 of D is empty, as the hook rests. Review MIDIs: `FlappyMonster_pruebas/groove_duelo/chart_*.mid`. Checked note by note against `tools/music/mid/groove.mid` when generated. History: the first version of this chart played the bass in D on Hard and up, 10 notes per second; the user: "it doesn't follow the slap or the other instrument, it seems to chart every instrument". Now the hook there. The user also reported notes out of sync depending on speed; arrival time does not depend on scroll, so a constant audio delay looks worse at higher speed: pending their next test.
+
+**Ghost notes are out of the chart.** The user first asked for 1:1, then played it: "2 or 3 notes where only one should go". They are in the MIDI at velocity 48, but barely sound. **Hit feedback:** the strum jumps and a splash plays on each hit (`splash-Sheet.png`).
 
 **Result:** a meter starts at 50 %; hits and misses are scaled so "empties below" is the break-even accuracy, whatever the note count. Empty: the duel ends, −1 HP (at most 1 per duel). From "KO from": knocked out, one free hit. In between: nothing. Pressing with no note costs nothing.
 
