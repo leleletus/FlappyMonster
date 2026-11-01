@@ -61,7 +61,7 @@
     { "id": "polilla",          "name": "La Polilla (Saltarín Gigante)", "intro": "bosses/polilla_intro.ogg", "loop": "bosses/polilla_loop.ogg", "level": false, "boss": true, "volume": 0.69 },
     { "id": "templo",           "name": "El Templo (Escarabajo Rinoceronte Gigante)", "intro": "bosses/templo_intro.ogg", "loop": "bosses/templo_loop.ogg", "level": false, "boss": true, "volume": 0.46 },
     { "id": "obsidiana",        "name": "Obsidiana (Escorpión Triple Aguijón)", "intro": "bosses/obsidiana_intro.ogg", "loop": "bosses/obsidiana_loop.ogg", "level": false, "boss": true, "volume": 0.66 },
-    { "id": "groove",           "name": "El Groove (jefe secreto)",    "intro": "bosses/groove_intro.ogg", "loop": "bosses/groove_loop.ogg", "level": false, "boss": true, "volume": 0.50 },
+    { "id": "groove",           "name": "El Groove (jefe secreto)",    "intro": "bosses/groove_intro.ogg", "loop": "bosses/groove_loop.ogg", "level": false, "boss": true, "volume": 0.49 },
     { "id": "crab_mashup",      "name": "Mega Mashup de los Cangrejos (evento)", "intro": "bosses/crab_mashup_intro.ogg", "loop": "bosses/crab_mashup_loop.ogg", "level": false, "boss": true, "volume": 0.50 },
 
     { "id": "menus",         "name": "Menús",                         "file": "menus/menus.ogg",       "level": false, "volume": 0.93 },

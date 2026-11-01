@@ -1,5 +1,5 @@
 -- tools/tests/giantscorpion_rules — reglas del ESCORPIÓN (types/enemies/scorpion.lua) y del ESCORPIÓN TRIPLE AGUIJÓN
--- (types/bosses/giantscorpion.lua) caso a caso, en su arena (tools/levelgen/arenas/jefe_escorpion.json):
+-- (types/bosses/giantscorpion.lua) caso a caso, en una copia fija de su arena (arena.json):
 --   chico_cola    jugador a su alcance: clic, cola atrás, clava donde estaba; quita 1 y se queda clavada
 --   chico_esquiva si el jugador se aparta durante el aviso, el aguijón no le da
 --   chico_pinza   muy cerca cierra la pinza: quita 1
@@ -58,7 +58,7 @@ end
 local function count(name) local n = 0; for _, s in ipairs(played) do if s == name then n = n + 1 end end; return n end
 
 local function arena(diff)
-    local f = assert(io.open('tools/levelgen/arenas/jefe_escorpion.json', 'r'))
+    local f = assert(io.open('tools/tests/giantscorpion_rules/arena.json', 'r'))   -- (su propia copia: el usuario retoca la de levelgen en el editor)
     local data = json.decode(f:read('*a')); f:close()
     local level = Level.fromData(data)
     level.difficulty = diff

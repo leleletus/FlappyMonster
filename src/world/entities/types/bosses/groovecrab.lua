@@ -65,7 +65,7 @@ local S16 = 0.1                                 -- 150 BPM: semicorchea
 local BAR = 16 * S16
 local BEAT = 4 * S16
 local INTRO_BARS = 8
-local SONG = { { 'A', 16 }, { 'B', 16 }, { 'K', 8 }, { 'S', 8 }, { 'C', 16 }, { 'O', 4 } }
+local SONG = { { 'A', 16 }, { 'B', 16 }, { 'K', 8 }, { 'S', 8 }, { 'C', 16 }, { 'D', 16 }, { 'O', 4 } }   -- (D: "la pista", tools/music/groove_mejora.py)
 local LOOP = 0
 for _, s in ipairs(SONG) do LOOP = LOOP + s[2] end
 GC.S16, GC.BAR, GC.INTRO_BARS, GC.LOOP = S16, BAR, INTRO_BARS, LOOP
@@ -211,7 +211,7 @@ function GC.loopOf(b) return b < INTRO_BARS and 0 or math.floor((b - INTRO_BARS)
 -- ¿Dispara la nota dorada en el compás (sec, k)? → su semicorchea, o nil. En el golpe de banda que cierra cada 8
 -- compases (el usuario, 0.5.48: antes cada 4 eran demasiadas); en el SOLO, en el golpe del 5º compás. Solo en la 1ª
 -- fase (ver GC:goldOn)
-local PHRASE = { A = true, B = true, S = true, C = true }
+local PHRASE = { A = true, B = true, S = true, C = true, D = true }
 function GC.goldAt(sec, k)
     if PHRASE[sec] and k % 8 == 0 then return GOLD_AT end
     if sec == 'K' and k == 5 then return 0 end
@@ -219,7 +219,7 @@ function GC.goldAt(sec, k)
 end
 
 -- ¿Pista de baile en el compás (sec, k)? (la subida entera y la 2ª mitad del clímax)
-function GC.floorOn(sec, k) return sec == 'S' or (sec == 'C' and k >= 9) end
+function GC.floorOn(sec, k) return sec == 'S' or (sec == 'C' and k >= 9) or (sec == 'D' and k >= 9) end
 
 -- Lo que hace él en un compás: { hop = true | lick = true, notes = { semicorcheas } }. noGold: ya no suelta doradas
 -- (2ª fase): sus compases son como los demás
@@ -241,6 +241,8 @@ function GC.plan(sec, k, rage, noGold)
                 if rage and not gold then p.notes = { 6, 11 } end
             end
         else p.notes = B_NOTES[k] or {} end
+    elseif sec == 'D' then                                              -- (la pista: salta en los impares, notas con los pops de los pares)
+        if k % 2 == 1 then p.hop = true else p.notes = rage and not gold and { 2, 6, 14 } or { 6, 14 } end
     elseif sec == 'K' then
         p.lick = k % 2 == 0
     elseif sec == 'O' then

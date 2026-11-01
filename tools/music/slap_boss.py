@@ -2,6 +2,7 @@
 # EL GROOVE — un tema de jefe cuyo instrumento PRINCIPAL es el slap bass de Resaca (tools/music/slap.py), con
 # acompañamiento de Famicom. Nació como maqueta ("quiero oír el tema para inspirarme", 2026-10-26); el usuario: "el mejor
 # tema del juego por mucho" → es el tema de EL GROOVE, el Crabby trampolín gigante, jefe secreto (catálogo `groove`).
+# (el juego usa ahora tools/music/groove_mejora.py, que parte de estos compases; este sigue siendo la base y lo lee crab_mashup.py)
 # OJO: el jefe (types/bosses/groovecrab.lua) SIGUE ESTA PARTITURA por compases (sus SECCIONES, los POPS del bajo y los
 # golpes de banda): si cambia la forma, el tempo o dónde caen los golpes, hay que cambiar también su tabla SONG.
 #

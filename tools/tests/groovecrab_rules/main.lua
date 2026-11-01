@@ -152,12 +152,13 @@ function cases.reloj()
     local function is(t, sec, k) local _, s, kk = W(t); return s == sec and kk == k end
     local B = boss.BAR
     local ok = is(0, 'I', 1) and is(8 * B + 0.01, 'A', 1) and is(24 * B + 0.01, 'B', 1) and is(40 * B + 0.01, 'K', 1)
-        and is(48 * B + 0.01, 'S', 1) and is(56 * B + 0.01, 'C', 1) and is(72 * B + 0.01, 'O', 1)
-        and is((8 + 68) * B + 0.01, 'A', 1) and is((8 + 68 + 35) * B + 0.01, 'K', 4)
+        and is(48 * B + 0.01, 'S', 1) and is(56 * B + 0.01, 'C', 1) and is(72 * B + 0.01, 'D', 1) and is(88 * B + 0.01, 'O', 1)
+        and boss.plan('D', 1).hop and #boss.plan('D', 2).notes == 2 and boss.goldAt('D', 8) == 12 and boss.floorOn('D', 9) and not boss.floorOn('D', 8)
+        and is((8 + 84) * B + 0.01, 'A', 1) and is((8 + 84 + 35) * B + 0.01, 'K', 4)
     local gold = boss.goldAt('A', 8) == 12 and boss.goldAt('A', 4) == nil and boss.goldAt('B', 16) == 12 and boss.goldAt('K', 1) == nil
         and boss.goldAt('K', 3) == nil and boss.goldAt('K', 5) == 0 and boss.goldAt('I', 8) == nil and boss.goldAt('O', 4) == nil
     local floor = boss.floorOn('S', 1) and boss.floorOn('C', 9) and not boss.floorOn('C', 8) and not boss.floorOn('A', 1)
-    check('reloj', ok and gold and floor and boss.LOOP == 68,
+    check('reloj', ok and gold and floor and boss.LOOP == 84,
         ('secciones=%s · dorada=%s · pista=%s · bucle %d compases (%.1f s)'):format(tostring(ok), tostring(gold), tostring(floor),
             boss.LOOP, boss.LOOP * B))
 end
