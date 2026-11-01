@@ -182,3 +182,12 @@ more original variant every time):
 Added by later verdicts, to keep in any GM track: every layer on time (advanced by its own measured attack), no tail over the next note on rhythmic
 layers, no echo or reverb on them (`montana_nes.py`: `attack_smp`, `tight_stem`); a boss uses the slap bass; a riff can BE the melody (El Templo: every lead
 tried over it was rejected).
+
+### Why my melodies come out forced (measured 2026-10-31, the user: "your problems are always in the melodies")
+
+Triple Aguijón v1, rejected as "forced, it doesn't fit the flow", against the approved jungle and mountain melodies: chord tones 100 % (approved 79-90), by step 5-7 % (20-44), repeated
+notes 26 % (1-23, only one approved track over 11), long notes 8-12 % (11-46). It passed every check, because the checks only punish wrong notes: writing nothing but chord tones is the
+safest way to pass them, and that is an arpeggio, not a tune. Starting from a concept (the rattle) made it worse: the idea belongs in the percussion, not forced on the melody.
+**Before showing a melody:** print these four numbers and aim inside the approved ranges, use passing notes on purpose, keep the 3+3+2 anticipations. They are necessary, not sufficient:
+none of this hears.
+

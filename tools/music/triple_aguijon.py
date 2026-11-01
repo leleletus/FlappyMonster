@@ -5,9 +5,8 @@
 # Hecho con la receta de la JUNGLA, los temas favoritos del usuario (docs/audio/music-guide.md § 8): una idea propia sacada
 # del personaje, instrumentos GM TEMÁTICOS sobre el chip de la casa, un ritmo que el juego no tenía y una forma que crece a su
 # manera. La isla es el VOLCÁN (frigio, ♭II); el escorpión lo lleva al desierto: La FRIGIO DOMINANTE (hiyaz: La Si♭ Do# Re Mi Fa Sol).
-#   · LA IDEA: tres notas seguidas y un golpe, el ritmo de su MATRACA: a 168 BPM una semicorchea dura 0,089 s, lo mismo que entre
-#     dos clics (0,09 s). Las notas repetidas y su "aguijón" son el motivo de toda la pieza.
-#   · LA FORMA CUENTA SU PELEA: B = SEPARADAS: la melodía va pasando nota a nota por tres instrumentos (hoquetus: "cada una a su
+#   · LA IDEA: su MATRACA en la percusión: a 168 BPM una semicorchea dura 0,089 s, lo mismo que entre dos clics (0,09 s).
+#   · LA FORMA CUENTA SU PELEA: B = SEPARADAS: la melodía va pasando por tres instrumentos, cada dos compases ("cada una a su
 #     vez"); C = ENROLLADAS: las tres voces a la vez, mismo ritmo (terceras y octava), "atacan como una sola"; K = el corro de la
 #     matraca: solo percusión, bloques y castañuelas de tres en tres.
 #   · INSTRUMENTOS del soundfont: shanai (la voz), sitar, koto, dulcémele, taiko, darbuka (congas y bongós en maqsum), castañuelas,
@@ -48,69 +47,91 @@ CH_B = "Dm Bb Gm A Dm Bb Bbm A"                                  # el GIRO OSCUR
 CH_C = "A Gm|A Bb|A Dm A Gm|A Bb A"
 CH_K = "A A A Bb|A A A Gm Bb|A"
 
+# (v1 rechazada, el usuario: "la melodía se siente forzada, no encaja con el flujo de la canción". Medido: 100 % notas del acorde,
+#  7 % por grado y 26 % repetidas; las de la jungla y las montañas, 80-90 %, 30-44 % y ~8 %. Era un arpegio con un concepto encima. La
+#  v2 CANTA: por grados, con notas de paso y notas largas; la matraca se queda en la percusión, que es donde funciona)
 # ── A: 4/4 (16 semicorcheas) ───────────────────────────────────────────────────────────────────────────────────────────
 MEL_A = {
-    # A: la matraca (tres repetidas) que trepa por el acorde hasta el aguijón; la respuesta, en secuencia
-    'A': ["0:E5/1 1:E5/1 2:E5/1 3:A5/3 6:C#6/2 8:E6/3 11:C#6/3 14:A5/2",
-          "0:C#6/2 2:E6/2 4:A6/4 8:F6/1 9:F6/1 10:F6/1 11:D6/3 14:Bb5/2",
-          "0:G5/1 1:G5/1 2:G5/1 3:Bb5/3 6:D6/2 8:C#6/3 11:E6/3 14:A5/2",
-          "0:A5/1 1:A5/1 2:A5/1 3:D6/3 6:F6/2 8:F6/4 12:D6/2 14:Bb5/2",
-          "0:A5/1 1:A5/1 2:A5/1 3:C#6/3 6:E6/2 8:A6/3 11:E6/3 14:C#6/2",
-          "0:E6/4 4:C#6/2 6:A5/2 8:Bb5/1 9:Bb5/1 10:Bb5/1 11:D6/3 14:F6/2",
-          "0:G6/3 3:D6/3 6:Bb5/2 8:G5/3 11:Bb5/3 14:D6/2"],              # el tresillo 3+3+2
-    'E1': "0:F6/2 2:D6/2 4:Bb5/2 6:D6/2 8:C#6/8",
-    'E2': "0:D6/3 3:Bb5/3 6:F5/2 8:E5/1 9:E5/1 10:E5/1 11:A5/5",
-    # B: SEPARADAS: cada nota, un instrumento; golpes 3+3+2
-    'B': ["0:D6/3 3:F6/3 6:A6/2 8:F6/3 11:D6/3 14:A5/2",
-          "0:Bb5/3 3:D6/3 6:F6/2 8:D6/3 11:Bb5/3 14:F5/2",
-          "0:G5/3 3:Bb5/3 6:D6/2 8:G6/3 11:D6/3 14:Bb5/2",
-          "0:A5/3 3:C#6/3 6:E6/2 8:A6/8",
-          "0:A6/3 3:F6/3 6:D6/2 8:F6/3 11:A6/3 14:D7/2",
-          "0:D7/3 3:Bb6/3 6:F6/2 8:D6/3 11:F6/3 14:Bb6/2",
-          "0:Db7/3 3:Bb6/3 6:F6/2 8:Bb6/3 11:F6/3 14:Db6/2",
+    'A': ["0:A5/2 2:Bb5/1 3:A5/1 4:C#6/4 8:E6/6 14:D6/1 15:C#6/1",
+          "0:C#6/3 3:D6/1 4:E6/4 8:F6/4 12:E6/1 13:D6/1 14:Bb5/2",
+          "0:Bb5/3 3:A5/1 4:G5/4 8:C#6/4 12:D6/1 13:E6/3",
+          "0:F6/3 3:E6/1 4:D6/4 8:F6/3 11:D6/3 14:Bb5/2",
+          "0:A5/2 2:C#6/2 4:E6/4 8:A6/6 14:G6/1 15:F6/1",
+          "0:E6/3 3:D6/1 4:C#6/4 8:D6/4 12:F6/4",
+          "0:G6/4 4:D6/4 8:Bb5/3 11:A5/1 12:G5/4"],
+    'E1': "0:Bb5/2 2:D6/2 4:F6/4 8:E6/8",
+    'E2': "0:F6/2 2:D6/2 4:Bb5/4 8:A5/8",
+    'B': ["0:F6/6 6:E6/2 8:D6/8",
+          "0:D6/6 6:E6/1 7:F6/1 8:Bb6/6 14:A6/2",
+          "0:G6/6 6:F6/1 7:E6/1 8:D6/8",
+          "0:C#6/3 3:D6/1 4:E6/4 8:A6/8",
+          "0:A6/6 6:G6/2 8:F6/6 14:E6/2",
+          "0:D6/6 6:E6/1 7:F6/1 8:D6/8",
+          "0:Db6/4 4:F6/4 8:F6/8",
           "0:E5/4 4:A5/2 6:C#6/2 8:E6/8"],                                # LA LLAMADA (Mi-La-Do#-Mi)
-    # C: ENROLLADAS: tres notas y el aguijón, dos veces por compás
-    'C': ["0:E6/1 1:E6/1 2:E6/1 3:A6/5 8:E6/1 9:E6/1 10:E6/1 11:C#6/5",
-          "0:D6/1 1:D6/1 2:D6/1 3:G6/5 8:E6/1 9:E6/1 10:E6/1 11:A6/5",
-          "0:F6/1 1:F6/1 2:F6/1 3:Bb6/5 8:E6/1 9:E6/1 10:E6/1 11:C#6/5",
-          "0:A5/3 3:D6/3 6:F6/2 8:A6/8",
-          "0:E6/1 1:E6/1 2:E6/1 3:A6/5 8:E6/1 9:E6/1 10:E6/1 11:C#6/5",
-          "0:D6/1 1:D6/1 2:D6/1 3:G6/5 8:E6/1 9:E6/1 10:E6/1 11:A6/5",
-          "0:F6/3 3:D6/3 6:Bb5/2 8:F6/3 11:D6/3 14:Bb5/2",
-          "0:A5/1 1:A5/1 2:A5/1 3:C#6/5 8:E6/8"],
+    'C': ["0:A5/2 2:C#6/2 4:E6/4 8:A6/8",
+          "0:G6/6 6:F6/2 8:E6/8",
+          "0:F6/3 3:E6/1 4:D6/4 8:C#6/3 11:D6/1 12:E6/4",
+          "0:F6/3 3:E6/1 4:D6/4 8:A5/8",
+          "0:C#6/2 2:E6/2 4:A6/4 8:C#7/8",
+          "0:Bb6/6 6:A6/2 8:A6/8",
+          "0:F6/3 3:E6/1 4:D6/4 8:Bb5/4 12:D6/4",
+          "0:C#6/3 3:D6/1 4:E6/4 8:A5/8"],
 }
 # ── B: 7/8 = 2+2+3 corcheas (14 semicorcheas: grupos en 0, 4, 8) ───────────────────────────────────────────────────────────
 MEL_B = {
-    'A': ["0:E5/1 1:E5/1 2:E5/1 3:A5/1 4:C#6/2 6:A5/2 8:E6/4 12:C#6/2",
-          "0:E6/2 2:C#6/2 4:A6/3 7:F6/1 8:F6/1 9:F6/1 10:D6/2 12:Bb5/2",
-          "0:G5/1 1:G5/1 2:G5/1 3:Bb5/1 4:D6/3 8:E6/2 10:C#6/2 12:A5/2",
-          "0:A5/1 1:A5/1 2:A5/1 3:D6/1 4:F6/3 8:F6/2 10:D6/2 12:Bb5/2",
-          "0:A5/1 1:A5/1 2:A5/1 3:C#6/1 4:E6/2 6:C#6/2 8:A6/4 12:E6/2",
-          "0:E6/4 4:C#6/3 8:Bb5/1 9:Bb5/1 10:Bb5/1 11:D6/1 12:F6/2",
-          "0:G6/2 2:D6/2 4:Bb5/2 6:D6/2 8:G5/2 10:Bb5/2 12:D6/2"],
-    'E1': "0:F6/2 2:D6/2 4:Bb5/3 8:C#6/6",
-    'E2': "0:D6/2 2:Bb5/2 4:F5/3 8:E5/1 9:E5/1 10:E5/1 11:A5/3",
-    'B': ["0:D6/2 2:F6/2 4:A6/2 6:F6/2 8:D6/3 11:A5/3",
-          "0:Bb5/2 2:D6/2 4:F6/2 6:D6/2 8:Bb5/3 11:F5/3",
-          "0:G5/2 2:Bb5/2 4:D6/2 6:Bb5/2 8:G6/3 11:D6/3",
-          "0:A5/2 2:C#6/2 4:E6/2 6:C#6/2 8:A6/6",
-          "0:A6/2 2:F6/2 4:D6/2 6:F6/2 8:A6/3 11:D7/3",
-          "0:D7/2 2:Bb6/2 4:F6/2 6:Bb6/2 8:D7/3 11:F6/3",
-          "0:Db7/2 2:Bb6/2 4:F6/2 6:Bb6/2 8:Db7/3 11:F6/3",
+    'A': ["0:A5/2 2:Bb5/1 3:A5/1 4:C#6/4 8:E6/4 12:D6/1 13:C#6/1",
+          "0:C#6/2 2:D6/2 4:E6/3 7:F6/5 12:E6/1 13:D6/1",
+          "0:Bb5/2 2:A5/2 4:G5/3 8:C#6/3 11:D6/1 12:E6/2",
+          "0:F6/2 2:E6/2 4:D6/3 8:F6/2 10:D6/2 12:Bb5/2",
+          "0:A5/2 2:C#6/2 4:E6/3 8:A6/4 12:G6/1 13:F6/1",
+          "0:E6/2 2:D6/2 4:C#6/3 8:D6/3 11:F6/3",
+          "0:G6/4 4:D6/4 8:Bb5/2 10:A5/2 12:G5/2"],
+    'E1': "0:Bb5/2 2:D6/2 4:F6/3 8:E6/6",
+    'E2': "0:F6/2 2:D6/2 4:Bb5/3 8:A5/6",
+    'B': ["0:F6/4 4:E6/2 6:D6/2 8:A5/6",
+          "0:D6/4 4:E6/1 5:F6/3 8:Bb6/4 12:A6/2",
+          "0:G6/4 4:F6/1 5:E6/1 6:D6/2 8:D6/6",
+          "0:C#6/2 2:D6/2 4:E6/3 8:A6/6",
+          "0:A6/4 4:G6/2 6:F6/2 8:F6/4 12:E6/2",
+          "0:D6/4 4:E6/1 5:F6/3 8:D6/6",
+          "0:Db6/4 4:F6/3 8:F6/6",
           "0:E5/3 3:A5/2 5:C#6/3 8:E6/6"],                                # LA LLAMADA
-    'C': ["0:E6/1 1:E6/1 2:E6/1 3:A6/4 8:E6/1 9:E6/1 10:E6/1 11:C#6/3",
-          "0:D6/1 1:D6/1 2:D6/1 3:G6/4 8:E6/1 9:E6/1 10:E6/1 11:A6/3",
-          "0:F6/1 1:F6/1 2:F6/1 3:Bb6/4 8:E6/1 9:E6/1 10:E6/1 11:C#6/3",
-          "0:A5/2 2:D6/2 4:F6/3 8:A6/6",
-          "0:E6/1 1:E6/1 2:E6/1 3:A6/4 8:E6/1 9:E6/1 10:E6/1 11:C#6/3",
-          "0:D6/1 1:D6/1 2:D6/1 3:G6/4 8:E6/1 9:E6/1 10:E6/1 11:A6/3",
-          "0:F6/2 2:D6/2 4:Bb5/3 8:F6/3 11:D6/3",
-          "0:A5/1 1:A5/1 2:A5/1 3:C#6/4 8:E6/6"],
+    'C': ["0:A5/2 2:C#6/2 4:E6/3 8:A6/6",
+          "0:G6/5 5:F6/2 8:E6/6",
+          "0:F6/2 2:E6/2 4:D6/3 8:C#6/2 10:D6/2 12:E6/2",
+          "0:F6/2 2:E6/2 4:D6/3 8:A5/6",
+          "0:C#6/2 2:E6/2 4:A6/3 8:C#7/6",
+          "0:Bb6/5 5:A6/2 8:A6/6",
+          "0:F6/2 2:E6/2 4:D6/3 8:Bb5/3 11:D6/3",
+          "0:C#6/2 2:D6/2 4:E6/3 8:A5/6"],
 }
+
+
+def anticipate(txt, chord, minlen):
+    """las notas largas que caen en un tiempo entran una semicorchea antes, robándosela a la anterior (la síncopa de la casa, sobre
+    el 3+3+2 del bajo); en la mitad del compás, solo si no cambia el acorde"""
+    if not txt: return txt
+    notes = [t.split(':') for t in txt.split()]
+    notes = [[int(a), *b.split('/')] for a, b in notes]
+    for i in range(1, len(notes)):
+        st, n, d = notes[i][0], notes[i][1], int(notes[i][2])
+        pd = int(notes[i - 1][2])
+        if d >= minlen and st in (4, 8, 12) and pd >= 2 and (st != 8 or '|' not in chord):
+            notes[i - 1][2] = str(pd - 1)
+            notes[i][0], notes[i][2] = st - 1, str(d + 1)
+    return ' '.join(f'{a}:{n}/{d}' for a, n, d in notes)
+
+
+def sync(bars, chords, minlen):
+    return [anticipate(t, c, minlen) for t, c in zip(bars, chords.split())]
 
 
 def sections(v):
     M, S = (MEL_A, 16) if v == 'A' else (MEL_B, 14)
+    ml = 4 if v == 'A' else 3
+    M = dict(M, A=sync(M['A'], CH_A, ml), E1=anticipate(M['E1'], 'Bb|A', ml), E2=anticipate(M['E2'], 'Bb|A', ml),
+             B=sync(M['B'], CH_B, ml), C=sync(M['C'], CH_C, ml))
     A1, A2 = M['A'] + [M['E1']], M['A'] + [M['E2']]
     out = [('intro', IN_, [''] * 4, S, ''),
            ('A', CH_A, A1, S, ''), ('A', CH_A, A2, S, ''), ('B', CH_B, M['B'], S, ''), ('C', CH_C, M['C'], S, ''),
@@ -149,7 +170,8 @@ def arrange(sg, R, v):
     for i, (b, st, n, d) in enumerate(sg.mel):
         tag, var = sg.tag[b - 1], sg.var[b - 1]
         if tag == 'B':                                                 # SEPARADAS: cada nota, un instrumento (hoquetus)
-            k, prog = (('hk1', voice), ('hk2', other), ('hk3', KOTO))[i % 3]
+            # (v2: pasa de un instrumento a otro cada dos compases, pregunta y respuesta; nota a nota cortaba el canto)
+            k, prog = (('hk1', voice), ('hk2', other), ('hk3', KOTO), ('hk1', voice))[(sg.pos[b - 1] - 1) // 2]
             R.gm(k, prog, b, st, n, d, 100 if 'dbl' not in var else 108, gate=0.95)
             R.notes.setdefault('lead', []).append((sg.q(b, st), sg.q(b, st + d), n))
         else:
@@ -259,7 +281,10 @@ def slap_adv(n):
     return int(np.argmax(e[SR // 2:] >= 0.5 * e.max()))
 
 
-def build(v):
+MUTE = ('lead', 'hk1', 'hk2', 'hk3', 'thirds', 'low', 'voice')
+
+
+def build(v, instrumental=False):
     J.TRACKS['triple_aguijon']['bpm'] = TRACKS_BPM[v]
     sg = J.Song('triple_aguijon', v)
     R = MN.Rig(sg)
@@ -304,6 +329,9 @@ def build(v):
     hp = butter(2, 30, btype='high', fs=SR, output='sos')
     S = {k: sosfilt(hp, GN.fold(x, n, at)) for k, x in S.items() if np.abs(x).max() > 0}
     g = GN.level(S, {k: LV.get(k, -10) for k in S}, 'lead')
+    if instrumental:                                                   # (sin melodía: el Templo se aprobó así)
+        for k in MUTE:
+            if k in g: g[k] = 0.0
     x = sum(S[k] * g[k] for k in S)
     sd = lambda k, w: S[k] * g[k] * w if k in S else 0.0
     # (las tres voces del hoquetus, abiertas: izquierda, centro, derecha — se oye cómo se separan)
@@ -324,6 +352,11 @@ def report(v, sg, R, S, g, y, n, at):
     beats = {16: 4, 14: None}
     groups = (0, 4, 8)
     off = np.mean([(st % 4 != 0) if sg.steps[b - 1] == 16 else (st not in groups) for b, st, nn, d in sg.mel])
+    iv = np.array([sg.mel[i + 1][2] - sg.mel[i][2] for i in range(len(sg.mel) - 1)])
+    tn = np.mean([nn % 12 in sg.tones(b, st) for b, st, nn, d in sg.mel])
+    print(f'  ¿canta? (jungla y montañas: acorde 79-90 %, por grado 20-44 %, repetidas 1-23 %, largas 11-46 %): acorde {100 * tn:.0f} %, por grado '
+          f'{100 * np.mean((abs(iv) > 0) & (abs(iv) <= 2)):.0f} %, repetidas {100 * np.mean(iv == 0):.0f} %, '
+          f'largas {100 * np.mean([sg.q(b, st + d) - sg.q(b, st) >= 4 for b, st, nn, d in sg.mel]):.0f} %')
     print(f'  melodía: {len(sg.mel)} notas, a contratiempo {100 * off:.0f} %; largas fuera del acorde: {lb or "ninguna"}; sueltas: {lo or "ninguna"}; fuera de la escala: {out or "ninguna"}')
     others = []
     for k in ('ost', 'pad1', 'pad2', 'accent', 'thirds', 'low'):
@@ -346,7 +379,10 @@ if __name__ == '__main__':
             J.export(y, at, os.path.join(F.MUSIC_DIR, 'bosses', 'triple_aguijon'))
             J.write_mid(F.out('triple_aguijon', 'mid'), sg, R)
             continue
-        base = os.path.join(PRUEBAS, f'triple_aguijon_{v}_{VNAME[v]}')
+        base = os.path.join(PRUEBAS, f'v2_{v}_{VNAME[v]}')
         J.export(y, at, base)
+        _, _, _, _, yi, _, _ = build(v, True)
+        J.enc(np.concatenate([yi, yi[at:]]), base + '_sin_melodia.ogg')
+        os.system(f'ffmpeg -v quiet -y -i "{base}_sin_melodia.ogg" -q:a 3 "{base}_sin_melodia.mp3"')
         J.enc(np.concatenate([y, y[at:]]), base + '_preview.ogg')
         os.system(f'ffmpeg -v quiet -y -i "{base}_preview.ogg" -q:a 3 "{base}_preview.mp3"')
