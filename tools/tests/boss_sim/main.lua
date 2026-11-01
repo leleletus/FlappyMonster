@@ -91,7 +91,7 @@ function love.load()
     local gb = boss.def.name == 'giantbeetle'
     local gbs = { launches = 0, rage = false, lastT = -9 }
     if gb then VULN = { flipped = true } end
-    -- Escorpión de Tres Colas: solo clavada; esquiva las marcas (lo hace el bloque de abajo)
+    -- Escorpión Triple Aguijón: solo clavada; esquiva las marcas (lo hace el bloque de abajo)
     local gs = boss.def.name == 'giantscorpion'
     if gs then VULN = { stuck = true } end
     local kg = { phases = {}, maxGuards = 0, flopOff = {}, waveHits = 0, partHits = 0, lastPartT = -9 }

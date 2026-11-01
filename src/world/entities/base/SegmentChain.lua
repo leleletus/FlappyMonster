@@ -43,7 +43,15 @@ local function stepOnce(self, k, damp, stretch)
         v.y = (v.y + (t.y - p.y) * kk) * damp
         p.x, p.y = p.x + v.x, p.y + v.y
     end
-    local gap = self.gap * (stretch or 1)
+    local gap = self.gap
+    if stretch then                             -- (`stretch` = hasta cuánto se puede estirar para LLEGAR a su objetivo)
+        local len = 0
+        for i = 2, n do
+            local dx, dy = tg[i].x - tg[i - 1].x, tg[i].y - tg[i - 1].y
+            len = len + math.sqrt(dx * dx + dy * dy)
+        end
+        gap = math.max(gap, math.min(gap * stretch, len / (n - 1)))
+    end
     for i = 2, n do
         local a, b = P[i - 1], P[i]
         local dx, dy = b.x - a.x, b.y - a.y
@@ -54,7 +62,7 @@ local function stepOnce(self, k, damp, stretch)
 end
 
 -- Avanza dt segundos. fill(tg, n, ...) escribe la curva objetivo en tg (solo se llama en cada paso fijo); opts:
--- k = fuerza del muelle (0.16 tranquilo, 0.34-0.42 rápido), damp, stretch = × el largo entre segmentos
+-- k = fuerza del muelle, damp, stretch = cuánto puede estirarse como mucho para llegar a la punta de la curva (nil = nada)
 function Chain:advance(dt, k, damp, stretch, fill, ...)
     if not self.placed then self:place(fill, ...) end
     self.acc = math.min(self.acc + math.max(0, dt), STEP * 4)

@@ -33,6 +33,7 @@ local Boss     = require 'src/world/entities/base/Boss'
 local DeadEyes = require 'src/player/DeadEyes'
 
 local Ship = Entity.extend(Boss, {
+    OPENINGS = { stuck = true, rise = true },                      -- (un golpe por noqueo: Boss.damage)
     -- (aliados en Xtra extremo: qué estados son atacar)
     ATTACKS = { prep = true, slam = true },
     debugColor = { 0.3, 0.9, 1 },
@@ -147,6 +148,7 @@ function Ship:isDying()
 end
 -- Solo se le puede dañar clavado tras el picado (y justo al empezar a subir)
 local RISE_VULN = 0.6
+Ship.KO_EXTRA = RISE_VULN + 0.1                 -- (tras clavarse, sigue abierto un momento al subir: un golpe en total)
 function Ship:isVulnerable()
     return self.state == 'stuck' or (self.state == 'rise' and self.deadTimer < RISE_VULN)
 end

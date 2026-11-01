@@ -1,10 +1,13 @@
--- tools/tests/giantscorpion_rules — reglas del ESCORPIÓN (types/enemies/scorpion.lua) y del ESCORPIÓN DE TRES COLAS
+-- tools/tests/giantscorpion_rules — reglas del ESCORPIÓN (types/enemies/scorpion.lua) y del ESCORPIÓN TRIPLE AGUIJÓN
 -- (types/bosses/giantscorpion.lua) caso a caso, en su arena (tools/levelgen/arenas/jefe_escorpion.json):
 --   chico_cola    ve al jugador a media distancia: clic, cola atrás, clava donde estaba; quita 1 y se queda clavada
 --   chico_esquiva si el jugador se aparta durante el aviso, el aguijón no le da
 --   chico_pinza   muy cerca cierra la pinza: quita 1
 --   chico_pisar   pisarlo lo mata
---   acorazado     fuera de su ventana, caerle encima solo rebota; tocarlo de lado quita 1
+--   atravesable   su cuerpo no es sólido ni hace daño: se pasa a través y, encima, nada (fuera de su ventana)
+--   chico_anda    tras atacar vuelve a andar DE VERDAD (se desplaza)
+--   llega         la cola llega a su marca: el pincho a menos de 12 px, en el pequeño y en el jefe
+--   sin_rebote    un cambio de postura no se pasa de su objetivo y tarda lo que la matraca
 --   matraca       enrollarse: la matraca suena al EMPEZAR y dura lo que el movimiento (0,21 s); igual al desenrollarse
 --   enrollada     marca, golpe fuerte (quita 2 en la marca, nada fuera) y se queda clavada
 --   ventana       clavada: pisotón -1, ground pound -2, también sobre la cola; tras el golpe se levanta en GETUP_T
@@ -15,6 +18,7 @@
 --   pinza_falla   si se aparta durante el último tramo del aviso, no lo atrapa
 --   pinza_otro    golpear al jefe con alguien atrapado lo libera
 --   pinza_muerde  sin machacar pierde vida poco a poco
+--   un_golpe      TODOS los jefes: un solo golpe por noqueo
 --   fases         baja de fase a 2/3 y 1/3 de la vida (más rápido)
 --   alcance       una marca nunca sale de la zona ni del alcance de la cola
 --   derrota       el último golpe: tumbado, huye atravesando la pared, libera la zona y suelta su pieza
@@ -97,7 +101,7 @@ end
 -- El jefe quieto en el centro, descansando sin atacar
 local function still(boss, x)
     boss.x, boss.y = x or 28 * T, feet() - boss.outerH / 2
-    boss.vx, boss.vy, boss.onGround, boss.inv, boss.graceT = 0, 0, true, 0, 0
+    boss.vx, boss.vy, boss.onGround, boss.inv = 0, 0, true, 0
     boss.ghost, boss.downHitState, boss.clawCd = false, nil, 99
     boss.restLen = 99
     boss:enter('rest')
@@ -129,7 +133,7 @@ function CASES.chico_cola()
     local level, es, boss, small = arena('normal')
     local list = smallOnly(level, es, small)
     smallReady(level, list, small)
-    local pa = playerAt(level, list, small.x + 2.3 * T)
+    local pa = playerAt(level, list, small.x + 85)
     local hp, seen = pa.hp, {}
     stepAll(level, list, { pa }, 1.2, function() seen[small.state] = true end)
     check('chico_cola', seen.sting_wind and seen.sting and seen.stuck, 'aviso, aguijón y clavada: ' .. tostring(seen.sting_wind) .. ' ' .. tostring(seen.stuck))
@@ -142,7 +146,7 @@ function CASES.chico_esquiva()
     local level, es, boss, small = arena('normal')
     local list = smallOnly(level, es, small)
     smallReady(level, list, small)
-    local pa = playerAt(level, list, small.x + 2.3 * T)
+    local pa = playerAt(level, list, small.x + 85)
     local hp = pa.hp
     stepAll(level, list, { pa }, 2, function()
         if small.state == 'sting_wind' then pa.x = small.x + 6 * T end
@@ -153,9 +157,9 @@ function CASES.chico_pinza()
     local level, es, boss, small = arena('normal')
     local list = smallOnly(level, es, small)
     smallReady(level, list, small)
-    local pa = playerAt(level, list, small.x + 1.15 * T)
+    local pa = playerAt(level, list, small.x + 50)
     local hp, seen = pa.hp, {}
-    stepAll(level, list, { pa }, 0.7, function() seen[small.state] = true; pa.x = small.x + 1.15 * T end)
+    stepAll(level, list, { pa }, 0.7, function() seen[small.state] = true; pa.x = small.x + 50 end)
     check('chico_pinza', seen.pinch_wind and seen.pinch and count('scorpionSnap') == 1, 'avisa y cierra la pinza')
     check('chico_pinza', pa.hp < hp, 'quita vida')
 end
@@ -169,19 +173,67 @@ function CASES.chico_pisar()
     stepAll(level, list, { pa }, 0.15)
     check('chico_pisar', small.state == 'dead' or not small.alive, 'pisado muere: ' .. tostring(small.state))
 end
-function CASES.acorazado()
+function CASES.atravesable()
     local level, es, boss = arena('normal')
     still(boss)
-    local pa = playerAt(level, es, 18 * T)
+    check('atravesable', not boss:isSolidBody(), 'no es sólido')
+    local pa = playerAt(level, es, boss.x + boss.outerW / 2 + 40)
+    local h, x0 = pa.hp, pa.x
+    stepAll(level, es, { pa }, 2, nil, function() stub.state.left = true end)
+    check('atravesable', pa.x < boss.x - boss.outerW / 2 and pa.hp == h, ('lo cruza andando sin daño (%d → %d, vida %d)'):format(x0, pa.x, pa.hp))
+    still(boss)
     local hp0 = boss.hp
     drop(pa, boss.x, boss:getOuterBounds().y)
-    stepAll(level, es, { pa }, 0.25)
-    check('acorazado', boss.hp == hp0 and pa.vy < 200, 'pisarlo descansando rebota sin dañarlo')
-    still(boss)
-    pa.invT, pa.x, pa.y, pa.vx, pa.vy = 0, boss.x + boss.outerW / 2 + 4, feet() - 40, -300, 0
-    local h = pa.hp
-    stepAll(level, es, { pa }, 0.2, nil, function() stub.state.move_left = true end)
-    check('acorazado', pa.hp == h - 1, ('tocarlo de lado quita 1 (%d → %d, inv %.1f, grace %.1f)'):format(h, pa.hp, pa.invT or 0, boss.graceT or 0))
+    check('atravesable', boss:interact(pa) == nil, 'caerle encima fuera de su ventana: nada')
+    stepAll(level, es, { pa }, 0.2)
+    check('atravesable', boss.hp == hp0, 'ni le hace daño')
+end
+function CASES.chico_anda()
+    local level, es, boss, small = arena('normal')
+    local list = smallOnly(level, es, small)
+    smallReady(level, list, small)
+    local pa = playerAt(level, list, small.x + 85)
+    stepAll(level, list, { pa }, 1.5, function() pa.invT = 1; return small.state == 'walk' and small.cd > 0 end)
+    pa.x = 3 * T
+    local x0 = small.x
+    stepAll(level, list, { pa }, 0.8, function() pa.invT = 1 end)
+    check('chico_anda', math.abs(small.x - x0) > 20, ('tras atacar anda de verdad (%d → %d, %s)'):format(x0, small.x, small.state))
+end
+function CASES.llega()
+    local Chain = require 'src/world/entities/base/SegmentChain'
+    local Kit = require 'src/world/entities/base/ScorpionKit'
+    local function tip(n, gap, k, bx, by, f, tx, ty, stretch)
+        local c = Chain.new(n, gap)
+        c:place(Kit.fan, bx, by, k, f, 2, 0, 1)
+        for _ = 1, 40 do c:advance(1 / 30, Kit.FAST_K, Kit.FAST_DAMP, stretch, Kit.strike, bx, by, k, f, tx, ty) end
+        local x, y = c:pos(n)
+        return math.sqrt((x - (tx - Kit.TIP_D * k * f)) ^ 2 + (y - (ty - Kit.TIP_D * k)) ^ 2)
+    end
+    local d = tip(12, 9.6, 3, 0, 0, 1, 33 + 95, 39, 1.7)
+    check('llega', d < 12, ('el pequeño, a su máximo: a %.1f px'):format(d))
+    d = tip(19, 23.8, 7, 0, 0, 1, 520, 91, 1.4)
+    check('llega', d < 12, ('el jefe, a su máximo: a %.1f px'):format(d))
+end
+function CASES.sin_rebote()
+    local Chain = require 'src/world/entities/base/SegmentChain'
+    local Kit = require 'src/world/entities/base/ScorpionKit'
+    local c = Chain.new(19, 23.8)
+    c:place(Kit.fan, 0, 0, 7, 1, 3, 0, 1)
+    local x0, y0 = c:pos(19)
+    local tg = {}
+    for i = 1, 19 do tg[i] = { x = 0, y = 0 } end
+    Kit.fan(tg, 19, 0, 0, 7, 1, 1, 0, 1)
+    local dist0 = math.sqrt((tg[19].x - x0) ^ 2 + (tg[19].y - y0) ^ 2)
+    local maxOver, t90 = 0, nil
+    for f = 1, 60 do
+        c:advance(1 / 30, Kit.COIL_K, Kit.COIL_DAMP, nil, Kit.fan, 0, 0, 7, 1, 1, 0, 1)
+        local x, y = c:pos(19)
+        local along = ((x - x0) * (tg[19].x - x0) + (y - y0) * (tg[19].y - y0)) / dist0
+        maxOver = math.max(maxOver, along - dist0)
+        if not t90 and along >= dist0 * 0.9 then t90 = f / 30 end
+    end
+    check('sin_rebote', maxOver < dist0 * 0.08, ('se pasa %.1f px de %.0f'):format(maxOver, dist0))
+    check('sin_rebote', t90 and t90 <= 0.27, ('llega en %.2f s (la matraca dura 0,21 s)'):format(t90 or -1))
 end
 function CASES.matraca()
     local level, es, boss = arena('normal')
@@ -237,7 +289,7 @@ function CASES.ventana()
     hp0 = boss.hp
     local mk = boss.marks[1]
     local Kit = require 'src/world/entities/base/ScorpionKit'
-    local line = Kit.strikeLine({}, 10, boss:tailX(), boss:tailY(), 10, boss.facing, mk.x, mk.y)
+    local line = Kit.strikeLine({}, 10, boss:tailX(), boss:tailY(), 7, boss.facing, mk.x, mk.y)
     local ob = pc:getOuterBounds()
     pc.x, pc.y, pc.vy, pc.onGround, pc.gpPhase = line[8].x, line[8].y - 20 - ob.h / 2, 300, false, 'fall'
     check('ventana', math.abs(pc.x - boss.x) > boss.outerW / 2 + 20, 'la cola, fuera del cuerpo')
@@ -328,20 +380,8 @@ function CASES.pinza()
     stepAll(level, es, { pa }, 2, function() return boss.state == 'hold' end)
     check('pinza', boss.state == 'hold' and pa.gulped and boss.held == pa and pa.gulpKind == 1, 'lo atrapa')
     check('pinza', pa.gulpBy == boss, 'quien lo tiene es el jefe')
-    local n = 0
-    local prev = false
-    stepAll(level, es, { pa }, 2, function() return not pa.gulped end, function()
-        prev = not prev
-        stub.state.jump = prev
-        stub.pressed = stub.pressed
-    end)
-    -- (machacar con las pulsaciones del Input de prueba: recién pulsado)
+    stepAll(level, es, { pa }, 2, function() return not pa.gulped end, function() stub.state.jump_pressed = true end)
     local mashed = not pa.gulped
-    if not mashed then
-        pa.gulpMash = pa.GULP_MASH or 10
-        stepAll(level, es, { pa }, 0.1)
-        mashed = not pa.gulped
-    end
     check('pinza', mashed, 'machacando sale')
     played = {}
     stepAll(level, es, { pa }, 0.8, function() pa.invT = 1 end)
@@ -381,6 +421,30 @@ function CASES.pinza_muerde()
     stepAll(level, es, { pa }, 2.0)
     check('pinza_muerde', pa.hp == hp - 1 and count('scorpionSnap') >= 1 and count('plantCrunch') == 0, ('pierde vida con el sonido de la pinza (%d → %d)'):format(hp, pa.hp))
 end
+-- UN GOLPE POR NOQUEO, en TODOS los jefes (el usuario): dos golpes en la misma ventana, separados por más que INV_TIME
+function CASES.un_golpe()
+    local level, es, boss = arena('normal')
+    local WINDOWS = { giantscorpion = 'stuck', giantbeetle = 'flipped', gianthopper = 'scared', giantpuffer = 'gasp',
+                      groovecrab = 'stunned', megagummy = 'dazed', megacrabby = 'stuck', megacrabby_ice = 'stuck',
+                      miniboss1 = 'stuck', snowboss = 'dizzy', megagloomy = 'dazzled' }
+    for name, st in pairs(WINDOWS) do
+        local e = Entities.create({ type = name, col = 30, row = 14, props = {} })
+        e.hp, e.hpMax, e.inv, e.state, e.deadTimer, e.phase = 50, 50, 0, st, 0, 1
+        e.zone = nil
+        local first = e.isVulnerable and e:isVulnerable()
+        local hit1 = first and e:damage(1, 'stomp')
+        local hp1 = e.hp
+        local reopened = false
+        for k = 1, 16 do                       -- (lo que dura la ventana tras el golpe, sin que el tipo cambie de estado)
+            e.inv = math.max(0, e.inv - 0.1)
+            if k <= 15 and e.state == st then
+                e.state = st
+                if k <= 14 and e:isVulnerable() and e.inv <= 0 then reopened = true end
+            end
+        end
+        check('un_golpe', first and hit1 and hp1 == 49 and not reopened, name .. ' en ' .. st .. ': un golpe y no se reabre en 1,4 s (invulnerable ' .. ('%.1f'):format(e.inv) .. ')')
+    end
+end
 function CASES.fases()
     local level, es, boss = arena('normal')
     still(boss)
@@ -397,7 +461,7 @@ function CASES.alcance()
     still(boss, 18 * T + 40)
     local zx0, zx1 = boss:zoneBounds()
     local x = boss:markAt(level, zx1 + 900, feet() - 40)
-    check('alcance', x <= zx1 and x <= boss:tailX() + 600, ('no pasa del alcance (%d)'):format(x))
+    check('alcance', x <= zx1 and x <= boss:tailX() + 520, ('no pasa del alcance (%d)'):format(x))
     x = boss:markAt(level, zx0 - 900, feet() - 40)
     check('alcance', x >= zx0, ('ni sale de la zona (%d, zona %d)'):format(x, zx0))
     -- lejos: anda hacia el jugador

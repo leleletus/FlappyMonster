@@ -1,5 +1,5 @@
 -- src/world/entities/base/ScorpionKit.lua
--- Lo común del ESCORPIÓN (types/enemies/scorpion.lua) y del ESCORPIÓN DE TRES COLAS (types/bosses/giantscorpion.lua):
+-- Lo común del ESCORPIÓN (types/enemies/scorpion.lua) y del ESCORPIÓN TRIPLE AGUIJÓN (types/bosses/giantscorpion.lua):
 -- dónde nace cada pieza en la hoja del cuerpo, las curvas de la cola y cómo se dibujan segmentos, aguijones y pinzas
 -- (hojas de tools/art/enemies/make_scorpion.py). Las curvas se escribieron mirando a la DERECHA; `f` las refleja.
 -- Solo dibujo salvo `strikeLine`, que es pura y también la usa la simulación (la cola clavada se puede pisar).
@@ -13,9 +13,11 @@ K.NEAR = { 9.4, -7 }
 K.FAR  = { 6.4, -8 }
 K.HAND = { 18.8, -9 }
 K.HAND_FAR = { 15.8, -15 }
-K.COIL_K, K.COIL_DAMP = 0.34, 0.62         -- (enrollarse / desenrollarse: 0,2 s; lo mismo que la previa aprobada)
-K.FAST_K, K.FAST_DAMP = 0.42, 0.62         -- (el golpe)
-K.CALM_K, K.CALM_DAMP = 0.16, 0.72
+-- (2026-10-31, el usuario: "muy jelly, rebotan y se sacuden demasiado": muelles casi sin rebote)
+K.COIL_K, K.COIL_DAMP = 0.7, 0.5         -- (enrollarse / desenrollarse: unos 0,2 s)
+K.FAST_K, K.FAST_DAMP = 0.85, 0.45         -- (el golpe)
+K.CALM_K, K.CALM_DAMP = 0.3, 0.45
+K.TIP_D = 6                                -- px de arte: del centro del aguijón a su pincho, al clavarse en diagonal
 
 local TAU = math.pi * 2
 
@@ -23,13 +25,13 @@ local TAU = math.pi * 2
 -- Tres colas abiertas como un tridente sobre el lomo, cada punta hacia delante. i = 1, 2, 3
 local FAN = { { -14, -29 }, { 6, -41 }, { 27, -29 } }
 function K.fan(tg, n, bx, by, k, f, i, t, up)
-    local sway = math.sin(t * 2.2 + (i - 1) * 2.1) * 1.2 * k
+    local sway = math.sin(t * 1.2 + (i - 1) * 2.1) * 0.4 * k
     local tx, ty = bx + FAN[i][1] * k * f + sway, by + FAN[i][2] * k * (up or 1)
     Chain.bez(tg, n, bx, by, bx + (-11 + (i - 1) * 7) * k * f, by - 11 * k, tx - 11 * k * f, ty - 9 * k, tx, ty)
 end
 
 -- Entrelazadas: una sola curva gruesa hasta (tx, ty) y cada cola da vueltas alrededor. Fase de la vuelta del punto j:
-function K.braidPhase(j, n, i, t) return (j - 1) / n * TAU * 2.2 + (i - 1) * TAU / 3 + t * 0.9 end
+function K.braidPhase(j, n, i, t) return (j - 1) / n * TAU * 2.2 + (i - 1) * TAU / 3 + t * 0.3 end
 local ctr = {}
 function K.braid(tg, n, bx, by, k, f, i, t, tx, ty, up, amp)
     for j = #ctr + 1, n do ctr[j] = { x = 0, y = 0 } end
@@ -45,8 +47,9 @@ function K.braid(tg, n, bx, by, k, f, i, t, tx, ty, up, amp)
     end
 end
 
--- Un aguijón directo a (tx, ty)
+-- Un aguijón directo: su PINCHO en (tx, ty)
 function K.strike(tg, n, bx, by, k, f, tx, ty)
+    tx, ty = tx - K.TIP_D * k * f, ty - K.TIP_D * k
     Chain.bez(tg, n, bx, by, bx + 10 * k * f, by - 18 * k, tx - 12 * k * f, ty - 12 * k, tx, ty)
 end
 
@@ -81,13 +84,15 @@ function K.drawTail(set, chain, name, flash, k, camX, camY, shade, a)
     K.drawStinger(set, chain, name, flash, k, camX, camY, a)
 end
 
--- Un brazo: del hombro a la mano, 3 segmentos y la pinza
+-- Un brazo: del hombro a la mano, sus segmentos y la pinza
 function K.drawArm(set, sx, sy, hx, hy, ang, opened, k, camX, camY, shade, a)
     local s = shade or 1
     love.graphics.setColor(s, s, s, a or 1)
     local fr = set:frameN('segment', 4)
-    for i = 0, 2 do
-        local t = i / 3
+    local dx, dy = hx - sx, hy - sy
+    local segs = math.max(3, math.floor(math.sqrt(dx * dx + dy * dy) / (3.2 * k)))     -- (estirado, más: que no se vea suelto)
+    for i = 0, segs - 1 do
+        local t = i / segs
         set:drawFrame(fr, math.floor(sx + (hx - sx) * t - camX),
                       math.floor(sy + (hy - sy) * t + math.sin(t * math.pi) * k - camY), 0, k, k, 0.5, 0.5)
     end

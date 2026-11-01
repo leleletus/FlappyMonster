@@ -33,6 +33,7 @@ local TileCodec   = require 'src/world/tiles/TileCodec'
 local IceEncase, BossFx                 -- (solo dibujo)
 
 local Snow = Entity.extend(Boss, {
+    OPENINGS = { dizzy = true, frozen = true, soaked = true },     -- (un golpe por noqueo: Boss.damage)
     -- (aliados en Xtra extremo: qué estados son atacar)
     ATTACKS = { windup = true, roll = true, slide = true, shoot = true, hop = true, leap_wind = true, leap = true,
                 slam_up = true, slam_hold = true, slam_fall = true, slam_land = true },
@@ -1202,7 +1203,7 @@ function Snow:updateBoss(dt, level)
 
     elseif st == 'dizzy' then
         self:physics(level, dt); self:friction(level, dt)
-        if t >= (self.dizzyFor or DIZZY_T) then self:enter('recover') end
+        if t >= self:downTime(self.dizzyFor or DIZZY_T) then self:enter('recover') end
 
     elseif st == 'soaked' then
         self:physics(level, dt); self:friction(level, dt)

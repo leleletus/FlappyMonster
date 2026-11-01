@@ -70,6 +70,7 @@ Boss.INV_TIME         = 1.0     -- s invulnerable tras un golpe normal (parpadea
 -- tumbado / aturdido / atascado (su ventana vulnerable), en cuanto recibe el primer golpe le quedan como mucho GETUP_T s
 -- en ese estado, dure lo que dure la ventana. El tipo lo aplica con `t >= self:downTime(lo que dura)`.
 Boss.GETUP_T          = 1.5
+Boss.KO_EXTRA         = 0.1     -- s más de invulnerable tras el golpe de un noqueo (un tipo con más ventana detrás: lo sube)
 Boss.STUN_INV         = 3.0     -- s invulnerable tras el ground pound que lo deja KO (dura más
                                 -- que el KO) o tras el único golpe que admite aturdido
 Boss.DEATH_HOLD       = 3.4     -- s parpadeando entre explosiones antes de caer
@@ -218,6 +219,10 @@ function Boss:damage(n, kind)
         -- Ground pound: queda KO e invulnerable desde ya hasta después de
         -- despertar (nada de rematarlo mientras está KO)
         self.inv, self.ghost = self.STUN_INV, true
+    elseif self:isOpening() then
+        -- UN GOLPE POR NOQUEO (2026-10-31, el usuario, todos los jefes: se le concatenaban golpes aturdido): cubre lo que le
+        -- queda de ventana (como mucho GETUP_T: downTime). `inv` ya viaja por red y lo respetan damage e interact
+        self.inv, self.ghost = self.GETUP_T + self.KO_EXTRA, false
     else
         self.inv, self.ghost = self.INV_TIME, false
     end

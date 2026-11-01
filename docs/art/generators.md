@@ -68,7 +68,7 @@ the diff before committing anything they write.
   in the catalog and `--apply`. The 7-piece set of before is kept in
   `/home/mtvemo/FlappyMonster_originals/story/mirror_7/`.
 - `tools/art/enemies/make_beetle.py`: the jungle's Rhino Beetle and the Giant Rhino Beetle (22x20 frames: 4-frame tripod walk, charge, on its back; the giant adds toss, wings, landing and the gold rune) + the giant's temple block, debris, floor wave and dust; design D chosen by the user (2026-10-28); without flags = previews, mockups and GIFs in `FlappyMonster_pruebas/escarabajo/`; `--apply` writes the attack sprites and both anim sets; it never rewrites the two body sheets the user retouched (`KEEP`).
-- `tools/art/enemies/make_scorpion.py`: the volcano's Scorpion and the Three-Tailed Scorpion, chosen design C ([future-secret-bosses](../bosses/future-secret-bosses.md)): the body in 30x24 frames, tails and arms as loose pieces animated live; no flags = previews of the chosen one, `--all` = the 4 designs, `--apply` = `assets/`.
+- `tools/art/enemies/make_scorpion.py`: the volcano's Scorpion and the Triple Strike Scorpion, chosen design C ([future-secret-bosses](../bosses/future-secret-bosses.md)): the body in 30x24 frames, tails and arms as loose pieces animated live; no flags = previews of the chosen one, `--all` = the 4 designs, `--apply` = `assets/`.
 - `tools/art/enemies/make_penguin.py`: the Frozen Coast's Penguin (24x20 frames: walk, idle, dive, slide, dazed,
   ridden, getup, dead), two designs A «Torpedo» / B «Zancos» drawn with `make_jungle_enemies.py`'s piece engine; no flags =
   previews in `FlappyMonster_pruebas/pinguino/`; `--apply A|B [--force]` writes `enemies/penguin/penguin-Sheet.png` and

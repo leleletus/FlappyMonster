@@ -19,7 +19,7 @@ later, NOT built: [future-secret-bosses](future-secret-bosses.md). The four crab
 | Giant Rhino Beetle (Escarabajo Rinoceronte Gigante; the jungle, world 3) | `giantbeetle` | [giantbeetle](giantbeetle.md) | `templo_escarabajo` | 8 (third in story order: `assets/story/shards.json`) |
 | The Mirror | `mirror` | [mirror](mirror.md) | `ruta_del_espejo` | 7 |
 | Mirror chase (not a fight) | `mirrorchase` | [mirror-chase](mirror-chase.md) | `huida_del_espejo` | — |
-| Three-Tailed Scorpion (Escorpión de Tres Colas, SECRET; no level yet) | `giantscorpion` | [giantscorpion](giantscorpion.md) | test arena only | — |
+| Triple Strike Scorpion (Escorpión Triple Aguijón, SECRET; no level yet) | `giantscorpion` | [giantscorpion](giantscorpion.md) | test arena only | — |
 | The Groove (El Groove, SECRET, after the game; fights to its music) | `groovecrab` | [groovecrab](groovecrab.md) | `isla_del_groove` (secret map node) | — |
 | Crab Mega Mashup (EVENT: the four crabs in turns, adaptive music; Free Play) | `crabmashup` (director) | [crab-mashup](crab-mashup.md) | `mashup_cangrejos` | — |
 
@@ -37,7 +37,7 @@ same attack and the same move"): `Boss:startFight` calls the type's `rollStart(r
 / cycle start / route start / facing — and the client and single player now seed Lua's `math.random` (`game.lua`; LÖVE
 only seeds `love.math`, so every launch repeated the same "random" choices; the server always seeded it). Harness
 `difficulty_rules` (`azar`). Every attack is telegraphed; one clear vulnerable window (stomp 1, ground
-pound 2, one hit per opening); outside it, landing on the boss bounces you off sideways; damage to players goes
+pound 2, ONE HIT PER KNOCKOUT, enforced by `Boss:damage` for the `OPENINGS` states: `inv` covers the rest of the window, harness `giantscorpion_rules` `un_golpe` checks every boss); outside it, landing on the boss bounces you off sideways; damage to players goes
 through `Boss.withPlayer` / `Boss.strike`; everything drawn derives from `state + deadTimer + x, y + netPackExtra`.
 Online, levels with bosses are Race-only.
 
@@ -133,12 +133,13 @@ Files: `src/world/systems/BossZones.lua` (zones + fight controller),
   through each other. Invulnerable players also pass through bosses (but not
   `solidFull` objects) and bosses can't hit them.
 
+- **One hit per knockout** (2026-10-31, the user, a serious bug on every boss with a window: after the 1 s of `INV_TIME` a second hit fit inside the 1.5 s of `GETUP_T`, and the Groove allowed 2 on purpose). A knocked-down state must be in the type's `OPENINGS` (or leave on the hit) and end with `downTime`. Exceptions by design: the Gummy King's split parts (each its own health, each with `PART_INV`) and bosses whose hits are not a window (Mirror, data bosses with `vulnerable: always`).
 - **Getting up after the hit** (0.5.82, the user, every boss: "it looks odd how they stay lying there for so long"):
   in a knocked-down window (flipped, scared, gasping, dazed, stunned, frozen, stuck…), once it takes its FIRST hit it
   stays at most `Boss.GETUP_T` (1.5 s) more, however long the window was. `Boss:damage` records the state and its
   `deadTimer` at that hit (`downHitState` / `downHitT`; cleared by `Boss:enter` or leaving the state); the type ends the
   window with `t >= self:downTime(full)`. Used by giantbeetle, gianthopper, giantpuffer, megagummy, groovecrab,
-  snowboss (frozen), miniboss1 (stuck); the others already leave on the hit (Mega Crabbies, Mega Gloomy, Mirror, data
+  snowboss (frozen, dizzy), miniboss1 (stuck); the others already leave on the hit (Mega Crabbies, Mega Gloomy, Mirror, data
   bosses). A new boss with a lying-down window must use `downTime` too.
 
 - **Worn pieces** (`Cls.WEAR` + `Boss:drawWear`, 2026-10-29): extra drawing layers with what a boss wears (the Mega

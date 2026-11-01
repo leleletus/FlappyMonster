@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# tools/art/enemies/make_scorpion.py — el ESCORPIÓN del volcán (una cola) y el ESCORPIÓN DE TRES COLAS, jefe secreto
+# tools/art/enemies/make_scorpion.py — el ESCORPIÓN del volcán (una cola) y el ESCORPIÓN TRIPLE AGUIJÓN, jefe secreto
 # (docs/bosses/future-secret-bosses.md). El usuario eligió el C «Obsidiana» (2026-10-31), con el cuerpo más corto y las colas
 # dibujadas por encima de él.
 #
@@ -18,7 +18,7 @@ from PIL import Image, ImageDraw, ImageFont
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.normpath(os.path.join(HERE, '..', '..', '..'))
 OUT = '/home/mtvemo/FlappyMonster_pruebas/escorpion'
-SMALL_K, BOSS_K = 4, 10
+SMALL_K, BOSS_K = 3, 7
 W, H = 40, 24
 GROUND = 22
 TAU = math.tau

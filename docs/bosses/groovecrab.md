@@ -65,7 +65,7 @@ snapshot; the client's music starts when it sees the fight, with the same delay 
   while he is knocked out or regrowing. If an arena has no such platforms (`decks = false`), phase 2 keeps the golden
   note so he can still be hurt.
 - **Knocked out** ('stunned', `STUN_T` 2 bars; also the look of 'dying_daze'): stomp 1 / ground pound 2,
-  up to 2 hits, then 'regrow' (a new trampoline grows from his head). Look (`ko-Sheet.png`, `glasses.png`): his
+  ONE hit (2 until 2026-10-31), then 'regrow' (a new trampoline grows from his head). Look (`ko-Sheet.png`, `glasses.png`): his
   SUNGLASSES fly off in an arc and bounce on the floor behind him (back on his face in the first 0.35 s of 'regrow';
   left on the floor when he bursts), X eyes that spin (X / + frames), tongue out, legs splayed, claws on the floor; the
   hit SQUASHES him and he springs back, then he sways side to side (offset, never rotated) under a bigger star ring.
@@ -117,7 +117,7 @@ Protocol 71.
   (6) more epicness: a crowd of crabs dancing to the music, more energy and visuals.
 - 0.5.47, the user's picks from the drafts: (5) GOLDEN NOTE — on the band hit closing each phrase (and the solo's bars
   1 and 5) it fires a golden note aimed above you; touching it sends it back, it bursts the trampoline (`groove_tramp`
-  particles, confetti) → 'stunned' 2 bars (stomp 1 / GP 2, up to 2 hits) → 'regrow' (a new trampoline grows from its
+  particles, confetti) → 'stunned' 2 bars (stomp 1 / GP 2, one hit) → 'regrow' (a new trampoline grows from its
   head). The old pose is gone. (3) DANCE FLOOR (build + climax 9-16: panels warn on a beat, light column on the next,
   1 HP; side platforms safe) and CONGA (solo; enraged also climax 9-16: 4 crowd crabs hop one tile per beat, touch 1 HP,
   stomp removes them). (6) Stage = night rave + beach concert (level `time` night): crowd of crabs and Gummies in

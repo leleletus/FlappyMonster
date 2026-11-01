@@ -1,4 +1,4 @@
--- El ESCORPIÓN (types/enemies/scorpion.lua): enemigo del VOLCÁN; una sola cola. Su gigante es el Escorpión de Tres Colas
+-- El ESCORPIÓN (types/enemies/scorpion.lua): enemigo del VOLCÁN; una sola cola. Su gigante es el Escorpión Triple Aguijón
 -- (types/bosses/giantscorpion.lua; diseño del usuario, docs/bosses/future-secret-bosses.md).
 --   · Anda (patrulla). Si ve a un jugador delante a media distancia: clic de matraca y la cola se echa atrás (aviso,
 --     WIND_T), la clava donde estaba el jugador ('sting') y se queda clavada un momento ('stuck'): quieto, buen momento
@@ -18,19 +18,19 @@ local Scorpion = Entity.extend(Entity, {
     hitbox = { outerW = 0.7, outerH = 0.58, innerW = 0.55, innerH = 0.45 },
 })
 
-local S = GUMMY_SCALE
+local S = 3                              -- (0.5.118, el usuario: a ×4 era demasiado grande para ser el pequeño)
 local FW, FH = Kit.FW, Kit.FH
-local N, GAP = 8, 3.2 * S
-local STING_STRETCH = 1.6                -- (clavando, la cola se estira: es lo que le da alcance por delante de las pinzas)
-local REACH   = 120                      -- px por delante de su centro hasta donde llega el aguijón
-local PINCH_R = 1.3 * TILE_PX            -- más cerca que esto: pinza
-local SEE     = 3.0 * TILE_PX            -- ve a un jugador delante hasta aquí
+local N, GAP = 12, 3.2 * S
+local STING_STRETCH = 1.7                -- (clavando, la cola se estira lo justo para llegar: por delante de las pinzas)
+local REACH   = 95                       -- px por delante de su centro hasta donde llega el aguijón
+local PINCH_R = 65                       -- más cerca que esto: pinza
+local SEE     = REACH + 15               -- a qué distancia ataca: solo donde de verdad llega
 local SEE_Y   = 1.5 * TILE_PX
 local WIND_T, SWING_T, STUCK_T = 0.45, 0.13, 0.75
 local PINCH_WIND, PINCH_T = 0.32, 0.16
 local COOLDOWN = 1.3
 local SKITTER_EVERY = 1.1
-local STING_BOX, PINCH_BOX = 34, 36      -- px: medio lado de lo que golpea
+local STING_BOX, PINCH_BOX = 14, 20      -- px: medio lado de lo que golpea (el pincho y la pinza, no más)
 
 Scorpion.animId = 'enemies/scorpion'
 Scorpion.wantsLevel = true
@@ -77,6 +77,13 @@ function Scorpion:hitAt(level, x, y, r)
     end
 end
 
+-- Vuelve a andar con su velocidad (0.5.118: sin ella movía las patas sin moverse)
+function Scorpion:walkAgain()
+    self.cd = COOLDOWN
+    self.vx = (self.facing or 1) * (self.speed or 55)
+    self:startWalk()
+end
+
 function Scorpion:handX() return self.x + (self.facing or 1) * Kit.HAND[1] * S end
 function Scorpion:handY() return self.y + self.outerH / 2 + Kit.HAND[2] * S end
 
@@ -93,7 +100,7 @@ function Scorpion:updateCustom(dt, level)
                 else
                     local f = self.facing or 1
                     self.markX = self.x + f * math.min(dx, REACH)
-                    self.markY = math.min(self.y + self.outerH / 2 - 10, pa.y + 10)
+                    self.markY = self.y + self.outerH / 2          -- (se clava en el SUELO, delante de sus pies)
                     self.state, self.deadTimer = 'sting_wind', 0
                     Sound.playAt('scorpionClick', self.x, self.y)
                 end
@@ -121,12 +128,12 @@ function Scorpion:updateCustom(dt, level)
     elseif st == 'sting' then
         if t >= SWING_T then
             Sound.playAt('scorpionSting', self.markX, self.markY)
-            Entity.emitFx('gp_land', self.markX, self.y + self.outerH / 2)
-            self:hitAt(level, self.markX, self.markY, STING_BOX)
+            Entity.emitFx('gp_land', self.markX, self.markY)
+            self:hitAt(level, self.markX, self.markY - STING_BOX, STING_BOX)
             self.state, self.deadTimer = 'stuck', 0
         end
     elseif st == 'stuck' then
-        if t >= STUCK_T then self.cd = COOLDOWN; self:startWalk() end
+        if t >= STUCK_T then self:walkAgain() end
     elseif st == 'pinch_wind' then
         if t >= PINCH_WIND then
             self.state, self.deadTimer = 'pinch', 0
@@ -134,7 +141,7 @@ function Scorpion:updateCustom(dt, level)
             self:hitAt(level, self:handX(), self:handY(), PINCH_BOX)
         end
     elseif st == 'pinch' then
-        if t >= PINCH_T then self.cd = COOLDOWN; self:startWalk() end
+        if t >= PINCH_T then self:walkAgain() end
     end
     return true
 end
@@ -151,11 +158,11 @@ function Scorpion.loadAssets() parts = parts or Anim.load('enemies/scorpion_part
 
 local function fillIdle(tg, n, bx, by, f, wob)
     local k = S
-    Chain.bez(tg, n, bx, by, bx - 5 * k * f, by - 7 * k, bx - 3 * k * f, by - 19 * k + wob, bx + 6 * k * f, by - 21 * k)   -- (curva del largo de la cadena: la punta, hacia delante)
+    Chain.bez(tg, n, bx, by, bx - 7 * k * f, by - 9 * k, bx - 5 * k * f, by - 24 * k + wob, bx + 8 * k * f, by - 27 * k)   -- (curva del largo de la cadena: la punta, hacia delante)
 end
 local function fillWind(tg, n, bx, by, f)
     local k = S
-    Chain.bez(tg, n, bx, by, bx - 6 * k * f, by - 6 * k, bx - 8 * k * f, by - 16 * k, bx - 2 * k * f, by - 21 * k)
+    Chain.bez(tg, n, bx, by, bx - 8 * k * f, by - 8 * k, bx - 10 * k * f, by - 22 * k, bx - 3 * k * f, by - 28 * k)
 end
 
 function Scorpion:render(camX, camY)
@@ -201,9 +208,9 @@ function Scorpion:render(camX, camY)
     if st == 'sting' or st == 'stuck' then
         self.tail:advance(dt, Kit.FAST_K, Kit.FAST_DAMP, STING_STRETCH, Kit.strike, bx, by, S, f, self.markX, self.markY)
     elseif st == 'sting_wind' then
-        self.tail:advance(dt, Kit.COIL_K, Kit.COIL_DAMP, 1, fillWind, bx, by, f)
+        self.tail:advance(dt, Kit.COIL_K, Kit.COIL_DAMP, nil, fillWind, bx, by, f)
     else
-        self.tail:advance(dt, Kit.CALM_K, Kit.CALM_DAMP, 1, fillIdle, bx, by, f, math.sin(now * 3) * S)
+        self.tail:advance(dt, Kit.CALM_K, Kit.CALM_DAMP, nil, fillIdle, bx, by, f, math.sin(now * 1.5) * S * 0.5)
     end
     Kit.drawTail(parts, self.tail, 'stinger', st == 'sting_wind' and t < 0.1, S, camX, camY, nil, a)
     love.graphics.setColor(1, 1, 1, 1)
@@ -211,8 +218,8 @@ end
 
 function Scorpion:debugBoxes()
     local out = {}
-    if self.state == 'sting' or self.state == 'stuck' then
-        out[1] = { x = self.markX - STING_BOX, y = self.markY - STING_BOX, w = STING_BOX * 2, h = STING_BOX * 2, kind = 'hazard' }
+    if self.state == 'sting' then
+        out[1] = { x = self.markX - STING_BOX, y = self.markY - STING_BOX * 2, w = STING_BOX * 2, h = STING_BOX * 2, kind = 'hazard' }
     elseif self.state == 'pinch' then
         out[1] = { x = self:handX() - PINCH_BOX, y = self:handY() - PINCH_BOX, w = PINCH_BOX * 2, h = PINCH_BOX * 2, kind = 'hazard' }
     end

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# tools/sounds/scorpion.py — sonidos del ESCORPIÓN del volcán y del ESCORPIÓN DE TRES COLAS (jefe secreto), con el tramo
+# tools/sounds/scorpion.py — sonidos del ESCORPIÓN del volcán y del ESCORPIÓN TRIPLE AGUIJÓN (jefe secreto), con el tramo
 # más fuerte de 100 ms a -12 dBFS (sin GAIN en Sound.lua). LA MATRACA es su firma: 3 clics de madera SEGUIDOS en UN solo
 # archivo por gesto (online, 3 sonidos sueltos llegarían cada uno con su retraso y se perdería el ritmo):
 #   bosses/giantscorpion/rattle_join.wav    se enrollan: 3 clics que suben un poco

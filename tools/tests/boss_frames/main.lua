@@ -65,7 +65,7 @@ function love.load()
         if boss.state == 'aim' and math.abs(pa.x - boss.x) < 3 * TILE_PX then
             pa.x = boss.x + ((boss.x - z.x0 > z.x1 - boss.x) and -5 or 5) * TILE_PX
         end
-        -- Escorpión de Tres Colas: CLAW=1, siempre a tiro de pinza y sin rematarlo; SMALL=1, el pequeño junto al jugador
+        -- Escorpión Triple Aguijón: CLAW=1, siempre a tiro de pinza y sin rematarlo; SMALL=1, el pequeño junto al jugador
         -- (FOCUS=small: la captura sigue al pequeño)
         if boss.def.name == 'giantscorpion' then
             if os.getenv('CLAW') then
@@ -76,7 +76,7 @@ function love.load()
                 for _, e in ipairs(ents) do
                     if e.def.name == 'scorpion' and e.alive and not hitDone.small then
                         hitDone.small = true
-                        e.x, e.y = pa.x + 2.4 * TILE_PX, z.y1 - e.outerH / 2
+                        e.x, e.y = pa.x + 1.4 * TILE_PX, z.y1 - e.outerH / 2
                         e.facing, e.home.x, e.home.y = -1, e.x, e.y
                         boss.focusSmall = e
                     end

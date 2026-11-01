@@ -8,7 +8,7 @@
 --   notas      en la B dispara en los pops (2 en un compás: semicorcheas 4 y 8) hacia el jugador; una nota quita 1
 --   dorada     en la 12 del compás 8 dispara la DORADA, alta: a un jugador quieto en el suelo le pasa por encima sin
 --              tocarle; saltar contra ella la devuelve, le da y le REVIENTA el trampolín → aturdido (vulnerable)
---   aturdido   aturdido: pisotón -1, otro -1 y con el 2º le crece el trampolín ('regrow'), un 3º no le da; sin golpes, a
+--   aturdido   aturdido: UN solo golpe (-1) y le crece el trampolín ('regrow'), un 3º no le da; sin golpes, a
 --              los 2 compases también; con el trampolín de nuevo fuera vuelve a lo suyo
 --   trampolin  con el trampolín, caerle encima te LANZA (vy ≈ salto × 1,85), también con ground pound, sin daño;
 --              aturdido (sin trampolín), el pisotón le da
@@ -252,7 +252,7 @@ function cases.aturdido()
         if regrowT and boss2:trampOut() and not backT then backT = boss2.songT - t0 end
         if backT and boss2.state ~= 'regrow' then return true end
     end)
-    check('aturdido', r1 == 'stomp' and r2 == 'stomp' and hits == 2 and after2 == 'regrow' and r3 ~= 'stomp'
+    check('aturdido', r1 == 'stomp' and r2 ~= 'stomp' and hits == 1 and after2 == 'regrow' and r3 ~= 'stomp'
         and regrowT and math.abs(regrowT - 2 * boss.BAR) < 0.05 and backT and boss2.state ~= 'stunned',
         ('pisotones %s, %s (-%d) → %s; un 3º: %s · sin golpes, le crece a los %.2f s (2 compases = %.2f) y lanza otra vez a los %.2f s'):format(
             tostring(r1), tostring(r2), hits, tostring(after2), tostring(r3), regrowT or -1, 2 * boss.BAR, backT or -1))

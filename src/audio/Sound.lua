@@ -253,7 +253,7 @@ function Sound.load()
     -- Pingüino (tools/sounds/penguin.py)
     load('penguinSquawk', 'assets/sounds/enemies/penguin/squawk.wav', 'static')   -- te ve y se tira de barriga
     load('penguinSlide',  'assets/sounds/enemies/penguin/slide.wav',  'static')   -- se desliza / echa a correr de trineo
-    -- Escorpión y Escorpión de Tres Colas (tools/sounds/scorpion.py): la matraca, 3 clics en un solo archivo por gesto
+    -- Escorpión y Escorpión Triple Aguijón (tools/sounds/scorpion.py): la matraca, 3 clics en un solo archivo por gesto
     load('scorpionRattleJoin',  'assets/sounds/bosses/giantscorpion/rattle_join.wav',  'static')  -- las colas se enrollan
     load('scorpionRattleSplit', 'assets/sounds/bosses/giantscorpion/rattle_split.wav', 'static')  -- se desenrollan
     load('scorpionClick',   'assets/sounds/enemies/scorpion/click.wav',     'static')   -- un clic (el pequeño)

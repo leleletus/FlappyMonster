@@ -41,14 +41,14 @@ Common to all:
   - **Phase 2:** it spins and changes direction mid-blow.
 - **Piece:** a **weather vane**, the splinter as the arrow's tip.
 
-## 4. The Three-Tailed Scorpion — Volcano
+## 4. The Triple Strike Scorpion — Volcano
 The user's idea (2026-10-31), replacing the Emperor Penguin. **Built as entities: [giantscorpion](giantscorpion.md). No level, music or
 collectible entry yet.** The user chose design C «Obsidiana» (rejected: A «Basalto», B «Ascua», D «Ceniza»), with a
 shorter body and the tails drawn OVER the body. Type ids: `scorpion`, `giantscorpion`.
 
 Package (`tools/art/enemies/make_scorpion.py --apply`, `tools/sounds/scorpion.py --apply`; previews in
 `FlappyMonster_pruebas/escorpion/final/`, with `jefe_C_con_sonido.mp4` showing the sounds in place):
-- `assets/anim/enemies/scorpion.json` (×4), `assets/anim/bosses/giantscorpion.json` (×10; same grid + gold marks), origin at the feet:
+- `assets/anim/enemies/scorpion.json` (×3), `assets/anim/bosses/giantscorpion.json` (×7; same grid + gold marks), origin at the feet:
   `idle`, `walk`, `windup`, `hurt`, `dead`.
 - `assets/anim/enemies/scorpion_parts.json`, `assets/anim/bosses/giantscorpion_parts.json`, origin at the centre: `segment` (5 sizes,
   base to tip), `pincer_open`, `pincer_closed`, `stinger` (boss: `stinger1-3`) and `stinger_flash`. Directions: frame
@@ -58,7 +58,7 @@ Package (`tools/art/enemies/make_scorpion.py --apply`, `tools/sounds/scorpion.py
   `astilla_escorpion_empty.png`. Do NOT add the entry to `assets/story/collectibles.json` before the boss exists: the
   Groove's gate asks for every splinter, so it would become impossible to open.
 - Anchors in the body sheet (art pixels from the top left, facing right): tail base (4, 9), far shoulder (21, 14), near shoulder (24, 15).
-  Preview chain: boss 19 segments, 3.4 art px apart; small 8, 3.2 apart.
+  Chains: boss 19 segments, 3.4 art px apart; small 12, 3.2 apart.
 - Sounds (names in `src/audio/Sound.lua`): `scorpionRattleJoin` / `scorpionRattleSplit` (3 wooden clicks 0.09 s apart in ONE
   file per gesture: three separate network sounds would lose the rhythm online), `scorpionClick` (one click, the small
   one), `scorpionSting`, `scorpionSnap`, `scorpionSkitter`, `scorpionStrike`, `scorpionPull`, `scorpionHiss`.

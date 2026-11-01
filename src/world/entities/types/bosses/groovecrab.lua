@@ -102,7 +102,7 @@ local GOLD_R = 24
 local GOLD_UP = 2.2 * T                         -- apunta por ENCIMA de ti: hay que saltar contra ella
 local GOLD_LIFE = 4.5
 local STUN_T = 2 * BAR                          -- aturdido: dos compases
-local STUN_HITS = 2                             -- golpes que admite aturdido
+local STUN_HITS = 1                             -- golpes que admite aturdido (el usuario: uno por noqueo; eran 2)
 local REGROW_T = 0.9                            -- s que tarda en crecerle el trampolín nuevo
 -- La pista de baile: baldosas de 2 casillas por todo el suelo de la zona; en cada compás dos dibujos: aviso en el
 -- tiempo 1 → columna en el 2; aviso en el 3 → columna en el 4

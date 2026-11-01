@@ -1,4 +1,4 @@
--- Jefe secreto ESCORPIÓN DE TRES COLAS (types/bosses/giantscorpion.lua): idea del usuario (2026-10-31), diseño C
+-- Jefe secreto ESCORPIÓN TRIPLE AGUIJÓN (types/bosses/giantscorpion.lua): idea del usuario (2026-10-31), diseño C
 -- «Obsidiana» (docs/bosses/giantscorpion.md). Es el Escorpión del volcán (types/enemies/scorpion.lua) en grande: su
 -- astilla le partió la cola en tres.
 --   · LA MATRACA es su firma: 3 clics de madera JUSTO mientras las colas se enrollan o se desenrollan (0,2 s), un destello
@@ -8,9 +8,10 @@
 --     arrancarla ('pull') se desenrolla con su matraca.
 --   · SEPARADAS ('split_coil' → 'split_aim' → 'sting'): una marca por cola alrededor del jugador y cada una golpea por
 --     turno, en un orden que cambia. En su última fase, dos a la vez y luego la tercera (2 + 1).
---   · PINZA ('claw_wind' → 'claw' → 'hold'): abre la pinza temblando y la lanza a donde estabas. Si te pilla, te ATRAPA:
+--   · PINZA ('claw_wind' → 'claw' → 'hold'): abre la pinza y la lanza a donde estabas. Si te pilla, te ATRAPA:
 --     machacar botones para salir, como la Planta carnívora (PlayerGulp); otro jugador lo libera golpeándolo.
---   · Fuera de eso, acorazado: caerle encima solo rebota; tocarlo de lado, 1.
+--   · Su cuerpo se ATRAVIESA, como el del Lúgubre, y no hace daño (el usuario): solo golpean las colas al lanzarlas y atrapa
+--     la pinza al lanzarla. Fuera de su ventana, caerle encima tampoco hace nada.
 -- Las colas y los brazos son piezas animadas al momento (base/SegmentChain: solo dibujo); lo que golpea sale del estado,
 -- deadTimer y las marcas (netPackExtra): online se ve y se decide igual.
 
@@ -40,10 +41,11 @@ GS.zoneBounds = Snow.zoneBounds
 local strike, overlap = Boss.strike, Boss.overlap
 
 local T  = TILE_PX
-local MS = 10
+local MS = 7                                    -- (0.5.118, el usuario: a ×10 no dejaba sitio para esquivar ni para moverse)
 local FW, FH = Kit.FW, Kit.FH
 local N, GAP = 19, 3.4 * MS
-local REACH = 600                               -- px desde la base de las colas hasta donde llega un aguijón
+local REACH = 520                               -- px desde la base de las colas hasta donde llega un aguijón
+local STRETCH = 1.4                             -- (clavando, las colas se estiran lo justo para llegar a su marca)
 
 -- Ritmo por fase (1, 2, 3)
 local REST_T    = { 1.1, 0.85, 0.6 }
@@ -62,19 +64,16 @@ local CLAW_WIND = { 0.65, 0.5, 0.42 }
 local CLAW_T    = 0.2
 local CLAW_BACK = 0.4
 local CLAW_CD   = 4.5                           -- s sin volver a usar la pinza
-local CLAW_RANGE = 5.5 * T                      -- desde su centro: te tiene a tiro
-local CLAW_MAX   = 7 * T                        -- hasta dónde llega la mano
-local CLAW_BOX   = 44
-local GRACE     = 0.8
-local TOUCH_M   = 10
-local MARK_OFF  = 150                           -- px entre las marcas de los aguijones
-local STING_BOX, HEAVY_BOX = 44, 92             -- medio ancho de lo que golpea
-local BOX_H     = 72
+local CLAW_RANGE = 4.5 * T                      -- desde su centro: te tiene a tiro
+local CLAW_MAX   = 5 * T                        -- hasta dónde llega la mano
+local CLAW_BOX   = 36
+local MARK_OFF  = 120                           -- px entre las marcas de los aguijones
+local STING_BOX, HEAVY_BOX = 34, 72             -- medio ancho de lo que golpea
+local BOX_H     = 56
 -- s clavada (vulnerable), según la dificultad; tras el primer golpe se levanta en Boss.GETUP_T, como todos
 local STUCK_T   = { easy = 4.4, normal = 3.6, hard = 2.9, extreme = 2.5, xtra = 2.3 }
 
 -- Golpes a los jugadores: { vida, vx, vy, s sin control, s aturdido }
-local HIT_TOUCH = { 1, 480, -420, 0.2, 0 }
 local HIT_STING = { 1, 420, -460, 0.2, 0 }
 local HIT_HEAVY = { 2, 620, -560, 0.3, 0 }
 
@@ -104,7 +103,7 @@ function GS:initBoss()
     self.vx, self.vy, self.onGround = 0, 0, true
     self.facing = -1
     self.phase = 1
-    self.graceT, self.clawCd = 0, 0
+    self.clawCd = 0
     self.marks = { { x = self.x, y = self:feetY() }, { x = self.x, y = self:feetY() }, { x = self.x, y = self:feetY() } }
     self.order, self.two, self.gapT, self.uncoilOnly = 1, false, STING_GAP[1], false
     self.handX, self.handY, self.held, self.last = self:restHandX(), self:restHandY(), nil, nil
@@ -118,7 +117,8 @@ function GS:isDying() return DEATH[self.state] == true or Boss.isDying(self) end
 -- (clavada: la ventana; con alguien atrapado: otro jugador lo libera golpeándolo)
 function GS:isVulnerable() return self:isActive() and (self.state == 'stuck' or self.state == 'hold') end
 function GS:releasesZone() return self.state == 'dying_flee' or self.state == 'dead' end
-function GS:isSolidBody() return Boss.isSolidBody(self) and not DEATH[self.state] end
+function GS:isSolidBody() return false end
+function GS:isObstacle() return false end
 function GS:canBeKnocked() return false end
 
 -- ── La cola clavada también se pisa (pura: la usa el cliente para predecir) ──
@@ -135,6 +135,7 @@ function GS:overTail(pob)
 end
 
 function GS:interact(pa)
+    if not self:isVulnerable() then return nil end                 -- (se atraviesa: encima tampoco pasa nada)
     local r, a, b = Boss.interact(self, pa)
     if r or self.state ~= 'stuck' or not self:isActive() then return r, a, b end
     if self.ghost and self.inv > 0 then return nil end
@@ -146,21 +147,6 @@ function GS:interact(pa)
 end
 
 -- ── Golpes a jugadores ────────────────────────────────────────────────────────
-function GS:touch(level)
-    if self.graceT > 0 then return end
-    local b = self:getOuterBounds()
-    local box = { x = b.x - TOUCH_M, y = b.y, w = b.w + TOUCH_M * 2, h = b.h }     -- (es sólido: pegado a él ya es tocarlo)
-    for _, pa in ipairs(level.players or {}) do
-        if not pa.dying and pa.alive ~= false and not pa:isInvulnerable() then
-            local pb = pa:getOuterBounds()
-            local onTop = pb.y + pb.h <= b.y + b.h * 0.5
-            if not onTop and overlap(pb, box) and strike(pa, HIT_TOUCH, (pa.x >= self.x) and 1 or -1) then
-                self.graceT = GRACE
-            end
-        end
-    end
-end
-
 function GS:floorBelow(level, x, y)
     local _, _, _, zy1 = self:zoneBounds()
     for yy = y, zy1 + 4 * T, 8 do
@@ -249,7 +235,7 @@ function GS:onDamaged(n, kind)
     local ph = (frac <= (self.props.rageAt or 1 / 3)) and 3 or ((frac <= (self.props.angerAt or 2 / 3)) and 2 or 1)
     if ph > self:ph() then
         self.phase = ph
-        Entity.emitFx('shake_roar', self.x, self.y)
+        Entity.emitFx('shake_small', self.x, self.y)
         Sound.play('scorpionHiss', 0.85, 0.9)
     end
     if self.state == 'hold' then self:letGo() end
@@ -275,7 +261,6 @@ function GS:updateBoss(dt, level)
     if self.state == 'dormant' then return end
     self.levelRef = self.levelRef or level
     self.deadTimer = self.deadTimer + dt
-    if self.graceT > 0 then self.graceT = math.max(0, self.graceT - dt) end
     if self.clawCd > 0 then self.clawCd = math.max(0, self.clawCd - dt) end
     local st, t, ph = self.state, self.deadTimer, self:ph()
 
@@ -287,16 +272,15 @@ function GS:updateBoss(dt, level)
         if pa then
             local dx = pa.x - self.x
             if math.abs(dx) > 8 then self.facing = (dx > 0) and 1 or -1 end
-            local far = math.abs(pa.x - self:tailX()) > REACH * 0.8 or math.abs(dx) > 6 * T
+            local far = math.abs(pa.x - self:tailX()) > REACH * 0.8 or math.abs(dx) > 5 * T
             self.vx = far and self.facing * WALK_V[ph] or 0
         end
         self:physics(level, dt)
         if self.vx ~= 0 and math.floor(t / 0.42) ~= math.floor((t - dt) / 0.42) then Sound.play('scorpionSkitter', 0.8, 0.45) end
-        self:touch(level)
         if t >= (self.restLen or REST_T[ph]) and self.onGround and self:mayAttack(level) then self:choose(level) end
 
     elseif st == 'join_coil' then
-        self.vx = 0; self:physics(level, dt); self:touch(level)
+        self.vx = 0; self:physics(level, dt)
         if t >= COIL_T then
             local pa = self:nearestPlayer(level)
             local px = pa and pa.x or self.x
@@ -306,15 +290,15 @@ function GS:updateBoss(dt, level)
         end
 
     elseif st == 'join_wind' then
-        self.vx = 0; self:physics(level, dt); self:touch(level)
+        self.vx = 0; self:physics(level, dt)
         if t >= JOIN_WIND[ph] then self:enter('join_hit') end
 
     elseif st == 'join_hit' then
-        self.vx = 0; self:physics(level, dt); self:touch(level)
+        self.vx = 0; self:physics(level, dt)
         if t >= SWING_T then
             local mk = self.marks[1]
             Sound.play('scorpionStrike')
-            Entity.emitFx('shake_big', mk.x, mk.y)
+            Entity.emitFx('shake_small', mk.x, mk.y)
             Entity.emitFx('gp_land', mk.x, mk.y)
             self:hitBox(level, mk.x, mk.y, HEAVY_BOX, HIT_HEAVY)
             self.stuckLen = STUCK_T[level.difficulty or ''] or STUCK_T.normal
@@ -333,7 +317,7 @@ function GS:updateBoss(dt, level)
         if t >= PULL_T then self:startSplit(true) end
 
     elseif st == 'split_coil' then
-        self.vx = 0; self:physics(level, dt); self:touch(level)
+        self.vx = 0; self:physics(level, dt)
         if t >= COIL_T then
             if self.uncoilOnly then self:rest(); return end
             local pa = self:nearestPlayer(level)
@@ -352,17 +336,16 @@ function GS:updateBoss(dt, level)
         end
 
     elseif st == 'split_aim' then
-        self.vx = 0; self:physics(level, dt); self:touch(level)
+        self.vx = 0; self:physics(level, dt)
         if t >= AIM_T[ph] then self:enter('sting') end
 
     elseif st == 'sting' then
-        self.vx = 0; self:physics(level, dt); self:touch(level)
+        self.vx = 0; self:physics(level, dt)
         for i = 1, 3 do
             local at = self:stingAt(i)
             if t >= at and t - dt < at then
                 local mk = self.marks[i]
                 Sound.play('scorpionSting')
-                Entity.emitFx('shake_small', mk.x, mk.y)
                 Entity.emitFx('gp_land', mk.x, mk.y)
                 self:hitBox(level, mk.x, mk.y, STING_BOX, HIT_STING)
             end
@@ -370,11 +353,11 @@ function GS:updateBoss(dt, level)
         if t >= self:stingEnd() then self:enter('split_back') end
 
     elseif st == 'split_back' then
-        self.vx = 0; self:physics(level, dt); self:touch(level)
+        self.vx = 0; self:physics(level, dt)
         if t >= BACK_T then self:rest() end
 
     elseif st == 'claw_wind' then
-        self.vx = 0; self:physics(level, dt); self:touch(level)
+        self.vx = 0; self:physics(level, dt)
         local pa = self:nearestPlayer(level)
         if pa and t < CLAW_WIND[ph] * 0.7 then self.lockX, self.lockY = pa.x, pa.y end   -- (el último tramo, fijo: se esquiva)
         if t >= CLAW_WIND[ph] then
@@ -451,7 +434,7 @@ function GS:updateIntro(dt, level, t)
     if t >= HISS_AT and self.introStep < 3 then
         self.introStep = 3
         Sound.play('scorpionHiss')
-        Entity.emitFx('shake_roar', self.x, self.y)
+        Entity.emitFx('shake_small', self.x, self.y)
     end
 end
 
@@ -504,29 +487,28 @@ function GS:moveTails(dt, bx, by, f, st, t, now)
             local kk, dd = Kit.COIL_K, Kit.COIL_DAMP
             if st == 'join_wind' then tipX, tipY, up = bx - 4 * MS * f, by - 30 * MS, 1.2; kk, dd = ct, cd
             elseif st == 'join_hit' or st == 'stuck' then
-                tipX, tipY, up, amp = self.marks[1].x, self.marks[1].y + 2, 0.45, 1
+                tipX, tipY, up, amp = self.marks[1].x - Kit.TIP_D * MS * f, self.marks[1].y - Kit.TIP_D * MS, 0.45, 1
                 kk, dd = Kit.FAST_K, Kit.FAST_DAMP
             elseif st == 'pull' then
-                local sh = (t < PULL_T * 0.55) and math.sin(now * 60) * 2 * MS or 0     -- (tira: tiembla y luego sale)
-                tipX, tipY, up, amp = self.marks[1].x + sh, self.marks[1].y + 2, 0.45, 1
+                tipX, tipY, up, amp = self.marks[1].x - Kit.TIP_D * MS * f, self.marks[1].y - Kit.TIP_D * MS, 0.45, 1
                 kk, dd = Kit.FAST_K, Kit.FAST_DAMP
                 if t >= PULL_T * 0.55 then tipX, tipY, up, kk, dd = bx + 19 * MS * f, by - 37 * MS, 1, Kit.COIL_K, Kit.COIL_DAMP; amp = 1.5 end
             end
-            c:advance(dt, kk, dd, 1, Kit.braid, b2x, b2y, MS, f, i, now, tipX, tipY, up, amp)
+            c:advance(dt, kk, dd, (st == 'join_hit' or st == 'stuck' or st == 'pull') and STRETCH or nil, Kit.braid, b2x, b2y, MS, f, i, now, tipX, tipY, up, amp)
         elseif st == 'sting' and t >= self:stingAt(i) - SWING_T then
             local mk = self.marks[i]
-            c:advance(dt, Kit.FAST_K, Kit.FAST_DAMP, 1, Kit.strike, b2x, b2y, MS, f, mk.x, mk.y + 1)
+            c:advance(dt, Kit.FAST_K, Kit.FAST_DAMP, STRETCH, Kit.strike, b2x, b2y, MS, f, mk.x, mk.y)
         elseif DEATH[st] then
             -- (derrotado: las colas caen, lacias, hacia atrás)
-            c:advance(dt, ct, cd, 1, Kit.strike, b2x, b2y, MS, f, bx - (12 + i * 11) * MS * f, self:feetY() + 1)
+            c:advance(dt, ct, cd, nil, Kit.strike, b2x, b2y, MS, f, bx - (12 + i * 11) * MS * f, self:feetY() + 1)
         elseif st == 'split_coil' then
-            c:advance(dt, Kit.COIL_K, Kit.COIL_DAMP, 1, Kit.fan, b2x, b2y, MS, f, i, now, 1.1)
+            c:advance(dt, Kit.COIL_K, Kit.COIL_DAMP, nil, Kit.fan, b2x, b2y, MS, f, i, now, 1.1)
         elseif st == 'intro' or st == 'dormant' then
             -- (entrada: recogidas hasta que se abren con la matraca)
             local open = (self.deadTimer or 0) >= OPEN_AT
-            c:advance(dt, open and Kit.COIL_K or ct, open and Kit.COIL_DAMP or cd, 1, Kit.fan, b2x, b2y, MS, f, i, now, open and 1 or 0.3)
+            c:advance(dt, open and Kit.COIL_K or ct, open and Kit.COIL_DAMP or cd, nil, Kit.fan, b2x, b2y, MS, f, i, now, open and 1 or 0.3)
         else
-            c:advance(dt, ct, cd, 1, Kit.fan, b2x, b2y, MS, f, i, now, (st == 'split_aim' or st == 'sting') and 1.1 or 1)
+            c:advance(dt, ct, cd, nil, Kit.fan, b2x, b2y, MS, f, i, now, (st == 'split_aim' or st == 'sting') and 1.1 or 1)
         end
     end
 end
@@ -564,7 +546,7 @@ function GS:handPos(st, t, now)
     local hx, hy = self:restHandX(), self:restHandY()
     local f = self.facing or 1
     if st == 'claw_wind' then
-        return hx - f * 4 * MS + math.sin(now * 50) * 3, hy - 3 * MS, true                -- (encogida, abierta, temblando)
+        return hx - f * 4 * MS, hy - 3 * MS, true                                        -- (encogida y abierta: el aviso)
     elseif st == 'claw' then
         local u = math.min(1, t / CLAW_T)
         return hx + (self.handX - hx) * u, hy + (self.handY - hy) * u, u < 0.8
@@ -659,13 +641,13 @@ function GS:debugBoxes()
     return out
 end
 
-local G = 'Escorpión de Tres Colas'
+local G = 'Escorpión Triple Aguijón'
 return {
-    name = 'giantscorpion', label = 'Escorpión de Tres Colas', category = 'Jefes',
+    name = 'giantscorpion', label = 'Escorpión Triple Aguijón', category = 'Jefes',
     description = 'Jefe secreto del volcán. Tres clics de matraca: se enrollan (un golpe fuerte que se queda CLAVADO, la '
                .. 'ventana) o se separan (tres aguijones por turno). Su pinza atrapa: machacar botones para salir.',
     class = GS,
-    boss = { title = 'ESCORPIÓN DE TRES COLAS' },
+    boss = { title = 'ESCORPIÓN TRIPLE AGUIJÓN' },
     hide = Boss.HIDE,
     defaults = { points = 30 },
     props = Boss.props({ hp = 12, hpPerPlayer = 4 }, {
