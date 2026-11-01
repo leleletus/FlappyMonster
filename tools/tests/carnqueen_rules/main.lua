@@ -3,9 +3,9 @@
 --   esquiva       apartado en el último tramo del aviso, se cierra en el vacío
 --   muerde        tragado sin machacar pierde vida poco a poco
 --   no_debajo     una Lanza nunca brota bajo tus pies ni junto a otra; si te pones encima del agujero, se cierra
---   busca         asomada, te apunta
+--   busca         asomada, te apunta girando poco a poco
 --   lanza         se lanza recta y traga al contacto
---   campea        si falla, algunas se quedan quietas y tragan a quien las toque
+--   campea        si falla, algunas se quedan quietas: ni te miran ni te tragan
 --   arriba        con enredaderas, muchas del techo y las paredes y ninguna del suelo
 --   atrapado      con el jugador tragado, las demás se retiran y no salen más
 --   salta         la Reina salta a su plataforma y vuelve
@@ -187,10 +187,16 @@ function CASES.busca()
     local pa = playerAt(level, 20 * T)
     local m = boss:spawnMouth(level, pa)
     stepAll(level, es, { pa }, 3, function() pa.invT = 9; return m.state == 'seek' end)
-    local a0 = m.ax
+    local function ang() return math.atan2(m.ay, m.ax) end
     pa.x = m.bx + ((pa.x > m.bx) and -1 or 1) * 3 * T
-    stepAll(level, es, { pa }, 0.05, function() pa.invT = 9 end)
-    check('busca', math.abs(m.ax - a0) > 0.5, ('te apunta (%.2f → %.2f)'):format(a0, m.ax))
+    local a0, worst = ang(), 0
+    stepAll(level, es, { pa }, 0.3, function()
+        pa.invT = 9
+        local a1 = ang()
+        worst = math.max(worst, math.abs((a1 - a0 + math.pi) % (2 * math.pi) - math.pi))
+        a0 = a1
+    end)
+    check('busca', worst > 0 and worst < 0.1, ('te apunta girando suave: %.3f rad por paso como mucho'):format(worst))
 end
 function CASES.lanza()
     local level, es, boss = arena()
@@ -213,12 +219,12 @@ function CASES.campea()
         return m.state == 'camp'
     end)
     check('campea', m.state == 'camp', 'falla y se queda: ' .. m.state)
-    local x, t0 = m.tx, 0
-    stepAll(level, es, { pa }, 1)
-    check('campea', m.state == 'camp' and m.tx == x, ('quieta: %s t=%.2f tx %.0f→%.0f gulped=%s'):format(m.state, m.t, x, m.tx, tostring(pa.gulped)))
+    local x, ax = m.tx, m.ax
+    stepAll(level, es, { pa }, 0.5)
+    check('campea', m.state == 'camp' and m.tx == x and m.ax == ax, 'quieta: ya no te apunta')
     pa.invT = 0; pa.x, pa.y = m.tx, m.ty
-    stepAll(level, es, { pa }, 0.1)
-    check('campea', pa.gulped and m.state == 'hold', 'tocarla te traga')
+    stepAll(level, es, { pa }, 0.2)
+    check('campea', not pa.gulped and m.state == 'camp', 'tocarla ya no te traga')
 end
 function CASES.arriba()
     local level, es, boss = arena()

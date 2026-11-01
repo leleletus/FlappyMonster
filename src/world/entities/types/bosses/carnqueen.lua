@@ -2,7 +2,7 @@
 -- «Cepo Real», sin cara: el usuario, 2026-11-01; docs/bosses/carnqueen.md). Enraizada en el centro de la sala del templo.
 --   · LAS LANZAS (el usuario las llama así; en el código, `mouths`) brotan del suelo, las paredes y el techo a unas casillas de ti,
 --     nunca debajo ni amontonadas: el agujero se abre (aviso), asoman, te apuntan y se lanzan rectas como una lanza. Al contacto
---     te TRAGAN al instante: machacar botones para salir (PlayerGulp). Algunas se quedan quietas campeando antes de volver.
+--     te TRAGAN al instante: machacar botones para salir (PlayerGulp). Si fallan, ya no: algunas se quedan cerradas e inofensivas un rato.
 --     Si estás arriba o hay enredaderas, salen muchas más, del techo y las paredes.
 --   · ELLA MISMA COME (el usuario): si te quedas muy cerca abre las hojas (aviso) y se cierra; pillado, a machacar como siempre.
 --   · LAS ENREDADERAS (el usuario): aviso largo y se llena el piso de enredaderas con espinas: hay que subir a las plataformas.
@@ -56,7 +56,8 @@ local OVERSHOOT = 1.5 * T                       -- se pasa de donde estabas
 local BACK_T   = 0.3
 local SHUT_T   = 0.3                            -- s cerrada tras fallar, antes de volver
 local CAMP     = 0.4                            -- cuántas se quedan campeando
-local CAMP_T   = { 2.5, 4 }                     -- s quieta, aún te traga al tocarla
+local CAMP_T   = { 2.5, 4 }                     -- s quieta y cerrada: ya falló, no te mira ni te come (el usuario)
+local TURN_V   = { 3.0, 3.5, 4.0 }              -- rad/s que gira al apuntar (el usuario: suave)
 local PEEK     = 1.3 * T                        -- lo que asoma antes de lanzarse
 local RECOIL   = 0.55                           -- cuánto se encoge en el amago
 local CAUGHT_PAUSE = 1.5                        -- s sin sacar más tras soltarte
@@ -165,11 +166,16 @@ function Q:floorBelow(level, x, y)
 end
 
 -- Apunta: la cabeza asoma hacia el jugador
-local function aim(m, pa, pull)
+local function aim(m, pa, pull, maxTurn)
     local dx, dy = pa.x - m.bx, pa.y - m.by
-    local d = math.sqrt(dx * dx + dy * dy)
-    if d < 1 then return end
-    m.ax, m.ay = dx / d, dy / d
+    if dx * dx + dy * dy < 1 then return end
+    local want = math.atan2(dy, dx)
+    if maxTurn then                                  -- (gira poco a poco; sin maxTurn, de golpe: aún no se ve)
+        local cur = math.atan2(m.ay, m.ax)
+        local da = (want - cur + math.pi) % (2 * math.pi) - math.pi
+        want = cur + math.max(-maxTurn, math.min(maxTurn, da))
+    end
+    m.ax, m.ay = math.cos(want), math.sin(want)
     local len = PEEK * (1 - RECOIL * (pull or 0))
     m.tx, m.ty = m.bx + m.ax * len, m.by + m.ay * len
 end
@@ -245,7 +251,7 @@ function Q:updateMouth(m, level, dt)
     m.t = m.t + dt
     local ph = self:ph()
     local pa = self:freePlayer(level)
-    if m.state == 'out' or m.state == 'seek' or m.state == 'lunge' or m.state == 'camp' then
+    if m.state == 'out' or m.state == 'seek' or m.state == 'lunge' then
         if self:mouthEats(m, level) then return false end
     end
     if m.state == 'warn' then
@@ -256,14 +262,14 @@ function Q:updateMouth(m, level, dt)
             Sound.play('plantSnap', 1.3, 0.5)
         end
     elseif m.state == 'out' then
-        if pa then aim(m, pa) end
+        if pa then aim(m, pa, 0, TURN_V[ph] * dt) end
         if m.t >= m.outT then
             m.state, m.t = 'seek', 0
             Sound.play('plantRustle', 1.6, 0.7)
         end
     elseif m.state == 'seek' then
         -- el amago: se encoge apuntándote; el último tramo, fija: es cuando hay que apartarse
-        if pa and m.t < SEEK_T[ph] - SEEK_LOCK then aim(m, pa, m.t / (SEEK_T[ph] - SEEK_LOCK)) end
+        if pa and m.t < SEEK_T[ph] - SEEK_LOCK then aim(m, pa, m.t / (SEEK_T[ph] - SEEK_LOCK), TURN_V[ph] * dt) end
         if m.t >= SEEK_T[ph] then
             local d = pa and math.sqrt((pa.x - m.bx) ^ 2 + (pa.y - m.by) ^ 2) or PEEK
             m.reach = math.min(LONG, d + OVERSHOOT)
@@ -279,12 +285,7 @@ function Q:updateMouth(m, level, dt)
             if m.campT then m.state, m.t = 'camp', 0 else m.state, m.t = 'shut', 0 end
         end
     elseif m.state == 'camp' then
-        -- quieta, campeando: la cabeza te sigue con la mirada y traga a quien la toque
-        if pa then
-            local dx, dy = pa.x - m.tx, pa.y - m.ty
-            local d = math.sqrt(dx * dx + dy * dy)
-            if d > 1 then m.ax, m.ay = dx / d, dy / d end
-        end
+        -- ya falló: quieta y cerrada, ni te mira ni te come
         if m.t >= m.campT then m.state, m.t = 'back', 0 end
     elseif m.state == 'hold' then
         local q, here = m.held, false
@@ -708,7 +709,6 @@ function Q:drawMouth(m, camX, camY, dt, r, g, b, alpha)
     end
     local hx, hy = Q.headPos(m)
     local len = math.sqrt((hx - m.bx) ^ 2 + (hy - m.by) ^ 2)
-    c.gap = math.max(0.1, len / (c.n - 1))
     -- El amago tiembla más cuanto más cerca está de lanzarse, y parpadea en el tramo final
     local tr, tg, tb = r, g, b
     if m.state == 'seek' then
@@ -719,25 +719,29 @@ function Q:drawMouth(m, camX, camY, dt, r, g, b, alpha)
         hx, hy = hx - m.ay * sh, hy + m.ax * sh
         if m.t >= seek - SEEK_LOCK and math.floor(m.t * 16) % 2 == 0 then tr, tg, tb = r, g * 0.45, b * 0.45 end
     end
-    -- (muelle solo en reposo; moviéndose rápido el tallo va pegado a la cabeza: si no, se quedaba atrás y parecía suelta)
-    if m.state == 'seek' or m.state == 'camp' or m.state == 'hold' then
-        c:advance(dt, 0.85, 0.35, nil, fillStalk, m.bx, m.by, m.nx, m.ny, hx, hy, m.ax, m.ay, len)
-    else
-        c:place(fillStalk, m.bx, m.by, m.nx, m.ny, hx, hy, m.ax, m.ay, len)
-    end
-    local stride = math.max(1, math.floor(8 / math.max(0.5, c.gap)))    -- (corto, sin dibujar discos unos encima de otros)
+    -- (sin muelle: el tallo es siempre la curva exacta hasta la cabeza. Con él, y su largo medido en línea recta, la punta se
+    -- quedaba corta de la curva y la cabeza parecía suelta)
+    local want = math.atan2(m.ay, m.ax)                    -- (lo que llega por red va a saltos: lo dibujado gira suave)
+    c.ang = c.ang or want
+    local da = (want - c.ang + math.pi) % (2 * math.pi) - math.pi
+    local turn = 9 * dt
+    c.ang = c.ang + math.max(-turn, math.min(turn, da))
+    local ax, ay = math.cos(c.ang), math.sin(c.ang)
+    c:place(fillStalk, m.bx, m.by, m.nx, m.ny, hx, hy, ax, ay, len)
+    local gap = len / (c.n - 1)
+    local stride = math.max(1, math.floor(8 / math.max(0.5, gap)))    -- (corto, sin dibujar discos unos encima de otros)
     for _, name in ipairs(LAYERS) do                       -- (contornos, sombras y luces: un tubo liso de 3 tonos)
         for j = 1, c.n - 1, stride do
             local x, y = c:pos(j)
             parts:drawFrame(parts:frameN(name, math.min(5, math.floor((j - 1) * 5 / c.n) + 1)), math.floor(x - camX), math.floor(y - camY), 0, MS, MS, 0.5, 0.5)
         end
     end
-    -- (cerrada y fina casi siempre, como una lanza; se entreabre al apuntar y a ratos campeando. La sprite no cambió: lo que el
+    -- (cerrada y fina casi siempre, como una lanza; se entreabre al apuntar. La sprite no cambió: lo que el
     -- usuario vio "muy gorda" era la abierta aguantada mientras buscaba)
     local name = 'head_closed'
     if m.state == 'hold' then name = 'head_prey'
-    elseif m.state == 'seek' or (m.state == 'camp' and m.t % 0.9 < 0.3) then name = 'head_half' end
-    local d = math.floor(math.atan2(m.ay, m.ax) / (math.pi * 2) * 16 + 0.5) % 16 + 1
+    elseif m.state == 'seek' then name = 'head_half' end
+    local d = math.floor(c.ang / (math.pi * 2) * 16 + 0.5) % 16 + 1
     love.graphics.setColor(tr, tg, tb, alpha)
     parts:drawFrame(parts:frameN(name, d), math.floor(hx - camX), math.floor(hy - camY), 0, MS, MS, 0.5, 0.5)
 end
@@ -821,7 +825,7 @@ end
 function Q:debugBoxes()
     local out = {}
     for _, m in ipairs(self.mouths or {}) do
-        if m.state == 'out' or m.state == 'seek' or m.state == 'lunge' or m.state == 'camp' then
+        if m.state == 'out' or m.state == 'seek' or m.state == 'lunge' then
             local hx, hy = Q.headPos(m)
             out[#out + 1] = { x = hx - HEAD_BOX, y = hy - HEAD_BOX, w = HEAD_BOX * 2, h = HEAD_BOX * 2, kind = 'hazard' }
         end

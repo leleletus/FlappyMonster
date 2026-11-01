@@ -401,6 +401,7 @@ class Kit:
         c = (n / 2, n / 2)
         ha = d16 * 360 / 16 + 90
         th = {0: 0, 1: 22, 2: 50, 3: 0}[op]
+        if self.id == 'A': th = {0: 0, 1: 13, 2: 26, 3: 0}[op]     # (el usuario: abierta, menos gorda; cerrada igual)
         it = []
         if h['lid']:                                               # (C: una copa con su tapa)
             ar = math.radians(ha)
@@ -429,7 +430,7 @@ class Kit:
                     tip = (c[0] + math.sin(ar) * (h['L'] + 1), c[1] - math.cos(ar) * (h['L'] + 1))
                     it.append(D([(int(tip[0]), int(tip[1]), CILIA)]))
         else:
-            it += trap(c, ha, th, h['L'], h['W'], closed=op in (0, 3), bulge=1.2 if op == 3 else 0)
+            it += trap(c, ha, th, h['L'], h['W'] * (0.72 if self.id == 'A' and op in (1, 2) else 1), closed=op in (0, 3), bulge=1.2 if op == 3 else 0)
         it.append(P(E(c[0], c[1], 2.8, 2.8), LEAFD))
         im = self.up(render(n, n, [(Xf(), it, None)]))
         self.head_art[key] = im
