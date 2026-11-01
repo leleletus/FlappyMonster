@@ -97,5 +97,5 @@ kills it. Touching it from the side, −1.
   unchanged).
 - 2026-10-31: chaining hits while stuck (and on the Groove) reported by the user → one hit per knockout, for all bosses ([system](system.md)).
 - 2026-10-31, second round (the user): drawn 1 px into the ground like the Beetle (`Kit.SINK`); the small one attacks behind and overhead, not only ahead; the WHOLE boss flashes red, tails and pincers too (`Kit.tint`); the caught player is visible; pincers sway while walking (`Kit.swing`); both faster; the boss leaps, long-jumps, climbs walls and aims ahead with wider marks.
-- 2026-10-31: its theme, Triple Aguijón: two variants waiting for the user's pick ([music-history](../audio/music-history.md)).
+- 2026-10-31: its theme, Triple Aguijón: two variants, both rejected by the user; a new attempt is pending ([music-history](../audio/music-history.md)).
 - **Pending the user:** how the fight feels, numbers (timings, damage), how often it leaps and climbs. Nobody has played it. Sounds not listened to by Claude.

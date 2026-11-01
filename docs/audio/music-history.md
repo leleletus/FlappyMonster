@@ -645,11 +645,12 @@ The jungle boss (the Giant Rhino Beetle, a prototype for a future jungle island)
 ## Triple Aguijón (`tools/music/triple_aguijon.py`, the Triple Strike Scorpion's theme; 2026-10-31)
 
 The user: create its boss theme using everything from the jungle tracks ([recipe](music-guide.md#8-the-jungle-recipe-the-users-favourite-2026-10-31)). A / B previews
-(`FlappyMonster_pruebas/musica/escorpion/`), **not installed, pending the user's pick**. A phrygian dominant (the volcano's ♭II, with a desert colour). The idea: three
+(`FlappyMonster_pruebas/musica/escorpion/`), not installed. A phrygian dominant (the volcano's ♭II, with a desert colour). The idea: three
 repeated notes and a strike, its rattle: at 168 BPM a 16th lasts 89 ms, the same as between its clicks. The form tells the fight: B = split (hocket, each note on another
 instrument, panned), C = coiled (three voices in one rhythm), K = a percussion circle of threes. Cast: shanai, sitar, koto, dulcimer, taiko, darbuka (congas and bongos),
 castanets, wood blocks, claves, vibraslap, timpani over slap bass, DPCM drums, noise cymbals, N163 pad. On time, no echo or reverb. A "shanai": 4/4, intro 5.7 s + loop 91.4 s (64 bars).
 B "aksak": 7/8 (2+2+3), the game's first odd meter, 5 s + 90 s (72 bars). Melody checks clean, no clashes; −11 LUFS. Verified by numbers only; **not listened to**.
+- The user's verdict on both: "ninguno de los 2 me convence". Rejected, reason not given yet; nothing installed.
 
 ## The slap bass in every boss theme (0.5.44)
 
