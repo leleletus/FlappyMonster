@@ -157,3 +157,28 @@ From the user's brief (Toby Fox's "Spider Dance" as the reference for the effect
   re-entry (the "drop").
 - A second, DESYNCED pattern of 6 notes against the 8, from the chorus on; register jumps every 4 bars.
 - Dry drums and few layers around it: the legs are the texture.
+
+## 8. The jungle recipe (the user's favourite, 2026-10-31)
+
+The user: the jungle's level tracks are the best in the game, "very original and innovative compared with the earlier ones without
+leaving the style. Perfect". **Use this for new themes.** What they have in common (`tools/music/jungla_nes.py`; offered A/B, the user chose the
+more original variant every time):
+
+- **Permission to leave the mould** (the user, while they were made): "you can always create an original theme". Always offer one
+  variant close to the house and one bolder.
+- **One identity taken from a character or place:** key colour plus one motif (the beetle's riff). Quoted by its RHYTHM and head contour where its
+  chord fits, then own material; literal only once or twice (rule 10).
+- **Themed GM instruments over the chip cast, not instead of it:** pan flute, ocarina, blown bottle, marimba, kalimba, taiko, congas, bongos, agogó,
+  cabasa, maracas, wood blocks, surdos, timbales, samba whistle (GeneralUser GS, `gm.py`) + triangle or slap bass, DPCM kick and snare, noise
+  cymbals, N163 pad, and a little N163 under a GM lead for the house colour.
+- **A rhythm the game did not have:** hemiola 3+3+3+3+2+2 against 4/4; 12/8 on the African bell 2-2-1-2-2-2-1; a section changing the subdivision
+  over the same pulse.
+- **Instrument idiom:** the marimba sings as a balafón (repeated notes, rolls on long notes), not a melody pasted on another timbre.
+- **Things the house never does:** two melodies in parallel thirds (pan flute and ocarina).
+- **An accent that is an animal or a place's voice:** toucan (5th-5th-octave), night bird (5th to 3rd); chord tones, quiet.
+- **A form that grows its own way:** a drum circle with no melody, stop-time, a "shadow of the boss" section.
+- **House rules kept:** la llamada once, one dark turn, the checks (no long notes off the chord, no clashes), intro + exact loop of about 1:30.
+
+Added by later verdicts, to keep in any GM track: every layer on time (advanced by its own measured attack), no tail over the next note on rhythmic
+layers, no echo or reverb on them (`montana_nes.py`: `attack_smp`, `tight_stem`); a boss uses the slap bass; a riff can BE the melody (El Templo: every lead
+tried over it was rejected).
