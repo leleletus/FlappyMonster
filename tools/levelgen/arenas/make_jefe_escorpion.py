@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # tools/levelgen/arenas/make_jefe_escorpion.py → jefe_escorpion.json (arena de prueba del ESCORPIÓN TRIPLE AGUIJÓN, jefe
 # secreto del volcán; aún sin nivel ni música propia). Antes de la zona, un Escorpión pequeño para probarlo también.
-#   python3 tools/levelgen/arenas/make_jefe_escorpion.py
+#   python3 tools/levelgen/arenas/make_jefe_escorpion.py    (¡reescribe la arena: el usuario la retoca en el editor!)
 #   love . --editor tools/levelgen/arenas/jefe_escorpion.json    (probarlo desde el editor)
 #
 # Zona: columnas 16-55 (40 de ancho), filas 3-14; suelo en la 15 (las colas abiertas miden unas 8 casillas: techo alto).

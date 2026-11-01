@@ -1,10 +1,15 @@
 -- tools/tests/giantscorpion_rules — reglas del ESCORPIÓN (types/enemies/scorpion.lua) y del ESCORPIÓN TRIPLE AGUIJÓN
 -- (types/bosses/giantscorpion.lua) caso a caso, en su arena (tools/levelgen/arenas/jefe_escorpion.json):
---   chico_cola    ve al jugador a media distancia: clic, cola atrás, clava donde estaba; quita 1 y se queda clavada
+--   chico_cola    jugador a su alcance: clic, cola atrás, clava donde estaba; quita 1 y se queda clavada
 --   chico_esquiva si el jugador se aparta durante el aviso, el aguijón no le da
 --   chico_pinza   muy cerca cierra la pinza: quita 1
 --   chico_pisar   pisarlo lo mata
 --   atravesable   su cuerpo no es sólido ni hace daño: se pasa a través y, encima, nada (fuera de su ventana)
+--   chico_espalda ataca aunque estés a su espalda (se gira) y si saltas por encima (al aire)
+--   chico_va      lejos de su alcance pero cerca: va a por ti, y más rápido que antes
+--   salto         a otra altura salta a tu plataforma y luego de vuelta al suelo; lejos, salto largo
+--   pared         corre a la pared, trepa, lanza desde allí y se deja caer
+--   predice       apunta por delante de un jugador que corre; las marcas, repartidas
 --   chico_anda    tras atacar vuelve a andar DE VERDAD (se desplaza)
 --   llega         la cola llega a su marca: el pincho a menos de 12 px, en el pequeño y en el jefe
 --   sin_rebote    un cambio de postura no se pasa de su objetivo y tarda lo que la matraca
@@ -103,6 +108,7 @@ local function still(boss, x)
     boss.x, boss.y = x or 28 * T, feet() - boss.outerH / 2
     boss.vx, boss.vy, boss.onGround, boss.inv = 0, 0, true, 0
     boss.ghost, boss.downHitState, boss.clawCd = false, nil, 99
+    boss.leapCd, boss.climbCd, boss.wall = 99, 99, nil
     boss.restLen = 99
     boss:enter('rest')
 end
@@ -139,8 +145,9 @@ function CASES.chico_cola()
     check('chico_cola', seen.sting_wind and seen.sting and seen.stuck, 'aviso, aguijón y clavada: ' .. tostring(seen.sting_wind) .. ' ' .. tostring(seen.stuck))
     check('chico_cola', count('scorpionClick') == 1 and count('scorpionSting') == 1, 'un clic y un pinchazo')
     check('chico_cola', pa.hp == hp - 1, ('quita 1 (%d → %d)'):format(hp, pa.hp))
-    stepAll(level, list, { pa }, 1)
-    check('chico_cola', small.state == 'walk' or small.state == 'idle', 'luego vuelve a andar: ' .. small.state)
+    local again = false
+    stepAll(level, list, { pa }, 1, function() pa.invT = 1; again = again or small.state == 'walk' or small.state == 'idle' end)
+    check('chico_cola', again, 'luego vuelve a andar')
 end
 function CASES.chico_esquiva()
     local level, es, boss, small = arena('normal')
@@ -199,6 +206,107 @@ function CASES.chico_anda()
     stepAll(level, list, { pa }, 0.8, function() pa.invT = 1 end)
     check('chico_anda', math.abs(small.x - x0) > 20, ('tras atacar anda de verdad (%d → %d, %s)'):format(x0, small.x, small.state))
 end
+function CASES.chico_espalda()
+    local level, es, boss, small = arena('normal')
+    local list = smallOnly(level, es, small)
+    smallReady(level, list, small)
+    small.facing = 1
+    local pa = playerAt(level, list, small.x - 85)
+    local seen = {}
+    stepAll(level, list, { pa }, 0.3, function() seen[small.state] = true end)
+    check('chico_espalda', seen.sting_wind and small.facing == -1, 'a su espalda: se gira y ataca')
+    smallReady(level, list, small)
+    small.facing = 1
+    pa.x, pa.y, pa.vx, pa.vy, pa.onGround = small.x, small.y - 110, 0, 0, false
+    pa.invT = 9
+    seen = {}
+    local my
+    stepAll(level, list, { pa }, 0.2, function() seen[small.state] = true; pa.y = small.y - 110; pa.vy = 0; pa.onGround = false; my = small.markY end)
+    check('chico_espalda', seen.sting_wind and my and my < small.y - 40, ('saltando por encima: apunta al aire (marca a %s, él en %d)'):format(tostring(my), small.y))
+end
+function CASES.chico_va()
+    local level, es, boss, small = arena('normal')
+    local list = smallOnly(level, es, small)
+    smallReady(level, list, small)
+    small.facing, small.vx, small.cd = -1, -100, 0
+    small.x = 10 * T
+    local pa = playerAt(level, list, small.x + 4.5 * T)
+    local x0 = small.x
+    stepAll(level, list, { pa }, 0.5, function() pa.invT = 1 end)
+    check('chico_va', small.x > x0 + 30, ('va a por ti (%d → %d)'):format(x0, small.x))
+end
+function CASES.salto()
+    local level, es, boss = arena('normal')
+    still(boss, 45 * T)
+    boss.climbCd = 99; boss.leapCd = 0
+    -- de pie en la plataforma de en medio (columnas 33-38, fila 11)
+    local pa = playerAt(level, es, 35 * T)
+    pa.x, pa.y = 35.5 * T, 10 * T - 60
+    pa.vy = 0
+    for _ = 1, 30 do pa:update(DT, level) end
+    check('salto', pa.onGround and pa.y < 11 * T, 'el jugador, en la plataforma')
+    boss.restLen = 0; boss.deadTimer = 1
+    local top
+    stepAll(level, es, { pa }, 2.5, function() pa.invT = 1; pa.vx = 0; if boss.state == 'land' then top = boss:feetY(); return true end end)
+    check('salto', top and math.abs(top - 10 * T) < 4, ('sube a tu plataforma (pies en %s, plataforma en %d)'):format(tostring(top), 10 * T))
+    -- de vuelta al suelo
+    still(boss, 35.5 * T); boss.y = 10 * T - boss.outerH / 2; boss.climbCd = 99; boss.leapCd = 0
+    pa.x, pa.y = 25 * T, feet() - 40
+    for _ = 1, 30 do pa:update(DT, level) end
+    boss.restLen = 0; boss.deadTimer = 1
+    top = nil
+    stepAll(level, es, { pa }, 2.5, function() pa.invT = 1; if boss.state == 'land' then top = boss:feetY(); return true end end)
+    check('salto', top and math.abs(top - feet()) < 4, 'baja al suelo a por ti')
+    -- lejos: salto largo
+    still(boss, 20 * T); boss.climbCd = 99; boss.leapCd = 0
+    pa.x, pa.y = 50 * T, feet() - 40
+    for _ = 1, 30 do pa:update(DT, level) end
+    boss.restLen = 0
+    local x0, jumped = boss.x, false
+    for _ = 1, 20 do
+        boss.deadTimer = 1; boss.restLen = 0; boss.leapCd = 0; boss:enter('rest')
+        boss.restLen = 0; boss.deadTimer = 1
+        stepAll(level, es, { pa }, 2 / 60, function() pa.invT = 1 end)
+        if boss.state == 'leap_wind' then jumped = true; break end
+    end
+    stepAll(level, es, { pa }, 2.2, function() pa.invT = 1; return boss.state == 'land' end)
+    check('salto', jumped and boss.x - x0 > 8 * T, ('salto largo (%d → %d)'):format(x0, boss.x))
+end
+function CASES.pared()
+    local level, es, boss = arena('normal')
+    still(boss, 22 * T)
+    boss.climbCd = 0; boss.leapCd = 99; boss.clawCd = 99
+    local pa = playerAt(level, es, 30 * T)
+    boss.toWall = -1
+    boss:enter('to_wall')
+    local order, wallAt = {}, nil
+    stepAll(level, es, { pa }, 12, function()
+        pa.invT = 1; pa.x = 30 * T
+        if order[#order] ~= boss.state then order[#order + 1] = boss.state end
+        if boss.state == 'sting' then wallAt = wallAt or boss.wall end
+        return boss.state == 'rest' and #order > 3
+    end)
+    local s = table.concat(order, ' ')
+    check('pared', s:find('to_wall climb split_coil split_aim sting split_back', 1, true) ~= nil and s:find('wall_drop land', 1, true) ~= nil, s)
+    check('pared', wallAt == -1, 'lanza agarrado a la pared')
+    check('pared', boss.wall == nil and boss.onGround, 'y acaba en el suelo')
+    still(boss, 22 * T); boss.wall = -1; boss.facing = -1; boss.y = 500
+    local p = boss:netPack()
+    local other = Entities.create({ type = 'giantscorpion', col = boss.col, row = boss.row, props = {} })
+    other:netApply(p, p, 1)
+    check('pared', other.wall == -1, 'la pared viaja por red')
+    boss.wall = nil
+end
+function CASES.predice()
+    local level, es, boss = arena('normal')
+    still(boss, 28 * T); boss.climbCd, boss.leapCd = 99, 99
+    local pa = playerAt(level, es, 22 * T)
+    boss:startJoin(level, pa)
+    pa.vx = 200
+    local x0
+    stepAll(level, es, { pa }, 1, function() pa.vx = 200; pa.invT = 1; x0 = x0 or pa.x; if boss.state == 'join_wind' then return true end end, function() stub.state.right = true end)
+    check('predice', boss.marks[1].x > pa.x + 40, ('la marca, por delante de quien corre (marca %d, jugador %d)'):format(boss.marks[1].x, pa.x))
+end
 function CASES.llega()
     local Chain = require 'src/world/entities/base/SegmentChain'
     local Kit = require 'src/world/entities/base/ScorpionKit'
@@ -209,7 +317,11 @@ function CASES.llega()
         local x, y = c:pos(n)
         return math.sqrt((x - (tx - Kit.TIP_D * k * f)) ^ 2 + (y - (ty - Kit.TIP_D * k)) ^ 2)
     end
-    local d = tip(12, 9.6, 3, 0, 0, 1, 33 + 95, 39, 1.7)
+    local c = Chain.new(12, 9.6)
+    c:place(Kit.fan, 0, 0, 3, 1, 2, 0, 1)
+    for _ = 1, 40 do c:advance(1 / 30, Kit.FAST_K, Kit.FAST_DAMP, 1.7, Kit.aim, 0, 0, 3, 155, 39) end
+    local cx, cy = c:pos(12)
+    local d = math.sqrt((cx - (155 - 155 / 160 * 18)) ^ 2 + (cy - (39 - 39 / 160 * 18)) ^ 2)
     check('llega', d < 12, ('el pequeño, a su máximo: a %.1f px'):format(d))
     d = tip(19, 23.8, 7, 0, 0, 1, 520, 91, 1.4)
     check('llega', d < 12, ('el jefe, a su máximo: a %.1f px'):format(d))
@@ -469,7 +581,7 @@ function CASES.alcance()
     local pa = playerAt(level, es, 39 * T)
     local x0 = boss.x
     stepAll(level, es, { pa }, 1)
-    check('alcance', boss.x > x0 + 50, ('se acerca andando (%d → %d)'):format(x0, boss.x))
+    check('alcance', boss.x > x0 + 50 or boss.state == 'leap_wind', ('se acerca andando (%d → %d)'):format(x0, boss.x))
 end
 function CASES.derrota()
     local level, es, boss = arena('normal')

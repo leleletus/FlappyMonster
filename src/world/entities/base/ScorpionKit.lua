@@ -20,6 +20,19 @@ K.CALM_K, K.CALM_DAMP = 0.3, 0.45
 K.TIP_D = 6                                -- px de arte: del centro del aguijón a su pincho, al clavarse en diagonal
 
 local TAU = math.pi * 2
+K.SINK = 1                                 -- px de arte que el dibujo va bajo el suelo (como el Escarabajo: patas que pisan)
+
+-- El tinte que se multiplica en TODAS las piezas (el destello rojo al recibir un golpe, en todo el cuerpo: el usuario)
+local tr, tg_, tb = 1, 1, 1
+function K.tint(r, g, b) tr, tg_, tb = r or 1, g or 1, b or 1 end
+local function col(s, a) love.graphics.setColor(tr * s, tg_ * s, tb * s, a or 1) end
+
+-- Las pinzas se balancean al andar, como las de los cangrejos (quieto, apenas respiran). → dx, dy en px de pantalla
+function K.swing(now, i, moving, k)
+    local amp, w = moving and 1.5 or 0.3, moving and 11 or 1.6
+    local a = now * w + i * math.pi
+    return math.sin(a) * amp * k, math.cos(a) * amp * 0.6 * k
+end
 
 -- ── Curvas objetivo: fill(tg, n, ...) para SegmentChain ──────────────────────
 -- Tres colas abiertas como un tridente sobre el lomo, cada punta hacia delante. i = 1, 2, 3
@@ -53,6 +66,16 @@ function K.strike(tg, n, bx, by, k, f, tx, ty)
     Chain.bez(tg, n, bx, by, bx + 10 * k * f, by - 18 * k, tx - 12 * k * f, ty - 12 * k, tx, ty)
 end
 
+-- Un aguijón apuntado a cualquier sitio (también al aire): sube por encima y baja hacia su objetivo, con el PINCHO en él
+function K.aim(tg, n, bx, by, k, tx, ty)
+    local dx, dy = tx - bx, ty - by
+    local d = math.sqrt(dx * dx + dy * dy)
+    if d < 1 then d = 1 end
+    dx, dy = dx / d, dy / d
+    local cx, cy = tx - dx * K.TIP_D * k, ty - dy * K.TIP_D * k
+    Chain.bez(tg, n, bx, by, bx + dx * 2 * k, by - 12 * k, cx - dx * 8 * k, cy - dy * 8 * k - 6 * k, cx, cy)
+end
+
 -- PURA: los `m` puntos de la cola clavada, de la base a la punta (la simulación pisa aquí, el dibujo va por ahí cerca)
 function K.strikeLine(out, m, bx, by, k, f, tx, ty)
     for j = #out + 1, m do out[j] = { x = 0, y = 0 } end
@@ -68,13 +91,13 @@ local function segIndex(j, n) return math.min(5, math.floor((j - 1) * 5 / n) + 1
 -- El segmento j de una cadena (shade: la cola de atrás, más oscura; a = alfa)
 function K.drawSeg(set, chain, j, k, camX, camY, shade, a)
     local x, y = chain:pos(j)
-    love.graphics.setColor(shade or 1, shade or 1, shade or 1, a or 1)
+    col(shade or 1, a)
     set:drawFrame(set:frameN('segment', segIndex(j, chain.n)), math.floor(x - camX), math.floor(y - camY), 0, k, k, 0.5, 0.5)
 end
 
 function K.drawStinger(set, chain, name, flash, k, camX, camY, a)
     local x, y = chain:pos(chain.n)
-    love.graphics.setColor(1, 1, 1, a or 1)
+    col(1, a)
     set:drawFrame(set:frameN(flash and 'stinger_flash' or name, dirIndex(chain:tipAngle())),
                   math.floor(x - camX), math.floor(y - camY), 0, k, k, 0.5, 0.5)
 end
@@ -86,8 +109,7 @@ end
 
 -- Un brazo: del hombro a la mano, sus segmentos y la pinza
 function K.drawArm(set, sx, sy, hx, hy, ang, opened, k, camX, camY, shade, a)
-    local s = shade or 1
-    love.graphics.setColor(s, s, s, a or 1)
+    col(shade or 1, a)
     local fr = set:frameN('segment', 4)
     local dx, dy = hx - sx, hy - sy
     local segs = math.max(3, math.floor(math.sqrt(dx * dx + dy * dy) / (3.2 * k)))     -- (estirado, más: que no se vea suelto)

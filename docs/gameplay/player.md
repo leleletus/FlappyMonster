@@ -130,7 +130,7 @@ sits 4 px below the station floor.
 
 ## Swallowed by a Carnivorous Plant
 
-The Triple Strike Scorpion's pincer catches the same way (`swallow(..., kind)`, `gulpKind` = 1: its sounds; in the own state, index 41).
+The Triple Strike Scorpion's pincer catches the same way (`swallow(..., kind)`, `gulpKind` = 1: its sounds; in the own state, index 41), but the player is still drawn.
 
 (0.5.97, the user: "the plant can eat the PLAYER too, like the beetles, and the player has to MASH all the buttons
 to get out; if they don't get out in time, the plant takes 1 HP every few seconds". `src/player/PlayerGulp.lua`; the

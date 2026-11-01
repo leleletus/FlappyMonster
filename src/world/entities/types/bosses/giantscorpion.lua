@@ -10,6 +10,9 @@
 --     turno, en un orden que cambia. En su última fase, dos a la vez y luego la tercera (2 + 1).
 --   · PINZA ('claw_wind' → 'claw' → 'hold'): abre la pinza y la lanza a donde estabas. Si te pilla, te ATRAPA:
 --     machacar botones para salir, como la Planta carnívora (PlayerGulp); otro jugador lo libera golpeándolo.
+--   · SE MUEVE POR TODA LA ARENA (el usuario): corre, salta a las plataformas donde estés y de vuelta al suelo ('leap_wind' →
+--     'leap' → 'land'), da saltos largos si estás lejos, y trepa las paredes ('to_wall' → 'climb'): desde ahí lanza sus aguijones y
+--     luego se deja caer ('wall_drop'). Apunta a donde VAS a estar, con las marcas más repartidas.
 --   · Su cuerpo se ATRAVIESA, como el del Lúgubre, y no hace daño (el usuario): solo golpean las colas al lanzarlas y atrapa
 --     la pinza al lanzarla. Fuera de su ventana, caerle encima tampoco hace nada.
 -- Las colas y los brazos son piezas animadas al momento (base/SegmentChain: solo dibujo); lo que golpea sale del estado,
@@ -37,7 +40,7 @@ GS.animId      = 'bosses/giantscorpion'
 GS.WEAR = { { image = 'assets/images/bosses/giantscorpion/wear_clasp.png', anchor = 'tail', ax = 4.5, ay = 4.5 } }
 
 GS.move, GS.physics, GS.friction, GS.groundDecel = Snow.move, Snow.physics, Snow.friction, Snow.groundDecel
-GS.zoneBounds = Snow.zoneBounds
+GS.zoneBounds, GS.jumpTo = Snow.zoneBounds, Snow.jumpTo
 local strike, overlap = Boss.strike, Boss.overlap
 
 local T  = TILE_PX
@@ -49,7 +52,20 @@ local STRETCH = 1.4                             -- (clavando, las colas se estir
 
 -- Ritmo por fase (1, 2, 3)
 local REST_T    = { 1.1, 0.85, 0.6 }
-local WALK_V    = { 110, 135, 165 }
+local WALK_V    = { 200, 240, 290 }
+local LEAP_WIND = { 0.35, 0.28, 0.22 }
+local LEAP_UP   = 2.5                           -- casillas por encima de lo más alto del salto
+local LAND_T    = 0.18
+local LEAP_CD   = 2.2                           -- s sin volver a saltar
+local LONG_D    = 8 * T                         -- más lejos que esto: salto largo
+local LONG_MAX  = 11 * T                        -- lo más lejos que salta de una vez
+local CLIMB_CD  = { 14, 22 }                    -- s entre dos subidas a la pared
+local RUN_V     = { 340, 390, 440 }             -- corriendo hacia la pared
+local RUN_MAX   = 4.0
+local CLIMB_V   = 420
+local CLIMB_UP  = { 3, 6 }                      -- casillas que sube
+local LEAD      = { 0.6, 0.8, 1.0 }             -- cuánto se adelanta a tu movimiento al apuntar (1 = donde estarás si sigues igual)
+local SPREAD    = { { 90, 170 }, { 100, 210 }, { 110, 260 } }    -- px: las marcas de los otros dos aguijones, a los lados
 local COIL_T    = 0.21                          -- s enrollándose o desenrollándose: lo que dura la matraca
 local CLICKS    = { 0, 0.09, 0.18 }             -- (make_scorpion.py RATTLE_F, tools/sounds/scorpion.py GAP)
 local CLICK_LEN = 0.06
@@ -67,7 +83,7 @@ local CLAW_CD   = 4.5                           -- s sin volver a usar la pinza
 local CLAW_RANGE = 4.5 * T                      -- desde su centro: te tiene a tiro
 local CLAW_MAX   = 5 * T                        -- hasta dónde llega la mano
 local CLAW_BOX   = 36
-local MARK_OFF  = 120                           -- px entre las marcas de los aguijones
+local HOLD_LIFT, HOLD_FWD = 40, 48              -- px: lo levanta y lo sujeta por delante de la pinza
 local STING_BOX, HEAVY_BOX = 34, 72             -- medio ancho de lo que golpea
 local BOX_H     = 56
 -- s clavada (vulnerable), según la dificultad; tras el primer golpe se levanta en Boss.GETUP_T, como todos
@@ -93,24 +109,39 @@ function GS:feetY() return self.y + self.outerH / 2 end
 function GS:ph() return self.phase or 1 end
 function GS:bossPhase() return self:ph() end
 function GS:angryPhase() return self:ph() == 3 end
-function GS:tailX() return self.x + (self.facing or 1) * Kit.TAIL[1] * MS end
-function GS:tailY() return self:feetY() + Kit.TAIL[2] * MS end
-function GS:restHandX() return self.x + (self.facing or 1) * Kit.HAND[1] * MS end
-function GS:restHandY() return self:feetY() + Kit.HAND[2] * MS end
+-- Un punto del cuerpo (px de arte desde los pies: ax hacia delante, ay hacia abajo) en el mundo; en la pared, girado.
+-- Pura (la usan simulación y dibujo)
+function GS:pt(ax, ay)
+    local f = self.facing or 1
+    if self.wall then
+        local s = (self.wall < 0) and 1 or -1                       -- (sin / cos de ±90°: los pies, hacia la pared)
+        return self.x + self.wall * self.outerH / 2 - s * ay * MS, self.y + s * ax * MS * f
+    end
+    return self.x + ax * MS * f, self:feetY() + ay * MS
+end
+function GS:tailX() local x = self:pt(Kit.TAIL[1], Kit.TAIL[2]); return x end
+function GS:tailY() local _, y = self:pt(Kit.TAIL[1], Kit.TAIL[2]); return y end
+function GS:restHandX() local x = self:pt(Kit.HAND[1], Kit.HAND[2]); return x end
+function GS:restHandY() local _, y = self:pt(Kit.HAND[1], Kit.HAND[2]); return y end
+-- La física de siempre, salvo agarrado a la pared: ahí no cae
+function GS:phys(level, dt)
+    if self.wall then self.vx, self.vy = 0, 0; return end
+    return self:physics(level, dt)
+end
 
 function GS:initBoss()
     self.y = self.row * T - self.outerH / 2
     self.vx, self.vy, self.onGround = 0, 0, true
     self.facing = -1
     self.phase = 1
-    self.clawCd = 0
+    self.clawCd, self.leapCd, self.climbCd, self.wall = 0, 0, 0, nil
     self.marks = { { x = self.x, y = self:feetY() }, { x = self.x, y = self:feetY() }, { x = self.x, y = self:feetY() } }
     self.order, self.two, self.gapT, self.uncoilOnly = 1, false, STING_GAP[1], false
     self.handX, self.handY, self.held, self.last = self:restHandX(), self:restHandY(), nil, nil
 end
 
 function GS:onFightStart(n) self:enter('fight') end
-function GS:rollStart(r) self.clawCd = r(0, CLAW_CD); self.last = r(0, 1) < 0.5 and 'join' or 'split' end
+function GS:rollStart(r) self.clawCd, self.climbCd = r(0, CLAW_CD), r(CLIMB_CD[1] * 0.4, CLIMB_CD[2] * 0.7); self.last = r(0, 1) < 0.5 and 'join' or 'split' end
 
 function GS:isActive() return Boss.isActive(self) and not DEATH[self.state] end
 function GS:isDying() return DEATH[self.state] == true or Boss.isDying(self) end
@@ -188,6 +219,7 @@ end
 
 -- ── Elegir ────────────────────────────────────────────────────────────────────
 function GS:rest()
+    if self.wall then return self:enter('wall_drop') end
     self.restLen = REST_T[self:ph()] * rand(0.85, 1.15)
     self:enter('rest')
 end
@@ -198,6 +230,59 @@ function GS:startJoin(level, pa)
     self:enter('join_coil')
     self.vx = 0
     Sound.play('scorpionRattleJoin')
+end
+
+-- Salta a (x, y): a una plataforma, de vuelta al suelo o lejos
+function GS:startLeap(x, y)
+    self.leapCd = LEAP_CD
+    self.leapX, self.leapY = x, y
+    self.vx = 0
+    self.facing = (x >= self.x) and 1 or -1
+    self:enter('leap_wind')
+    Sound.play('scorpionSkitter', 0.7, 0.7)
+end
+
+-- Se mueve antes de atacar? true si ha empezado a moverse
+function GS:chooseMove(level, pa, d)
+    if not self.onGround then return false end
+    local zx0, zx1 = self:zoneBounds()
+    local hw = self.outerW / 2 + 8
+    if self.climbCd <= 0 and math.random() < 0.3 + 0.1 * self:ph() then
+        self.climbCd = rand(CLIMB_CD[1], CLIMB_CD[2])
+        self.toWall = (self.x - zx0 < zx1 - self.x) and -1 or 1
+        self.facing = self.toWall
+        self:enter('to_wall')
+        return true
+    end
+    if self.leapCd > 0 then return false end
+    local ob = pa:getOuterBounds()
+    local pFeet = ob.y + ob.h
+    local dy = self:feetY() - pFeet
+    -- a otra altura y de pie sobre algo: a su plataforma, o de vuelta al suelo
+    if pa.onGround and math.abs(dy) >= 1.5 * T then
+        self:startLeap(math.max(zx0 + hw, math.min(zx1 - hw, pa.x)), pFeet)
+        return true
+    end
+    -- lejos: salto largo, sin caerle justo encima
+    if d > LONG_D and math.random() < 0.7 then
+        local dir = (pa.x >= self.x) and 1 or -1
+        local x = self.x + dir * math.min(LONG_MAX, d - 3 * T)
+        self:startLeap(math.max(zx0 + hw, math.min(zx1 - hw, x)), self:floorBelow(level, x, self:feetY() - 8))
+        return true
+    end
+    -- encima de él: a veces se aparta de un salto para poder usar la cola
+    if d < 2.5 * T and math.random() < 0.3 then
+        local dir = (self.x - zx0 < zx1 - self.x) and 1 or -1
+        local x = self.x + dir * 6 * T
+        self:startLeap(math.max(zx0 + hw, math.min(zx1 - hw, x)), self:floorBelow(level, x, self:feetY() - 8))
+        return true
+    end
+    return false
+end
+
+-- Dónde estará el jugador dentro de `secs` si sigue igual (según la fase, más o menos adelantado)
+function GS:predictX(pa, secs)
+    return pa.x + (pa.vx or 0) * secs * LEAD[self:ph()]
 end
 
 function GS:startSplit(uncoilOnly)
@@ -212,6 +297,7 @@ function GS:choose(level)
     if not pa then return self:rest() end
     local d = math.abs(pa.x - self.x)
     self.facing = (pa.x >= self.x) and 1 or -1
+    if self:chooseMove(level, pa, d) then return end
     if self.clawCd <= 0 and d < CLAW_RANGE and pa.canBeSwallowed and pa:canBeSwallowed() then
         self.clawCd = CLAW_CD
         self.vx = 0
@@ -241,6 +327,13 @@ function GS:onDamaged(n, kind)
     if self.state == 'hold' then self:letGo() end
 end
 
+-- Atrapa al jugador y lo levanta: la pinza le coge por delante y se le VE (el usuario), asomando de sus dedos
+function GS:grab(pa)
+    local f = self.facing or 1
+    self.handY = self.handY - HOLD_LIFT
+    return pa:swallow(self.handX + f * HOLD_FWD - f * (pa.w / 2 + 1), self.handY, f, 0, 1)
+end
+
 function GS:letGo()
     self.held = nil                                    -- (el atrapado ve que ya no lo tiene y sale: PlayerGulp)
     if self.state == 'hold' then self:enter('claw_back') end
@@ -248,6 +341,10 @@ end
 
 function GS:defeat()
     self.hp, self.inv, self.ghost = 0, 0, false
+    if self.wall then
+        self.x = self.x + self.wall * (self.outerH - self.outerW) / 2
+        self.wall, self.vy, self.onGround = nil, 0, false
+    end
     self:letGo()
     self.vx = 0
     self:enter('dying_out')
@@ -262,6 +359,8 @@ function GS:updateBoss(dt, level)
     self.levelRef = self.levelRef or level
     self.deadTimer = self.deadTimer + dt
     if self.clawCd > 0 then self.clawCd = math.max(0, self.clawCd - dt) end
+    if self.leapCd > 0 then self.leapCd = math.max(0, self.leapCd - dt) end
+    if self.climbCd > 0 then self.climbCd = math.max(0, self.climbCd - dt) end
     local st, t, ph = self.state, self.deadTimer, self:ph()
 
     if st == 'fight' then self:rest(); return end
@@ -275,26 +374,26 @@ function GS:updateBoss(dt, level)
             local far = math.abs(pa.x - self:tailX()) > REACH * 0.8 or math.abs(dx) > 5 * T
             self.vx = far and self.facing * WALK_V[ph] or 0
         end
-        self:physics(level, dt)
+        self:phys(level, dt)
         if self.vx ~= 0 and math.floor(t / 0.42) ~= math.floor((t - dt) / 0.42) then Sound.play('scorpionSkitter', 0.8, 0.45) end
         if t >= (self.restLen or REST_T[ph]) and self.onGround and self:mayAttack(level) then self:choose(level) end
 
     elseif st == 'join_coil' then
-        self.vx = 0; self:physics(level, dt)
+        self.vx = 0; self:phys(level, dt)
         if t >= COIL_T then
             local pa = self:nearestPlayer(level)
-            local px = pa and pa.x or self.x
+            local px = pa and self:predictX(pa, JOIN_WIND[ph] + SWING_T) or self.x
             local mx, my = self:markAt(level, px, (pa and pa.y or self.y))
             self.marks[1].x, self.marks[1].y = mx, my
             self:enter('join_wind')
         end
 
     elseif st == 'join_wind' then
-        self.vx = 0; self:physics(level, dt)
+        self.vx = 0; self:phys(level, dt)
         if t >= JOIN_WIND[ph] then self:enter('join_hit') end
 
     elseif st == 'join_hit' then
-        self.vx = 0; self:physics(level, dt)
+        self.vx = 0; self:phys(level, dt)
         if t >= SWING_T then
             local mk = self.marks[1]
             Sound.play('scorpionStrike')
@@ -306,41 +405,44 @@ function GS:updateBoss(dt, level)
         end
 
     elseif st == 'stuck' then
-        self.vx = 0; self:physics(level, dt)
+        self.vx = 0; self:phys(level, dt)
         if t >= self:downTime(self.stuckLen or STUCK_T.normal) then
             self:enter('pull')
             Sound.play('scorpionPull')
         end
 
     elseif st == 'pull' then
-        self.vx = 0; self:physics(level, dt)
+        self.vx = 0; self:phys(level, dt)
         if t >= PULL_T then self:startSplit(true) end
 
     elseif st == 'split_coil' then
-        self.vx = 0; self:physics(level, dt)
+        self.vx = 0; self:phys(level, dt)
         if t >= COIL_T then
             if self.uncoilOnly then self:rest(); return end
             local pa = self:nearestPlayer(level)
-            local px, py = pa and pa.x or self.x, pa and pa.y or self.y
-            -- la primera en golpear va a por el jugador; las otras dos, a los lados (lo van cercando)
+            local py = pa and pa.y or self.y
+            -- la primera en golpear, a donde estará el jugador; las otras dos, a los lados de donde estará entonces
             self.order = math.random(1, #ORDERS)
             self.two = ph == 3 and math.random() < 0.5
             self.gapT = STING_GAP[ph]
             local o = ORDERS[self.order]
             local side = (math.random() < 0.5) and 1 or -1
-            for pos, off in ipairs({ 0, side * MARK_OFF, -side * MARK_OFF }) do
-                local mk = self.marks[o[pos]]
+            local sp = SPREAD[ph]
+            for pos, off in ipairs({ 0, side * rand(sp[1], sp[2]), -side * rand(sp[1], sp[2]) }) do
+                local i = o[pos]
+                local px = pa and self:predictX(pa, AIM_T[ph] + self:stingAt(i)) or self.x
+                local mk = self.marks[i]
                 mk.x, mk.y = self:markAt(level, px + off, py)
             end
             self:enter('split_aim')
         end
 
     elseif st == 'split_aim' then
-        self.vx = 0; self:physics(level, dt)
+        self.vx = 0; self:phys(level, dt)
         if t >= AIM_T[ph] then self:enter('sting') end
 
     elseif st == 'sting' then
-        self.vx = 0; self:physics(level, dt)
+        self.vx = 0; self:phys(level, dt)
         for i = 1, 3 do
             local at = self:stingAt(i)
             if t >= at and t - dt < at then
@@ -353,11 +455,11 @@ function GS:updateBoss(dt, level)
         if t >= self:stingEnd() then self:enter('split_back') end
 
     elseif st == 'split_back' then
-        self.vx = 0; self:physics(level, dt)
+        self.vx = 0; self:phys(level, dt)
         if t >= BACK_T then self:rest() end
 
     elseif st == 'claw_wind' then
-        self.vx = 0; self:physics(level, dt)
+        self.vx = 0; self:phys(level, dt)
         local pa = self:nearestPlayer(level)
         if pa and t < CLAW_WIND[ph] * 0.7 then self.lockX, self.lockY = pa.x, pa.y end   -- (el último tramo, fijo: se esquiva)
         if t >= CLAW_WIND[ph] then
@@ -370,13 +472,13 @@ function GS:updateBoss(dt, level)
         end
 
     elseif st == 'claw' then
-        self.vx = 0; self:physics(level, dt)
+        self.vx = 0; self:phys(level, dt)
         if t >= CLAW_T then
             Sound.play('scorpionSnap')
             local box = { x = self.handX - CLAW_BOX, y = self.handY - CLAW_BOX, w = CLAW_BOX * 2, h = CLAW_BOX * 2 }
             for _, pa in ipairs(level.players or {}) do
                 if pa.canBeSwallowed and pa:canBeSwallowed() and overlap(box, pa:getOuterBounds())
-                   and pa:swallow(self.handX, self.handY, self.facing or 1, 0, 1) then
+                   and self:grab(pa) then
                     pa.gulpBy = self
                     self.held = pa
                     self:enter('hold')
@@ -388,7 +490,7 @@ function GS:updateBoss(dt, level)
         end
 
     elseif st == 'hold' then
-        self.vx = 0; self:physics(level, dt)
+        self.vx = 0; self:phys(level, dt)
         local pa = self.held
         local here = false                             -- (sigue en la partida: online se puede ir)
         for _, q in ipairs(level.players or {}) do if q == pa then here = true end end
@@ -398,11 +500,73 @@ function GS:updateBoss(dt, level)
         end
 
     elseif st == 'claw_back' then
-        self.vx = 0; self:physics(level, dt)
+        self.vx = 0; self:phys(level, dt)
         if t >= CLAW_BACK then self:rest() end
 
+    elseif st == 'leap_wind' then
+        self.vx = 0; self:phys(level, dt)
+        if t >= LEAP_WIND[ph] then
+            self.passY = self.leapY
+            self:jumpTo(self.leapX, self.leapY, LEAP_UP)
+            self:enter('leap')
+            Sound.play('scorpionSkitter', 1.3, 0.8)
+        end
+
+    elseif st == 'leap' then
+        self:phys(level, dt)
+        if self.onGround and self.vy >= 0 and t > 0.1 then
+            self.passY, self.vx = nil, 0
+            Sound.play('gpImpact', 1, 0.6)
+            Entity.emitFx('gp_land', self.x, self:feetY())
+            self:enter('land')
+        end
+
+    elseif st == 'land' then
+        self.vx = 0; self:phys(level, dt)
+        if t >= LAND_T then self:rest() end
+
+    elseif st == 'to_wall' then
+        self.facing = self.toWall
+        self.vx = self.toWall * RUN_V[ph]
+        local hit = self:phys(level, dt)
+        if math.floor(t / 0.3) ~= math.floor((t - dt) / 0.3) then Sound.play('scorpionSkitter', 1, 0.5) end
+        if hit == 'wall' then
+            local zx0, zx1 = self:zoneBounds()
+            self.wall = self.toWall
+            self.facing = self.wall
+            self.vx, self.vy, self.onGround = 0, 0, false
+            self.x = ((self.wall < 0) and zx0 or zx1) - self.wall * self.outerH / 2
+            local _, _, zy0 = self:zoneBounds()
+            self.climbTo = math.max(zy0 + self.outerW / 2 + 8, self.y - rand(CLIMB_UP[1], CLIMB_UP[2]) * T)
+            self:enter('climb')
+        elseif t >= RUN_MAX then self:rest() end
+
+    elseif st == 'climb' then
+        self.y = self.y - CLIMB_V * dt
+        if math.floor(t / 0.22) ~= math.floor((t - dt) / 0.22) then Sound.play('scorpionSkitter', 1.1, 0.5) end
+        if self.y <= self.climbTo then
+            self.y = self.climbTo
+            self.last = 'split'
+            self:startSplit(false)
+        end
+
+    elseif st == 'wall_drop' then
+        if self.wall then
+            -- se suelta: del sitio de la pared al de andar, sin saltos
+            self.x = self.x + self.wall * (self.outerH - self.outerW) / 2
+            self.wall, self.vy, self.onGround = nil, 0, false
+            local zx0, zx1 = self:zoneBounds()
+            self.facing = ((self.x - zx0) < (zx1 - self.x)) and 1 or -1
+        end
+        self:phys(level, dt)
+        if self.onGround and t > 0.1 then
+            Sound.play('gpImpact', 1, 0.6)
+            Entity.emitFx('gp_land', self.x, self:feetY())
+            self:enter('land')
+        end
+
     elseif st == 'dying_out' then
-        self.vx = 0; self:physics(level, dt)
+        self.vx = 0; self:phys(level, dt)
         if t >= OUT_D and self.onGround then
             self.fleeDir = self:fleeSide(level)
             self.facing, self.fleeing = self.fleeDir, true
@@ -443,7 +607,7 @@ function GS:netPackExtra()
     local m = self.marks
     return { self:ph(), m[1].x, m[1].y, m[2].x, m[2].y, m[3].x, m[3].y, self.order or 1, self.two and 1 or 0,
              math.floor((self.gapT or 0) * 100), self.uncoilOnly and 1 or 0, math.floor(self.handX or 0), math.floor(self.handY or 0),
-             math.floor(self.lockX or 0), math.floor(self.lockY or 0), (self.fleeDir or 1) }
+             math.floor(self.lockX or 0), math.floor(self.lockY or 0), (self.fleeDir or 1), self.wall or 0 }
 end
 
 function GS:netApplyExtra(a, b, f)
@@ -453,6 +617,7 @@ function GS:netApplyExtra(a, b, f)
     m[1].x, m[1].y, m[2].x, m[2].y, m[3].x, m[3].y = b[2], b[3], b[4], b[5], b[6], b[7]
     self.order, self.two, self.gapT, self.uncoilOnly = b[8], b[9] == 1, b[10] / 100, b[11] == 1
     self.handX, self.handY, self.lockX, self.lockY, self.fleeDir = b[12], b[13], b[14], b[15], b[16]
+    self.wall = (b[17] ~= 0) and b[17] or nil
 end
 
 -- ── Dibujo ────────────────────────────────────────────────────────────────────
@@ -479,7 +644,8 @@ end
 -- Mueve las 3 colas hacia lo que toca en este estado (solo dibujo)
 function GS:moveTails(dt, bx, by, f, st, t, now)
     self.tails = self.tails or { Chain.new(N, GAP), Chain.new(N, GAP), Chain.new(N, GAP) }
-    local ct, cd, ck = Kit.CALM_K, Kit.CALM_DAMP, nil
+    local ct, cd = Kit.CALM_K, Kit.CALM_DAMP
+    if self.wall then f = -self.wall end                 -- (agarrado a la pared: las colas salen hacia la arena)
     for i, c in ipairs(self.tails) do
         local b2x, b2y = bx + (i - 2) * MS, by
         if BRAIDED[st] then
@@ -487,6 +653,7 @@ function GS:moveTails(dt, bx, by, f, st, t, now)
             local kk, dd = Kit.COIL_K, Kit.COIL_DAMP
             if st == 'join_wind' then tipX, tipY, up = bx - 4 * MS * f, by - 30 * MS, 1.2; kk, dd = ct, cd
             elseif st == 'join_hit' or st == 'stuck' then
+                f = (self.marks[1].x >= bx) and 1 or -1      -- (la curva, hacia donde esté la marca: también a su espalda)
                 tipX, tipY, up, amp = self.marks[1].x - Kit.TIP_D * MS * f, self.marks[1].y - Kit.TIP_D * MS, 0.45, 1
                 kk, dd = Kit.FAST_K, Kit.FAST_DAMP
             elseif st == 'pull' then
@@ -497,7 +664,7 @@ function GS:moveTails(dt, bx, by, f, st, t, now)
             c:advance(dt, kk, dd, (st == 'join_hit' or st == 'stuck' or st == 'pull') and STRETCH or nil, Kit.braid, b2x, b2y, MS, f, i, now, tipX, tipY, up, amp)
         elseif st == 'sting' and t >= self:stingAt(i) - SWING_T then
             local mk = self.marks[i]
-            c:advance(dt, Kit.FAST_K, Kit.FAST_DAMP, STRETCH, Kit.strike, b2x, b2y, MS, f, mk.x, mk.y)
+            c:advance(dt, Kit.FAST_K, Kit.FAST_DAMP, STRETCH, Kit.strike, b2x, b2y, MS, (mk.x >= b2x) and 1 or -1, mk.x, mk.y)
         elseif DEATH[st] then
             -- (derrotado: las colas caen, lacias, hacia atrás)
             c:advance(dt, ct, cd, nil, Kit.strike, b2x, b2y, MS, f, bx - (12 + i * 11) * MS * f, self:feetY() + 1)
@@ -556,7 +723,9 @@ function GS:handPos(st, t, now)
         local u = math.min(1, t / CLAW_BACK)
         return self.handX + (hx - self.handX) * u, self.handY + (hy - self.handY) * u, true
     end
-    return hx, hy, true
+    local moving = (st == 'rest' and self.vx ~= 0) or st == 'to_wall' or st == 'climb' or st == 'dying_flee'
+    local sx, sy = Kit.swing(now, 1, moving, MS)
+    return hx + sx, hy + sy, true
 end
 
 function GS:render(camX, camY)
@@ -572,33 +741,50 @@ function GS:render(camX, camY)
     -- Lo del suelo, antes que nada: marcas y grietas
     self:drawMarks(camX, camY, st, t, now, alpha)
     local fr
-    if st == 'rest' and self.vx ~= 0 or st == 'dying_flee' then fr = set:frameAt('walk', now)
-    elseif st == 'join_wind' or st == 'claw_wind' or st == 'split_aim' or st == 'join_coil' then fr = set:frameAt('windup', 0)
+    local running = (st == 'rest' and self.vx ~= 0) or st == 'to_wall' or st == 'climb' or st == 'dying_flee'
+    if running then fr = set:frameAt('walk', now * 1.8)
+    elseif st == 'join_wind' or st == 'claw_wind' or st == 'split_aim' or st == 'join_coil' or st == 'leap_wind' or st == 'land' then fr = set:frameAt('windup', 0)
     elseif st == 'stuck' or st == 'pull' or st == 'dying_out' then fr = set:frameAt('hurt', 0)
     else fr = set:frameAt('idle', 0) end
-    local feetW = self:feetY()
-    local feet = math.floor(feetW - camY) + set:footGap(fr) * MS
-    local x = math.floor(self.x - camX)
-    local bx, by = self:tailX(), self:tailY()
+    local sink = Kit.SINK
+    local function P(ax, ay) return self:pt(ax, ay + sink) end
+    local gap = set:footGap(fr)
+    local bodyX, bodyY = self:pt(0, gap + sink)
+    local bx, by = P(Kit.TAIL[1], Kit.TAIL[2])
     local dt = math.min(0.1, now - (self.tailT or now))
     self.tailT = now
     self:moveTails(dt, bx, by, f, st, t, now)
-    if st == 'stuck' or st == 'dying_out' then BossFx.stars(x, feet - 16 * MS, 8 * MS, 1.2 * MS, 5, alpha, 'back') end
+    local rot = self.wall and ((self.wall < 0) and math.pi / 2 or -math.pi / 2) or 0
+    if st == 'stuck' or st == 'dying_out' then
+        local sx, sy = P(0, -16)
+        BossFx.stars(math.floor(sx - camX), math.floor(sy - camY), 8 * MS, 1.2 * MS, 5, alpha, 'back')
+    end
+    -- TODO EL CUERPO parpadea al recibir un golpe: colas, segmentos, pinzas y broche también (el usuario)
     local r, g, b = 1, 1, 1
     if self:flashRed() then r, g, b = 1, 0.35, 0.35 end
+    Kit.tint(r, g, b)
     -- Pinza de atrás, cuerpo, pinza de delante y ENCIMA las colas y el broche (el usuario)
     local hx, hy, opened = self:handPos(st, t, now)
-    local ang = math.atan2(hy - (feetW + Kit.NEAR[2] * MS), hx - (self.x + Kit.NEAR[1] * MS * f))
-    if st == 'rest' or st == 'dying_out' or st == 'dying_flee' or st == 'stuck' or st == 'pull' then ang = (f > 0) and 0 or math.pi end
+    local nearX, nearY = P(Kit.NEAR[1], Kit.NEAR[2])
+    local farX, farY = P(Kit.FAR[1], Kit.FAR[2])
+    local fhx, fhy = P(Kit.HAND_FAR[1], Kit.HAND_FAR[2])
+    local moving = running
+    local sx, sy = Kit.swing(now, 0, moving, MS)
+    fhx, fhy = fhx + sx, fhy + sy
+    local ang = math.atan2(hy - nearY, hx - nearX)
+    local fang = (f > 0) and -0.35 or math.pi + 0.35
+    if self.wall then fang = math.atan2(fhy - farY, fhx - farX)
+    elseif st == 'rest' or st == 'dying_out' or st == 'dying_flee' or st == 'stuck' or st == 'pull' or st == 'leap' or st == 'to_wall' then
+        ang = (f > 0) and 0 or math.pi
+    end
+    Kit.drawArm(parts, farX, farY, fhx, fhy, fang, st ~= 'hold', MS, camX, camY, 0.65, alpha)
     love.graphics.setColor(r, g, b, alpha)
-    Kit.drawArm(parts, self.x + Kit.FAR[1] * MS * f, feetW + Kit.FAR[2] * MS, self.x + Kit.HAND_FAR[1] * MS * f, feetW + Kit.HAND_FAR[2] * MS,
-                (f > 0) and -0.35 or math.pi + 0.35, st ~= 'hold', MS, camX, camY, 0.65, alpha)
-    love.graphics.setColor(r, g, b, alpha)
-    set:drawFrame(fr, x, feet, 0, MS * f, MS, 0.5, 1)
-    Kit.drawArm(parts, self.x + Kit.NEAR[1] * MS * f, feetW + Kit.NEAR[2] * MS, hx, hy, ang, opened, MS, camX, camY, nil, alpha)
+    set:drawFrame(fr, math.floor(bodyX - camX), math.floor(bodyY - camY), rot, MS * f, MS, 0.5, 1)
+    Kit.drawArm(parts, nearX, nearY, hx, hy, ang, opened, MS, camX, camY, nil, alpha)
     self:drawTails(camX, camY, st, t, alpha, now)
-    love.graphics.setColor(1, 1, 1, alpha)
+    love.graphics.setColor(r, g, b, alpha)
     self:drawWear('tail', math.floor(bx - camX), math.floor(by - camY), MS)
+    Kit.tint()
     love.graphics.setColor(1, 1, 1, 1)
 end
 
