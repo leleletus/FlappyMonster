@@ -29,7 +29,7 @@ local DT = 1 / 60
 local BAR = 8 + 16                                    -- (compás 24: el comienzo de la B)
 local function setup(diff, bar, bars)
     local d = { bar = bar or BAR, bars = bars or 8 }
-    local boss = setmetatable({ songT = (d.bar - 1) * GC.BAR }, { __index = GC })
+    local boss = setmetatable({ songT = (d.bar - 1) * GC.BAR, props = {} }, { __index = GC })
     boss.duelInfo = function() return d end
     return boss, { bossZones = { { bosses = { boss } } }, difficulty = diff }
 end

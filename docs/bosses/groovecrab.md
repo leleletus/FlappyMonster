@@ -197,11 +197,13 @@ Friday Night Funkin' style. The player stands still, invulnerable; the crab keep
 
 | Difficulty | Chart | Notes/s | Window | On screen | Meter empties below | KO from | Can kill |
 |---|---|---|---|---|---|---|---|
-| Easy | `easy`: pops and strong beats, 400 ms apart; hook in D | 1.6 | ±160 ms | 1.6 s | 50 % | 70 % | no |
+| Easy | `easy`: pops and strong beats, 400 ms apart; hook in D | 1.9 | ±160 ms | 1.6 s | 50 % | 70 % | no |
 | Normal | `normal`: 200 ms apart; hook in D | 4.5 | ±130 ms | 1.3 s | 60 % | 80 % | no |
 | Hard | `full`: slap bass 1:1 (the user: must be 1:1) | 7.4 | ±110 ms | 1.1 s | 65 % | 85 % | yes |
 | Extreme | `full` | 7.4 | ±85 ms | 0.85 s | 70 % | 90 % | yes |
 | Xtra Extreme | `full` | 7.4 | ±65 ms | 0.65 s | 75 % | 92 % | yes |
+
+**The chart** (`tools/music/groove_chart.py`) was hand-authored per distinct bar by an agent with no earlier context, from the score: at 100 ms the hands always alternate (left 0-1, right 2-3; asserted), repeated phrases keep their arrows, pops mostly land on outer lanes, each section has its own patterns. On Normal and Easy, bar 16 of D is empty, as the hook rests. Review MIDIs: `FlappyMonster_pruebas/groove_duelo/chart_*.mid`. Not listened to.
 
 **Result:** a meter starts at 50 %; hits and misses are scaled so "empties below" is the break-even accuracy, whatever the note count. Empty: the duel ends, −1 HP (at most 1 per duel). From "KO from": knocked out, one free hit. In between: nothing. Pressing with no note costs nothing.
 
@@ -220,6 +222,8 @@ Friday Night Funkin' style. The player stands still, invulnerable; the crab keep
 | Xtra | 0 / 77 | 0 / 0 | 15 / 0 | 95 / 0 | 100 / 0 |
 
 **The song as MIDI:** `tools/music/mid/groove.mid` (slap bass and hook tracks, 92 bars with the intro), from `MIDI=1 tools/music/groove_mejora.py`; the installed song wrote none before 2026-11-01 because its scripts had no such step.
+
+**Test level:** `love . --editor tools/levelgen/arenas/jefe_groove_duelo.json`, prop `duelOnly`: one duel of the whole song from the first bar, the meter cannot empty, and the crab dies at the end. For the user to test the system; not in the story.
 
 **If anything goes wrong:** each duel writes `rhythm_duel.log` in the save folder (start, end, notes, clock, music). A player dead or respawning when it starts joins as soon as alive. A duel with no notes ends at once, with no penalty. History: the first version, 0.5.136, left the user frozen with strums and no notes; not reproduced in single player (test arena and real level), a natural fight or online; the hole found was deciding "is playing" only on the first frame. Tests need `sp_boss GROOVE_BAR=n` or `FM_TEST_GROOVE_BAR=n` with `online_boss DUELDBG=1`.
 

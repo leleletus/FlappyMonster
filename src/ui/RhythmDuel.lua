@@ -183,7 +183,9 @@ function R.update(dt, level, who, report, press)
                 c.text, c.textT = 'rhythm.miss', 0.5
             else break end
         end
-        if c.meter <= 0 or c.clock >= c.endT then
+        local endless = boss.duelOnly and boss:duelOnly()            -- (nivel de prueba: toda la canción, aunque se vacíe)
+        if endless then c.meter = math.max(1, c.meter) end
+        if (c.meter <= 0 and not endless) or c.clock >= c.endT then
             c.done, c.failed = true, c.meter <= 0
             c.acc = c.hits / c.n
             c.ko = not c.failed and c.acc >= c.cfg.koAt

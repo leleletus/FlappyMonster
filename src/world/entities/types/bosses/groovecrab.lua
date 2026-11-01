@@ -727,7 +727,10 @@ function GC:duelReport(pa, bar, acc, failed)
     if not d or d.bar ~= bar or type(acc) ~= 'number' then return end
     d.res[pa] = { acc = math.max(0, math.min(1, acc)), failed = failed == true }
 end
+-- (prop `duelOnly`, nivel de prueba del usuario: su único ataque es UN duelo de toda la canción, sin vaciarse; al acabar, muere)
+function GC:duelOnly() return self.props.duelOnly == true end
 function GC:planDuel(level, b)
+    if self:duelOnly() then return end
     if self.eventRef or self.state == 'stunned' or self.state == 'regrow' or not self:isActive() then return end
     local loop = GC.loopOf(b)
     if self.extraLoop ~= loop then
@@ -743,6 +746,10 @@ end
 function GC:finishDuel(level)
     local d = self.duel
     self.duel = nil
+    if self:duelOnly() then
+        self.duelDone = true
+        return self:defeat()
+    end
     local cfg = GC.DUEL[level.difficulty or 'normal'] or GC.DUEL.normal
     local n, ko = 0, 0
     for _, pa in ipairs(level.players or {}) do
@@ -760,6 +767,10 @@ function GC:finishDuel(level)
 end
 function GC:updateDuel(level, b, crossed)
     local d = self.duel
+    if not d and self:duelOnly() and not self.duelDone then
+        self.duel = { bar = 0, bars = INTRO_BARS + LOOP, res = {} }
+        return
+    end
     if not d then
         if crossed(0) then self:planDuel(level, b) end
         return
@@ -880,7 +891,7 @@ function GC:updateBoss(dt, level)
 
     -- EL DUELO DE RITMO: sin ataques ni peligros; él baila
     self:updateDuel(level, b, crossed)
-    if self.state == 'stunned' then return end                          -- (lo acaba de noquear el duelo)
+    if self.state == 'stunned' or self:isDying() then return end        -- (lo acaba de noquear o matar el duelo)
     if self:duelLive() then
         self.notes, self.waves = {}, {}
         local pa = self:nearestPlayer(level)
@@ -1055,6 +1066,7 @@ return {
         { key = 'rageAt', kind = 'number', label = '2ª fase con (fracción de vida)', group = G, default = 0.5,
           min = 0.1, max = 0.9, step = 0.05 },
         -- (el Mega Mashup: en su turno, con los platos desde el principio y sin enfado; en el final, el escenario grande)
+        { key = 'duelOnly', kind = 'bool', label = 'Prueba: solo un duelo de ritmo de toda la canción', group = 'Evento', default = false },
         { key = 'decksFromStart', kind = 'bool', label = 'Platos desde el principio (sin enfado)', group = 'Evento', default = false },
         { key = 'bigStage', kind = 'bool', label = 'Escenario grande (el final del Mega Mashup)', group = 'Evento', default = false },
     }),

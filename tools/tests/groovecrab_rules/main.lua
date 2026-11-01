@@ -37,6 +37,7 @@
 --   duelo      al principio de "la pista" (8 o 16 compases): un compás de aviso, sin peligros; el jugador sin control e
 --              invulnerable y él bailando; acaba solo, sin castigar a quien no dio resultado
 --   duelo_ko   un buen resultado lo noquea; un fallo quita 1; en Fácil y Normal no mata, en Difícil sí; online, por mayoría
+--   duelo_solo prop duelOnly: el único ataque es un duelo de toda la canción, no se puede fallar y al acabar muere
 --   duelo_red  el duelo viaja en netPackExtra
 --   red        netPackExtra → otro Groove (cliente): canción, enfado, fase, diana, ondas, notas (con la dorada),
 --              platos y bajón iguales; interact igual
@@ -750,6 +751,26 @@ function cases.duelo_ko()
     stepAll(level, es, { p1, p2, p3 }, 0.05)
     check('duelo_ko', boss.state ~= 'stunned', 'uno de tres no basta')
 end
+function cases.duelo_solo()
+    local level, es, boss = arena('normal')
+    boss.props.duelOnly = true
+    local pa = playerAt(level, 14)
+    songAt(boss, 0, 0)
+    stepAll(level, es, { pa }, 0.1)
+    local total = boss.INTRO_BARS + boss.LOOP
+    check('duelo_solo', boss.duel and boss.duel.bar == 0 and boss.duel.bars == total and boss:duelLive() and pa.frozen,
+          'empieza ya, de toda la canción: ' .. tostring(boss.duel and boss.duel.bars))
+    songAt(boss, total - 1, 15)
+    boss.duel = { bar = 0, bars = total, res = {} }
+    stepAll(level, es, { pa }, 0.1)
+    check('duelo_solo', boss.duel and boss:duelLive(), 'sigue hasta el final')
+    boss:duelReport(pa, 0, 0.1, false)
+    local hp = pa.hp
+    stepAll(level, es, { pa }, 0.1)
+    check('duelo_solo', boss.duel == nil and boss:isDying() and pa.hp == hp, 'al acabar muere, sin castigo: ' .. boss.state)
+    stepAll(level, es, { pa }, 8, function() return boss:releasesZone() end)
+    check('duelo_solo', boss:releasesZone(), 'y libera la zona')
+end
 function cases.duelo_red()
     local level, es, boss = arena('normal')
     songAt(boss, duelBar(boss) - 1, 1)
@@ -763,7 +784,7 @@ end
 function love.load(arg)
     local only = os.getenv('CASE')
     for _, n in ipairs({ 'reloj', 'salto', 'notas', 'dorada', 'aturdido', 'trampolin', 'tocar', 'pista', 'dibujos', 'baile', 'temblor', 'platos', 'enfriar', 'ocultos', 'publico', 'trepar', 'enfado',
-                         'solo', 'derrota', 'duelo', 'duelo_ko', 'duelo_red', 'red' }) do
+                         'solo', 'derrota', 'duelo', 'duelo_ko', 'duelo_solo', 'duelo_red', 'red' }) do
         if not only or only == n then
             local ok, err = xpcall(cases[n], debug.traceback)
             if not ok then check(n, false, 'error: ' .. tostring(err)) end
