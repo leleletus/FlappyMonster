@@ -194,7 +194,7 @@ I_UNDER = {'vol': [6, 9, 10, 10, 9], 'sus': 9, 'vib': (18, 0.15, 5.2), 'duty': 2
 I_SAW = {'vol': [9, 8, 7, 7, 6], 'sus': 6, 'vib': (20, 0.12, 5.4)}
 M.TIGHT_KEYS = M.TIGHT_KEYS + ('lead3',)                             # (sin cola sobre la nota siguiente, también la 3ª voz)
 LEADS = ('lead', 'lead2', 'lead3', 'thirds')
-B_LEAD = os.environ.get('B_LEAD', 'pulso')
+B_LEAD = os.environ.get('B_LEAD', 'sierra')
 I_SAW_LEAD = {'vol': [15, 14, 14, 13, 13, 12], 'sus': 12, 'vib': (14, 0.18, 6)}
 
 
@@ -252,7 +252,7 @@ def play_melody(sg, R, v):
             if var == 'rep': thirds.append(b)
         elif v == 'B':
             # (la voz, del chip: el usuario eligió la B "con otro instrumento en lugar de la guitarra saturada, quizá uno clásico de
-            #  NES". B_LEAD=pulso: el 2A03 con barrido de ciclo, la INSTALADA · sierra: la sierra del VRC6, la del volcán)
+            #  NES". sierra: la sierra del VRC6, la del volcán, la ELEGIDA · B_LEAD=pulso: el 2A03 con barrido de ciclo)
             if B_LEAD == 'sierra':
                 R.chip('saw', b, st, n - 12, d, I_SAW_LEAD, q=F.q_saw, release=3)
             else:

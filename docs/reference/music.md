@@ -44,7 +44,7 @@ plays the intro once and then repeats the loop. `level` = offered as level music
 | `resaca` | Resaca (Pez Globo Gigante) | `bosses/resaca.ogg` | 0.64 | boss |
 | `polilla` | La Polilla (Saltarín Gigante) | `bosses/polilla_intro.ogg` + `bosses/polilla_loop.ogg` | 0.69 | boss |
 | `templo` | El Templo (Escarabajo Rinoceronte Gigante) | `bosses/templo_intro.ogg` + `bosses/templo_loop.ogg` | 0.46 | boss |
-| `obsidiana` | Obsidiana (Escorpión Triple Aguijón) | `bosses/obsidiana_intro.ogg` + `bosses/obsidiana_loop.ogg` | 0.67 | boss |
+| `obsidiana` | Obsidiana (Escorpión Triple Aguijón) | `bosses/obsidiana_intro.ogg` + `bosses/obsidiana_loop.ogg` | 0.66 | boss |
 | `groove` | El Groove (jefe secreto) | `bosses/groove_intro.ogg` + `bosses/groove_loop.ogg` | 0.5 | boss |
 | `crab_mashup` | Mega Mashup de los Cangrejos (evento) | `bosses/crab_mashup_intro.ogg` + `bosses/crab_mashup_loop.ogg` | 0.5 | boss |
 | `menus` | Menús | `menus/menus.ogg` | 0.93 |  |
