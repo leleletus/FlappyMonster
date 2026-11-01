@@ -59,6 +59,28 @@ function love.update(dt)
         last.jumpWas = s.jump
     end
     Input = setmetatable({ pressed = stub.pressed, down = stub.down }, { __index = package.loaded['input'] })
+    -- (GROOVE_BAR=n: lleva la canción del Cangrejo Groove al compás n; `duelo` en la salida y una captura en pleno duelo)
+    if boss and boss.duelInfo and os.getenv('GROOVE_BAR') and boss.state ~= 'dormant' and boss.state ~= 'intro' and boss.state ~= 'ready' and not last.barDone then
+        last.barDone = true
+        local n = tonumber(os.getenv('GROOVE_BAR'))
+        boss.songT, boss.prevT = n * boss.BAR - 0.05, n * boss.BAR - 0.06
+    end
+    if boss and boss.duelInfo then
+        local d = boss.duel
+        if d and not last.duel then
+            print(('%6.1fs duelo: compás %d, %d compases; frozen=%s'):format(t, d.bar, d.bars, tostring(pa.frozen)))
+            last.duel = d
+        elseif last.duel and not d then
+            local c = require('src/ui/RhythmDuel').current()
+            print(('%6.1fs duelo acabado; jefe=%s vida %d; notas %s'):format(t, boss.state, pa.hp, c and (c.hits .. '/' .. c.n) or '-'))
+            last.duel = nil
+        end
+        if d and not last.shot and boss.songT > (d.bar + 2) * boss.BAR then
+            last.shot = true
+            love.graphics.captureScreenshot('duelo_real.png')
+            print('captura: ' .. love.filesystem.getSaveDirectory() .. '/duelo_real.png; frozen=' .. tostring(pa.frozen) .. ' inv=' .. tostring(pa:isInvulnerable()))
+        end
+    end
     local camX0 = st.camX
     gameUpdate(dt)
     if last.killT and camX0 then last.camJump = math.max(last.camJump or 0, math.abs(st.camX - camX0)) end

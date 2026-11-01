@@ -687,7 +687,7 @@ end
 function GC:drawCue(camX, camY, now)
     if not (self:isActive() and self.state == 'snap') or EDITOR_VIEW then return end
     local _, sec, k, step = self:whereAt(self.songT or 0)
-    local plan = GC.plan(sec, k, self.rage, self:goldOff())
+    local plan = self:duelLive() and { notes = {} } or GC.plan(sec, k, self.rage, self:goldOff())
     local nextS
     for _, s in ipairs(plan.notes) do if s > step and (not nextS or s < nextS) then nextS = s end end
     if not nextS then return end

@@ -6,7 +6,7 @@
 -- groovecrab_stage.lua (una PARTE: añade métodos a la misma tabla; docs/architecture/project-structure.md).
 --
 -- EL RELOJ ES LA CANCIÓN: `songT` = el tiempo desde que empezó la pelea (la música de la zona empieza en ese mismo
--- instante y sigue sonando al reaparecer). De él sale en qué SECCIÓN, compás y semicorchea está (tabla SONG: la
+-- instante y sigue sonando al reaparecer). EL DUELO DE RITMO: ver GC.DUEL y src/ui/RhythmDuel.lua. De él sale en qué SECCIÓN, compás y semicorchea está (tabla SONG: la
 -- partitura del tema, 150 BPM: intro 8 compases + bucle A 16 · B 16 · SOLO 8 · SUBIDA 8 · CLÍMAX 16 · VUELTA 4), y de
 -- eso, qué hace (GC.plan). No le afecta el ritmo de la dificultad (def.pace = false): todo cae en el compás.
 --   · SALTO (A, compases impares de la 1ª mitad del clímax, la vuelta): se AGACHA con una diana en el suelo que te
@@ -69,6 +69,19 @@ local SONG = { { 'A', 16 }, { 'B', 16 }, { 'K', 8 }, { 'S', 8 }, { 'C', 16 }, { 
 local LOOP = 0
 for _, s in ipairs(SONG) do LOOP = LOOP + s[2] end
 GC.S16, GC.BAR, GC.INTRO_BARS, GC.LOOP = S16, BAR, INTRO_BARS, LOOP
+-- EL DUELO DE RITMO (src/ui/RhythmDuel.lua lo juega cada cliente; aquí, lo que pasa en la pelea). Por dificultad: chart, margen (s a
+-- cada lado), s en pantalla, precisión por debajo de la cual se vacía el medidor, desde cuál lo noquea y si puede matar
+GC.DUEL = {
+    easy    = { chart = 'easy',   window = 0.16,  scroll = 1.6,  failAt = 0.5,  koAt = 0.7,  kills = false },
+    normal  = { chart = 'normal', window = 0.13,  scroll = 1.3,  failAt = 0.6,  koAt = 0.8,  kills = false },
+    hard    = { chart = 'full',   window = 0.11,  scroll = 1.1,  failAt = 0.65, koAt = 0.85, kills = true },
+    extreme = { chart = 'full',   window = 0.085, scroll = 0.85, failAt = 0.7,  koAt = 0.9,  kills = true },
+    xtra    = { chart = 'full',   window = 0.065, scroll = 0.65, failAt = 0.75, koAt = 0.92, kills = true },
+}
+local DUEL_WAIT = 1.0                           -- s de más esperando los resultados (online: cada cliente va con su música)
+local DUEL_AFTER = 1.0                          -- s invulnerable al acabar
+-- Dónde más puede empezar enfadado, una vez por vuelta de la canción (siempre, al principio de "la pista")
+local DUEL_SPOTS = { { 'A', 1 }, { 'A', 9 }, { 'B', 1 }, { 'B', 9 }, { 'C', 1 }, { 'C', 9 } }
 -- Las notas: en los POPS del bajo de cada compás de la B (y de la 2ª mitad del clímax, que es la B)
 local B_NOTES = { { 4, 8 }, { 4, 8 }, { 4, 8 }, { 4, 8 }, { 4, 8 }, { 4, 10 }, { 4, 8 }, {},
                   { 4, 8 }, { 4, 8 }, { 4, 8 }, { 4, 8 }, { 4, 8 }, { 4, 10 }, { 4, 8 }, { 6 } }
@@ -242,7 +255,9 @@ function GC.plan(sec, k, rage, noGold)
             end
         else p.notes = B_NOTES[k] or {} end
     elseif sec == 'D' then                                              -- (la pista: salta en los impares, notas con los pops de los pares)
-        if k % 2 == 1 then p.hop = true else p.notes = rage and not gold and { 2, 6, 14 } or { 6, 14 } end
+        if k % 2 == 1 then p.hop = true
+        elseif k == 16 then p.notes = { 6 }                             -- (en el compás 16 no hay pop en la 14)
+        else p.notes = rage and not gold and { 2, 6, 14 } or { 6, 14 } end
     elseif sec == 'K' then
         p.lick = k % 2 == 0
     elseif sec == 'O' then
@@ -287,6 +302,7 @@ end
 -- UN dibujo por compás (0.5.51, el usuario: "más visibles y evitables"; antes dos, con 0,4 s de aviso): AVISO los 3
 -- primeros tiempos (FLOOR_WARN), la COLUMNA en el 4º (BOOM_LEN semicorcheas)
 function GC:floorNow()
+    if self:duelLive() then return nil end
     local b, sec, k, step = self:whereAt(self.songT or 0)
     if not GC.floorOn(sec, k) then return nil end
     local n = self:panels()
@@ -361,6 +377,7 @@ function GC:goldOff() return self.phase == 2 and self.decks ~= nil and self.deck
 -- ¿Se pueden poner a girar? (no con él noqueado o recomponiéndose: el bajón ya le dio; ni durante la pista de baile)
 function GC:decksLive()
     return self:goldOff() and self:isActive() and self.state ~= 'stunned' and self.state ~= 'regrow' and not self:decksAway()
+        and not self:duelLive()
         and self:deckCool() <= 0
 end
 -- ENFRIAMIENTO de los platos tras un bajón (0.5.64, el usuario: "se puede spamear, no tienen cooldown"): DECK_COOL s
@@ -489,7 +506,7 @@ end
 
 -- (sin efectos: el cliente online lo usa para predecir)
 function GC:interact(pa)
-    if not self:isActive() then return nil end
+    if not self:isActive() or self:duelLive() then return nil end
     if self.eventFrozen then return Boss.interact(self, pa) end        -- (evento: aturdido hasta el corte)
     if self:trampOut() and (pa.vy or 0) > 0 then
         local tb, pob = self:trampBox(), pa:getOuterBounds()
@@ -617,7 +634,7 @@ function GC:isDying() return DEATH[self.state] == true or Boss.isDying(self) end
 function GC:isVulnerable() return self:isActive() and self.state == 'stunned' and (self.stunHits or 0) < STUN_HITS end
 function GC:releasesZone() return self.state == 'dying_burst' or self.state == 'dead' end
 function GC:shardDrop() return false end                                -- (jefe secreto: no guarda fragmento)
-function GC:isSolidBody() return Boss.isSolidBody(self) and not DEATH[self.state] end
+function GC:isSolidBody() return Boss.isSolidBody(self) and not DEATH[self.state] and not self:duelLive() end
 function GC:canBeKnocked() return false end
 
 -- Un golpe aturdido (hasta STUN_HITS por aturdimiento; con el último, se recompone y le crece el trampolín)
@@ -691,6 +708,69 @@ function GC:burst()
     Sound.play('enemyExplode', 0.8)
     Sound.play('megaSlam', 0.9, 0.7)
     Sound.play('crowdBoo', 0.9)
+end
+
+-- ── El duelo de ritmo ──────────────────────────────────────────────────────────
+-- self.duel = { bar, bars, res }: empieza en el compás `bar`; el compás de antes ya es el aviso. Del reloj: igual online
+function GC:duelLive()
+    local d = self.duel
+    return d ~= nil and (self.songT or 0) >= (d.bar - 1) * BAR
+end
+-- Mientras, los jugadores de la zona sin control e invulnerables (BossZones.frozenAt: nada les hace daño)
+function GC:freezesPlayers() return self:duelLive() and self:isActive() end
+function GC:duelInfo() return self:duelLive() and self.duel or nil end
+-- El resultado de un jugador (RhythmDuel, directo u online)
+function GC:duelReport(pa, bar, acc, failed)
+    local d = self.duel
+    if not d or d.bar ~= bar or type(acc) ~= 'number' then return end
+    d.res[pa] = { acc = math.max(0, math.min(1, acc)), failed = failed == true }
+end
+function GC:planDuel(level, b)
+    if self.eventRef or self.state == 'stunned' or self.state == 'regrow' or not self:isActive() then return end
+    local loop = GC.loopOf(b)
+    if self.extraLoop ~= loop then
+        self.extraLoop, self.extraSpot = loop, DUEL_SPOTS[math.random(#DUEL_SPOTS)]
+    end
+    local _, sec, k = GC.where((b + 1) * BAR)
+    local spot = self.extraSpot
+    if (sec == 'D' and k == 1) or (self.rage and sec == spot[1] and k == spot[2]) then
+        self.duel = { bar = b + 1, bars = (math.random() < 0.5) and 8 or 16, res = {} }     -- (el usuario: a veces 8, a veces 16)
+        Sound.play('crowdCheer', 1.05)
+    end
+end
+function GC:finishDuel(level)
+    local d = self.duel
+    self.duel = nil
+    local cfg = GC.DUEL[level.difficulty or 'normal'] or GC.DUEL.normal
+    local n, ko = 0, 0
+    for _, pa in ipairs(level.players or {}) do
+        if not pa.dying and pa.alive ~= false then
+            n = n + 1
+            pa.frozen = false                                            -- (ya no: si no, el golpe no le llegaría)
+            local r = d.res[pa]
+            if r and r.failed then
+                if (cfg.kills or (pa.hp or 0) > 1) and pa.hurt then pa:hurt(1) end
+            elseif r and r.acc >= cfg.koAt then ko = ko + 1 end
+            pa.invT = math.max(pa.invT or 0, DUEL_AFTER)
+        end
+    end
+    if n > 0 and ko * 2 > n then self:knockOut() end                     -- (online: la mayoría)
+end
+function GC:updateDuel(level, b, crossed)
+    local d = self.duel
+    if not d then
+        if crossed(0) then self:planDuel(level, b) end
+        return
+    end
+    local all, n = true, 0
+    for _, pa in ipairs(level.players or {}) do
+        if not pa.dying and pa.alive ~= false then
+            n = n + 1
+            if not d.res[pa] then all = false end
+        end
+    end
+    local fin = (d.bar + d.bars) * BAR
+    if (n > 0 and all) or self.songT >= fin + DUEL_WAIT then self:finishDuel(level) end
 end
 
 -- ── Update ────────────────────────────────────────────────────────────────────
@@ -796,6 +876,17 @@ function GC:updateBoss(dt, level)
         self:set('groove')
     end
 
+    -- EL DUELO DE RITMO: sin ataques ni peligros; él baila
+    self:updateDuel(level, b, crossed)
+    if self.state == 'stunned' then return end                          -- (lo acaba de noquear el duelo)
+    if self:duelLive() then
+        self.notes, self.waves = {}, {}
+        local pa = self:nearestPlayer(level)
+        if pa then self:faceTo(pa.x) end
+        self:set('groove')
+        return
+    end
+
     -- La NOTA DORADA, en el golpe de banda que cierra la frase (una a la vez; solo en la 1ª fase)
     local g = not self:goldOff() and GC.goldAt(sec, k) or nil
     if g and crossed(g) and not self:goldAlive() then self:shoot(level, true) end
@@ -876,9 +967,9 @@ end
 
 -- ── Red ───────────────────────────────────────────────────────────────────────
 -- { songT·100, enfadado 0/1, diana x, golpes aturdido, fase, bajón songT·100 (-1), 2ª fase songT·100 (-1), ánimo del
---   público (0/1/2), su songT·100 (-1), nOndas, {ondas…}, nNotas, {id, x, y, vx, vy, color}…, nPlatos, {x, y, girando s·10}… }
+--   público (0/1/2), su songT·100 (-1), duelo: compás (-1) y compases, nOndas, {ondas…}, nNotas, {id, x, y, vx, vy, color}…, nPlatos, {x, y, girando s·10}… }
 local NOTE_STRIDE, DECK_STRIDE = 6, 3
-local HEAD = 10                                 -- (donde empiezan las ondas)
+local HEAD = 12                                 -- (donde empiezan las ondas)
 local function readList(b, k, stride)
     local n = type(b[k]) == 'number' and b[k] or 0
     local list = {}
@@ -893,7 +984,8 @@ end
 function GC:netPackExtra()
     local out = { math.floor(self.songT * 100), self.rage and 1 or 0, self.markX or 0, self.stunHits or 0, self.phase or 1,
                   self.dropT and math.floor(self.dropT * 100) or -1, self.p2T and math.floor(self.p2T * 100) or -1,
-                  self.moodKind or 0, self.moodAt and math.floor(self.moodAt * 100) or -1 }
+                  self.moodKind or 0, self.moodAt and math.floor(self.moodAt * 100) or -1,
+                  self.duel and self.duel.bar or -1, self.duel and self.duel.bars or 0 }
     BossWaves.pack(self.waves, out)
     out[#out + 1] = #self.notes
     for _, n in ipairs(self.notes) do
@@ -917,6 +1009,9 @@ function GC:netApplyExtra(a, b, f)
     self.p2T = (type(b[7]) == 'number' and b[7] >= 0) and b[7] / 100 or nil
     self.moodKind = b[8] or 0
     self.moodAt = (type(b[9]) == 'number' and b[9] >= 0) and b[9] / 100 or nil
+    if type(b[10]) == 'number' and b[10] >= 0 then
+        if not (self.duel and self.duel.bar == b[10]) then self.duel = { bar = b[10], bars = b[11] or 8, res = {} } end
+    else self.duel = nil end
     local waves, k = BossWaves.unpack(a, b, HEAD, f)
     self.waves = waves
     local prev = {}

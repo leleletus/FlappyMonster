@@ -34,6 +34,10 @@
 --              golpe, sin ondas
 --   derrota    el último golpe: aturdido, REVIENTA (libera la zona, explosión grande, abucheo) y, recogido el escenario,
 --              se acaba; no se mueve de su sitio; sin fragmento
+--   duelo      al principio de "la pista" (8 o 16 compases): un compás de aviso, sin peligros; el jugador sin control e
+--              invulnerable y él bailando; acaba solo, sin castigar a quien no dio resultado
+--   duelo_ko   un buen resultado lo noquea; un fallo quita 1; en Fácil y Normal no mata, en Difícil sí; online, por mayoría
+--   duelo_red  el duelo viaja en netPackExtra
 --   red        netPackExtra → otro Groove (cliente): canción, enfado, fase, diana, ondas, notas (con la dorada),
 --              platos y bajón iguales; interact igual
 --
@@ -677,10 +681,89 @@ function cases.enfriar()
         ('tras el bajón faltan %.1f s; se pueden pisar: durante %s, después %s'):format(cool0, tostring(liveDuring), tostring(liveAfter)))
 end
 
+local function duelBar(boss)                                       -- (el compás en que empieza "la pista")
+    return boss.INTRO_BARS + 16 + 16 + 8 + 8 + 16
+end
+function cases.duelo()
+    local level, es, boss = arena('normal')
+    local pa = playerAt(level, 14)
+    local start = duelBar(boss)
+    songAt(boss, start - 2, 15)
+    boss.prevT = boss.songT - 0.01
+    level.players = { pa }
+    local seen = {}
+    for _ = 1, 20 do
+        stepAll(level, es, { pa }, 1 / 60)
+        if boss.duel then break end
+    end
+    check('duelo', boss.duel and boss.duel.bar == start and (boss.duel.bars == 8 or boss.duel.bars == 16),
+          ('se anuncia: compás %s, %s compases'):format(tostring(boss.duel and boss.duel.bar), tostring(boss.duel and boss.duel.bars)))
+    boss.notes = { { id = 1, x = pa.x, y = pa.y, vx = 0, vy = 0, c = 0, t = 0 } }
+    pa.hp = 3
+    local bars = boss.duel.bars
+    local still, hurt, moved = true, false, false
+    local x0
+    stepAll(level, es, { pa }, boss.BAR * (bars + 1) + 1.2, function()
+        if boss:duelLive() then
+            x0 = x0 or pa.x
+            stub.state.move_right = true
+            if not pa.frozen or not pa:isInvulnerable() then still = false end
+            if #boss.notes > 0 or #boss.waves > 0 or boss.state ~= 'groove' or boss:floorNow() then hurt = true end
+            if math.abs(pa.x - x0) > 2 then moved = true end
+        end
+    end)
+    check('duelo', still and not hurt and not moved and pa.hp == 3, ('congelado=%s peligros=%s se movió=%s vida %d'):format(tostring(still), tostring(hurt), tostring(moved), pa.hp))
+    check('duelo', boss.duel == nil and boss.state ~= 'stunned', 'acaba solo y sin resultado no pasa nada: ' .. boss.state)
+end
+function cases.duelo_ko()
+    local function run(diff, acc, failed, hp)
+        local level, es, boss = arena(diff)
+        local pa = playerAt(level, 14)
+        pa.hp = hp or 3
+        local start = duelBar(boss)
+        songAt(boss, start - 1, 1)
+        boss.duel = { bar = start, bars = 8, res = {} }
+        stepAll(level, es, { pa }, 0.1)
+        boss:duelReport(pa, start, acc, failed)
+        stepAll(level, es, { pa }, 0.05)
+        return boss, pa
+    end
+    local b, p = run('normal', 0.95, false)
+    check('duelo_ko', b.state == 'stunned' and b:isVulnerable(), 'buen resultado: noqueado y vulnerable, ' .. b.state)
+    b, p = run('normal', 0.7, false)
+    check('duelo_ko', b.state ~= 'stunned' and p.hp == 3, 'a medias: nada, vida ' .. p.hp)
+    b, p = run('normal', 0.1, true, 3)
+    check('duelo_ko', p.hp == 2 and b.duel == nil, 'falla: −1, vida ' .. p.hp)
+    b, p = run('easy', 0.1, true, 1)
+    check('duelo_ko', p.hp == 1 and not p.dying, 'en Fácil no mata')
+    b, p = run('hard', 0.1, true, 1)
+    check('duelo_ko', p.dying or p.lives < 3 or p.hp == p.hpMax, 'en Difícil, sí')
+    -- Online: mayoría
+    local level, es, boss = arena('normal')
+    local p1, p2, p3 = playerAt(level, 12), playerAt(level, 14), playerAt(level, 16)
+    local start = duelBar(boss)
+    songAt(boss, start - 1, 1)
+    boss.duel = { bar = start, bars = 8, res = {} }
+    boss:duelReport(p1, start, 0.95, false)
+    boss:duelReport(p2, start, 0.5, false)
+    boss:duelReport(p3, start, 0.5, false)
+    stepAll(level, es, { p1, p2, p3 }, 0.05)
+    check('duelo_ko', boss.state ~= 'stunned', 'uno de tres no basta')
+end
+function cases.duelo_red()
+    local level, es, boss = arena('normal')
+    songAt(boss, duelBar(boss) - 1, 1)
+    boss.duel = { bar = duelBar(boss), bars = 16, res = {} }
+    local pack = boss:netPackExtra()
+    local _, _, other = arena('normal')
+    other:netApplyExtra(pack, pack, 1)
+    check('duelo_red', other.duel and other.duel.bar == boss.duel.bar and other.duel.bars == 16 and other:duelLive() and other:freezesPlayers(),
+          'el cliente sabe del duelo y congela igual')
+end
 function love.load(arg)
     local only = os.getenv('CASE')
     for _, n in ipairs({ 'reloj', 'salto', 'notas', 'dorada', 'aturdido', 'trampolin', 'tocar', 'pista', 'dibujos', 'baile', 'temblor', 'platos', 'enfriar', 'ocultos', 'publico', 'trepar', 'enfado',
-                         'solo', 'derrota', 'red' }) do
+                         'solo', 'derrota', 'duelo', 'duelo_ko', 'duelo_red', 'red' }) do
         if not only or only == n then
             local ok, err = xpcall(cases[n], debug.traceback)
             if not ok then check(n, false, 'error: ' .. tostring(err)) end

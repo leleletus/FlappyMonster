@@ -29,6 +29,11 @@ local controls = {
     crouch     = {'key:down', 'key:s', 'button:dpdown', 'axis:lefty+'},
     -- Linterna (niveles a oscuras): encender / apagar
     light      = {'key:f', 'key:lshift', 'button:x', 'button:y'},
+    -- El duelo de ritmo (src/ui/RhythmDuel.lua): cruceta o botones; en teclado, flechas, WASD o DFJK. Sin la repetición de los menús
+    rhythm_left  = {'key:left',  'key:a', 'key:d', 'button:dpleft',  'button:x', 'axis:leftx-'},
+    rhythm_down  = {'key:down',  'key:s', 'key:f', 'button:dpdown',  'button:a', 'axis:lefty+'},
+    rhythm_up    = {'key:up',    'key:w', 'key:j', 'button:dpup',    'button:y', 'axis:lefty-'},
+    rhythm_right = {'key:right', 'key:k', 'key:l', 'button:dpright', 'button:b', 'axis:leftx+'},
 }
 
 -- (mando, distribución Nintendo: confirmar = A, a la derecha; volver = B, abajo — `button:a` de SDL)

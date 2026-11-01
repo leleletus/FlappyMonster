@@ -293,6 +293,12 @@ end
 function BossZones.frozenAt(level, x, y)
     for _, z in ipairs(level.bossZones or {}) do
         if z.state == 'intro' and contains(z, x, y) then return true end
+        -- (un jefe puede pararlo también: el duelo de ritmo del Cangrejo Groove)
+        if z.state == 'fight' and contains(z, x, y) then
+            for _, b in ipairs(z.bosses or {}) do
+                if b.freezesPlayers and b:freezesPlayers() then return true end
+            end
+        end
     end
     return false
 end

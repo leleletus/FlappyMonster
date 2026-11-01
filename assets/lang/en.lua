@@ -210,7 +210,18 @@ return {
         desc_settings = "Language and options",
         hint = "{move} choose      {ok} select      {back} back",
     },
+    rhythm = {
+        ready = "RHYTHM DUEL!",
+        perfect = "PERFECT!",
+        good = "GOOD",
+        miss = "MISS",
+        fail = "HE BEAT YOU!",
+        ok = "YOU HELD ON",
+        ko = "KNOCKED OUT!",
+        watch = "WATCH THE DUEL",
+    },
     settings = {
+        rhythm_offset = "RHYTHM DELAY: {ms} MS",
         language = "LANGUAGE",
         hint = "{change} change      {back} back",
     },

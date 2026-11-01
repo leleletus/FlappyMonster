@@ -187,6 +187,40 @@ Protocol 71.
   back still spinning → while the decks are away they switch OFF (they return off); (2) "too easy" → a deck spins
   `DECK_T` 6 bars (9.6 s; was 10 bars, 16 s). Harness `groovecrab_rules` (`ocultos`, `platos`). Not played yet.
 
+## The rhythm duel (the user's idea, 2026-11-01)
+
+Friday Night Funkin' style. The player stands still, invulnerable; the crab keeps dancing, can't be hit and does no harm; the song's exact notes rise to 4 grey strums and must be pressed on time.
+
+**Files:** `src/ui/RhythmDuel.lua` (the game, drawing, input) · `GC.DUEL`, `GC:planDuel`, `GC:finishDuel` in the boss · `assets/charts/groove.json` from `tools/music/groove_chart.py`, generated from the installed score, so **if the score changes, regenerate it** · sprites in `assets/images/ui/rhythm/` from `tools/art/ui/make_rhythm.py`.
+
+**When:** at the start of section D always; enraged, also one random phrase (A, B or C) per song loop. **Randomly 8 or 16 bars** (the user). One bar of warning before it, already frozen. Not while knocked out, not in the Mashup.
+
+| Difficulty | Chart | Notes/s | Window | On screen | Meter empties below | KO from | Can kill |
+|---|---|---|---|---|---|---|---|
+| Easy | `easy`: pops and strong beats, 400 ms apart; hook in D | 1.6 | ±160 ms | 1.6 s | 50 % | 70 % | no |
+| Normal | `normal`: 200 ms apart; hook in D | 4.5 | ±130 ms | 1.3 s | 60 % | 80 % | no |
+| Hard | `full`: slap bass 1:1 (the user: must be 1:1) | 7.4 | ±110 ms | 1.1 s | 65 % | 85 % | yes |
+| Extreme | `full` | 7.4 | ±85 ms | 0.85 s | 70 % | 90 % | yes |
+| Xtra Extreme | `full` | 7.4 | ±65 ms | 0.65 s | 75 % | 92 % | yes |
+
+**Result:** a meter starts at 50 %; hits and misses are scaled so "empties below" is the break-even accuracy, whatever the note count. Empty: the duel ends, −1 HP (at most 1 per duel). From "KO from": knocked out, one free hit. In between: nothing. Pressing with no note costs nothing.
+
+**Sync:** judged against the music's real position (`Sound.musicPosition`), falling back to `songT`. Settings has a rhythm delay (±300 ms) for audio latency.
+
+**Single player, server, client:** the freeze comes from the song clock through `freezesPlayers` (`BossZones.frozenAt`): same in all three. **The judging is the exception to the rule that the server decides:** each client plays against its own music and sends `rhythm_result` (a modified client could fake it, accepted). A KO needs a majority of players. No result: nothing happens.
+
+**Measured with simulated players** (`rhythm_duel`, % fail / % KO over 40 duels of 8 bars; each player has a timing error and misses some notes):
+
+| | 30 ms | 50 ms | 70 ms | 100 ms | 140 ms |
+|---|---|---|---|---|---|
+| Easy | 0 / 100 | 0 / 100 | 0 / 100 | 0 / 75 | 2 / 2 |
+| Normal | 0 / 100 | 0 / 100 | 0 / 90 | 0 / 5 | 10 / 0 |
+| Hard | 0 / 100 | 0 / 100 | 0 / 37 | 0 / 0 | 27 / 0 |
+| Extreme | 0 / 100 | 0 / 42 | 0 / 0 | 0 / 0 | 82 / 0 |
+| Xtra | 0 / 77 | 0 / 0 | 15 / 0 | 95 / 0 | 100 / 0 |
+
+Simulated players do not get tired or lost at 10 notes per second, so real results will be worse. **Pending the user:** feel, whether the chart is readable, the lanes, real devices. The existing attacks were measured against the new song: 61 of 62 shots on a pop; bar 16 of D fixed.
+
 ## The song's section D (2026-11-01)
 
 The improved theme adds D, 16 disco bars after the climax (loop 84 bars): he hops on odd bars, throws notes on even bars with the pops (steps 6, 14; enraged also 2), golden note on bars 8 and 16, dance floor from bar 9. Timings not played yet.

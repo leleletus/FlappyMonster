@@ -32,6 +32,7 @@ local CornerButtons        = require 'src/ui/CornerButtons'
 local Modes                = require 'src/world/modes/Modes'
 local BossZones            = require 'src/world/systems/BossZones'
 local BossHud              = require 'src/ui/BossHud'
+local RhythmDuel           = require 'src/ui/RhythmDuel'
 local AutoScroll           = require 'src/world/systems/AutoScroll'
 local Floods               = require 'src/world/systems/Floods'
 local PointAreas           = require 'src/world/systems/PointAreas'
@@ -429,6 +430,12 @@ local INTRO_DUR     = 4.0  -- s del cartel de presentación del modo
 local BANNER_DUR    = 3.0
 
 function OnlineAdventureState:update(dt)
+    -- El duelo de ritmo del Cangrejo Groove: se juega aquí, contra la música de este cliente, y el servidor recibe el resultado
+    if self.level then
+        RhythmDuel.update(dt, self.level, self.localPa, function(bar, acc, failed)
+            NC:send('rhythm_result', { bar = bar, acc = acc, failed = failed })
+        end)
+    end
     -- Indicador de conexión: ping + cuánto hace del último snapshot
     self.pingIcon = self.pingIcon or PingIcon.new()
     local age = self.lastSnapAt and (love.timer.getTime() - self.lastSnapAt) or 0

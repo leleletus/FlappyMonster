@@ -22,6 +22,7 @@ local Entity          = require 'src/world/entities/base/Entity'
 local Particles       = require 'src/fx/Particles'
 local BossZones       = require 'src/world/systems/BossZones'
 local BossHud         = require 'src/ui/BossHud'
+local RhythmDuel      = require 'src/ui/RhythmDuel'
 local AutoScroll      = require 'src/world/systems/AutoScroll'
 local Floods          = require 'src/world/systems/Floods'
 local PointAreas      = require 'src/world/systems/PointAreas'
@@ -465,6 +466,12 @@ end
 
 -- ── Update ────────────────────────────────────────────────────────────────────
 function AdventureState:update(dt)
+    -- El duelo de ritmo del Cangrejo Groove (lo juega el jugador; el jefe decide el resto)
+    RhythmDuel.update(dt, self.level, self.player, function(bar, acc, failed)
+        for _, e in ipairs(self.level.liveEntities or {}) do
+            if e.duelReport then e:duelReport(self.player, bar, acc, failed) end
+        end
+    end)
     -- ── Game over ─────────────────────────────────────────────────────────────
     if self.dead then
         self.timeScale = self.timeScale + (0.7 - self.timeScale) * 2 * dt
@@ -968,6 +975,7 @@ function AdventureState:_renderScene()
     if not self.bonus then renderLivesHud(self.player, self.level.dark) end     -- (en el bonus no hay vidas: ver BonusMatch)
     if self.level.dark then LightHud.draw(self.player, WINDOW_W - 206, 76) end      -- (bajo las vidas)
     self:renderBossHud()
+    RhythmDuel.draw()
     if self.bonus then self.bonus:renderHud() end
     self.player:renderAirBar()
     self.player:renderDrownCountdown(self.player.x - self.camX, self.player.y - self.camY)

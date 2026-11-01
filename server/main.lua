@@ -1140,6 +1140,18 @@ Updates.register(function(event, handler)
     end, true)
 end)
 
+-- El resultado del duelo de ritmo de un jugador: cada cliente lo juega contra su música (src/ui/RhythmDuel.lua)
+on("rhythm_result", function(data, client, player)
+    if type(data) ~= "table" or not player.roomId then return end
+    local room = rooms[player.roomId]
+    if not room or room.state ~= "IN_GAME" or not room.sim then return end
+    local ps = room.sim.playerSims[player.id]
+    if not ps or ps.isSpectator or type(data.acc) ~= "number" or type(data.bar) ~= "number" then return end
+    for _, e in ipairs(room.sim.enemies or {}) do
+        if e.duelReport then e:duelReport(ps.pa, data.bar, data.acc, data.failed == true) end
+    end
+end)
+
 server.onInvalidPacket = function(client, size)
     local p = client and players[client]
     if not p or p.kicked then return end

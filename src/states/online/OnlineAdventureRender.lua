@@ -14,6 +14,7 @@ local CornerButtons        = require 'src/ui/CornerButtons'
 local Modes                = require 'src/world/modes/Modes'
 local BossZones            = require 'src/world/systems/BossZones'
 local BossHud              = require 'src/ui/BossHud'
+local RhythmDuel           = require 'src/ui/RhythmDuel'
 local PointAreas           = require 'src/world/systems/PointAreas'
 local Darkness             = require 'src/fx/Darkness'
 
@@ -168,6 +169,7 @@ function OnlineAdventureState:_renderScene()
         end
         self:_renderBossHUD()
     end)
+    RhythmDuel.draw()
 
     -- Overlays
     if self.showPause then self:_renderPauseOverlay() end

@@ -6,7 +6,7 @@
 
 local Lang = require 'src/core/Lang'
 
-local Settings = { language = Lang.DEFAULT, onlineName = '' }
+local Settings = { language = Lang.DEFAULT, onlineName = '', rhythmOffset = 0 }   -- (rhythmOffset: ms de retardo del audio, duelo de ritmo)
 local FILE = 'options.cfg'
 
 function Settings.load()
@@ -19,6 +19,7 @@ function Settings.load()
             if ok2 and type(data) == 'table' then
                 if type(data.language) == 'string' then Settings.language = data.language end
                 if type(data.onlineName) == 'string' then Settings.onlineName = data.onlineName:sub(1, 32) end
+                if type(data.rhythmOffset) == 'number' then Settings.rhythmOffset = math.max(-300, math.min(300, data.rhythmOffset)) end
             end
         end
     end
@@ -26,7 +27,7 @@ function Settings.load()
 end
 
 function Settings.save()
-    local s = string.format('return { language = %q, onlineName = %q }\n', Settings.language, Settings.onlineName or '')
+    local s = string.format('return { language = %q, onlineName = %q, rhythmOffset = %d }\n', Settings.language, Settings.onlineName, Settings.rhythmOffset or 0 or '')
     pcall(love.filesystem.write, FILE, s)
 end
 
@@ -34,6 +35,11 @@ end
 function Settings.setOnlineName(name)
     if type(name) ~= 'string' or name == '' or name == Settings.onlineName then return end
     Settings.onlineName = name
+    Settings.save()
+end
+
+function Settings.setRhythmOffset(ms)
+    Settings.rhythmOffset = math.max(-300, math.min(300, ms))
     Settings.save()
 end
 

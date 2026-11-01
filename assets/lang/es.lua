@@ -210,7 +210,18 @@ return {
         desc_settings = "Idioma y opciones",
         hint = "{move} elegir      {ok} aceptar      {back} volver",
     },
+    rhythm = {
+        ready = "¡DUELO DE RITMO!",
+        perfect = "¡PERFECTO!",
+        good = "BIEN",
+        miss = "FALLO",
+        fail = "¡TE HA GANADO!",
+        ok = "AGUANTASTE",
+        ko = "¡LO NOQUEASTE!",
+        watch = "MIRA EL DUELO",
+    },
     settings = {
+        rhythm_offset = "RETARDO DEL RITMO: {ms} MS",
         language = "IDIOMA",
         hint = "{change} cambiar      {back} volver",
     },

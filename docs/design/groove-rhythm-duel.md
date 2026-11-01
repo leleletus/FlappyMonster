@@ -1,6 +1,6 @@
 # Groove Crab: the rhythm duel (proposal)
 
-**Status: proposal, nothing built.** The user's idea (2026-11-01): a Friday Night Funkin' style micro-game inside the Groove Crab's fight. The player stands still, the crab keeps dancing, 4 arrows appear and the song's exact notes scroll to them. The user asked for an opinion and a balance plan. Fight today: [groovecrab](../bosses/groovecrab.md).
+**Status: built, see [groovecrab](../bosses/groovecrab.md#the-rhythm-duel-the-users-idea-2026-11-01).** The user's verdicts: Hard is 1:1, a good duel knocks him out, each duel randomly lasts 8 or 16 bars. The user's idea (2026-11-01): a Friday Night Funkin' style micro-game inside the Groove Crab's fight. The player stands still, the crab keeps dancing, 4 arrows appear and the song's exact notes scroll to them. The user asked for an opinion and a balance plan. Fight today: [groovecrab](../bosses/groovecrab.md).
 
 ## What was measured (`tools/music/groove_mejora.py`, variant B, the installed one)
 

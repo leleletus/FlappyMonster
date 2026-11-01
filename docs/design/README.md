@@ -14,7 +14,7 @@ and describe the real thing in the system's page.
 |---|---|
 | 4 future secret bosses: Mother Mole, Carnivorous Queen, Supreme Gust, Triple Strike Scorpion (at least 3 needed) | [bosses/future-secret-bosses](../bosses/future-secret-bosses.md) |
 | The Carnivorous Queen's looks (A chosen, built) | [carnivorous-queen](carnivorous-queen.md) |
-| Groove Crab's rhythm duel, Friday Night Funkin' style: charts, balance, risks (proposal, waiting for the user) | [groove-rhythm-duel](groove-rhythm-duel.md) |
+| Groove Crab's rhythm duel, Friday Night Funkin' style: charts, balance, risks (built) | [groove-rhythm-duel](groove-rhythm-duel.md) |
 | Bosses still waiting for the user's verdict, the Giant Hopper's own theme | [bosses/new-bosses-plan](../bosses/new-bosses-plan.md) |
 | Level review: where to put Gusts, reworks, new levels | [levels/level-review-2026-10](../levels/level-review-2026-10.md) |
 | Flying in replayed levels after the ending (future idea, not to build yet) | [story/story](../story/story.md) |
