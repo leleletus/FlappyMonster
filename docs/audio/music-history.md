@@ -521,7 +521,7 @@ the old level tune in the final boss, Verity's hook).
 ## Reina (`tools/music/reina.py`, the Carnivorous Queen's theme; 2026-11-01)
 
 The user: strong inspiration from the jungle level themes, its own boss touch, and especially the Temple Tumble riff of El Templo. By the agent. F minor, 168 BPM; the riff in 46 of 76 loop bars with no tune over it; "the mouths" as its own accent; an 8-bar 12/8 section. Variants A "enredadera", B "bocas", C "balafon": **all rejected**, "literally just remixes of the Giant Beetle's theme"; inspiration meant the rhythm, instruments and riff, everything else must be different and original.
-- v2, recomposed as its own song: G minor, 140 BPM, its own 3+3+2+3+3+2 "bite", own chords and form (A P C D A' C' R), a main melody, the temple riff only as a 4-bar quote (6 % of the loop). Variants A "dientes" (saw), B "raices" (marimba + saw), C "flor" (pan flute); previews in `FlappyMonster_pruebas/musica/reina_v2/`, **not installed, pending the user's pick**. Not listened to.
+- v2, recomposed as its own song: G minor, 140 BPM, its own 3+3+2+3+3+2 "bite", own chords and form (A P C D A' C' R), a main melody, the temple riff only as a 4-bar quote (6 % of the loop). **The user chose B "raices"** (marimba + saw; rejected A "dientes", C "flor"), installed. Not listened to.
 
 ## El Groove, the improvement (2026-11-01; `tools/music/groove_mejora.py`)
 

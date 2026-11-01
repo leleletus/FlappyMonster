@@ -1,7 +1,7 @@
 # The Carnivorous Queen (`carnqueen`)
 
 The jungle's secret boss: the Carnivorous Plant grown huge, lying flat, rooted in the middle of a temple room. **In the game as an entity, with an arena for
-testing; no story level, secret exit, Collection entry or music of her own yet** (plan: [future-secret-bosses](future-secret-bosses.md), looks:
+testing; no story level, secret exit or Collection entry yet** (plan: [future-secret-bosses](future-secret-bosses.md), looks:
 [carnivorous-queen](../design/carnivorous-queen.md)). The user chose look A «Cepo Real», without the face.
 
 Try her: `love . --editor tools/levelgen/arenas/jefe_reina.json`, then play from the editor.

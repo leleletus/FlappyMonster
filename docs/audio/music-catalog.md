@@ -25,6 +25,7 @@ screens play `victory`; the Flappy mode plays `flappy`.
 | `polilla.py` | `polilla` "La Polilla": the Giant Hopper's boss theme (caves) — original, in the dark-cave style, on Resaca's GM slap bass (own riff); intro + loop |
 | `gloomy_nes.py cueva` | `cuevas_oscuras` (also a library: the spider "legs") |
 | `story_music.py [intro ending chase lair]` | the film scores, composed ON `assets/story/films.json` and the shard catalog `assets/story/shards.json` (one bell / hit / note per boss or shard; re-run after adding a boss with a shard) |
+| `reina.py [A B C]` | `reina`, the Carnivorous Queen's theme; `INSTALL=1 REINA=B` installs the chosen one |
 | `obsidiana.py [A B C]` | `obsidiana`, the Triple Strike Scorpion's theme (a fire bulería); `INSTALL=1 OBSIDIANA=B` installs the chosen one; `B_LEAD=sierra` (chosen) or `pulso` |
 | `credits_music.py` | `story_credits`: the credits medley, cut bar-exact from the game's own tracks as `films.json` `credits` says ([credits](../story/credits.md)) |
 | `groove_mejora.py [A B C]` | `groove` as installed since 0.5.123: the improved theme, built on `slap_boss.py`'s bars; `INSTALL=1 GROOVE=B` installs the chosen one. The old version: `FlappyMonster_originals/music/versiones/groove_antes_de_la_mejora/` |

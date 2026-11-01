@@ -32,7 +32,7 @@
   "vents": [],
   "foliage": [],
   "bossZones": [
-    {"col":12,"h":11,"id":1,"row":3,"w":32}
+    {"col":12,"h":11,"id":1,"row":3,"w":32, "music": "reina" }
   ],
   "background": "jungle",
   "time": "day",
