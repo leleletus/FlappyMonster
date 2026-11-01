@@ -170,7 +170,29 @@ def build():
             charts['normal'][b] = thin_lanes(t, ev, keep, 4)
             keep = EASY_STEPS.get(t) or best({st: weight_easy(st, ev[st][2]) for st in ev if ev[st][2] != GHOST}, 4, 12)
             charts['easy'][b] = thin_lanes(t, ev, list(keep), 2, True)
+    unjack(charts['full'])
     return charts
+
+
+def unjack(chart):
+    """Entre compases (cada uno se elige solo) pueden quedar dos flechas iguales a 100 ms: la segunda pasa al carril de al lado"""
+    keys = sorted(chart)
+    rows = {b: list(chart[b]) for b in keys}
+    prev = None                                            # (compás, índice, tiempo, carril)
+    for b in keys:
+        for i, (st, l) in enumerate(rows[b]):
+            t = b * 16 + st
+            if prev and t - prev[0] == 1 and l == prev[1]:
+                l = l + 1 if l < 3 else 2
+                rows[b][i] = (st, l)
+            prev = (t, l)
+    # (la vuelta del bucle: la última de la O con la primera de la A)
+    head = next(rows[b][0] for b in keys if b >= LOOP_FROM and rows[b])
+    last = keys[-1]
+    if rows[last] and rows[last][-1][0] == 15 and head[0] == 0 and rows[last][-1][1] == head[1]:
+        st, l = rows[last][-1]
+        rows[last][-1] = (st, l - 1 if l > 0 else 1)
+    chart.update(rows)
 
 
 def flat(chart):
