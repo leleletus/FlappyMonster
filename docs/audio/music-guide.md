@@ -191,3 +191,4 @@ safest way to pass them, and that is an arpeggio, not a tune. Starting from a co
 **Before showing a melody:** print these four numbers and aim inside the approved ranges, use passing notes on purpose, keep the 3+3+2 anticipations. They are necessary, not sufficient:
 none of this hears.
 
+**Delegate melodies:** when a track needs a new melody, give a fresh agent the boss or place and let it study the music without seeing rejected attempts (`obsidiana.py`; the user: "that usually works"). Its finding to keep: the melody's rhythm is the groove's rhythm.

@@ -42,7 +42,7 @@ def build():
         'name': 'Jefe: Escorpión Triple Aguijón', 'name_en': 'Boss: Triple Strike Scorpion',
         'width': W, 'height': H, 'playerStart': [3, FLOOR - 1],
         'tiles': t, 'entities': ents, 'vents': [], 'foliage': [],
-        'bossZones': [{'id': 1, 'col': Z0, 'row': 3, 'w': Z1 - Z0 + 1, 'h': FLOOR - 3}],
+        'bossZones': [{'id': 1, 'col': Z0, 'row': 3, 'w': Z1 - Z0 + 1, 'h': FLOOR - 3, 'music': 'obsidiana'}],
         'background': 'volcano', 'time': 'day',
     }
 

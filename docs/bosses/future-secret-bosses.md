@@ -42,7 +42,7 @@ Common to all:
 - **Piece:** a **weather vane**, the splinter as the arrow's tip.
 
 ## 4. The Triple Strike Scorpion — Volcano
-The user's idea (2026-10-31), replacing the Emperor Penguin. **Built as entities: [giantscorpion](giantscorpion.md). No level, music or
+The user's idea (2026-10-31), replacing the Emperor Penguin. **Built as entities: [giantscorpion](giantscorpion.md). No level or
 collectible entry yet.** The user chose design C «Obsidiana» (rejected: A «Basalto», B «Ascua», D «Ceniza»), with a
 shorter body and the tails drawn OVER the body. Type ids: `scorpion`, `giantscorpion`.
 

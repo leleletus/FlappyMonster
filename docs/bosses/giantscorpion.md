@@ -1,11 +1,11 @@
 # The Triple Strike Scorpion (`giantscorpion`) and the small Scorpion (`scorpion`)
 
 The user's secret boss for the volcano (2026-10-31): the volcano's one-tailed Scorpion after a mirror splinter split its
-tail in three. **In the game as entities, with an arena for testing; no story level, no music of its own, no collectible
+tail in three. **In the game as entities, with its theme and an arena for testing; no story level, no collectible
 entry yet** (plan: [future-secret-bosses](future-secret-bosses.md)).
 
 Try them: `love . --editor tools/levelgen/arenas/jefe_escorpion.json`, then play from the editor (a small one stands
-before the boss zone). The zone falls back to the default boss track until it gets its own.
+before the boss zone).
 
 ## Files
 
@@ -75,7 +75,7 @@ kills it. Touching it from the side, −1.
 
 - A new tail attack: a state, its entry in `ATTACKS`, its curve in `GS:moveTails` and its hit from pure data.
 - Any tail, tentacle or rope elsewhere: `SegmentChain` knows nothing about scorpions.
-- **Before it enters the story:** its secret exit and level, its music, the `collectibles.json` entry (not before: the Groove's gate
+- **Before it enters the story:** its secret exit and level, the `collectibles.json` entry (not before: the Groove's gate
   asks for every splinter), the `Worlds.lua` line.
 
 ## Tests
@@ -97,5 +97,5 @@ kills it. Touching it from the side, −1.
   unchanged).
 - 2026-10-31: chaining hits while stuck (and on the Groove) reported by the user → one hit per knockout, for all bosses ([system](system.md)).
 - 2026-10-31, second round (the user): drawn 1 px into the ground like the Beetle (`Kit.SINK`); the small one attacks behind and overhead, not only ahead; the WHOLE boss flashes red, tails and pincers too (`Kit.tint`); the caught player is visible; pincers sway while walking (`Kit.swing`); both faster; the boss leaps, long-jumps, climbs walls and aims ahead with wider marks.
-- 2026-10-31: its theme, Triple Aguijón: two variants, both rejected by the user; a new attempt is pending ([music-history](../audio/music-history.md)).
+- 2026-10-31: its theme is `obsidiana`, set in the arena's zone, after two rejected rounds ([music-history](../audio/music-history.md)).
 - **Pending the user:** how the fight feels, numbers (timings, damage), how often it leaps and climbs. Nobody has played it. Sounds not listened to by Claude.

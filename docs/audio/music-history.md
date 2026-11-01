@@ -642,7 +642,7 @@ The jungle boss (the Giant Rhino Beetle, a prototype for a future jungle island)
   also runs under the climax). REJECTED: every lead melody tried over this arrangement (4 attempts) — the riff is the
   melody of this piece; do not add one back without the user asking.
 
-## Triple Aguijón (`tools/music/triple_aguijon.py`, the Triple Strike Scorpion's theme; 2026-10-31)
+## Triple Aguijón (rejected; the generator is in `FlappyMonster_originals/herramientas_retiradas/`) and Obsidiana (`tools/music/obsidiana.py`, boss track `obsidiana`), the Triple Strike Scorpion's theme (2026-10-31)
 
 The user: create its boss theme using everything from the jungle tracks ([recipe](music-guide.md#8-the-jungle-recipe-the-users-favourite-2026-10-31)). A / B previews
 (`FlappyMonster_pruebas/musica/escorpion/`), not installed. A phrygian dominant (the volcano's ♭II, with a desert colour). The idea: three
@@ -652,6 +652,8 @@ castanets, wood blocks, claves, vibraslap, timpani over slap bass, DPCM drums, n
 B "aksak": 7/8 (2+2+3), the game's first odd meter, 5 s + 90 s (72 bars). Melody checks clean, no clashes; −11 LUFS. Verified by numbers only; **not listened to**.
 - The user's verdict on both: "ninguno de los 2 me convence": the melody feels forced and does not fit the song's flow; the rhythm and the instrumental are very good.
 - v2: same instrumental, new melodies that sing, the instrument hand-over every 2 bars instead of every note; previews `v2_*` with and without melody ([why](music-guide.md#why-my-melodies-come-out-forced-measured-2026-10-31-the-user-your-problems-are-always-in-the-melodies)). Pending the user; not listened to.
+- v2 had "the same problem" for the user. Who wrote the melody seems to matter: the user asked for a fresh agent with no context ("that usually works"; the jungle and mountain sets were also delegated). It studied all the music, never saw the rejected attempts, and wrote **Obsidiana**: a fire bulería in a 12-step bar 3+3+2+2+2 (the tail rises, then strikes three times), A minor with the Andalusian cadence, dark turn B♭ → E; Spanish guitar, palmas, castanets, taiko, Crystal accents over slap bass and chip drums; 12 s + 114 s (76 bars). Its finding: the melody's rhythm IS the groove's rhythm.
+- **The user chose B "picado" (riff-style melody), but with another lead instead of the overdriven guitar, "maybe a classic NES one"** → installed with the 2A03 pulse (duty sweep), the saw an octave below; `B_LEAD=sierra` = the VRC6 saw alone, preview only. Rejected: A "saeta", C "tres colas". Verified by numbers only; **not listened to**. To judge by ear: the pulse against the guitar, the loop seam (jump 2.1× a section downbeat, a band attack after a quieter bar).
 
 ## The slap bass in every boss theme (0.5.44)
 
