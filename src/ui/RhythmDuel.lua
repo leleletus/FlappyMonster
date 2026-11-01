@@ -97,6 +97,7 @@ function R.press(lane)
         if not n.judged and n.lane == lane and math.abs(n.t - c.clock) <= W then
             n.judged, n.hit = true, true
             c.hit[lane] = SPLASH_T
+            Sound.play('scorpionClick', 1, 1)            -- (el usuario: cada nota acertada suena con un clic)
             c.hits = c.hits + 1
             c.meter = math.min(100, c.meter + c.gain)
             c.text, c.textT = (math.abs(n.t - c.clock) <= W / 2) and 'rhythm.perfect' or 'rhythm.good', 0.5
@@ -171,21 +172,7 @@ function R.update(dt, level, who, report, press)
         logLine(c, 'entra_tarde')
     end
     if c.playing and not c.done then
-        -- (nivel de prueba, duelOnly: se juega solo y cada nota suena con un clic: para OÍR si el chart cuadra con la canción)
-        if boss.duelOnly and boss:duelOnly() and not press then
-            for i = c.first, #c.notes do
-                local n = c.notes[i]
-                if n.t > c.clock then break end
-                if not n.judged then
-                    R.press(n.lane)
-                    Sound.play('scorpionClick', 1, 1)
-                end
-            end
-            if c.clock - (c.logT or 0) >= 10 then
-                c.logT = c.clock
-                logLine(c, 'reloj')
-            end
-        elseif press then press() else readInput() end
+        if press then press() else readInput() end
         -- Las que ya pasaron
         local W = c.cfg.window
         while c.first <= #c.notes do
