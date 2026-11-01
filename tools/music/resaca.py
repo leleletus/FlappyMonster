@@ -1,481 +1,459 @@
 #!/usr/bin/env python3
-# RESACA (antes "Caída libre") — tema de jefe ORIGINAL sobre el bajo de "Final Fall": el del Pez Globo Gigante, el
-# nuevo jefe de la costa (docs/bosses/new-bosses-plan.md). Nombre del usuario (2026-10-25). SEGUNDA versión (+ la v3).
+# tools/music/resaca.py — REWORK general de "Resaca", el tema del Pez Globo Gigante (jefe de la costa). El usuario
+# eligió la A "galerna": INSTALL=1 RESACA=A la instala (el index.json, aparte). NO SE HA ESCUCHADO.
 #
-# v1 (archivada: FlappyMonster_originals/music/versiones/caida_libre_v1/) — el usuario: "la melodía principal y las
-# cosas nuevas no terminan de funcionar, no suena armonioso ni a jefe". Las dos causas: (1) la armonía de arriba
-# (Re, Mi, Sim) iba CONTRA el bajo, que nunca salía de Fa#; (2) la melodía vagaba sin una idea que volviera. Ahora:
-#   · LA ARMONÍA ES LA DEL BAJO, siempre. Cuando los acordes se mueven, el bajo se mueve con ellos (el usuario lo
-#     permite: "que siga sonando como ya lo hace, pero que no siempre sea así"): el riff de Final Fall tal cual en las
-#     secciones A; en la B y el clímax, EL RITMO DEL RIFF sobre las raíces de la progresión (Fa# · Re · Mi · Fa# …);
-#     notas largas en el respiro; y en el A final, el riff con más golpes de octava.
-#   · UN GANCHO de jefe: Fa# Fa# La · Sol# Fa# Do#~ (grito en 3+3+2 y caída), que se repite, varía el final de la
-#     frase y en la B baja en SECUENCIA por los acordes (i–VI–VII–i: Fa#m · Re · Mi · Fa#m), como un grito de guerra.
-#   · Arreglo de jefe como Crab Tantrum (aprobado): sierra del VRC6 una octava abajo + pulso, golpes de quinta en el
-#     tresillo, timbales, plato cada dos compases en el clímax; la caja de música solo en el respiro.
-# De Final Fall: SOLO el riff del bajo (su sonido de bajo real: `final_fall.render_bass`) y las voces en crunch (al
-# abrir y cerrar —cruzan la costura seguidas—, filtradas en el respiro, y cortes que contestan al gancho).
+# El usuario: "un super rework general" que conserve el slap bass, "con otro ritmo y melodía
+# diferente para que suenen bien, armónico, boss like y disfrutablemente épico".
 #
-# Forma (181 BPM, Fa# menor natural): INTRO 8 · A 16 · B 16 · A' 16 · RESPIRO 8 · SUBIDA 8 · CLÍMAX 16 · A FINAL 16 ·
-# CODA 8 · SALIDA 8 = 120 compases (159,1 s), un solo archivo en bucle (la salida vuelve a la intro).
+# LO QUE SE QUEDA: el SONIDO del slap (slap.py: el mismo Slap Bass GM de TimGM6mb) y las VOCES en crunch (el mismo archivo
+# de resaca.py, final_fall.VOX). Fa# menor y el registro grave del bajo.
+# LO QUE CAMBIA: todo lo demás.
+#   · EL RITMO: de los 181 BPM en 3+3+2 a un 12/8 de GALOPE, una saloma de tormenta: 4 pulsos de negra con puntillo a 126
+#     (compás de 84 000 muestras justas), cada pulso "LAAR-go corto" (2+1). El mar empuja y se retira.
+#   · LA ARMONÍA se mueve de verdad y el bajo con ella: i-VI-III-VII (Fa#m Re La Mi) y una DOMINANTE real, Do# mayor, que
+#     da la cadencia épica. Giro oscuro (uno): Sol mayor (♭II) → Do#.
+#   · EL STEEL DRUM, la voz de la costa en el juego, contesta en los huecos de la melodía (las voces croppeadas que pidió al
+#     principio se probaron y el usuario las descartó al elegir la A; la versión anterior: FlappyMonster_originals/music/versiones/).
+#   · El reparto épico sobre el de la casa: coro y trémolo de cuerda en los estribillos, metal en los pulsos, timbales
+#     en la raíz, taiko. Voz: la SIERRA del VRC6, la elegida en Obsidiana, una octava abajo, y pulso en las fuertes.
+#     De la costa: maracas en corcheas y la marimba que sube (su motivo) en la sección K.
 #
-#   python tools/music/resaca.py          → previas en FlappyMonster_pruebas/musica/resaca/
-#   INSTALL=1 …                           → assets/music/bosses/resaca.ogg + tools/music/mid/resaca.mid
-#   REPORT=1 → solo números. Se comprueba con números (NO se ha escuchado).
+# TRES VARIANTES con la misma armonía y forma y DISTINTA melodía:
+#   A "galerna"  melodía-riff: el galope sube por el acorde, en secuencia (lo que funcionó en Obsidiana B).
+#   B "himno"    himno: notas largas en los pulsos, por grados y saltos de 5ª; el bajo galopa debajo.
+#   C "saloma"   llamada y respuesta: media frase de la voz y otra media de los gritos, como una canción de marineros.
+#
+# Forma: INTRO 4 · A 16 · B 8 · C 16 · K 8 (voces y slap, sin melodía) · A' 8 · C' 8 = 4 + 64 compases: 7,6 s + bucle de
+# 121,9 s. La intro y el bucle acaban igual, en Do#: la dominante empuja al Fa#m del principio del bucle.
+#
+#   ~/.venvs/fm-music/bin/python tools/music/resaca.py [A B C] → previas en FlappyMonster_pruebas/musica/resaca_rework/
+#   REPORT=1 → solo números · INSTALL=1 RESACA=A|B|C → assets/music/bosses/resaca_intro|_loop.ogg + mid/resaca.mid
 import os, sys
 import numpy as np
 
 sys.path.insert(0, os.path.dirname(__file__))
 import famicom as F
-from famicom import SR, Chan, Noise, play, wavetable, q_saw, q_n163
-import tentacle_nes as TN
+from famicom import SR, Chan
 import gloomy_nes as GN
-import worlds_nes as W
-import final_fall as FF
+import jungla_nes as J
+import montana_nes as M
+import slap as SL
+import gm as GM
 
-BPM = FF.BPM
-S16 = 60.0 / BPM / 4
-BAR = 16 * S16
-NAME = 'resaca'
-PREVIEW = '/home/mtvemo/FlappyMonster_pruebas/musica/resaca'
-SCALE = FF.SCALE
-ch = FF.ch
-T1, T2 = ['A', 'Bm', 'C#m'], ['D', 'Bm', 'C#m']                   # los giros del riff (8 + 4 + 4 semicorcheas). v3: Sim y
-# Do#m, como suena en Final Fall (medido: Re > Re#, Mi > Mi#); v2 los tomaba mayores y los pulsos tocaban Re# y Mi#
-RIFF_H = ['F#m', 'F#m', 'F#m', T1, 'F#m', 'F#m', 'F#m', T2]        # la armonía del riff = lo que toca el bajo
-ROOT = {'F#': 30, 'D': 26, 'E': 28, 'A': 33, 'B': 35, 'C#': 37}  # raíces en el registro del riff
+place, nm = M.place, J.nm
+PRUEBAS = '/home/mtvemo/FlappyMonster_pruebas/musica/resaca_rework'
+INSTALL_DIR = os.path.join(F.MUSIC_DIR, 'bosses')
+TRACK = 'resaca_rework'
+BPM, LUFS, CEILING = 126, -10.5, 0.64                               # (techo bajo: ni el OGG ni el MP3 deben pasar de 1,0)
+VNAME = {'A': 'galerna', 'B': 'himno', 'C': 'saloma'}
+SCALE = {6, 8, 9, 11, 1, 2, 4}                                        # Fa# menor natural (Mi# solo en Do#, Sol solo en su acorde)
 
-# ══ EL BAJO: el riff de Final Fall y sus variantes ═══════════════════════════════════════════════════════════════
-RIFF_RHY = [(0, 0, 2), (2, 12, 2), (8, 0, 2), (10, 0, 1), (11, 0, 2), (13, 0, 2), (15, 0, 1)]   # su ritmo (y la octava "pop")
-RIFF_POP = [(0, 0, 2), (2, 12, 2), (6, 12, 1), (8, 0, 2), (10, 12, 1), (11, 0, 2), (13, 0, 2), (15, 12, 1)]   # (A final)
+# ══ LA ARMONÍA (la misma en las tres) ═══════════════════════════════════════════════════════════════════════════════
+H_IN = "F#m D E C#"
+H_A1 = "F#m D A E F#m D C# C#"
+H_A2 = "F#m D A E Bm F#m C# F#m"
+H_B = "Bm E A D Bm F#m G C#"                                          # el GIRO OSCURO: Sol → Do#
+H_C1 = "D A E F#m D A C# C#"
+H_C2 = "D A E F#m D A C# F#m"
+H_K = "F#m F#m D D E E C# C#"
 
-
-def bass_riff(base, pops=False):
-    if not pops: return [(base + b, st, n, d) for b, st, n, d in FF.RIFF]
-    out = []
-    for b in range(1, 9):
-        if b in (4, 8): out += [(base + bb, st, n, d) for bb, st, n, d in FF.RIFF if bb == b]       # (los giros, iguales)
-        else: out += [(base + b, st, 30 + iv, d) for st, iv, d in RIFF_POP]
-    return out
-
-
-def bass_prog(base, harm, push=True):
-    """El ritmo del riff sobre la raíz de cada compás; el último de cada 4 empuja en corcheas hacia el siguiente"""
-    out = []
-    for i, c in enumerate(harm):
-        r = ROOT[c.rstrip('m')]
-        if push and i % 4 == 3:
-            out += [(base + i + 1, st, r + (12 if st in (2, 10) else 0), 1 if st >= 12 else 2) for st in (0, 2, 4, 6, 8, 10, 12, 13, 14, 15)]
-        else:
-            out += [(base + i + 1, st, r + iv, d) for st, iv, d in RIFF_RHY]
-    return out
-
-
-def bass_long(base, harm):
-    return [(base + i + 1, 0, ROOT[c.rstrip('m')], 15, 78) for i, c in enumerate(harm)]
-
-
-# ══ LA MELODÍA ═══════════════════════════════════════════════════════════════════════════════════════════════════
-HOOK = "0:F#5/3 3:F#5/3 6:A5/2 8:G#5/2 10:F#5/2 12:C#5/4"          # el gancho: grito en 3+3+2 y caída
-M_A = [HOOK,
-       "0:F#5/3 3:F#5/3 6:A5/2 8:C#6/4 12:B5/2 14:A5/2",
-       "0:F#5/3 3:F#5/3 6:A5/2 8:G#5/2 10:F#5/2 12:E5/2 14:F#5/2",
-       "0:E5/3 3:A5/3 6:C#6/2 8:B5/4 12:G#5/4",                       # (giro La–Si–Do#: notas de cada acorde)
-       HOOK,
-       "0:F#5/3 3:F#5/3 6:A5/2 8:C#6/4 12:D6/2 14:C#6/2",
-       "0:A5/3 3:C#6/3 6:B5/2 8:A5/4 12:F#5/4",
-       "0:F#5/3 3:A5/3 6:D6/2 8:B5/4 12:C#6/4"]                       # (giro Re–Si–Do#)
-M_A2 = ["0:F#5/3 3:F#5/3 6:A5/2 8:G#5/2 10:F#5/2 12:C#6/4",           # la 2ª mitad del tema: el gancho sube
-        "0:C#6/3 3:A5/3 6:B5/2 8:A5/4 12:F#5/4",
-        HOOK,
-        "0:C#6/3 3:E6/3 6:C#6/2 8:B5/4 12:C#6/4",
-        "0:F#6/3 3:F#6/3 6:E6/2 8:F#6/4 12:C#6/4",
-        "0:A5/3 3:F#5/3 6:A5/2 8:C#6/4 12:B5/2 14:A5/2",
-        "0:A5/3 3:F#5/3 6:E5/2 8:F#5/4 12:A5/4",
-        "0:A5/3 3:F#5/3 6:D5/2 8:F#5/4 12:G#5/4"]
-# B: el gancho en SECUENCIA por la progresión (i–VI–VII–i), luego el grito en notas repetidas
-H_B = ['F#m', 'D', 'E', 'F#m', 'F#m', 'D', 'A', 'E']
-M_B = [HOOK,
-       "0:D5/3 3:D5/3 6:F#5/2 8:E5/2 10:D5/2 12:A4/4",
-       "0:E5/3 3:E5/3 6:G#5/2 8:F#5/2 10:E5/2 12:B4/4",
-       "0:F#5/3 3:A5/3 6:C#6/2 8:B5/2 10:A5/2 12:F#5/4",
-       "0:C#6/2 3:C#6/2 6:C#6/2 8:A5/2 11:A5/2 14:C#6/2",
-       "0:D6/6 6:C#6/2 8:D6/4 12:A5/4",
-       "0:C#6/2 3:C#6/2 6:C#6/2 8:E6/2 11:E6/2 14:C#6/2",
-       "0:B5/6 6:G#5/2 8:E5/4 12:G#5/4"]
-M_B2 = [HOOK,
-        "0:D5/3 3:D5/3 6:F#5/2 8:E5/2 10:D5/2 12:A4/4",
-        "0:E5/3 3:E5/3 6:G#5/2 8:F#5/2 10:E5/2 12:B4/4",
-        "0:F#5/3 3:A5/3 6:C#6/2 8:B5/2 10:A5/2 12:F#5/4",
-        "0:A5/2 3:A5/2 6:A5/2 8:C#6/2 11:C#6/2 14:F#6/2",
-        "0:F#6/6 6:E6/2 8:D6/4 12:A5/4",
-        "0:E6/2 3:E6/2 6:E6/2 8:C#6/2 11:A5/2 14:C#6/2",
-        "0:B5/4 4:G#5/4 8:E5/4 12:B4/4"]
-# v3 — el gancho en OTRAS alturas (empieza en La o en Do#) para que no sea siempre idéntico
-HOOK_A = "0:A5/3 3:A5/3 6:C#6/2 8:B5/2 10:A5/2 12:F#5/4"
-HOOK_C = "0:C#6/3 3:C#6/3 6:F#6/2 8:E6/2 10:D6/2 12:C#6/4"
-M_A_2 = M_A[:4] + [HOOK_A] + M_A[5:]                                  # (A')
-M_A2_2 = M_A2[:2] + [HOOK_A] + M_A2[3:]
-M_B2_2 = [HOOK_C] + M_B2[1:]                                          # (2ª mitad de la B)
-# CLÍMAX (v3: su propia melodía; en v2 era la B nota por nota): el gancho por la progresión desde otras alturas, el
-# grito arriba, una cima nueva; la 2ª mitad repite la secuencia de la B ARMONIZADA en terceras y sube a otra cima
-M_CL = [HOOK_C,
-        "0:A5/3 3:A5/3 6:D6/2 8:E6/2 10:D6/2 12:A5/4",
-        "0:B5/3 3:B5/3 6:E6/2 8:F#6/2 10:E6/2 12:B5/4",
-        "0:C#6/3 3:C#6/3 6:F#6/2 8:E6/2 10:F#6/2 12:A6/4",
-        "0:A6/2 3:A6/2 6:A6/2 8:F#6/2 11:F#6/2 14:E6/2",
-        "0:F#6/6 6:E6/2 8:D6/4 12:A5/4",
-        "0:E6/2 3:E6/2 6:E6/2 8:C#6/2 11:E6/2 14:A6/2",
-        "0:G#6/6 6:F#6/2 8:E6/4 12:B5/4"]
-M_CL2 = M_B[:4] + ["0:C#6/3 3:F#6/3 6:A6/2 8:G#6/2 10:F#6/2 12:C#6/4",
-                   "0:D6/3 3:F#6/3 6:A6/2 8:F#6/4 12:D6/4",
-                   "0:C#6/3 3:E6/3 6:A6/2 8:G#6/2 10:A6/2 12:E6/4",
-                   "0:B5/4 4:E6/4 8:G#6/4 12:E6/4"]
-# A FINAL (v3: variado, no una copia de A): el gancho en terceras, finales de frase nuevos, un tramo una octava arriba
-M_F = [HOOK,
-       "0:A5/3 3:A5/3 6:C#6/2 8:F#6/4 12:C#6/4",
-       HOOK_A,
-       "0:C#6/3 3:E6/3 6:C#6/2 8:B5/4 12:G#5/4",
-       HOOK,
-       "0:F#5/3 3:A5/3 6:C#6/2 8:F#6/4 12:E6/2 14:D6/2",
-       "0:C#6/3 3:A5/3 6:B5/2 8:A5/4 12:C#6/4",
-       "0:F#6/3 3:D6/3 6:A5/2 8:B5/4 12:C#6/4",
-       HOOK,
-       "0:F#5/3 3:A5/3 6:B5/2 8:C#6/4 12:A5/4",
-       HOOK_A,
-       "0:E6/3 3:C#6/3 6:A5/2 8:B5/4 12:C#6/4",
-       "0:A6/3 3:A6/3 6:F#6/2 8:E6/2 10:D6/2 12:C#6/4",
-       "0:A5/3 3:C#6/3 6:A5/2 8:F#5/4 12:A5/4",
-       "0:C#6/3 3:A5/3 6:C#6/2 8:F#6/4 12:C#6/4",
-       "0:F#6/4 4:D6/4 8:B5/4 12:C#6/4"]
-HARM3 = {('C', k) for k in range(9, 13)} | {('F', k) for k in (1, 3, 5, 9, 11)}   # (sección, compás) con terceras
-
-# RESPIRO: el gancho en valores largos (caja de música); el bajo en redondas
-H_R = ['F#m', 'D', 'E', 'F#m', 'D', 'D', 'E', 'E']
-M_R = ["0:C#6/8 8:A5/8", "0:F#5/8 8:D6/8", "0:E6/8 8:B5/8", "0:A5/8 8:F#5/8",
-       "0:F#5/4 4:A5/4 8:D6/8", "0:D6/6 6:C#6/2 8:D6/8", "0:B5/8 8:G#5/8", "0:E5/4 4:G#5/4 8:B5/8"]
-# SUBIDA: vuelve el riff; el gancho a trozos (las voces contestan en los huecos) y una carrera hacia el clímax
-M_S = ["0:F#5/3 3:F#5/3 6:A5/2", "", "0:F#5/3 3:F#5/3 6:A5/2 8:C#6/4", "0:E5/3 3:A5/3 6:C#6/2 8:B5/4 12:G#5/4",
-       HOOK, "0:F#5/2 2:A5/2 4:C#6/2 6:F#6/2 8:E6/2 10:F#6/2 12:C#6/4",
-       "0:C#6/2 2:A5/2 4:F#5/2 6:A5/2 8:C#6/2 10:F#6/2 12:C#6/4", "0:D6/4 4:F#6/4 8:F#6/4 12:G#6/4"]
-# CODA: el gancho se posa en la tónica
-M_C = [HOOK, "0:F#5/3 3:F#5/3 6:A5/2 8:C#6/8", "0:C#6/3 3:A5/3 6:G#5/2 8:F#5/8",
-       "0:E5/3 3:A5/3 6:C#6/2 8:B5/4 12:G#5/4", "0:F#5/16", "", "", ""]
-
-# (sección, compases de melodía, armonía por compás, bajo, papel)
-SECTIONS = [
-    ('I', [''] * 8, RIFF_H, 'riff', 'intro'),
-    ('A', M_A + M_A2, RIFF_H * 2, 'riff', 'A'),
-    ('B', M_B + M_B2_2, H_B * 2, 'prog', 'B'),
-    ('A2', M_A_2 + M_A2_2, RIFF_H * 2, 'riff', 'A2'),
-    ('R', M_R, H_R, 'long', 'breath'),
-    ('S', M_S, RIFF_H, 'riff', 'build'),
-    ('C', M_CL + M_CL2, H_B * 2, 'prog', 'climax'),
-    ('F', M_F, RIFF_H * 2, 'pops', 'final'),
-    ('CO', M_C, RIFF_H, 'riff', 'coda'),
-    ('O', [''] * 8, RIFF_H, 'riff', 'out'),
-]
+# ══ LAS MELODÍAS: 'paso:Nota/duración' en 12 corcheas por compás (pulsos: 0 3 6 9; galope: 2+1) ═════════════════════
+_A_HEAD = ["0:C#5/2 2:F#5/1 3:A5/2 5:F#5/1 6:C#6/2 8:A5/1 9:F#5/3",   # Fa#m: el galope sube el acorde y se posa
+           "0:D5/2 2:F#5/1 3:A5/2 5:F#5/1 6:D6/2 8:A5/1 9:F#5/3",     # Re: la misma figura
+           "0:E5/2 2:A5/1 3:C#6/2 5:A5/1 6:E6/2 8:C#6/1 9:A5/3"]      # La: más arriba
+_B_HEAD = ["0:F#5/3 3:C#6/6 9:B5/2 11:A5/1", "0:A5/6 6:F#5/3 9:A5/3", "0:C#6/3 3:E6/6 9:D6/2 11:C#6/1"]
+_C_HEAD = ["0:A5/2 2:A5/1 3:C#6/2 5:A5/1 6:F#5/3", "0:A5/2 2:A5/1 3:D6/2 5:A5/1 6:F#5/3", "0:A5/2 2:C#6/1 3:E6/2 5:C#6/1 6:A5/3"]
+MEL = {
+    'A': {'A1': _A_HEAD + ["0:E5/2 2:G#5/1 3:B5/2 5:G#5/1 6:E6/2 8:F#6/1 9:E6/2 11:B5/1",
+                           "0:C#6/2 2:F#5/1 3:A5/2 5:C#6/1 6:F#6/2 8:C#6/1 9:A5/3",     # la cabeza, una octava arriba
+                           "0:D6/2 2:F#5/1 3:A5/2 5:D6/1 6:F#6/2 8:A5/1 9:D6/3",
+                           "0:G#5/2 2:C#6/1 3:E#6/2 5:C#6/1 6:G#6/2 8:E#6/1 9:C#6/3",   # Do#: la cima, y la dominante
+                           "0:G#6/2 2:F#6/1 3:E#6/3 6:C#6/3"],                   # (bajan; en el hueco, la voz)
+          'A2': _A_HEAD + ["0:E5/2 2:G#5/1 3:B5/2 5:E6/1 6:G#6/2 8:E6/1 9:B5/3",
+                           "0:B5/2 2:D6/1 3:F#6/2 5:D6/1 6:B5/2 8:F#5/1 9:D6/3",
+                           "0:C#6/2 2:A5/1 3:F#5/2 5:A5/1 6:C#6/2 8:F#6/1 9:A6/3",
+                           "0:G#6/2 2:F#6/1 3:E#6/2 5:C#6/1 6:G#5/3 9:E#5/3",
+                           "0:F#5/6"],
+          # B: la larga en el acorde, y tres que llevan a la siguiente, cada vez más arriba
+          'B': ["0:D6/6 6:B5/2 8:D6/1 9:F#6/3", "0:E6/6 6:B5/2 8:E6/1 9:G#6/3", "0:C#6/6 6:A5/2 8:C#6/1 9:E6/3",
+                "0:F#6/6 6:D6/2 8:F#6/1 9:A6/3", "0:F#6/6 6:D6/2 8:B5/1 9:D6/3", "0:C#6/6 6:A5/2 8:C#6/1 9:F#6/3",
+                "0:G6/6 6:D6/2 8:B5/1 9:G5/3", "0:G#5/6 6:C#6/2 8:E#6/1 9:G#6/3"],
+          # C: el ESTRIBILLO: el Sol# se resuelve en el La de arriba; baja el acorde con su vuelta
+          'C1': ["0:A6/3 3:F#6/2 5:E6/1 6:F#6/2 8:A6/1 9:F#6/2 11:D6/1", "0:E6/3 3:C#6/2 5:B5/1 6:C#6/2 8:E6/1 9:C#6/2 11:A5/1",
+                 "0:B5/3 3:G#5/2 5:A5/1 6:B5/2 8:E6/1 9:G#6/2 11:F#6/1", "0:F#6/3 3:C#6/2 5:A5/1 6:F#5/3",
+                 "0:A6/3 3:F#6/2 5:E6/1 6:F#6/2 8:A6/1 9:F#6/2 11:D6/1", "0:E6/3 3:C#6/2 5:B5/1 6:C#6/2 8:E6/1 9:C#6/2 11:A5/1",
+                 "0:C#6/3 3:E#6/2 5:G#6/1 6:C#7/3 9:G#6/3", "0:G#6/2 2:F#6/1 3:E#6/3 6:C#6/3"],
+          'C2': ["0:A6/3 3:F#6/2 5:E6/1 6:F#6/2 8:A6/1 9:F#6/2 11:D6/1", "0:E6/3 3:C#6/2 5:B5/1 6:C#6/2 8:E6/1 9:C#6/2 11:A5/1",
+                 "0:B5/3 3:G#5/2 5:A5/1 6:B5/2 8:E6/1 9:G#6/2 11:F#6/1", "0:F#6/3 3:C#6/2 5:A5/1 6:F#5/3",
+                 "0:D6/3 3:F#6/3 6:A6/2 8:F#6/1 9:D6/2 11:E6/1", "0:E6/3 3:A6/2 5:E6/1 6:C#6/2 8:E6/1 9:A5/2 11:B5/1",
+                 "0:C#6/3 3:E#6/2 5:G#6/1 6:C#7/3 9:G#6/3", "0:F#6/6"]},
+    'B': {'A1': _B_HEAD + ["0:B5/6 6:G#5/3 9:B5/3", "0:C#6/3 3:F#6/6 9:F#6/2 11:E6/1", "0:D6/3 3:A6/6 9:F#6/2 11:E6/1",
+                           "0:E#6/3 3:G#6/6 9:F#6/2 11:E#6/1", "0:C#6/6"],
+          'A2': _B_HEAD + ["0:B5/3 3:E6/6 9:G#6/3", "0:F#6/6 6:D6/3 9:B5/3", "0:C#6/6 6:A5/3 9:C#6/3",
+                           "0:E#6/3 3:G#6/3 6:F#6/2 8:E#6/1 9:C#6/3", "0:F#6/6"],
+          'B': ["0:D6/6 6:F#6/3 9:D6/3", "0:E6/6 6:G#6/3 9:E6/3", "0:C#6/6 6:E6/3 9:A6/3", "0:F#6/6 6:D6/3 9:A5/3",
+                "0:B5/6 6:D6/3 9:F#6/3", "0:A6/6 6:F#6/3 9:C#6/3", "0:D6/6 6:B5/3 9:G5/3", "0:G#5/6 6:C#6/3 9:E#6/3"],
+          'C1': ["0:F#6/9 9:E6/2 11:D6/1", "0:C#6/9 9:D6/2 11:E6/1", "0:G#6/6 6:F#6/2 8:E6/1 9:B5/3", "0:C#6/6",
+                 "0:A6/9 9:F#6/2 11:E6/1", "0:E6/9 9:C#6/3", "0:E#6/6 6:G#6/6", "0:C#7/6 6:G#6/3"],
+          'C2': ["0:F#6/9 9:E6/2 11:D6/1", "0:C#6/9 9:D6/2 11:E6/1", "0:G#6/6 6:F#6/2 8:E6/1 9:B5/3", "0:C#6/6",
+                 "0:A6/9 9:F#6/2 11:E6/1", "0:E6/9 9:C#6/3", "0:E#6/3 3:G#6/3 6:C#7/6", "0:F#6/9"]},
+    'C': {'A1': _C_HEAD + ["0:B5/2 2:G#5/1 3:E6/2 5:B5/1 6:G#5/3", "0:C#6/2 2:C#6/1 3:F#6/2 5:C#6/1 6:A5/3 9:C#6/3",
+                           "0:D6/2 2:D6/1 3:F#6/2 5:D6/1 6:A5/3 9:D6/3", "0:E#6/2 2:E#6/1 3:G#6/2 5:E#6/1 6:C#6/3 9:E#6/3",
+                           "0:G#6/6"],
+          'A2': _C_HEAD + ["0:B5/2 2:G#5/1 3:E6/2 5:B5/1 6:G#5/3", "0:D6/2 2:D6/1 3:F#6/2 5:D6/1 6:B5/3 9:D6/3",
+                           "0:C#6/2 2:C#6/1 3:F#6/2 5:C#6/1 6:A5/3 9:C#6/3", "0:E#6/2 2:G#6/1 3:E#6/2 5:C#6/1 6:G#5/3 9:C#6/3",
+                           "0:F#5/6"],
+          # B: los gritos dan el 1 y la voz sube por grados
+          'B': ["3:B5/2 5:C#6/1 6:D6/3 9:F#6/3", "3:G#5/2 5:A5/1 6:B5/3 9:E6/3", "3:A5/2 5:B5/1 6:C#6/3 9:E6/3",
+                "3:D6/2 5:E6/1 6:F#6/3 9:A6/3", "3:F#6/2 5:E6/1 6:D6/3 9:B5/3", "3:A5/2 5:B5/1 6:C#6/3 9:F#6/3",
+                "3:G6/3 6:D6/3 9:B5/3", "3:C#6/2 5:E#6/1 6:G#6/6"],
+          # C: la OLA: sube en dos pulsos, se queda arriba en los otros dos; el grito contesta al final
+          'C1': ["0:A5/1 1:D6/1 2:F#6/1 3:A6/6", "0:A6/1 1:E6/1 2:C#6/1 3:E6/6", "0:G#6/1 1:E6/1 2:B5/1 3:E6/6",
+                 "0:F#6/1 1:C#6/1 2:A5/1 3:C#6/6", "0:A5/1 1:D6/1 2:F#6/1 3:A6/6", "0:A6/1 1:E6/1 2:C#6/1 3:E6/6",
+                 "0:G#6/1 1:E#6/1 2:C#6/1 3:G#6/6", "0:G#6/1 1:E#6/1 2:C#6/1 3:G#5/6"],
+          'C2': ["0:A5/1 1:D6/1 2:F#6/1 3:A6/6", "0:A6/1 1:E6/1 2:C#6/1 3:E6/6", "0:G#6/1 1:E6/1 2:B5/1 3:E6/6",
+                 "0:F#6/1 1:C#6/1 2:A5/1 3:C#6/6", "0:A5/1 1:D6/1 2:F#6/1 3:A6/6", "0:A6/1 1:E6/1 2:C#6/1 3:E6/6",
+                 "0:G#6/1 1:E#6/1 2:C#6/1 3:G#6/6", "0:F#6/1 1:C#6/1 2:A5/1 3:F#6/6"]},
+}
 
 
-def song():
-    mel, chords, role, sec, bass, starts = [], [], [], [], [], {}
-    for name, bars, harm, bk, rl in SECTIONS:
-        base = len(chords)
-        starts[name] = base + 1
-        nb = len(harm)
-        mel.extend((base + b, st, n, d) for b, st, n, d in W.PH(*bars))
-        for c in harm:
-            chords.append(tuple(ch(x) for x in c) if isinstance(c, list) else (ch(c),) * 3)
-        role += [rl] * nb; sec += [name] * nb
-        if bk == 'riff':
-            for k in range(nb // 8): bass.extend(bass_riff(base + 8 * k))
-        elif bk == 'pops':
-            for k in range(nb // 8): bass.extend(bass_riff(base + 8 * k, pops=True))
-        elif bk == 'prog': bass.extend(bass_prog(base, harm))
-        elif bk == 'long': bass.extend(bass_long(base, harm))
-    return sorted(mel), chords, role, sec, bass, starts
+def sections(v):
+    M_ = MEL[v]
+    return [('intro', H_IN, [''] * 4, 12, ''), ('A', H_A1 + ' ' + H_A2, M_['A1'] + M_['A2'], 12, ''), ('B', H_B, M_['B'], 12, ''),
+            ('C', H_C1 + ' ' + H_C2, M_['C1'] + M_['C2'], 12, ''), ('K', H_K, [''] * 8, 12, ''),
+            ('A', H_A2, M_['A2'], 12, 'rep'), ('C', H_C1, M_['C1'], 12, 'rep')]
 
 
-SCALE_UP = sorted(SCALE)
+J.TRACKS[TRACK] = dict(secs=sections, bpm=BPM, scale=SCALE, tonic=(6, M.MIN), lufs=LUFS, variants=tuple(VNAME), title='Resaca', vname=VNAME)
 
-
-def third_up(n):
-    """La tercera diatónica de arriba (en Fa# menor natural)"""
-    pcs = [p for p in range(n + 1, n + 6) if p % 12 in SCALE]
-    return pcs[1]
-
-
-def chord_at(chords, b, st):
-    c = chords[b - 1]
-    return c[0] if st < 8 else (c[1] if st < 12 else c[2])
-
-
-def check(mel, chords):
-    def tones(b, st):
-        r, q = chord_at(chords, b, st)
-        return {(r + i) % 12 for i in q}
-    bad = [(b, st) for b, st, n, d in mel if d >= 4 and n % 12 not in tones(b, st)]
-    out = [(b, st) for b, st, n, d in mel if n % 12 not in SCALE and n % 12 not in tones(b, st)]
-    return bad, out
-
-
-def loose(mel, tones_at):
-    """Notas fuera del acorde que NO van por grado (entran o salen saltando) o duran ≥ 3 semicorcheas: lo que suena
-    "raro" (el usuario, 0.5.42). Las de paso y las bordaduras, que entran y salen por grado, sí valen"""
-    T = lambda m: (m[0] - 1) * 16 + m[1]
-    bad = []
-    for i, (b, st, n, d) in enumerate(mel):
-        if n % 12 in tones_at(b, st): continue
-        p = mel[i - 1] if i and T(mel[i - 1]) + mel[i - 1][3] >= T(mel[i]) - 2 else None
-        x = mel[i + 1] if i + 1 < len(mel) and T(mel[i]) + d >= T(mel[i + 1]) - 2 else None
-        if d >= 3 or not p or abs(n - p[2]) > 2 or not x or abs(x[2] - n) > 2: bad.append((b, st))
-    return bad
-
-def bass_vs_harmony(bass, chords):
-    """Notas del bajo que NO son la raíz/5ª/octava del acorde que suena (la v1 fallaba aquí: debe dar 0)"""
-    bad = 0
-    for x in bass:
-        b, st, n = x[0], x[1], x[2]
-        r, q = chord_at(chords, b, st)
-        if (n - r) % 12 not in (0, 7): bad += 1
-    return bad, len(bass)
-
-
-# ── INSTRUMENTOS (los de la casa; como Crab Tantrum) ──────────────────────────────────────────────────────────────
-WAVES = [wavetable([1.0, 0.3, 0.1]), GN.CWAVES[0]]            # 0 colchón · 1 caja de música
-I_SAWL = {'vol': [15, 14, 14, 13, 13, 12], 'sus': 12, 'vib': (14, 0.2, 6)}
-I_PUL = {'vol': [11, 10, 9, 8, 8, 7], 'sus': 7, 'duty': [0.125, 0.25]}
+# ══ EL REPARTO ══════════════════════════════════════════════════════════════════════════════════════════════════════
+STEEL = 114
+M.TIGHT_KEYS = M.TIGHT_KEYS + ('steel',)
+BRASS, MARIMBA, TAIKO, TIMP, CHOIR, TREM, HARP = 61, 12, 116, M.TIMPANI, M.CHOIR, M.TREM, M.HARP
+MARACAS = 70
+PULSES = (0, 3, 6, 9)
+BASS_ROOT = {6: 30, 2: 38, 9: 33, 4: 40, 11: 35, 1: 37, 7: 31}        # (el registro grave del riff de Resaca; Re y Mi, una 8ª arriba si no se pierden)
+I_SAW_LEAD = {'vol': [15, 14, 14, 13, 13, 12], 'sus': 12, 'vib': (14, 0.18, 6)}
 I_UP = {'vol': [8, 7, 7, 6, 6, 5], 'sus': 5, 'duty': 0.25}
-I_HARM = {'vol': [10, 9, 8, 8, 7, 7], 'sus': 7, 'duty': 0.25}
-I_BOX = dict(GN.I_BELL, duty=1.0)
-I_ECHO = {'vol': [5, 5, 4, 3], 'sus': 2, 'duty': 0.5}
-I_PAD = {'vol': [2, 3, 4, 5, 5, 5], 'sus': 5, 'vib': (24, 0.12, 4.5), 'duty': 0.0}
-I_CM = {'vol': [4, 6, 7, 7, 7, 6], 'sus': 6, 'vib': (18, 0.12, 5.0), 'duty': 0.0}
-I_PULSE8 = {'vol': [7, 5, 3, 2, 1], 'sus': 0, 'duty': 0.125}
-I_STAB = {'vol': [13, 10, 7, 4, 2, 1], 'sus': 0, 'duty': 0.25}
-I_SHIM = {'vol': [6, 4, 2, 1], 'sus': 0, 'duty': 0.25}
-SNARE_N, CRASH = [14, 10, 6, 3, 1], [14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1]
-CRASH_SOFT = [9, 8, 7, 6, 5, 4, 3, 3, 2, 2, 1, 1]
-TRES = (0, 6, 12)
-LV = {'lead': 0, 'dbl': -6, 'up': -8, 'harm': -5, 'echo': -13, 'box': -2, 'pad': -12, 'cm': -10, 'pulses': -13, 'stabs': -7,
-      'shim': -14, 'bass': 2, 'kick': -0.5, 'snare': -2.5, 'hat': -15, 'phat': -12, 'crash': -7, 'toms': -2,
-      'nrise': -12, 'vox': -1, 'voxf': -6, 'chop': -2}
-BACKING_UP = 3.0                  # (el acompañamiento, +3 dB respecto a la melodía: regla BACKING de la casa)
-LUFS = -10.0
-UP = {'A2', 'climax', 'final'}                                     # papeles con el pulso una octava arriba
-STABS = {'A2', 'B', 'climax', 'final', 'coda'}
+I_ARP = {'vol': [8, 5, 3, 2, 1], 'sus': 0, 'duty': 2}
+LEADS = ('lead',)
 
 
-def build():
-    mel, chords, role, sec, bass, starts = song()
-    NB = len(chords)
-    NF = F.frames_for(NB * BAR + 3)
-    keys = ('lead', 'dbl', 'up', 'harm', 'echo', 'box', 'pad1', 'pad2', 'cm', 'pulses', 'c1', 'c2', 'shim')
-    Cn = {k: Chan(NF) for k in keys}
-    NZ = {k: Noise(NF) for k in ('hat', 'phat', 'snare', 'crash', 'nrise')}
-    NS = int(NF * F.FRAME_S) + SR
-    kick, sn, tom = np.zeros(NS), np.zeros(NS), np.zeros(NS)
-    tv = lambda b, st: (b - 1) * BAR + st * S16
-    rl = lambda b: role[b - 1]
-    pos = lambda b: b - starts[sec[b - 1]] + 1
-    LEN = {name: len(h) for name, _, h, _, _ in SECTIONS}
+class Rig(M.Rig):
+    def __init__(self, sg):
+        super().__init__(sg)
+        self.Cn['saw'] = Chan(len(self.Cn['lead'].f))
+        self.slap = SL.Rec()
+        for k in ('snare', 'crash'): self.NZ[k].exact = True          # (cada golpe en su muestra)
 
-    def hit(buf, smp, t, g=1.0):
-        i = int(t * SR)
-        m = max(0, min(len(smp), NS - i))
-        buf[i:i + m] += smp[:m] * g
+    def sl(self, b, st, n, d, vel=100):
+        sg = self.sg
+        self.slap.add(sg.t(b, st), sg.t(b, st) + sg.dur(b, d) * 0.95, n, vel)
+        self.notes.setdefault('bass', []).append((sg.q(b, st), sg.q(b, st + d), n))
 
-    def snare(t, g=1.0, vols=SNARE_N):
-        NZ['snare'].hit(t, 4, vols); hit(sn, TN.SNARE_BODY, t, g)
 
-    # ── MELODÍA: sierra una octava abajo (cuerpo) + pulso; arriba, otro pulso en las secciones fuertes ──
-    for b, st, n, d in mel:
-        r_ = rl(b); t0 = tv(b, st)
-        if r_ == 'breath':
-            play(Cn['box'], t0, t0 + d * S16, n, I_BOX, q=q_n163, release=6)
-            play(Cn['echo'], t0 + 3 * S16, t0 + 3 * S16 + min(d, 4) * S16, n, I_ECHO, vs=0.7, release=2); continue
-        play(Cn['lead'], t0, t0 + d * S16 * 0.93, n - 12, I_SAWL, q=q_saw, release=3)
-        play(Cn['dbl'], t0, t0 + d * S16 * 0.93, n, I_PUL, release=2)
-        if r_ in UP or (r_ == 'A' and pos(b) > 8): play(Cn['up'], t0, t0 + d * S16 * 0.9, n + 12, I_UP, release=2)
-        if d >= 3: play(Cn['echo'], t0 + 3 * S16, t0 + 3 * S16 + min(d, 3) * S16 * 0.8, n, I_ECHO, release=1)
-        if (sec[b - 1], pos(b)) in HARM3:                                  # v3: el gancho armonizado en terceras
-            h = third_up(n)
-            r, q = chord_at(chords, b, st)
-            if d < 4 or (h - r) % 12 in q:                                 # (una tercera larga que no sea del acorde, no)
-                play(Cn['harm'], t0, t0 + d * S16 * 0.9, h, I_HARM, release=2)
+def lead_note(sg, R, b, st, n, d):
+    """la voz: la sierra una octava abajo (la de Obsidiana); en lo fuerte, además, un pulso arriba"""
+    R.notes.setdefault('lead', []).append((sg.q(b, st), sg.q(b, st + d), n))
+    R.chip('saw', b, st, n - 12, d, I_SAW_LEAD, q=F.q_saw, release=3)
+    R.notes['saw'].pop()                                               # (la misma nota; no se cuenta dos veces)
+    if sg.tag[b - 1] == 'C' or sg.var[b - 1] == 'rep': R.chip('dbl', b, st, n, d, I_UP, release=2); R.notes['dbl'].pop()
 
-    # ── ACOMPAÑAMIENTO (todo sobre la armonía del bajo) ──
-    for b in range(1, NB + 1):
-        r_, k = rl(b), pos(b)
-        vs = {'intro': 0.4 + 0.07 * (k - 1), 'out': max(0.3, 1 - 0.09 * (k - 1)), 'breath': 0.0}.get(r_, 1.0)
-        if r_ == 'breath' and k <= 2: vs = (0.6, 0.35)[k - 1]               # (los pulsos se apagan dentro del respiro)
-        thin = r_ == 'A2' and k >= 15                                      # (A' se vacía antes del respiro)
-        if vs > 0:                                                         # pulsos de fondo: notas del acorde en corcheas
-            for st in range(0, 16, 2):
-                r, q = chord_at(chords, b, st)
-                play(Cn['pulses'], tv(b, st), tv(b, st) + S16, 78 + (r - 78) % 12 + (q[2] if st % 4 == 0 else q[1]), I_PULSE8, vs=vs, release=0)
-        if r_ in STABS and not (r_ == 'B' and k <= 4) and not thin:                    # golpes de quinta en el tresillo
-            for st in TRES:
-                r, q = chord_at(chords, b, st)
-                root = 54 + (r - 54) % 12
-                play(Cn['c1'], tv(b, st), tv(b, st) + 2.5 * S16, root, I_STAB, release=2)
-                play(Cn['c2'], tv(b, st), tv(b, st) + 2.5 * S16, root + 7, I_STAB, release=2)
-        if r_ == 'climax' or (r_ == 'final' and k > 8):                   # arpegio brillante en semicorcheas
-            for st in range(16):
-                r, q = chord_at(chords, b, st)
-                play(Cn['shim'], tv(b, st), tv(b, st) + S16 * 0.7, 78 + (r - 78) % 12 + (q + (12,))[st % 4], I_SHIM, release=0)
-        if r_ == 'breath':                                                 # colchón: el acorde del bajo, tenido
-            r, q = chord_at(chords, b, 0)
-            for j, iv in enumerate(q[1:]):
-                play(Cn[('pad1', 'pad2')[j]], tv(b, 0), tv(b, 0) + 15.5 * S16, 64 + (r - 64) % 12 + iv, I_PAD, q=q_n163, release=6)
-        if r_ == 'climax' and k > 8:                                       # contracanto: notas largas del acorde, por debajo
-            for half, st in enumerate((0, 8)):
-                r, q = chord_at(chords, b, st)
-                play(Cn['cm'], tv(b, st), tv(b, st) + 7.5 * S16, 60 + (r - 60) % 12 + (q[1] if half == 0 else q[2]), I_CM, q=q_n163, release=4)
 
-    # ── BATERÍA ──
-    for b in range(1, NB + 1):
-        r_, k = rl(b), pos(b)
-        last = k == LEN[sec[b - 1]]
-        nxt = role[b] if b < NB else 'intro'
-        for st in range(16):
-            t = tv(b, st)
-            if r_ in ('intro', 'out'):                                     # apertura / salida
-                if st in (0, 8): hit(kick, TN.KICK, t, 0.9)
-                if st % 4 == 2: NZ['phat'].hit(t, 1, [5, 3, 1])
-                if (r_ == 'intro' and k >= 5 or r_ == 'out' and k <= 4) and st in (4, 12): snare(t, 0.7, [10, 6, 3, 1])
-                if r_ == 'intro' and k == 8 and st >= 8: snare(t, 0.3 + (st - 8) * 0.07, [6 + (st - 8), 4, 2])
-                if r_ == 'intro' and k == 1 and st == 0: NZ['crash'].hit(t, 3, CRASH_SOFT)
-                continue
-            if r_ == 'A2' and k >= 15:                                     # A' → respiro: la batería se retira
-                if st in (0, 8): hit(kick, TN.KICK, t, 0.8 if k == 15 else 0.6)
-                if st in (4, 12): snare(t, 0.6 if k == 15 else 0.4, [9, 5, 2] if k == 15 else [7, 4, 1])
-                if k == 15 and st % 4 == 2: NZ['phat'].hit(t, 1, [4, 2, 1])
-                continue
-            if r_ == 'breath':                                             # respiro: medio tiempo, suave
-                if st == 0: hit(kick, TN.KICK_DEEP, t, 0.6 if k <= 4 else 0.8)
-                if st == 8 and k >= 3: snare(t, 0.5, [8, 4, 2])
-                if st % 4 == 2 and k >= 5: NZ['phat'].hit(t, 1, [3, 2, 1])
-                if last and st >= 8: snare(t, 0.3 + (st - 8) * 0.07, [5 + (st - 8), 4, 2])
-                continue
-            if r_ == 'build':                                              # subida: la caja se apura
-                if st % 4 == 0: hit(kick, TN.KICK_DEEP, t, 1.0)
-                step = 4 if k <= 3 else (2 if k <= 6 else 1)
-                if st % step == 0: snare(t, 0.3 + 0.06 * k + 0.015 * st, [6 + k // 2 + st // 5, 4, 2])
-                if k == 8 and st >= 8: hit(tom, W.TOMS[(st - 8) // 3 % 3], t, 0.7)
-                continue
-            big = r_ in ('climax', 'final')
-            # bombo: en 1 y 3; en la B y el clímax, también el tresillo
-            if st in (0, 8) or (r_ in ('B', 'climax') and st in (6, 14)) or (big and st == 10 and k % 2 == 0):
-                hit(kick, TN.KICK_DEEP, t, 1.0)
-            if st in (4, 12): snare(t, 1.0)
-            elif st in (7, 15) and r_ != 'A': snare(t, 0.3, [6, 3, 1])
-            if st % 4 == 2: NZ['phat'].hit(t, 1, [6, 4, 2, 1])
-            elif st % 2 == 1: NZ['hat'].hit(t, 1, [3, 1])
-            if r_ in ('B', 'climax', 'final', 'A2') and st in (3, 14) and b % 2 == 0: hit(tom, W.TOMS[{3: 2, 14: 1}[st]], t, 0.8)
-            if last and st >= 12:                                          # redoble hacia la sección siguiente
-                soft = nxt in ('breath', 'out')
-                hit(tom, W.TOMS[min(2, st - 12)], t, 0.5 if soft else 0.75)
-                if st >= 14 and not soft: snare(t, 0.45 + (st - 14) * 0.15, [8 + (st - 14), 5, 2])
-            if st == 0:
-                if k == 1 and r_ in ('A', 'B', 'climax', 'final'): NZ['crash'].hit(t, 3, CRASH)
-                elif k == 1: NZ['crash'].hit(t, 3, CRASH_SOFT)
-                elif big and k % 2 == 1: NZ['crash'].hit(t, 3, CRASH)
-                elif k == 9: NZ['crash'].hit(t, 3, CRASH_SOFT)
-        if r_ == 'build' and k == 7:                                       # soplido de ruido hacia el clímax
-            nf = int(2 * BAR * F.FPS)
-            NZ['nrise'].hit(tv(b, 0), [int(12 - 9 * i / nf) for i in range(nf)], [int(1 + 9 * i / nf) for i in range(nf)])
+# ══ LAS VOCES: el muestreador que las afina al acorde ═══════════════════════════════════════════════════════════════
+def steel_events(sg, R, v):
+    """LA COSTA CONTESTA (el usuario eligió la A "mejor ya sin las voces croppeadas, otro instrumento de alguna sound font costera"):
+    el STEEL DRUM, la voz de la costa en el juego, pone notas del acorde donde antes iban los gritos: en los huecos de la melodía"""
+    def fig(b, sts, vel):
+        for j, (st, idx, d) in enumerate(sts):
+            nn = J.place(None, sg.chord(b, st), 69)[idx]
+            if not R.rub(b, st, nn, d, voice=LEADS): R.gm('steel', STEEL, b, st, nn, d, vel - 6 * (j % 2), gate=0.9)
+    largo = lambda st: ((st, 0, 1), (st + 1, 1, 1), (st + 2, 2, 1), (st + 3, 3, 2))
+    corto = lambda st: ((st, 2, 2), (st + 2, 1, 1)) if st <= 9 else ((st, 2, 2),)
+    for b in range(1, sg.NB + 1):
+        tag, k, L = sg.tag[b - 1], sg.pos[b - 1], sg.slen[b - 1]
+        last = max((m[1] + m[3] for m in sg.mel if m[0] == b), default=0)
+        if tag == 'intro':
+            if k < L: fig(b, largo(0), 92); fig(b, largo(6), 86)
+        elif tag == 'K':                                               # lleva la sección, en el ritmo del galope
+            if k <= 2:
+                fig(b, largo(0), 98); fig(b, largo(6), 98)
+            else:
+                fig(b, tuple((st, (0, 2, 3, 2)[st // 3], 2) for st in PULSES) + ((5, 1, 1), (11, 1, 1)), 100)
+        elif last <= 6: fig(b, largo(6), 94)
+        elif last <= 9: fig(b, corto(9), 94)
 
-    # ── STEMS ──
-    n = int(NB * BAR * SR)
-    tail = 3 * SR
-    cut = lambda x: x[:n + tail] - np.mean(x[:n])
-    pulse = lambda k: cut(F.pulse_dac(F.render_pulse(Cn[k])))
-    wave = lambda k: cut(F.render_wave(Cn[k], WAVES) * 0.0075)
-    base = F.tnd_dac(np.full(NS, 64 / 22638.0))
-    noise = lambda k: cut(F.tnd_dac(NZ[k].render() / 22638.0 * 12))
-    S = {
-        'lead': cut(F.pulse_dac(F.render_saw(Cn['lead']))), 'dbl': pulse('dbl'), 'up': pulse('up'), 'harm': pulse('harm'),
-        'echo': pulse('echo'),
-        'box': wave('box'), 'pad': wave('pad1') + wave('pad2'), 'cm': wave('cm'), 'pulses': pulse('pulses'),
-        'stabs': pulse('c1') + pulse('c2'), 'shim': pulse('shim'),
-        'kick': cut(F.tnd_dac((kick + 64) / 22638.0) - base), 'toms': cut(F.tnd_dac((tom + 64) / 22638.0) - base),
-        'snare': cut(F.tnd_dac((sn + 64) / 22638.0) - base) + noise('snare'),
-        'hat': noise('hat'), 'phat': noise('phat'), 'crash': noise('crash'), 'nrise': noise('nrise'),
-    }
-    import soundfile as sf
+
+# ══ EL ARREGLO (el mismo en las tres) ═══════════════════════════════════════════════════════════════════════════════
+def root(sg, b, st):
+    return BASS_ROOT.get(sg.chord(b, st)[0], 30)
+
+
+def next_root(sg, b):
+    return (sg.chords[b][0] if b < sg.NB else sg.chords[sg.INTRO][0])[0]
+
+
+def bass_bar(sg, R, b, pops):
+    """EL GALOPE del slap: cada pulso 2+1. Raíz, octava (pop) en el 2º, 5ª en el 4º; la última corchea, hacia el acorde siguiente"""
+    r = root(sg, b, 0)
+    nx = BASS_ROOT.get(next_root(sg, b), 30)
+    if sg.chord(b, 0)[0] == next_root(sg, b): ap = r + 7
+    else:
+        c = [p for p in (nx + 2, nx - 2, nx + 1, nx - 1) if p % 12 in sg.scale | sg.tones(b, 11) and not R.rub(b, 11, p, 1, voice=LEADS)]
+        ap = c[0] if c else r
+    for st, n, d, vv in ((0, r, 2, 112), (2, r, 1, 80), (3, r + 12, 2, 112), (5, r, 1, 78), (6, r, 2, 104), (8, r, 1, 78),
+                         (9, r + 7 if not pops else r + 12, 2, 106), (11, ap, 1, 90)):
+        R.sl(b, st, n, d, vv)
+
+
+def timp(sg, R, b, st, d, vel):
+    r = sg.chord(b, st)[0]
+    R.gm('timp', TIMP, b, st, 41 + (r - 41) % 12, d, vel)
+
+
+def stab(sg, R, b, sts, vel=98):
+    for st in sts:
+        for n in place(None, sg.chord(b, st), 57)[:4]:
+            if not R.rub(b, st, n, 2, voice=LEADS): R.gm('stab', BRASS, b, st, n, 2, vel, gate=0.75)
+
+
+def ending(sg, R, b):
+    """el último compás de la intro y del bucle (Do#): los cuatro pulsos de toda la banda, cada uno más fuerte"""
+    for i, st in enumerate(PULSES):
+        R.sl(b, st, root(sg, b, st) + (0, 7, 12, 0)[i], 2, 100 + 6 * i)
+        R.kick(b, st, 0.8 + 0.07 * i); R.snare(b, st, 0.6 + 0.12 * i)
+        timp(sg, R, b, st, 2, 90 + 8 * i)
+        R.gm('taiko', TAIKO, b, st, 36 + (sg.chord(b, st)[0] - 36) % 12, 2, 92 + 6 * i)
+    stab(sg, R, b, PULSES, 100)
+    R.dr('shaker', b, 11, MARACAS, 70)
+
+
+def bar_music(sg, R, b):
+    tag, var, k, L = sg.tag[b - 1], sg.var[b - 1], sg.pos[b - 1], sg.slen[b - 1]
+    rep = var == 'rep'
+    big = tag == 'C' or rep
+    last_of_all = b == sg.NB
+    if (tag == 'intro' and k == L) or last_of_all: return ending(sg, R, b)
+    if tag == 'intro':
+        R.sl(b, 0, root(sg, b, 0), 6, 112); R.sl(b, 6, root(sg, b, 6), 3, 104); R.sl(b, 9, root(sg, b, 9) + 12, 3, 108)
+        timp(sg, R, b, 0, 3, 100); timp(sg, R, b, 9, 3, 88)
+        R.kick(b, 0, 0.9)
+        if k >= 2:
+            R.snare(b, 9, 0.6)
+            for st in range(12): R.dr('shaker', b, st, MARACAS, 58 if st % 3 == 0 else 38)
+        return
+    # ── EL BAJO ──
+    if tag == 'K' and k <= 2:
+        R.sl(b, 0, root(sg, b, 0), 9, 112); R.sl(b, 9, root(sg, b, 9) + 12, 2, 106); R.sl(b, 11, root(sg, b, 11) + 7, 1, 90)
+    else: bass_bar(sg, R, b, pops=big)
+    # ── EL ARPEGIO de N163 en corcheas (sube el acorde por pulsos) ──
+    if tag in ('A', 'C') or (tag == 'K' and k > 4):
+        for st in range(12):
+            c = place(None, sg.chord(b, st), 72)[:6]
+            n = c[(0, 1, 2)[st % 3] + (3 if st >= 6 else 0)]
+            if not R.rub(b, st, n, 1, voice=LEADS): R.chip('cm', b, st, n, 1, I_ARP, q=F.q_n163, gate=0.8, release=0)
+    # ── EL ARPA en B ──
+    if tag == 'B':
+        for st in range(12):
+            c = place(None, sg.chord(b, st), 60)[:5]
+            n = c[(0, 1, 2, 3, 4, 3)[st % 6]]
+            if not R.rub(b, st, n, 1, voice=LEADS): R.gm('harp', HARP, b, st, n, 1, 72 + (12 if st in PULSES else 0), gate=1.0)
+    # ── EL CORO y la cuerda, sostienen ──
+    if big or tag == 'B':
+        ks, prog, vel = ('choir', CHOIR, 88) if big else ('trem', TREM, 76)
+        for n in place(None, sg.chord(b, 0), 57)[:3]:
+            if not R.rub(b, 0, n, 12, voice=LEADS): R.gm(ks, prog, b, 0, n, 12, vel, gate=0.98)
+    # ── EL METAL en los pulsos ──
+    if tag == 'C': stab(sg, R, b, (0, 3, 9) if k % 2 else (0, 9))
+    elif rep: stab(sg, R, b, (0, 9))
+    # ── LA COSTA: maracas y la marimba que sube ──
+    for st in range(12): R.dr('shaker', b, st, MARACAS, 60 if st % 3 == 0 else 40)
+    if tag == 'K' and k % 2 == 0:
+        for st, n in zip((9, 10, 11), place(None, sg.chord(b, 9), 72)[:3]): R.gm('marimba', MARIMBA, b, st, n, 1, 92)
+    # ── LA BATERÍA: bombo con galope, caja en el 2 y el 4 ──
+    if tag == 'K' and k <= 2:
+        R.kick(b, 0); R.gm('taiko', TAIKO, b, 6, 36 + (sg.chord(b, 6)[0] - 36) % 12, 2, 92)
+    else:
+        R.kick(b, 0); R.kick(b, 6, 0.9)
+        if big or tag == 'K': R.kick(b, 5, 0.65); R.kick(b, 11, 0.65)
+        R.snare(b, 3, 0.95); R.snare(b, 9, 0.95)
+        for st in range(12): R.NZ['hat'].hit(sg.t(b, st), 1, J.HAT if st % 3 == 0 else [3, 1])
+    # ── TIMBALES, TAIKO, PLATOS ──
+    if k % 2 == 1: timp(sg, R, b, 0, 3, 104 if big else 92)
+    if k == 1 or (big and k % 2 == 1) or k == 9:
+        R.NZ['crash'].hit(sg.t(b, 0), 3, J.CRASH_N)
+        R.gm('taiko', TAIKO, b, 0, 36 + (sg.chord(b, 0)[0] - 36) % 12, 3, 104)
+    if k == L and b < sg.NB:                                           # redoble de corcheas hacia la sección nueva
+        for st in (6, 7, 8, 9, 10, 11): R.snare(b, st, 0.35 + 0.08 * (st - 6))
+
+
+def arrange(sg, R, v):
+    R.notes['saw'] = []; R.notes['dbl'] = []
+    for b, st, n, d in sg.mel: lead_note(sg, R, b, st, n, d)
+    for b in range(1, sg.NB + 1): bar_music(sg, R, b)
+    steel_events(sg, R, v)
+
+
+# ══ LA MEZCLA ═══════════════════════════════════════════════════════════════════════════════════════════════════════
+LV = {'lead': 0, 'dbl': -9, 'cm': -11, 'harp': -6, 'choir': -9, 'trem': -9, 'stab': -8, 'marimba': -6, 'steel': -4,
+      'bass': -2, 'kick': -1, 'snare': -1, 'taiko': -5, 'timp': -3, 'shaker': -13, 'hat': -11, 'crash': -7}
+LEAD_GROUP = ('lead', 'dbl')
+DRUM_GROUP = ('kick', 'snare', 'taiko', 'timp', 'shaker', 'hat', 'crash')
+BACKING = 3.5
+
+
+def build(v):
+    sg = J.Song(TRACK, v)
+    R = Rig(sg)
+    arrange(sg, R, v)
+    n = int(round(sg.NB * sg.BAR * SR))
+    at = int(round(sg.INTRO * sg.BAR * SR))
+    L = n + 5 * SR
+    S = M.render_stems(R, n, L, True, at / SR)
+    def cut(x):
+        x = x[:L] - np.mean(x[:n])
+        return np.concatenate([x, np.zeros(L - len(x))]) if len(x) < L else x
+    y = GM.cached(R.slap, L)
+    S['bass'] = np.concatenate([y[M.GM_LAT:], np.zeros(M.GM_LAT)])
+    S['lead'] = cut(F.pulse_dac(F.render_saw(R.Cn['saw'])))
     from scipy.signal import butter, sosfilt
-    yb = FF.render_bass(bass)
-    S['bass'] = np.zeros(n + tail); S['bass'][:min(len(yb), n + tail)] = yb[:n + tail]
-    v, vsr = sf.read(FF.VOX)
-    v = v.mean(1) if v.ndim == 2 else v
-    assert vsr == SR
-    vb = lambda b0, b1: v[int(b0 * BAR * SR):int(b1 * BAR * SR)].copy()
-    def place(dst, seg, t, fade=0.02):
-        k_ = int(fade * SR); seg = seg.copy(); seg[:k_] *= np.linspace(0, 1, k_); seg[-k_:] *= np.linspace(1, 0, k_)
-        i = int(t * SR); dst[i:i + len(seg)] += seg[:len(dst) - i]
-    S['vox'] = np.zeros(n + tail); S['voxf'] = np.zeros(n + tail); S['chop'] = np.zeros(n + tail)
-    place(S['vox'], vb(0, 8), 0)                                           # apertura: 1ª mitad del bloque de voces
-    place(S['vox'], vb(8, 16), tv(NB - 7, 0))                              # salida: 2ª mitad (cruza la costura seguida)
-    place(S['voxf'], sosfilt(butter(2, 1400, btype='low', fs=SR, output='sos'), vb(0, 8)), tv(starts['R'], 0), fade=0.3)
-    chops = [vb(2 * i, 2 * i + 1) for i in range(8)]                      # un compás de canto por cada compás par
-    half = int(BAR * SR / 2)
-    ci = 0
-    for b in range(1, NB + 1):
-        r_, k = rl(b), pos(b)
-        if r_ in ('A', 'A2', 'final', 'B', 'climax') and k in (8, 16):     # al cerrar la frase
-            place(S['chop'], chops[ci % 8][:half], tv(b, 8), fade=0.01); ci += 1
-        if r_ == 'build' and k in (1, 2):                                  # la subida: contestan al gancho a trozos
-            place(S['chop'], chops[ci % 8][:half], tv(b, 8), fade=0.01); ci += 1
-        if r_ == 'climax' and k in (5, 7, 13, 15):                         # el grito del clímax, con respuesta
-            place(S['chop'], chops[ci % 8][:half // 2], tv(b, 12), fade=0.01); ci += 1
-    S = {k: GN.fold(x, n, 0) for k, x in S.items() if np.abs(x).max() > 0}
-    LEADS = ('lead', 'dbl', 'up', 'harm', 'echo', 'box')
-    g = GN.level(S, {k: LV.get(k, -10) + (BACKING_UP if k not in LEADS else 0) for k in S}, 'lead')
+    hp = butter(2, 30, btype='high', fs=SR, output='sos')
+    S = {k: sosfilt(hp, x) for k, x in S.items() if np.abs(x).max() > 0}
+    g = GN.level(S, {k: LV.get(k, -10) + (0 if k in LEAD_GROUP else BACKING) for k in S}, 'lead')
     x = sum(S[k] * g[k] for k in S)
-    x = sosfilt(butter(1, 30, btype='high', fs=SR, output='sos'), x)
     sd = lambda k, w: S[k] * g[k] * w if k in S else 0.0
-    side = sd('pulses', 0.4) - sd('echo', 0.6) + sd('stabs', 0.25) + sd('shim', 0.4) - sd('pad', 0.25) + sd('hat', 0.3) \
-        - sd('phat', 0.2) + sd('box', 0.2) - sd('cm', 0.25) + sd('up', 0.3) - sd('harm', 0.3)
-    y = F.master(np.stack([x + side, x - side], 1), lufs=LUFS)
-    GN.report(NAME, y, S, g, n)
-    bad, out = check(mel, chords)
-    bh, nbh = bass_vs_harmony(bass, chords)
-    same = [(a[0], b_[0]) for i, a in enumerate(SECTIONS) for b_ in SECTIONS[i + 1:] if a[1] == b_[1] and any(a[1])]
-    hooks = sum(t == HOOK for _, bars, *_ in SECTIONS for t in bars)
-    print(f'  secciones con la MISMA melodía: {same or "ninguna"} · gancho literal en {hooks} compases')
-    iv = np.abs(np.diff([m[2] for m in mel]))
+    side = sd('cm', 0.3) - sd('harp', 0.3) + sd('stab', 0.15) - sd('choir', 0.2) + sd('shaker', 0.3) + sd('dbl', 0.15) - sd('marimba', 0.25) + sd('steel', 0.3)
+    st = np.stack([GN.fold(x + side, n, at), GN.fold(x - side, n, at)], 1)
+    st = F.master(st, lufs=LUFS, ceiling=CEILING)
+    S = {k: GN.fold(s, n, at) for k, s in S.items()}
+    return sg, R, S, g, st, n, at
+
+
+# ══ INFORME (números: NO se ha escuchado) ═══════════════════════════════════════════════════════════════════════════
+def melody_numbers(sg):
+    mel = sg.mel
+    bars = sorted({m[0] for m in mel})
+    d16 = lambda m: sg.q(m[0], m[1] + m[3]) - sg.q(m[0], m[1])
+    per = {b: [m for m in mel if m[0] == b] for b in bars}
+    bl = [abs(per[b + 1][0][2] - per[b][-1][2]) for b in bars if b + 1 in per]
+    rhy = {}
+    for b in bars:
+        key = tuple(m[1] for m in per[b]); rhy[key] = rhy.get(key, 0) + 1
+    iv = np.diff([m[2] for m in mel])
+    rev = [np.sign(a) != np.sign(c) for a, c in zip(iv, iv[1:]) if abs(a) >= 5 and c != 0]
+    return dict(notes=len(mel), lo=nm(min(m[2] for m in mel)), hi=nm(max(m[2] for m in mel)), ct=np.mean([m[2] % 12 in sg.tones(m[0], m[1]) for m in mel]),
+                ct1=np.mean([m[2] % 12 in sg.tones(m[0], 0) for m in mel if m[1] == 0]), ctl=np.mean([m[2] % 12 in sg.tones(m[0], m[1]) for m in mel if d16(m) >= 4]),
+                pulse=np.mean([m[1] in PULSES for m in mel]), bl=np.mean(bl), bl2=np.mean(np.array(bl) <= 2), rhythms=len(rhy),
+                top3=sum(sorted(rhy.values())[-3:]) / len(bars), meaniv=np.mean(np.abs(iv)), rev=np.mean(rev), long=np.mean([d16(m) >= 4 for m in mel]))
+
+
+def report(v, sg, R, S, g, y, n, at):
+    print(f'── {TRACK} variante {v} "{VNAME[v]}"')
     tot = sum(np.mean((S[k][:n] * g[k]) ** 2) for k in S)
     grp = lambda ks: 100 * sum(np.mean((S[k][:n] * g[k]) ** 2) for k in ks if k in S) / tot
-    print(f'  {BPM} BPM, {NB} compases ({NB * BAR:.1f} s, un bucle); melodía {len(mel)} notas; '
-          f'batería {grp(("kick", "snare", "hat", "phat", "crash", "toms", "nrise")):.0f} %, bajo {grp(("bass",)):.0f} %, '
-          f'melodía {grp(LEADS):.0f} %, voces {grp(("vox", "voxf", "chop")):.1f} %')
-    print('  secciones: ' + ' · '.join(f'{nm} {(starts[nm] - 1) * BAR // 60:.0f}:{(starts[nm] - 1) * BAR % 60:04.1f}' for nm, *_ in SECTIONS))
-    print(f'  notas largas fuera del acorde: {bad or "ninguna"} · fuera de escala y acorde: {out or "ninguna"}')
-    sk = loose(mel, lambda b, st: {(chord_at(chords, b, st)[0] + i) % 12 for i in chord_at(chords, b, st)[1]})
-    print(f'  notas fuera del acorde que saltan o se alargan: {sk or "ninguna"}')
-    print(f'  bajo contra la armonía (ni raíz ni 5ª): {bh} de {nbh} · intervalo medio {iv.mean():.2f} st, '
-          f'grados {np.mean(iv <= 2) * 100:.0f} %, saltos de octava {np.mean(iv >= 12) * 100:.0f} %, '
-          f'a contratiempo {np.mean([m[1] % 4 != 0 for m in mel]) * 100:.0f} %')
-    return y, mel
+    bar = sg.BAR * SR
+    lufs = F.loudness(y)
+    print(f'  {sg.NB} compases: intro {sg.INTRO} = {at} muestras ({at / SR:.2f} s) + bucle {sg.NB - sg.INTRO} = {n - at} muestras ({(n - at) / SR:.2f} s) · {lufs:.1f} LUFS, pico {np.abs(y).max():.2f}')
+    print(f'  energía: melodía {grp(LEAD_GROUP):.0f} %, batería {grp(DRUM_GROUP):.0f} %, bajo {grp(("bass",)):.0f} %, steel drum {grp(("steel",)):.1f} %')
+    print('  ' + ' '.join(f'{k} {100 * np.mean((S[k][:n] * g[k]) ** 2) / tot:.1f}' for k in sorted(S, key=lambda k: -np.mean((S[k][:n] * g[k]) ** 2))))
+    lb, lo, out, off = J.check(sg)
+    mn = melody_numbers(sg)
+    print(f'  melodía: {mn["notes"]} notas {mn["lo"]}-{mn["hi"]} · en los pulsos {100 * mn["pulse"]:.0f} % · del acorde {100 * mn["ct"]:.0f} % (tiempo 1: {100 * mn["ct1"]:.0f} %, largas: {100 * mn["ctl"]:.0f} %)')
+    print(f'    entre compases {mn["bl"]:.1f} st ({100 * mn["bl2"]:.0f} % ≤ 2) · intervalo medio {mn["meaniv"]:.2f} · tras un salto cambia de sentido {100 * mn["rev"]:.0f} % · ritmos {mn["rhythms"]}, los 3 más usados {100 * mn["top3"]:.0f} % · largas {100 * mn["long"]:.0f} %')
+    print(f'    largas fuera del acorde: {lb or "ninguna"}; sueltas: {lo or "ninguna"}; fuera de escala: {out or "ninguna"}')
+    cnt = 0
+    for k, notes in R.notes.items():
+        if k in ('lead', 'saw', 'dbl', 'timp', 'taiko') or not notes: continue
+        cl = J.clashes(sg, sg.mel, notes)
+        cnt += len(cl)
+        if cl: print(f'    choques melodía / {k} (≥ corchea): {len(cl)} {cl[:5]}')
+    print(f'    choques melodía / resto: {cnt}')
+    badb = sum(1 for q0, q1, nn in R.notes['bass'] if q1 - q0 >= 2.6 and (nn - sg.chord(int(q0 // 16) + 1, (q0 % 16) * 12 / 16)[0]) % 12 not in (0, 7))
+    print(f'    bajo: {len(R.notes["bass"])} notas; las de corchea o más que no son raíz ni 5ª: {badb}')
+    from scipy.signal import butter, sosfilt
+    bp = butter(2, [1000, 5000], btype='band', fs=SR, output='sos')
+    rms = lambda z: np.sqrt(np.mean(sosfilt(bp, z[at:n]) ** 2))
+    lead = S['lead'] * g['lead']
+    print('    en 1-5 kHz, frente a la melodía: ' + ' '.join(f'{k} {100 * rms(S[k] * g[k]) / rms(lead):.0f} %' for k in S if k != 'lead' and rms(S[k] * g[k]) / rms(lead) > 0.3))
+    ln, bars, jr, dbs, ji, dbi = M.seam_numbers(y, at, bar, [(b0 - 1) * sg.BAR * SR for b0 in sg.starts[2:]])
+    print(f'  BUCLE: {ln} muestras = {bars:.4f} compases; costura {jr:.2f}× otro tiempo 1 de sección, {dbs:+.1f} dB; intro → bucle {ji:.2f}×, {dbi:+.1f} dB')
+    span = lambda b0, L_: (int((b0 - 1) * sg.BAR * SR), int((b0 - 1 + L_) * sg.BAR * SR))
+    def db(a, b_):
+        z = sum(S[k][a:b_] * g[k] for k in S)
+        return 10 * np.log10(np.mean(np.asarray(z) ** 2) + 1e-12)
+    r0 = db(*span(sg.starts[1], 16))
+    print('  sonoridad por sección vs A (dB): ' + ' '.join(f'{sg.tag[b0 - 1]} {db(*span(b0, sg.slen[b0 - 1])) - r0:+.1f}' for b0 in sg.starts))
+    return dict(lufs=lufs, loop=n - at, intro=at, bars=bars, jr=jr, nlb=len(lb), nlo=len(lo), ncl=cnt, mn=mn)
 
 
-def preview(y):
-    os.makedirs(PREVIEW, exist_ok=True)
-    def enc(x, name):
-        wav = os.path.join(PREVIEW, name + '.wav'); ogg = wav[:-4] + '.ogg'
-        F.write_wav(wav, x)
-        os.system(f'ffmpeg -v quiet -y -i "{wav}" -c:a libvorbis -q:a 6 "{ogg}"'); os.remove(wav)
-    enc(y, NAME + '_v4')
-    k = int(8 * BAR * SR)
-    enc(np.concatenate([y[-k:], y[:k]]), NAME + '_v4_costura')
-    print(f'  previas en {PREVIEW}')
+def mmss(t):
+    return f'{int(t // 60)}:{t % 60:04.1f}'
+
+
+def readme(sg, nums):
+    desc = {'intro': 'INTRO: el slap, los timbales y el steel drum', 'A': 'A: el tema (Fa#m Re La Mi; acaba en la dominante Do#)',
+            'B': 'B: se abre; arpa y cuerda; el giro oscuro Sol → Do#', 'C': 'C: EL ESTRIBILLO: coro, metal, lo más alto',
+            'K': 'K: el steel drum y el slap, sin melodía; la marimba que sube'}
+    t = ['RESACA (rework): el tema del Pez Globo Gigante. tools/music/resaca.py',
+         'NO SE HA ESCUCHADO: comprobado solo con números. El oído es el tuyo. No está instalado; resaca.py sigue igual.',
+         '',
+         'SE QUEDA: el slap bass y Fa# menor. Las voces croppeadas se cambian por steel drum.',
+         'CAMBIA: EL RITMO (de 181 BPM en 3+3+2 a un 12/8 de galope, pulso 126, una saloma de tormenta) y LA MELODÍA;',
+         'la armonía se mueve con el bajo y tiene una dominante de verdad (Do# mayor). Las voces van AFINADAS: para cada acorde se',
+         'elige el recorte que mejor encaja, con un transporte de hasta ±2 semitonos, y suenan en los huecos de la melodía.',
+         '',
+         'LAS TRES VARIANTES (misma armonía y forma, otra melodía; la voz es la sierra de Obsidiana):',
+         '  A galerna  melodía-riff: el galope sube el acorde en secuencia, como lo que elegiste en Obsidiana B.',
+         '  B himno    notas largas en los pulsos, de himno; el bajo galopa debajo.',
+         '  C saloma   llamada y respuesta: media frase la voz, la otra media los gritos.',
+         '',
+         'ARCHIVOS por variante: resaca_rework_<v>_preview.mp3 (intro + bucle dos veces), _intro.ogg, _loop.ogg, .mid (melodía y bajo).',
+         '',
+         'SECCIONES (tiempos de la previa; iguales en las tres):']
+    for b0 in sg.starts:
+        t.append(f'  {mmss((b0 - 1) * sg.BAR)}  {desc[sg.tag[b0 - 1]]}' + ('  (la vuelta, con más banda)' if sg.var[b0 - 1] == 'rep' else ''))
+    lp = (sg.NB - sg.INTRO) * sg.BAR
+    t.append(f'  {mmss(sg.NB * sg.BAR)}  el bucle empieza otra vez (segunda vuelta: los mismos tiempos + {mmss(lp)})')
+    t += [f'  {mmss((sg.NB + sg.NB - sg.INTRO) * sg.BAR)}  fin de la previa', '', 'NÚMEROS:'] + nums
+    t += ['', 'A JUZGAR DE OÍDO: si las voces suenan afinadas de verdad (son ruidosas: la medida no lo asegura) y qué tal los recortes', f'seguidos de la K ({mmss((sg.starts[4] - 1) * sg.BAR)}); si el 12/8 te sigue sonando a jefe a este tempo; el coro y el metal GM junto al chip.',
+          'OJO: el jefe suelta anillos de púas "en 3+3+2, el ritmo de Resaca" (docs/bosses/giantpuffer.md): con este ritmo ya no coincidirían.']
+    return '\n'.join(t) + '\n'
+
+
+def enc_mp3(y, path):
+    """la previa en MP3: el códec sube los picos; si pasan de 0,97, se baja SOLO la previa y se codifica otra vez"""
+    import soundfile as sf
+    wav = path[:-4] + '.wav'
+    for _ in range(5):
+        F.write_wav(wav, y)
+        os.system(f'ffmpeg -v quiet -y -i "{wav}" -c:a libmp3lame -b:a 320k "{path}"')
+        pk = np.abs(sf.read(path)[0]).max()
+        if pk < 0.97: break
+        y = y * (0.94 / pk)
+    os.remove(wav)
 
 
 if __name__ == '__main__':
-    y, mel = build()
-    if not os.environ.get('REPORT'):
-        preview(y)
+    which = [a for a in sys.argv[1:] if a in VNAME] or list(VNAME)
+    if os.environ.get('INSTALL'): which = [os.environ.get('RESACA', 'A')]
+    os.makedirs(PRUEBAS, exist_ok=True)
+    nums = []
+    for v in which:
+        sg, R, S, g, y, n, at = build(v)
+        r = report(v, sg, R, S, g, y, n, at)
+        mn = r['mn']
+        nums.append(f'  {v} {VNAME[v]}: intro {r["intro"] / SR:.2f} s + bucle {r["loop"]} muestras ({r["loop"] / SR:.2f} s = {r["bars"]:.4f} compases), {r["lufs"]:.1f} LUFS; '
+                    f'del acorde {100 * mn["ct"]:.0f} %, largas fuera {r["nlb"]}, sueltas {r["nlo"]}, choques {r["ncl"]}')
+        if os.environ.get('REPORT'): continue
         if os.environ.get('INSTALL'):
-            GN.export(NAME, y, 0)
-            W.write_mid(F.out(NAME, 'mid'), mel, BPM)
+            J.export(y, at, os.path.join(INSTALL_DIR, 'resaca'))
+            J.write_mid(os.path.join(F.MID_DIR, 'resaca.mid'), sg, R)
+            continue
+        base = os.path.join(PRUEBAS, f'{TRACK}_{v}_{VNAME[v]}')
+        J.export(y, at, base)
+        enc_mp3(np.concatenate([y, y[at:]]), base + '_preview.mp3')
+        J.write_mid(base + '.mid', sg, R)
+    if not os.environ.get('REPORT') and not os.environ.get('INSTALL') and len(which) == len(VNAME):
+        with open(os.path.join(PRUEBAS, 'LEEME.txt'), 'w') as f:
+            f.write(readme(sg, nums))
+        print(f'  previas en {PRUEBAS}')

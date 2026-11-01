@@ -96,7 +96,7 @@ way the map and the levels are the same music. The Mirror boss's motif is la lla
    A note OUTSIDE the chord must arrive AND leave by step (passing note, neighbour) and last under 3 sixteenths;
    one that leaps in or out, or is held on a beat, is what the user hears as "strange, not harmonious" (0.5.42:
    Resaca and La Polilla). The 7th of a dominant (G over A in D minor) counts as a chord tone. Checked by `loose()`
-   in `polilla.py` / `resaca.py`.
+   in `polilla.py`.
 3. More than half of the notes off the beat; at least one bar with the 3+3+2 tresillo.
 4. Quote "la llamada" once, unforced: in a place with ITS chord (never graft a motif onto another harmony).
 5. One dark turn per piece. Never transpose a known melody "to darken it". No bright major section inside an

@@ -41,7 +41,7 @@ plays the intro once and then repeats the loop. `level` = offered as level music
 | `mirror_chase` | ¡Corre! (la persecución del Espejo) | `bosses/mirror_chase_intro.ogg` + `bosses/mirror_chase_loop.ogg` | 0.55 | level, boss |
 | `snowball_verity` | ¿La Gran Bola? (Verity, huevo de Pascua) | `bosses/snowball_verity_intro.ogg` + `bosses/snowball_verity_loop.ogg` | 0.67 | boss |
 | `mirror_boss` | El Espejo (jefe final) | `bosses/mirror_boss_intro.ogg` + `bosses/mirror_boss_loop.ogg` | 0.63 | boss |
-| `resaca` | Resaca (Pez Globo Gigante) | `bosses/resaca.ogg` | 0.64 | boss |
+| `resaca` | Resaca (Pez Globo Gigante) | `bosses/resaca_intro.ogg` + `bosses/resaca_loop.ogg` | 0.67 | boss |
 | `polilla` | La Polilla (Saltarín Gigante) | `bosses/polilla_intro.ogg` + `bosses/polilla_loop.ogg` | 0.69 | boss |
 | `templo` | El Templo (Escarabajo Rinoceronte Gigante) | `bosses/templo_intro.ogg` + `bosses/templo_loop.ogg` | 0.46 | boss |
 | `obsidiana` | Obsidiana (Escorpión Triple Aguijón) | `bosses/obsidiana_intro.ogg` + `bosses/obsidiana_loop.ogg` | 0.66 | boss |

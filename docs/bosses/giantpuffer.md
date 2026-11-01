@@ -31,7 +31,7 @@ mark shows where). The fish does what the water at ITS position allows:
   `ATK_EVERY` s (3.6 / 2.6) it attacks, always with a warning:
   - near (< `PUFF_NEAR` 4.5 tiles) → 'puff_warn' (trembles half-inflated) → 'puffed' (spines out, radius `PUFF_R` = 6.4 × MS, body + half a spine:
     1 HP + strong push) → 'deflate'. Never puffs twice in a row (hugging it gets spines instead).
-  - far → 'spines_warn' (blinks half-inflated) → 'spines': rings at 3+3+2 sixteenths (the rhythm of "Resaca"), two
+  - far → 'spines_warn' (blinks half-inflated) → 'spines': rings at 3+3+2 sixteenths (the rhythm of the old "Resaca"; the 2026-10-31 rework is a 12/8 gallop: the rings were left as they are), two
     rings (three angry, `BURSTS_N`), `SPINES_N` 6 / 8 per ring at 400 px/s, 1 HP + push each; they stop at walls.
   - Nothing is vulnerable in water: stomping it only bounces.
 - **Low tide (stranded)** — 'flop_wind' (a target mark follows the player, locked the last 0.15 s) → 'flop' (a deflated

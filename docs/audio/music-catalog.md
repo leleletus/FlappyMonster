@@ -21,7 +21,7 @@ screens play `victory`; the Flappy mode plays `flappy`.
 | `crab_icy.py` | the composition of `crab_tantrum_icy` (v3: definitive, do not touch its winter references); running it installs the game's version through `jefes_helados.py` (GM cast v4 without the Christmas Bells chimes, 2026-10-29); `CHIP_ORIGINAL=1` = the old chip render |
 | `mirror_boss.py`, `mirror_chase.py`, `verity_boss.py` | those three |
 | `final_fall.py` | ARCHIVED (not in the game): `final_fall`, the boss theme with samples of Fall Guys' "Final Fall" — writes outside the repo (`FlappyMonster_originals/music/versiones/final_fall_v4/`); the user kept `caida_libre` instead |
-| `resaca.py` | `resaca` "Resaca" (was "Caída libre"): the coast's new boss theme (the Giant Pufferfish) on Final Fall's bass — the bass is a real GM slap bass rendered with fluidsynth, not chip; one file, the loop includes the intro |
+| `resaca.py [A B C]` | `resaca` "Resaca", the Giant Pufferfish's boss theme, reworked 2026-10-31: a 12/8 storm-shanty gallop on the slap bass; `INSTALL=1 RESACA=A` installs the chosen one; intro + loop. The old version: `FlappyMonster_originals/music/versiones/resaca_v6_antes_del_rework/` |
 | `polilla.py` | `polilla` "La Polilla": the Giant Hopper's boss theme (caves) — original, in the dark-cave style, on Resaca's GM slap bass (own riff); intro + loop |
 | `gloomy_nes.py cueva` | `cuevas_oscuras` (also a library: the spider "legs") |
 | `story_music.py [intro ending chase lair]` | the film scores, composed ON `assets/story/films.json` and the shard catalog `assets/story/shards.json` (one bell / hit / note per boss or shard; re-run after adding a boss with a shard) |

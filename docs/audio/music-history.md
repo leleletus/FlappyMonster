@@ -518,7 +518,11 @@ the old level tune in the final boss, Verity's hook).
   intro's F#m–E / D–E). Lead: mean interval 2.99 → 2.57 st, steps 57 → 61 %, leaps ≥ 5 st 18 → 12 %, octave leaps 4 → 0 %.
   Base, bass, form, mix, transitions and the kept motifs (la llamada coda) unchanged; 0 of 79 bars copied from Final Fall.
 
-## Resaca (was "Caída libre"; `tools/music/resaca.py`, boss track `resaca`)
+## Resaca, the rework (2026-10-31; `tools/music/resaca.py`)
+
+The user: "a super general rework" keeping the slap bass and the cropped vocals, with another rhythm and melody, "harmonious, boss like and enjoyably epic". By the agent that wrote Obsidiana. 12/8 gallop at 126 (2+1), F# minor with the chords moving with the bass, real C# major dominant, dark turn G → C#, saw lead, choir, tremolo strings, brass, timpani, taiko, maracas, marimba; 7.62 s + 121.9 s (64 bars). **The user chose A "galerna"** (riff melody; rejected B "himno", C "saloma") **but dropped the cropped vocals for "another instrument from some coastal soundfont"** → GM steel drum answering in the melody's gaps, the Coast's voice in this game. Old version archived. Verified by numbers only; **not listened to**. By ear: the steel drum's level, 12/8 as a boss, the loop seam (2.4× a section downbeat, a band hit after a quieter moment).
+
+## Resaca until 0.5.121 (was "Caída libre"; generator archived in `FlappyMonster_originals/music/versiones/resaca_v6_antes_del_rework/`)
 
 - The user, after `final_fall` v4 ("keep that one"): another track, COMPLETELY ORIGINAL; from Final Fall only the bass
   (the riff they love, with its sound, chords and notes) and the crunch vocals, used more often; everything else a
