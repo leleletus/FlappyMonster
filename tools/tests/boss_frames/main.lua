@@ -86,7 +86,7 @@ function love.load()
         end
         -- Reina Carnívora: una bomba lanzada a ella cada poco; aturdida no se la remata
         if boss.def.name == 'carnqueen' and os.getenv('NEAR') then pa.x, pa.invT = boss.x - 3.5 * TILE_PX, 1 end
-        if boss.def.name == 'carnqueen' and boss.state == 'idle' and t - (hitDone.bomb or 0) > 7 then
+        if boss.def.name == 'carnqueen' and boss.state == 'idle' and t - (hitDone.bomb or 0) > 7 and not os.getenv('NOBOMB') then
             hitDone.bomb = t
             for _, e in ipairs(ents) do
                 if e.def.name == 'bombobject' and e.alive and e.state ~= 'exploding' then

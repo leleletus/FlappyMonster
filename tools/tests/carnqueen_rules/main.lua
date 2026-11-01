@@ -2,6 +2,11 @@
 --   boca          se abre el agujero (aviso), sale hacia ti y te traga; machacando sales y la boca vuelve
 --   esquiva       apartado en el último tramo del aviso, se cierra en el vacío
 --   muerde        tragado sin machacar pierde vida poco a poco
+--   no_debajo     una boca nunca brota bajo tus pies: a 2,4 casillas o más, y tiene que estirarse
+--   busca         estirada, la cabeza te sigue; el último tramo, fija
+--   come          muy cerca, ella misma avisa y te traga; si te apartas, falla
+--   enredaderas   aviso sin daño; luego el piso pincha y arriba no; acaban
+--   varias        brotan varias a la vez
 --   superficies   lejos de todo sale del suelo; pegado a una pared puede salir de ella; bajo el techo, del techo
 --   fases         a 2/3 y 1/3 de vida cambia de fase, con más bocas a la vez
 --   semilla       escupe una semilla que brota en una planta carnívora, sin pasar del límite
@@ -79,7 +84,7 @@ local function playerAt(level, x, y)
 end
 -- Quieta y sin hacer nada por su cuenta
 local function still(boss)
-    boss.mouthT, boss.spitT, boss.inv = 99, 99, 0
+    boss.mouthT, boss.spitT, boss.inv, boss.vineT, boss.chompCd = 99, 99, 0, 999, 999
     boss.mouths, boss.seeds = {}, {}
     boss:enter('idle')
 end
@@ -113,7 +118,7 @@ function CASES.boca()
         if order[#order] ~= m.state then order[#order + 1] = m.state end
         return m.state == 'hold'
     end)
-    check('boca', table.concat(order, ' ') == 'warn out bite hold', table.concat(order, ' '))
+    check('boca', table.concat(order, ' ') == 'warn out seek bite hold', table.concat(order, ' '))
     check('boca', pa.gulped and pa.gulpBy == m and (pa.gulpKind or 0) == 0, 'te traga, como la planta')
     stepAll(level, es, { pa }, 2, function() return not pa.gulped end, function() stub.state.jump_pressed = true end)
     check('boca', not pa.gulped, 'machacando sales')
@@ -127,7 +132,7 @@ function CASES.esquiva()
     boss:spawnMouth(level, pa)
     local m = boss.mouths[1]
     stepAll(level, es, { pa }, 3, function()
-        if m.state == 'warn' and m.t > m.warnT - 0.15 then pa.x = 34 * T end
+        if m.state == 'seek' and m.t > 0.45 then pa.x = 34 * T end
         return m.state == 'shut' or m.state == 'hold'
     end)
     check('esquiva', m.state == 'shut' and not pa.gulped, 'apartado en el último tramo no te pilla: ' .. m.state)
@@ -142,6 +147,83 @@ function CASES.muerde()
     local hp = pa.hp
     stepAll(level, es, { pa }, 2)
     check('muerde', pa.hp == hp - 1 and m.state == 'hold', ('pierde vida (%d → %d)'):format(hp, pa.hp))
+end
+function CASES.no_debajo()
+    local level, es, boss = arena()
+    still(boss)
+    local pa = playerAt(level, 20 * T)
+    local nearest = 1e9
+    for _ = 1, 200 do
+        boss.mouths = {}
+        boss:spawnMouth(level, pa)
+        local m = boss.mouths[1]
+        if m.ny < 0 then nearest = math.min(nearest, math.abs(m.bx - pa.x)) end
+    end
+    check('no_debajo', nearest >= 2.4 * T - 1, ('la más cercana, a %.1f casillas'):format(nearest / T))
+end
+function CASES.busca()
+    local level, es, boss = arena()
+    still(boss)
+    local pa = playerAt(level, 20 * T)
+    boss:spawnMouth(level, pa)
+    local m = boss.mouths[1]
+    stepAll(level, es, { pa }, 3, function() pa.invT = 9; return m.state == 'seek' end)
+    local x0 = m.tx
+    pa.x = pa.x + 90
+    stepAll(level, es, { pa }, 0.25, function() pa.invT = 9 end)
+    check('busca', m.tx > x0 + 20, ('la cabeza te sigue (%d → %d)'):format(x0, m.tx))
+end
+function CASES.come()
+    local level, es, boss = arena()
+    still(boss); boss.chompCd = 0
+    local pa = playerAt(level, boss.x + 60)
+    stepAll(level, es, { pa }, 0.1)
+    check('come', boss.state == 'bite_wind', 'cerca: avisa: ' .. boss.state)
+    stepAll(level, es, { pa }, 1, function() return boss.state == 'hold' end)
+    check('come', boss.state == 'hold' and pa.gulped and pa.gulpBy == boss, 'te traga ella')
+    stepAll(level, es, { pa }, 2, function() return not pa.gulped end, function() stub.state.jump_pressed = true end)
+    check('come', not pa.gulped, 'machacando sales')
+    stepAll(level, es, { pa }, 0.1)
+    check('come', boss.state == 'recover', 'y se recupera: ' .. boss.state)
+    still(boss); boss.chompCd = 0
+    pa.invT = 0; pa.x = boss.x + 60
+    stepAll(level, es, { pa }, 0.1)
+    pa.x = boss.x + 4 * T
+    stepAll(level, es, { pa }, 0.6, function() pa.x = boss.x + 4 * T; return boss.state == 'chomp_miss' end)
+    check('come', boss.state == 'chomp_miss' and not pa.gulped, 'si te apartas durante el aviso, falla')
+end
+function CASES.enredaderas()
+    local level, es, boss = arena()
+    still(boss); boss.vineT = 0
+    local pa = playerAt(level, 18 * T)
+    local hp = pa.hp
+    stepAll(level, es, { pa }, 0.1)
+    check('enredaderas', boss.state == 'vine_wind', 'avisa: ' .. boss.state)
+    stepAll(level, es, { pa }, 3, function() return boss.state == 'vines' end)
+    check('enredaderas', pa.hp == hp, 'el aviso no hace daño')
+    stepAll(level, es, { pa }, 0.1)
+    check('enredaderas', pa.hp == hp - 1 and pa.vy < 0, 'en el piso pincha y te lanza arriba')
+    still(boss); boss.vineT = 0
+    local top = playerAt(level, 14 * T, 10 * T)
+    top.invT = 0
+    stepAll(level, es, { top }, 3, function() return boss.state == 'vines' end)
+    local h = top.hp
+    stepAll(level, es, { top }, 1)
+    check('enredaderas', top.onGround and top.y < 10 * T and top.hp == h, 'en una plataforma no')
+    stepAll(level, es, { top }, 6, function() return boss.state == 'idle' end)
+    check('enredaderas', boss.state == 'idle', 'y acaban')
+end
+function CASES.varias()
+    local level, es, boss = arena()
+    still(boss); boss.phase = 3; boss.mouthT = 0
+    local pa = playerAt(level, 20 * T)
+    local most = 0
+    for _ = 1, 40 do
+        boss.mouths = {}; boss.mouthT = 0
+        stepAll(level, es, { pa }, 1 / 60, function() pa.invT = 9 end)
+        most = math.max(most, #boss.mouths)
+    end
+    check('varias', most >= 2, 'brotan de golpe: ' .. most)
 end
 function CASES.superficies()
     local level, es, boss = arena()
@@ -188,7 +270,7 @@ function CASES.fases()
     local pa = playerAt(level, 20 * T)
     local most = 0
     stepAll(level, es, { pa }, 6, function() pa.invT = 9; if boss.mouthT > 0.3 then boss.mouthT = 0.01 end; most = math.max(most, #boss.mouths) end)
-    check('fases', most == 3, 'en la 3ª, tres bocas a la vez: ' .. most)
+    check('fases', most == 4, 'en la 3ª, cuatro bocas a la vez: ' .. most)
 end
 function CASES.semilla()
     local level, es, boss = arena()
@@ -230,7 +312,7 @@ function CASES.bomba()
 end
 function CASES.flor()
     local level, es, boss = arena()
-    local pa = playerAt(level, 34 * T)
+    local pa = playerAt(level, 40 * T)
     stun(level, es, boss, pa)
     local hp0 = boss.hp
     local fx, fy = boss:flowerPos()
@@ -268,7 +350,7 @@ function CASES.atravesable()
 end
 function CASES.derrota()
     local level, es, boss = arena()
-    local pa = playerAt(level, 34 * T)
+    local pa = playerAt(level, 40 * T)
     still(boss); boss.spitT = 0
     stepAll(level, es, { pa }, 3, function() pa.invT = 9; local _, a = boss:activePlants(level); return a > 0 end)
     boss:enter('stun'); boss.inv = 0; boss.hp = 1

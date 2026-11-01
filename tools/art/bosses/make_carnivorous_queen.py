@@ -850,6 +850,24 @@ def strip(ims, w, h):
     return sh
 
 
+def vine_frames():
+    """LAS ENREDADERAS del suelo, 3 cuadros de 16x16 que empalman de lado (asoman, crecen, con espinas)"""
+    out = []
+    for f, h in enumerate((4, 9, 14)):
+        im = Image.new('RGBA', (16, 16), (0, 0, 0, 0))
+        d = ImageDraw.Draw(im)
+        for x0, top, lean in ((2, h, 1), (8, max(2, h - 3), -1), (13, h - 1, 1)):
+            pts = [(x0, 15), (x0 + lean, 15 - top // 2), (x0, 15 - top)]
+            d.line(pts, fill=hx(LEAF[0]), width=3)
+            d.line(pts, fill=hx(LEAF[3] if lean > 0 else LEAF[2]), width=1)
+            if f == 2:                                               # (las espinas, claras: es lo que dice "no pises")
+                for y in range(15 - top + 1, 14, 3):
+                    im.putpixel((max(0, x0 - 2), y), hx(CILIA)); im.putpixel((min(15, x0 + 2), y + 1), hx(CILIA))
+                im.putpixel((x0, 15 - top), hx(CILIA))
+        out.append(im)
+    return out
+
+
 def apply():
     import json
     K = Kit('A')
@@ -869,7 +887,7 @@ def apply():
            B + 'flower_open.png': K.fl_art['open'], B + 'flower_bud.png': K.fl_art['bud'],
            B + 'wear_dew_open.png': K.drop_art['open'], B + 'wear_dew_bud.png': K.drop_art['bud'],
            B + 'seed-Sheet.png': strip(K.seed_art, 11, 11), B + 'sprout-Sheet.png': strip([sprout(0), sprout(1)], 17, 16),
-           B + 'socket-Sheet.png': strip(K.socket_art, 30, 10),
+           B + 'socket-Sheet.png': strip(K.socket_art, 30, 10), B + 'vine-Sheet.png': strip(vine_frames(), 16, 16),
            I + 'astilla_reina.png': icon(True), I + 'astilla_reina_empty.png': icon(False)}
     for name, ims in heads.items(): out[B + f'head_{name}-Sheet.png'] = strip(ims, HN, HN)
     for l, ln in enumerate(('line', 'shade', 'light')): out[B + f'stalk_{ln}-Sheet.png'] = strip([a[l] for a in K.seg_art], SEG_N, SEG_N)
@@ -898,6 +916,7 @@ def apply():
     aset('bosses/carnqueen_parts', K.k, [0.5, 0.5], sh, an)
     aset('bosses/carnqueen_seed', SMALL_K, [0.5, 0.5], [(B + 'seed-Sheet.png', 11, 11, 4), (B + 'sprout-Sheet.png', 17, 16, 2)],
          {"seed": a([1, 2, 3, 4], 10), "sprout": a([5, 6], 3, False)})
+    aset('bosses/carnqueen_vine', SMALL_K, [0, 1], [(B + 'vine-Sheet.png', 16, 16, 3)], {"grow": a([1, 2, 3], 5, False), "full": a([3], 1)})
     print('frame', W, H, 'FLC', FLC, 'cx', K.L['cx'], 'cabeza', HN, 'flor', K.fl_art['open'].size, K.fl_art['bud'].size, K.drop_art['open'].size, K.drop_art['bud'].size)
     for f in FRAMES:
         fl, st, m = K.anchor[f]

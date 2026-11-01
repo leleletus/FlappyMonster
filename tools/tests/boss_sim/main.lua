@@ -408,7 +408,7 @@ function love.load()
         end
         if cq and z.state == 'fight' and boss.state == 'idle' then
             cqT = cqT + dt
-            if cqT > 5 then
+            if cqT > 2.5 then
                 cqT = 0
                 for _, e in ipairs(ents) do
                     if e.def.name == 'bombobject' and e.alive and e.state ~= 'exploding' then
@@ -480,7 +480,9 @@ function love.load()
                 local ob = boss:getOuterBounds()
                 local hp0 = boss.hp
                 local ph = pa:getOuterBounds().h
-                pa.x, pa.y, pa.vx, pa.vy = boss.x, ob.y - ph / 2 + 4, 0, 400
+                local topY = ob.y
+                if boss.flowerPos then local _, fy = boss:flowerPos(); topY = fy - 44 end      -- (la Reina: solo la flor)
+                pa.x, pa.y, pa.vx, pa.vy = boss.x, topY - ph / 2 + 4, 0, 400
                 pa.onGround = false
                 pa.gpPhase = (attack.kind == 'pound') and 'fall' or nil
                 pa.hurtT = 0

@@ -3,6 +3,8 @@
 --   · LAS BOCAS brotan del suelo, las paredes y el techo cerca de ti: el agujero se abre (el aviso), la boca sale hacia donde
 --     estás y se cierra. Si te pilla, te TRAGA: machacar botones para salir, como la Planta (PlayerGulp). Solo traga: no hay
 --     más daño que ese. Más bocas a la vez en cada fase; desde la 2ª siguen al jugador mientras salen.
+--   · ELLA MISMA COME (el usuario): si te quedas muy cerca abre las hojas (aviso) y se cierra; pillado, a machacar como siempre.
+--   · LAS ENREDADERAS (el usuario): aviso largo y se llena el piso de enredaderas con espinas: hay que subir a las plataformas.
 --   · ESCUPE SEMILLAS en arco que brotan en plantas carnívoras normales (súbditas de reserva).
 --   · LA VENTANA: una bomba LANZADA que cae en ella: se cierra, se la traga ('bomb'), le explota dentro y queda ATURDIDA ('stun'),
 --     con la flor abierta y en alto: pisotón 1 / ground pound 2 EN LA FLOR, un solo golpe por noqueo (Boss.damage).
@@ -17,7 +19,7 @@ local Chain  = require 'src/world/entities/base/SegmentChain'
 local Anim   = require 'src/fx/Anim'
 
 local Q = Entity.extend(Boss, {
-    ATTACKS  = { spit_wind = true, spit = true },
+    ATTACKS  = { spit_wind = true, spit = true, bite_wind = true, hold = true, vine_wind = true, vines = true },
     OPENINGS = { stun = true },
     debugColor = { 0.3, 0.8, 0.4 },
     hitbox = { outerW = 0.8, outerH = 0.4, innerW = 0.7, innerH = 0.34 },
@@ -38,17 +40,34 @@ local FLOWER_R  = 42                            -- px: el radio de la flor (lo q
 local EAT_W, EAT_H = 120, 130                   -- px: medio ancho y alto de lo que se traga
 
 -- Ritmo por fase (1, 2, 3)
-local MOUTHS   = { 1, 2, 3 }                    -- bocas a la vez
-local MOUTH_CD = { 2.2, 1.6, 1.1 }              -- s entre una boca y la siguiente
+local MOUTHS   = { 2, 3, 4 }                    -- bocas a la vez
+local BURST    = { 1, 2, 3 }                    -- cuántas pueden brotar de golpe
+local MOUTH_CD = { 2.4, 1.9, 1.5 }              -- s entre una tanda y la siguiente
+local SEEK_T   = { 0.55, 0.65, 0.75 }           -- s estirada buscándote antes de morder
+local SEEK_V   = { 170, 230, 290 }              -- px/s que se mueve la cabeza buscándote
+local SEEK_LOCK = 0.16                          -- s antes de morder en que deja de seguirte: lo que hay para esquivarla
 local WARN_T   = { 0.8, 0.65, 0.55 }            -- s con el agujero abriéndose
 local OUT_T    = { 0.32, 0.28, 0.24 }           -- s saliendo
 local BITE_T   = 0.14
 local BACK_T   = 0.32
 local SHUT_T   = 0.5                            -- s cerrada tras fallar, antes de volver
 local LOCK_T   = 0.22                           -- s antes de salir en que deja de apuntar: lo que hay para esquivarla
-local TRACK    = { 0, 0.5, 0.8 }                -- cuánto la sigue mientras sale
 local REACH    = 4.6 * T                        -- lo más largo de un tallo
-local NEAR     = 4.2 * T                        -- a cuánto de una pared o del techo puede salir de ahí
+local NEAR     = 3.8 * T                        -- a cuánto de una pared o del techo puede salir de ahí
+local OFF_MIN, OFF_MAX = 2.4 * T, 3.8 * T       -- a qué distancia de ti brota (el usuario: nunca debajo; tiene que estirarse)
+-- Ella misma come (si estás encima)
+local CHOMP_R, CHOMP_H = 1.9 * T, 2.0 * T       -- px: te tiene a tiro
+local CHOMP_WIND = { 0.5, 0.42, 0.35 }
+local CHOMP_BOX = 1.7 * T
+local CHOMP_CD  = 2.5
+local CHOMP_EXTRA = 0.5                         -- s cerrada si falla
+-- Las enredaderas del piso
+local VINE_CD   = { 13, 11, 9 }
+local VINE_WARN = { 1.6, 1.4, 1.2 }             -- s asomando, sin hacer daño: para subir
+local VINE_T    = { 3.2, 3.8, 4.4 }
+local VINE_BACK = 0.5
+local VINE_H    = 42                            -- px de alto: lo que pincha
+local HIT_VINE  = { 1, 240, -760, 0.2, 0 }      -- (te lanza hacia arriba: hacia las plataformas)
 local HEAD_BOX = 34
 local SPIT_CD  = { 7.5, 6, 5 }
 local SPIT_WIND, SPIT_T = 0.5, 0.35
@@ -78,12 +97,13 @@ function Q:initBoss()
     self.vx, self.vy, self.onGround = 0, 0, true
     self.phase = 1
     self.mouths, self.seeds, self.nextId = {}, {}, 0
-    self.mouthT, self.spitT = 1.5, SPIT_CD[1]
+    self.mouthT, self.spitT, self.chompCd, self.vineT = 1.5, SPIT_CD[1], 0, VINE_CD[1]
+    self.vx0, self.vx1, self.vy0 = 0, 0, 0
     self.summonKey = 'cq' .. self.col .. ',' .. self.row
 end
 
 function Q:onFightStart(n) self:enter('fight') end
-function Q:rollStart(r) self.mouthT, self.spitT = r(0.8, 2.2), r(3, SPIT_CD[1]) end
+function Q:rollStart(r) self.mouthT, self.spitT, self.vineT = r(0.8, 2.2), r(3, SPIT_CD[1]), r(6, VINE_CD[1]) end
 
 function Q:isActive() return Boss.isActive(self) and not DEATH[self.state] end
 function Q:isDying() return DEATH[self.state] == true or Boss.isDying(self) end
@@ -144,11 +164,19 @@ function Q:spawnMouth(level, pa)
     local px, py = pa.x, pa.y
     local opts = {}
     local side = (math.random() < 0.5) and -1 or 1
-    local fx = math.max(zx0 + T, math.min(zx1 - T, px + side * rand(1.2, 2.4) * T))
+    -- (a un lado o, si ahí no cabe, al otro: nunca bajo sus pies)
+    local off = rand(OFF_MIN, OFF_MAX)
+    local fx = px + side * off
+    if fx < zx0 + T or fx > zx1 - T then fx = px - side * off end
     opts[#opts + 1] = { fx, self:floorBelow(level, fx, py), 0, -1 }
-    if px - zx0 < NEAR then opts[#opts + 1] = { zx0, math.max(zy0 + T, py + rand(-1, 1) * T), 1, 0 } end
-    if zx1 - px < NEAR then opts[#opts + 1] = { zx1, math.max(zy0 + T, py + rand(-1, 1) * T), -1, 0 } end
-    if py - zy0 < NEAR + T then opts[#opts + 1] = { math.max(zx0 + T, math.min(zx1 - T, px + side * rand(0.5, 1.5) * T)), zy0, 0, 1 } end
+    local wallY = math.max(zy0 + T, py + (math.random() < 0.5 and -1 or 1) * rand(1.5, 3) * T)
+    if px - zx0 < NEAR then opts[#opts + 1] = { zx0, wallY, 1, 0 } end
+    if zx1 - px < NEAR then opts[#opts + 1] = { zx1, wallY, -1, 0 } end
+    if py - zy0 < NEAR + T then
+        local cx = px + side * rand(1.8, 3.2) * T
+        if cx < zx0 + T or cx > zx1 - T then cx = px - side * rand(1.8, 3.2) * T end
+        opts[#opts + 1] = { cx, zy0, 0, 1 }
+    end
     local o = opts[math.random(#opts)]
     local ph = self:ph()
     local m = { id = self:nid(), state = 'warn', alive = true, t = 0, bx = math.floor(o[1]), by = math.floor(o[2]), nx = o[3], ny = o[4],
@@ -167,12 +195,18 @@ function Q:updateMouth(m, level, dt)
         if pa and m.t < m.warnT - LOCK_T then m.tx, m.ty = clampReach(m, pa.x, pa.y) end
         if m.t >= m.warnT then m.state, m.t = 'out', 0; Sound.play('plantSnap', 1.3, 0.5) end
     elseif m.state == 'out' then
-        if pa and TRACK[ph] > 0 then
+        if m.t >= m.outT then m.state, m.t = 'seek', 0 end
+    elseif m.state == 'seek' then
+        -- estirada, la cabeza te busca (el usuario: que no apunten siempre arriba); el último tramo, fija
+        if pa and m.t < SEEK_T[ph] - SEEK_LOCK then
             local x, y = clampReach(m, pa.x, pa.y)
-            local k = math.min(1, TRACK[ph] * dt * 6)
-            m.tx, m.ty = m.tx + (x - m.tx) * k, m.ty + (y - m.ty) * k
+            local dx, dy = x - m.tx, y - m.ty
+            local d = math.sqrt(dx * dx + dy * dy)
+            local step = SEEK_V[ph] * dt
+            if d > step then dx, dy = dx / d * step, dy / d * step end
+            m.tx, m.ty = m.tx + dx, m.ty + dy
         end
-        if m.t >= m.outT then m.state, m.t = 'bite', 0 end
+        if m.t >= SEEK_T[ph] then m.state, m.t = 'bite', 0 end
     elseif m.state == 'bite' then
         if m.t >= BITE_T then
             Sound.play('plantSnap')
@@ -203,6 +237,30 @@ function Q:updateMouth(m, level, dt)
         if m.t >= BACK_T then return true end
     end
     return false
+end
+
+-- ¿Te tiene encima? (→ jugador)
+function Q:playerClose(level)
+    local fy = self:feetY()
+    for _, pa in ipairs(level.players or {}) do
+        if pa.canBeSwallowed and pa:canBeSwallowed() and math.abs(pa.x - self.x) < CHOMP_R and pa.y > fy - CHOMP_H then return pa end
+    end
+end
+
+-- Se cierra: ella misma traga a quien siga a tiro. `held` y el estado 'hold' son lo que mira PlayerGulp
+function Q:chomp(level)
+    Sound.play('plantSnap', 0.75, 1)
+    Entity.emitFx('shake_small', self.x, self.y)
+    local fy = self:feetY()
+    for _, pa in ipairs(level.players or {}) do
+        if pa.canBeSwallowed and pa:canBeSwallowed() and math.abs(pa.x - self.x) < CHOMP_BOX and pa.y > fy - CHOMP_H
+           and pa:swallow(self.x, fy, 0, -1) then
+            pa.gulpBy, self.held = self, pa
+            Sound.play('plantCrunch', 0.8, 0.9)
+            return self:enter('hold')
+        end
+    end
+    self:enter('chomp_miss')
 end
 
 -- Aturdida o derrotada: se retiran; las que tienen a alguien, lo sueltan
@@ -287,6 +345,7 @@ end
 
 function Q:defeat()
     self.hp, self.inv, self.ghost = 0, 0, false
+    self.held = nil
     self:retractMouths()
     self.seeds = {}
     for _, e in ipairs(self.levelRef and self:minions(self.levelRef) or {}) do
@@ -304,6 +363,7 @@ function Q:updateBoss(dt, level)
     self.levelRef = self.levelRef or level
     self.deadTimer = self.deadTimer + dt
     self.vx, self.vy = 0, 0
+    if self.chompCd > 0 then self.chompCd = math.max(0, self.chompCd - dt) end
     for i = #self.mouths, 1, -1 do
         if self:updateMouth(self.mouths[i], level, dt) then table.remove(self.mouths, i) end
     end
@@ -312,7 +372,7 @@ function Q:updateBoss(dt, level)
     if st == 'fight' then self:enter('idle'); return end
 
     -- (la bomba, en cuanto cae en ella, salvo si ya está con otra o aturdida)
-    if st == 'idle' or st == 'spit_wind' or st == 'spit' or st == 'recover' then
+    if st == 'idle' or st == 'spit_wind' or st == 'spit' or st == 'recover' or st == 'vine_wind' or st == 'vines' then
         local b = self:bombToEat(level)
         if b then
             self.inside = b
@@ -325,9 +385,26 @@ function Q:updateBoss(dt, level)
 
     if st == 'idle' then
         self.mouthT, self.spitT = self.mouthT - dt, self.spitT - dt
+        self.vineT = self.vineT - dt
         local pa = self:nearestPlayer(level)
-        if pa and self.mouthT <= 0 and #self.mouths < MOUTHS[ph] and self:mayAttack(level) then
-            self:spawnMouth(level, pa)
+        if self.chompCd <= 0 and self:playerClose(level) then
+            self.chompCd = CHOMP_CD
+            self:enter('bite_wind')
+            Sound.play('plantRustle', 1.3, 0.9)
+            return
+        end
+        if self.vineT <= 0 then
+            self.vineT = VINE_CD[ph] * rand(0.9, 1.1)
+            local zx0, zx1 = self:zoneBounds()
+            self.vx0, self.vx1, self.vy0 = math.floor(zx0), math.floor(zx1), math.floor(self:feetY())
+            self:enter('vine_wind')
+            Sound.play('plantRustle', 0.6, 1)
+            return
+        end
+        if pa and self.mouthT <= 0 and self:mayAttack(level) then
+            for _ = 1, math.random(1, BURST[ph]) do                  -- (varias a la vez)
+                if #self.mouths < MOUTHS[ph] then self:spawnMouth(level, pa) end
+            end
             self.mouthT = MOUTH_CD[ph] * rand(0.85, 1.15)
         end
         if self.spitT <= 0 then
@@ -338,6 +415,36 @@ function Q:updateBoss(dt, level)
                 Sound.play('plantRustle', 1.1, 0.7)
             end
         end
+    elseif st == 'bite_wind' then
+        if t >= CHOMP_WIND[ph] then self:chomp(level) end
+    elseif st == 'chomp_miss' then
+        if t >= CHOMP_EXTRA then self:enter('recover') end
+    elseif st == 'hold' then
+        local q, here = self.held, false
+        for _, o in ipairs(level.players or {}) do if o == q then here = true end end
+        if not q or not here or q.gulpBy ~= self or not q.gulped or q.dying or q.alive == false then
+            if q and q.gulpBy == self then q.gulpBy = nil end
+            self.held = nil
+            self:enter('recover')
+        end
+    elseif st == 'vine_wind' then
+        if t >= VINE_WARN[ph] then
+            self:enter('vines')
+            Sound.play('plantSnap', 0.6, 1)
+            Entity.emitFx('shake_small', self.x, self.y)
+        end
+    elseif st == 'vines' then
+        -- quien pise el suelo de la sala: pincha y lo lanza hacia arriba
+        for _, pa in ipairs(level.players or {}) do
+            local b = pa:getOuterBounds()
+            if not pa.dying and pa.alive ~= false and not pa:isInvulnerable() and b.x + b.w > self.vx0 and b.x < self.vx1
+               and b.y + b.h > self.vy0 - VINE_H and b.y < self.vy0 + 4 then
+                Boss.strike(pa, HIT_VINE, (pa.x >= self.x) and 1 or -1)
+            end
+        end
+        if t >= VINE_T[ph] then self:enter('vine_back'); Sound.play('plantRustle', 1, 0.7) end
+    elseif st == 'vine_back' then
+        if t >= VINE_BACK then self:enter('idle') end
     elseif st == 'spit_wind' then
         if t >= SPIT_WIND then self:spitSeed(level); self:enter('spit') end
     elseif st == 'spit' then
@@ -391,10 +498,10 @@ function Q:updateIntro(dt, level, t)
 end
 
 -- ── Red ───────────────────────────────────────────────────────────────────────
-local MSTATE = { warn = 1, out = 2, bite = 3, hold = 4, shut = 5, back = 6 }
-local MNAME = { 'warn', 'out', 'bite', 'hold', 'shut', 'back' }
+local MSTATE = { warn = 1, out = 2, bite = 3, hold = 4, shut = 5, back = 6, seek = 7 }
+local MNAME = { 'warn', 'out', 'bite', 'hold', 'shut', 'back', 'seek' }
 function Q:netPackExtra()
-    local out = { self:ph(), #self.mouths }
+    local out = { self:ph(), self.vx0, self.vx1, self.vy0, #self.mouths }
     for _, m in ipairs(self.mouths) do
         local n = #out
         out[n + 1], out[n + 2], out[n + 3], out[n + 4], out[n + 5] = m.id, MSTATE[m.state], math.floor(m.t * 100), m.bx, m.by
@@ -412,9 +519,10 @@ end
 function Q:netApplyExtra(a, b, f)
     if type(b[1]) ~= 'number' then return end
     self.phase = b[1]
-    local k = 3
+    self.vx0, self.vx1, self.vy0 = b[2], b[3], b[4]
+    local k = 6
     local ms = {}
-    for _ = 1, b[2] or 0 do
+    for _ = 1, b[5] or 0 do
         ms[#ms + 1] = { id = b[k], state = MNAME[b[k + 1]], t = b[k + 2] / 100, bx = b[k + 3], by = b[k + 4], nx = b[k + 5], ny = b[k + 6],
                         tx = b[k + 7], ty = b[k + 8], outT = b[k + 9] / 100, warnT = b[k + 10] / 100 }
         k = k + 11
@@ -431,10 +539,11 @@ function Q:netApplyExtra(a, b, f)
 end
 
 -- ── Dibujo ────────────────────────────────────────────────────────────────────
-local parts, seedSet
+local parts, seedSet, vineSet
 function Q.loadAssets()
     parts = parts or Anim.load('bosses/carnqueen_parts')
     seedSet = seedSet or Anim.load('bosses/carnqueen_seed')
+    vineSet = vineSet or Anim.load('bosses/carnqueen_vine')
 end
 
 local GAP = 2 * MS
@@ -442,10 +551,11 @@ local HEAD_OUT = 44
 local LAYERS = { 'stalk_line', 'stalk_shade', 'stalk_light' }
 
 -- La curva del tallo: en S, de su base a la cabeza
-local function fillStalk(tg, n, bx, by, nx, ny, hx, hy, e)
+local function fillStalk(tg, n, bx, by, nx, ny, hx, hy, e, ax, ay)
     local px, py = -ny, nx
+    -- (la curva LLEGA por detrás de hacia donde mira: si no, la cabeza apuntaba siempre según su superficie, arriba en el suelo)
     Chain.bez(tg, n, bx, by, bx + nx * 70 * e + px * 46 * e, by + ny * 70 * e + py * 46 * e,
-              hx - nx * 40 * e - px * 40 * e, hy - ny * 40 * e - py * 40 * e, hx, hy)
+              hx - ax * 60 * e, hy - ay * 60 * e, hx, hy)
 end
 
 function Q:drawMouth(m, camX, camY, dt, r, g, b, alpha)
@@ -467,7 +577,16 @@ function Q:drawMouth(m, camX, camY, dt, r, g, b, alpha)
     local e = ext(m)
     local hx, hy = Q.headPos(m)
     c.gap = math.max(0.1, GAP * e)
-    c:advance(dt, 0.7, 0.42, 1.6, fillStalk, m.bx, m.by, m.nx, m.ny, hx, hy, e)
+    -- hacia dónde mira: hacia el jugador más cercano mientras busca; si no, hacia donde se estira
+    local ax, ay = m.tx - m.bx, m.ty - m.by
+    if m.state == 'seek' or m.state == 'out' then
+        local pa = self.levelRef and self:nearestPlayer(self.levelRef)
+        if pa then ax, ay = pa.x - hx, pa.y - hy end
+    end
+    local al = math.sqrt(ax * ax + ay * ay)
+    if al < 1 then ax, ay, al = m.nx, m.ny, 1 end
+    ax, ay = ax / al, ay / al
+    c:advance(dt, 0.7, 0.42, 1.6, fillStalk, m.bx, m.by, m.nx, m.ny, hx, hy, e, ax, ay)
     for _, name in ipairs(LAYERS) do                       -- (contornos, sombras y luces: un tubo liso de 3 tonos)
         for j = 1, c.n - 1 do
             local x, y = c:pos(j)
@@ -480,7 +599,7 @@ function Q:drawMouth(m, camX, camY, dt, r, g, b, alpha)
     elseif m.t < m.outT * 0.3 then name = 'head_half' end
     local x, y = c:pos(c.n)
     x, y = x + m.nx * (1 - e) * HEAD_OUT, y + m.ny * (1 - e) * HEAD_OUT          -- (al asomar, ya fuera de la superficie)
-    local d = math.floor(c:tipAngle() / (math.pi * 2) * 16 + 0.5) % 16 + 1
+    local d = math.floor(math.atan2(ay, ax) / (math.pi * 2) * 16 + 0.5) % 16 + 1
     parts:drawFrame(parts:frameN(name, d), math.floor(x - camX), math.floor(y - camY), 0, MS, MS, 0.5, 0.5)
 end
 
@@ -505,7 +624,10 @@ function Q:render(camX, camY)
     elseif st == 'bomb' then name = (t < 0.15) and 'closed' or 'gulp'
     elseif st == 'blast' then name = 'blast'
     elseif st == 'stun' or st == 'dying_out' then name = 'stun'
-    elseif st == 'recover' then name = 'tell'
+    elseif st == 'recover' or st == 'vine_back' then name = 'tell'
+    elseif st == 'bite_wind' or st == 'vine_wind' or st == 'vines' then name = 'blast'
+    elseif st == 'hold' then name = 'gulp'
+    elseif st == 'chomp_miss' then name = 'closed'
     elseif st == 'dying_flee' then name = 'closed'
     elseif st == 'intro' or st == 'ready' then
         if st == 'intro' and t < OPEN_AT then name = 'closed' elseif st == 'intro' and t < OPEN_AT + 0.3 then name = 'tell' end
@@ -527,6 +649,15 @@ function Q:render(camX, camY)
             parts:drawFrame(parts:frameN(open and 'dew_open' or 'dew_bud', 1), fx, fy, 0, MS, MS, 0.5, 0.5)
         end
         if open then BossFx.stars(fx, fy - 12 * MS, 8 * MS, 1.2 * MS, 5, alpha, 'back') end
+    end
+    -- Las enredaderas del piso: asoman (el aviso), con espinas (pinchan) y se retiran; un tramo cada casilla
+    if st == 'vine_wind' or st == 'vines' or st == 'vine_back' then
+        local i = (st == 'vines') and 3 or ((st == 'vine_back') and 2 or ((t < (self.vineWarnShow or 0.6)) and 1 or 2))
+        love.graphics.setColor(1, 1, 1, alpha)
+        local fr2 = vineSet:frameN('grow', i)
+        for vx = self.vx0, self.vx1 - 1, T do
+            vineSet:drawFrame(fr2, math.floor(vx - camX), math.floor(self.vy0 - camY) + 4, 0, 4, 4, 0, 1)
+        end
     end
     -- Las bocas y las semillas
     local seen = {}

@@ -1,0 +1,50 @@
+{
+  "id": "bosses/carnqueen_vine",
+  "scale": 4,
+  "origin": [
+    0,
+    1
+  ],
+  "fallback": "grow",
+  "frames": [
+    {
+      "h": 16,
+      "image": "assets/images/bosses/carnqueen/vine-Sheet.png",
+      "w": 16,
+      "x": 0,
+      "y": 0
+    },
+    {
+      "h": 16,
+      "image": "assets/images/bosses/carnqueen/vine-Sheet.png",
+      "w": 16,
+      "x": 16,
+      "y": 0
+    },
+    {
+      "h": 16,
+      "image": "assets/images/bosses/carnqueen/vine-Sheet.png",
+      "w": 16,
+      "x": 32,
+      "y": 0
+    }
+  ],
+  "anims": {
+    "grow": {
+      "fps": 5,
+      "frames": [
+        1,
+        2,
+        3
+      ],
+      "loop": false
+    },
+    "full": {
+      "fps": 1,
+      "frames": [
+        3
+      ],
+      "loop": true
+    }
+  }
+}
