@@ -250,6 +250,8 @@ function Sound.load()
     load('plantRustle', 'assets/sounds/enemies/carnivoreplant/rustle.wav',  'static')   -- planta: el aviso
     load('plantSnap',   'assets/sounds/enemies/carnivoreplant/snap.wav',    'static')   -- planta: se cierra de golpe
     load('plantCrunch', 'assets/sounds/enemies/carnivoreplant/crunch.wav',  'static')   -- planta: se come algo
+    load('plantBite',   'assets/sounds/enemies/carnivoreplant/bite.wav',    'static')   -- el mordisco: la planta chiquita y las Lanzas
+    load('queenBite',   'assets/sounds/bosses/carnqueen/bite.wav',          'static')   -- el mordisco de la Reina Carnívora
     -- Pingüino (tools/sounds/penguin.py)
     load('penguinSquawk', 'assets/sounds/enemies/penguin/squawk.wav', 'static')   -- te ve y se tira de barriga
     load('penguinSlide',  'assets/sounds/enemies/penguin/slide.wav',  'static')   -- se desliza / echa a correr de trineo
@@ -337,6 +339,7 @@ Sound.RANGE = {
     bombBlast = 4,
     scorpionRattleJoin = 3, scorpionRattleSplit = 3, scorpionStrike = 3, scorpionPull = 2.5, scorpionHiss = 3,
     scorpionSting = 2.5, scorpionSnap = 2.5,
+    queenBite = 3,
     mirrorWarp = 2.5, mirrorAppear = 2.5, mirrorPortal = 2.5, glassWarn = 3, glassRise = 3,
     mgloomyPing = 3, mgloomyListen = 3, mgloomyDrop = 3, mgloomySlam = 3, mgloomyDazzled = 3, mgloomyShriek = 3,
     mgloomyHurt = 3, mgloomyStep = 2, mgloomyRoar = 3,

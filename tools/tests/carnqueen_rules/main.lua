@@ -16,7 +16,8 @@
 --   varias        brotan varias a la vez
 --   superficies   lejos de todo sale del suelo; pegado a una pared puede salir de ella; bajo el techo, del techo
 --   fases         a 2/3 y 1/3 de vida cambia de fase, con más bocas a la vez
---   semilla       escupe una semilla que brota en una planta carnívora, sin pasar del límite
+--   semilla       escupe semillas que brotan en plantas carnívoras; límite y cuántas según fase y dificultad
+--   plataforma_bomba  en su plataforma, con enredaderas, también se traga la bomba; aturdida arriba, luego baja
 --   bomba         una bomba lanzada: se la traga, le explota dentro y queda aturdida; las bocas se retiran y sueltan
 --   flor          aturdida: pisar la FLOR -1, ground pound -2; un solo golpe por noqueo; el cuerpo no cuenta
 --   atravesable   su cuerpo no es sólido ni hace daño; pisarla fuera de la ventana no hace nada
@@ -406,7 +407,31 @@ function CASES.semilla()
     boss.spitT = 0
     stepAll(level, es, { pa }, 3, function() pa.invT = 9; if boss.spitT > 0.1 and boss.state == 'idle' then boss.spitT = 0 end end)
     local _, a = boss:activePlants(level)
-    check('semilla', a == 1, 'en la fase 1, no más de una: ' .. a)
+    check('semilla', a == 2, 'en la fase 1 y normal, no más de dos: ' .. a)
+    local lim = {}
+    for _, c in ipairs({ { 'easy', 1, 1 }, { 'normal', 3, 4 }, { 'hard', 2, 4 }, { 'xtra', 3, 6 } }) do
+        level.difficulty, boss.phase = c[1], c[2]
+        check('semilla', boss:plantLimit(level) == c[3], ('%s, fase %d: hasta %d plantas'):format(c[1], c[2], boss:plantLimit(level)))
+    end
+    -- en fase 3 escupe varias de golpe
+    level.difficulty, boss.phase = 'normal', 3
+    still(boss); boss.phase = 3; boss.spitT = 0
+    for _, e in ipairs(boss:minions(level)) do e.alive = false; e.state = 'reserve' end
+    stepAll(level, es, { pa }, 1.5, function() pa.invT = 9; return #boss.seeds >= 3 end)
+    check('semilla', #boss.seeds >= 2, 'con poca vida, varias de golpe: ' .. #boss.seeds)
+end
+function CASES.plataforma_bomba()
+    local level, es, boss = arena()
+    still(boss); boss.vineT = 0
+    local pa = playerAt(level, 18 * T)
+    stepAll(level, es, { pa }, 4, function() pa.invT = 9; return boss.state == 'vines' and not boss.hopT end)
+    check('plataforma_bomba', boss.state == 'vines' and boss:feetY() < feet(), 'está en su plataforma, con enredaderas')
+    bomb(es, boss, pa)
+    stepAll(level, es, { pa }, 5, function() pa.invT = 9; return boss.state == 'stun' end)
+    check('plataforma_bomba', boss.state == 'stun' and boss:feetY() < feet(), 'se la traga y queda aturdida arriba: ' .. boss.state)
+    boss.mouthT, boss.spitT, boss.vineT, boss.chompCd = 99, 99, 999, 999
+    stepAll(level, es, { pa }, 12, function() pa.invT = 9; return boss.state == 'idle' and boss:feetY() == feet() end)
+    check('plataforma_bomba', boss:feetY() == feet(), 'y luego baja: pies en la fila ' .. boss:feetY() / T)
 end
 function CASES.bomba()
     local level, es, boss = arena()

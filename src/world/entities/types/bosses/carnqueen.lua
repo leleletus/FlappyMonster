@@ -7,7 +7,9 @@
 --   · ELLA MISMA COME (el usuario): si te quedas muy cerca abre las hojas (aviso) y se cierra; pillado, a machacar como siempre.
 --   · LAS ENREDADERAS (el usuario): aviso largo y se llena el piso de enredaderas con espinas: hay que subir a las plataformas.
 --     Ella salta a la plataforma que tenga encima para salvarse; sus plantas del suelo mueren.
---   · ESCUPE SEMILLAS en arco que brotan en plantas carnívoras normales (súbditas de reserva).
+--   · ESCUPE SEMILLAS en arco que brotan en plantas carnívoras normales (súbditas de reserva): más cuanta menos vida le queda
+--     y cuanto más alta la dificultad (SEEDS, PLANTS, DIFF_*).
+--   · AL MORDER se dibuja como la planta chiquita (el usuario): se encoge, se estira hacia ti, se inclina y rebota (pose).
 --   · LA VENTANA: una bomba LANZADA que cae en ella: se cierra, se la traga ('bomb'), le explota dentro y queda ATURDIDA ('stun'),
 --     con la flor abierta y en alto: pisotón 1 / ground pound 2 EN LA FLOR, un solo golpe por noqueo (Boss.damage).
 --   · Su cuerpo se atraviesa y no hace daño, como el del Escorpión: lo que importa son sus bocas.
@@ -21,7 +23,7 @@ local Chain  = require 'src/world/entities/base/SegmentChain'
 local Anim   = require 'src/fx/Anim'
 
 local Q = Entity.extend(Boss, {
-    ATTACKS  = { spit_wind = true, spit = true, bite_wind = true, hold = true, vine_wind = true, vines = true },
+    ATTACKS  = { spit_wind = true, spit = true, bite_wind = true, chomp_snap = true, hold = true, vine_wind = true, vines = true },
     OPENINGS = { stun = true },
     debugColor = { 0.3, 0.8, 0.4 },
     hitbox = { outerW = 0.8, outerH = 0.4, innerW = 0.7, innerH = 0.34 },
@@ -73,6 +75,11 @@ local CHOMP_WIND = { 0.5, 0.42, 0.35 }
 local CHOMP_BOX = 1.7 * T
 local CHOMP_CD  = 2.5
 local CHOMP_EXTRA = 0.5                         -- s cerrada si falla
+local CHOMP_SNAP = 0.15                         -- s cerrándose: lo que dura el mordisco
+-- Squash & stretch del mordisco (lo mismo que la planta chiquita: Plant:pose), a su tamaño
+local STRETCH_MIN, STRETCH_MAX = 0.2, 0.45      -- estirón (fracción de su alto)
+local LEAN_MAX  = 110                           -- px que se inclina la punta hacia ti
+local RECOIL_T  = 0.7                           -- s del rebote
 -- Las enredaderas del piso
 local VINE_CD   = { 13, 11, 9 }
 local VINE_WARN = { 1.6, 1.4, 1.2 }             -- s asomando, sin hacer daño: para subir
@@ -85,8 +92,11 @@ local HOP_DELAY, HOP_T, HOP_ARC = 0.2, 0.6, 70  -- el salto a su plataforma
 local SPIT_CD  = { 7.5, 6, 5 }
 local SPIT_WIND, SPIT_T = 0.5, 0.35
 local SEED_G, SEED_FLY, SPROUT_T = 1500, 1.0, 0.7
-local PLANTS   = { 1, 2, 2 }                    -- plantas de semilla a la vez
-local PLANT_POOL = 2
+local PLANTS   = { 2, 3, 4 }                    -- plantas de semilla a la vez, por fase (cuanta menos vida, más)...
+local SEEDS    = { 1, 2, 3 }                    -- ...y semillas de cada vez
+local DIFF_PLANTS = { easy = -1, normal = 0, hard = 1, extreme = 1, xtra = 2 }     -- ...y según la dificultad
+local DIFF_CD  = { easy = 1.25, normal = 1, hard = 0.9, extreme = 0.8, xtra = 0.7 }
+local PLANT_POOL = 6                            -- (lo más que puede llegar a pedir: 4 + 2)
 local BLAST_T, RECOVER_T = 0.35, 0.7
 local STUN_T   = { easy = 6, normal = 5, hard = 4.2, extreme = 3.8, xtra = 3.5 }
 -- Muerte
@@ -113,6 +123,7 @@ function Q:initBoss()
     self.mouthT, self.spitT, self.chompCd, self.vineT = 1.5, SPIT_CD[1], 0, VINE_CD[1]
     self.vx0, self.vx1, self.vy0 = 0, 0, 0
     self.groundY = self.row * T
+    self.aimT, self.aimN = 0, 0
     self.hopT = nil
     self.summonKey = 'cq' .. self.col .. ',' .. self.row
 end
@@ -240,7 +251,8 @@ function Q:mouthEats(m, level)
             q.gulpBy, m.held = m, q
             m.tx, m.ty = hx, hy
             m.state, m.t = 'hold', 0
-            Sound.play('plantCrunch', 0.9, 0.8)
+            Sound.play('plantBite')
+            Sound.play('plantCrunch', 0.9, 0.6)
             Entity.emitFx('shake_small', hx, hy)
             return true
         end
@@ -260,7 +272,7 @@ function Q:updateMouth(m, level, dt)
         if m.t >= m.warnT then
             if pa and math.abs(pa.x - m.bx) < ON_HOLE and math.abs(pa.y - m.by) < ON_HOLE then return true end    -- (te has puesto encima)
             m.state, m.t = 'out', 0
-            Sound.play('plantSnap', 1.3, 0.5)
+            Sound.play('plantRustle', 1.4, 0.5)
         end
     elseif m.state == 'out' then
         if pa then aim(m, pa, 0, TURN_V[ph] * dt) end
@@ -275,7 +287,7 @@ function Q:updateMouth(m, level, dt)
             local d = pa and math.sqrt((pa.x - m.bx) ^ 2 + (pa.y - m.by) ^ 2) or PEEK
             m.reach = math.min(LONG, d + OVERSHOOT)
             m.state, m.t = 'lunge', 0
-            Sound.play('plantSnap')
+            Sound.play('plantRustle', 1.9, 0.7)
         end
     elseif m.state == 'lunge' then
         m.tx, m.ty = m.tx + m.ax * LUNGE_V[ph] * dt, m.ty + m.ay * LUNGE_V[ph] * dt
@@ -284,6 +296,7 @@ function Q:updateMouth(m, level, dt)
         local hit = dx * dx + dy * dy > PEEK * PEEK and level:collisionAt(m.tx + m.ax * HEAD_BOX, m.ty + m.ay * HEAD_BOX, false) ~= nil
         if hit or dx * dx + dy * dy >= m.reach * m.reach then
             if m.campT then m.state, m.t = 'camp', 0 else m.state, m.t = 'shut', 0 end
+            Sound.play('plantBite', 1, 0.8)
         end
     elseif m.state == 'camp' then
         -- ya falló: quieta y cerrada, ni te mira ni te come
@@ -370,20 +383,24 @@ function Q:playerClose(level)
     end
 end
 
--- Se cierra: ella misma traga a quien siga a tiro. `held` y el estado 'hold' son lo que mira PlayerGulp
+-- Hacia dónde muerde (para el dibujo: de lado y de alto, desde sus pies)
+function Q:aimAt(px, py)
+    self.aimT = math.max(-160, math.min(160, px - self.x))
+    self.aimN = math.max(0, math.min(240, self:feetY() - py))
+end
+
+-- Se cierra: ella misma traga a quien siga a tiro. `held` y el estado 'hold' son lo que mira PlayerGulp. true = alguien
 function Q:chomp(level)
-    Sound.play('plantSnap', 0.75, 1)
-    Entity.emitFx('shake_small', self.x, self.y)
     local fy = self:feetY()
     for _, pa in ipairs(level.players or {}) do
         if pa.canBeSwallowed and pa:canBeSwallowed() and math.abs(pa.x - self.x) < CHOMP_BOX and pa.y > fy - CHOMP_H
            and pa:swallow(self.x, fy, 0, -1) then
             pa.gulpBy, self.held = self, pa
             Sound.play('plantCrunch', 0.8, 0.9)
-            return self:enter('hold')
+            self:enter('hold')                                   -- (aimT sigue el de antes de tragar: tragado, ya está en su centro)
+            return true
         end
     end
-    self:enter('chomp_miss')
 end
 
 -- Aturdida o derrotada: se retiran; las que tienen a alguien, lo sueltan
@@ -397,15 +414,26 @@ function Q:retractMouths()
 end
 
 -- ── Las semillas ──────────────────────────────────────────────────────────────
-function Q:spitSeed(level)
+-- Cuántas plantas puede tener a la vez: por fase y dificultad
+function Q:plantLimit(level)
+    return math.max(1, math.min(PLANT_POOL, PLANTS[self:ph()] + (DIFF_PLANTS[level.difficulty or ''] or 0)))
+end
+
+function Q:spitSeed(level, i)
     local zx0, zx1 = self:zoneBounds()
     local pa = self:nearestPlayer(level)
-    local dir = (pa and pa.x >= self.x) and 1 or -1
-    local x = math.max(zx0 + T, math.min(zx1 - T, self.x + dir * rand(3, 8) * T))
+    local x
+    for _ = 1, 8 do                                                  -- (la 1ª, hacia ti; las demás, a cualquier lado y separadas)
+        local dir = (i == 1 and pa) and ((pa.x >= self.x) and 1 or -1) or ((math.random() < 0.5) and -1 or 1)
+        x = math.max(zx0 + T, math.min(zx1 - T, self.x + dir * rand(3, 11) * T))
+        local ok = true
+        for _, s in ipairs(self.seeds) do if math.abs(s.x1 - x) < 1.5 * T then ok = false end end
+        if ok then break end
+    end
     local x0, y0 = self:podCenter()
     local floor = self:floorBelow(level, x, y0)
     self.seeds[#self.seeds + 1] = { id = self:nid(), x = x0, y = y0, x0 = x0, y0 = y0, x1 = x, y1 = floor, t = 0, sprout = false }
-    Sound.play('plantSnap', 1.7, 0.6)
+    Sound.play('plantRustle', 1.7, 0.6)
 end
 
 function Q:activePlants(level)
@@ -497,18 +525,25 @@ function Q:updateBoss(dt, level)
     if st == 'fight' then self:enter('idle'); return end
 
     -- (la bomba, en cuanto cae en ella, salvo si ya está con otra o aturdida)
-    if st == 'idle' or st == 'spit_wind' or st == 'spit' or st == 'recover' then
+    if st == 'idle' or st == 'spit_wind' or st == 'spit' or st == 'recover' or st == 'vine_wind' or st == 'vines' then
         local b = self:bombToEat(level)
         if b then
             self.inside = b
             b:onEaten(self)
+            self:aimAt(b.x, b.y)
+            self.hopped = false                                  -- (también en su plataforma: las enredaderas acaban ahí)
             self:enter('bomb')
-            Sound.play('plantSnap', 0.8, 1)
+            Sound.play('queenBite', 1, 0.8)
             return
         end
     end
 
     if st == 'idle' then
+        -- (si la aturdieron en su plataforma, primero baja)
+        if self:feetY() < self.groundY - 1 or self.hopT then
+            if not self.hopT then self:hopTo(self.groundY) end
+            return
+        end
         self.spitT = self.spitT - dt
         self.vineT = self.vineT - dt
         local pa = self:nearestPlayer(level)
@@ -529,14 +564,23 @@ function Q:updateBoss(dt, level)
         self:tickMouths(level, dt, false)
         if self.spitT <= 0 then
             local free, active = self:activePlants(level)
-            self.spitT = SPIT_CD[ph] * rand(0.9, 1.1)
-            if free and active + #self.seeds < PLANTS[ph] then
+            self.spitT = SPIT_CD[ph] * (DIFF_CD[level.difficulty or ''] or 1) * rand(0.9, 1.1)
+            if free and active + #self.seeds < self:plantLimit(level) then
                 self:enter('spit_wind')
                 Sound.play('plantRustle', 1.1, 0.7)
             end
         end
     elseif st == 'bite_wind' then
-        if t >= CHOMP_WIND[ph] then self:chomp(level) end
+        local pa = self:freePlayer(level)
+        if pa then self:aimAt(pa.x, pa.y) end
+        if t >= CHOMP_WIND[ph] then
+            self:enter('chomp_snap')
+            Sound.play('queenBite')
+            Entity.emitFx('shake_small', self.x, self.y)
+        end
+    elseif st == 'chomp_snap' then
+        if self:chomp(level) then return end
+        if t >= CHOMP_SNAP then self:enter('chomp_miss') end
     elseif st == 'chomp_miss' then
         if t >= CHOMP_EXTRA then self:enter('recover') end
     elseif st == 'hold' then
@@ -583,7 +627,12 @@ function Q:updateBoss(dt, level)
     elseif st == 'vine_back' then
         if t >= VINE_BACK and not self.hopT then self:enter('idle') end
     elseif st == 'spit_wind' then
-        if t >= SPIT_WIND then self:spitSeed(level); self:enter('spit') end
+        if t >= SPIT_WIND then
+            local _, active = self:activePlants(level)
+            local room = self:plantLimit(level) - active - #self.seeds
+            for i = 1, math.max(1, math.min(SEEDS[ph], room)) do self:spitSeed(level, i) end
+            self:enter('spit')
+        end
     elseif st == 'spit' then
         if t >= SPIT_T then self:enter('idle') end
     elseif st == 'bomb' then
@@ -638,7 +687,7 @@ end
 local MSTATE = { warn = 1, out = 2, lunge = 3, hold = 4, shut = 5, back = 6, seek = 7, camp = 8 }
 local MNAME = { 'warn', 'out', 'lunge', 'hold', 'shut', 'back', 'seek', 'camp' }
 function Q:netPackExtra()
-    local out = { self:ph(), self.vx0, self.vx1, self.vy0, #self.mouths }
+    local out = { self:ph(), self.vx0, self.vx1, self.vy0, math.floor(self.aimT or 0), math.floor(self.aimN or 0), #self.mouths }
     for _, m in ipairs(self.mouths) do
         local n = #out
         out[n + 1], out[n + 2], out[n + 3], out[n + 4], out[n + 5] = m.id, MSTATE[m.state], math.floor(m.t * 100), m.bx, m.by
@@ -658,9 +707,10 @@ function Q:netApplyExtra(a, b, f)
     if type(b[1]) ~= 'number' then return end
     self.phase = b[1]
     self.vx0, self.vx1, self.vy0 = b[2], b[3], b[4]
-    local k = 6
+    self.aimT, self.aimN = b[5], b[6]
+    local k = 8
     local ms = {}
-    for _ = 1, b[5] or 0 do
+    for _ = 1, b[7] or 0 do
         ms[#ms + 1] = { id = b[k], state = MNAME[b[k + 1]], t = b[k + 2] / 100, bx = b[k + 3], by = b[k + 4], nx = b[k + 5], ny = b[k + 6],
                         tx = b[k + 7], ty = b[k + 8], outT = b[k + 9] / 100, warnT = b[k + 10] / 100,
                         ax = b[k + 11] / 100, ay = b[k + 12] / 100 }
@@ -747,6 +797,34 @@ function Q:drawMouth(m, camX, camY, dt, r, g, b, alpha)
     parts:drawFrame(parts:frameN(name, d), math.floor(hx - camX), math.floor(hy - camY), 0, MS, MS, 0.5, 0.5)
 end
 
+-- El mordisco (como Plant:pose): → sx, sy, inclinación de la punta (px) y temblor. Avisando se encoge y se echa atrás; cerrándose
+-- se estira hacia ti; al morder rebota (estirada → aplastada → en reposo)
+local function spring(rt)
+    if rt < 0.04 then return 0.6 + 0.4 * rt / 0.04 end
+    rt = rt - 0.04
+    return math.exp(-rt * 6) * math.cos(rt * 18)
+end
+function Q:pose(st, t)
+    local aimN = self.aimN or 0
+    local str = math.max(STRETCH_MIN, math.min(STRETCH_MAX, STRETCH_MIN + aimN / 500))
+    local lean = math.max(-LEAN_MAX, math.min(LEAN_MAX, (self.aimT or 0) * 0.9))
+    local shake = (math.floor(t * 30) % 2 == 0) and 1 or -1
+    if st == 'bite_wind' then
+        local q = math.min(1, t / CHOMP_WIND[self:ph()])
+        return 1 + 0.08 * q, 1 - 0.14 * q, -lean * 0.2 * q, shake * MS
+    elseif st == 'chomp_snap' then
+        local p = math.sin(math.pi / 2 * math.min(1, t / (CHOMP_SNAP * 0.6)))
+        return 1 - 0.35 * str * p, 1 + str * p, lean * p, 0
+    elseif st == 'hold' or st == 'chomp_miss' or st == 'bomb' then
+        if t < RECOIL_T then
+            local v = spring(t) * (1 - t / RECOIL_T)
+            return 1 - 0.35 * str * v, 1 + str * v, lean * v, 0
+        end
+        if st ~= 'chomp_miss' then return 1, 1, 0, ((math.floor(t * 16) % 2 == 0) and 1 or -1) * MS end     -- (masticando)
+    end
+    return 1, 1, 0, 0
+end
+
 function Q:render(camX, camY)
     if self.state == 'dormant' and not EDITOR_VIEW then return end
     if self.state == 'dead' then return end
@@ -774,6 +852,7 @@ function Q:render(camX, camY)
     elseif st == 'bite_wind' or st == 'vine_wind' then name = 'blast'
     elseif st == 'hold' then name = 'gulp'
     elseif st == 'chomp_miss' then name = 'closed'
+    elseif st == 'chomp_snap' then name = (t < CHOMP_SNAP * 0.4) and 'tell' or 'closed'
     elseif st == 'dying_flee' then name = 'closed'
     elseif st == 'intro' or st == 'ready' then
         if st == 'intro' and t < OPEN_AT then name = 'closed' elseif st == 'intro' and t < OPEN_AT + 0.3 then name = 'tell' end
@@ -784,12 +863,18 @@ function Q:render(camX, camY)
     local r, g, b = 1, 1, 1
     if self:flashRed() then r, g, b = 1, 0.35, 0.35 end
     love.graphics.setColor(r, g, b, alpha)
-    set:drawFrame(fr, x, feet, 0, MS, MS, 0.5, 1)
+    local px, py, lean, shakeX = self:pose(st, t)
+    x = x + shakeX
+    local sx, sy = MS * px, MS * py
+    -- (inclinación: la punta — FH px por encima de la base — se corre `lean` px; la base, quieta)
+    local kx = (lean ~= 0) and (-lean / (FH * sx)) or 0
+    set:drawFrame(fr, x, feet, 0, sx, sy, 0.5, 1, kx, 0)
     -- La flor y su gota (capas sueltas; al soltar la pieza, sin gota)
     if name ~= 'closed' and name ~= 'gulp' then
         local open = name == 'stun'
-        local fx = x + ((math.floor(now * 2) % 2 == 1 and not open) and MS or 0)
-        local fy = math.floor(self:feetY() - camY) + (open and FLOWER_OPEN or FLOWER_BUD) * MS + SINK * MS
+        local fh = -(open and FLOWER_OPEN or FLOWER_BUD)     -- (la flor sigue a la pose: a su altura, estirada e inclinada)
+        local fx = math.floor(x + lean * fh / FH) + ((math.floor(now * 2) % 2 == 1 and not open) and MS or 0)
+        local fy = math.floor(self:feetY() - camY - fh * sy) + SINK * MS
         parts:drawFrame(parts:frameN(open and 'flower_open' or 'flower_bud', 1), fx, fy, 0, MS, MS, 0.5, 0.5)
         if not self:shardDrop() and self.props.wear ~= false then
             parts:drawFrame(parts:frameN(open and 'dew_open' or 'dew_bud', 1), fx, fy, 0, MS, MS, 0.5, 0.5)

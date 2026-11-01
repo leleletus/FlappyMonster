@@ -36,7 +36,7 @@
 -- deadTimer + eso (y de la prop `mount`): igual online; abierta y esperando no se envía (netAtRest). Arte:
 -- assets/images/enemies/carnivoreplant/plant-Sheet.png (11 cuadros 26x24, la base en la fila de abajo) de
 -- tools/art/enemies/make_jungle_enemies.py; conjunto assets/anim/enemies/carnivoreplant.json; la "z" de dormida,
--- BossFx.sleepZ. Sonidos plantRustle / plantSnap / plantCrunch (tools/sounds/jungle_enemies.py).
+-- BossFx.sleepZ. Sonidos plantRustle / plantCrunch (tools/sounds/jungle_enemies.py), plantBite (tools/sounds/plant_bites.py).
 local Entity       = require 'src/world/entities/base/Entity'
 local Interactions = require 'src/world/entities/base/Interactions'
 local BossFx
@@ -262,7 +262,7 @@ function Plant:updateCustom(dt, level)
         if pa then self:aimAt(pa.x, pa.y) end
         if t >= TELL_T then
             self.state, self.deadTimer = 'snap', 0
-            Sound.play('plantSnap')
+            Sound.play('plantBite')
             local bx, by = self:base()
             Entity.emitFx('crab_dig', bx, by + 4 * -self.ny, { n = 3 })
         end
@@ -309,7 +309,7 @@ end
 -- Se cierra sobre algo que se come: desaparece y ella se duerme. Si eso SIGUE VIVO dentro (`onEaten(planta)` → true:
 -- la bomba lanzada), lo guarda ('bomb') hasta que revienta
 function Plant:snapOn(food)
-    Sound.play('plantSnap')
+    Sound.play('plantBite')
     self:aimAt(food.x, food.y)
     local bx, by = self:base()
     if food.onEaten and food:onEaten(self) then

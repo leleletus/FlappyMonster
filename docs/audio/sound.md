@@ -61,7 +61,7 @@ Not listened to by anyone yet. Woods to compare: `FlappyMonster_pruebas/escorpio
 `tools/sounds/jungle_enemies.py` → `assets/sounds/enemies/{mole,piranha,carnivoreplant}/`: `moleDig` (the mound moving:
 soft earth grains), `molePop` (it pops out), `moleBite` (two tooth clicks), `piranhaBite` (a dry, high snap at the top of
 its leap), `plantRustle` (the plant's warning: trembling leaves), `plantSnap` (it shuts: wet low thud + click),
-`plantCrunch` (it eats something). The piranha's leap reuses `waterSplashOut` / `waterSplash`; the dizzy mole,
+`plantCrunch` (it eats something), `plantBite` (the bite, shared by the Plant and the Carnivorous Queen's Lanzas: teeth, crunch grains, jaw thud, wet tail; `tools/sounds/plant_bites.py`), `queenBite` (the Queen's own, lower and heavier; same tool). Not listened to. The piranha's leap reuses `waterSplashOut` / `waterSplash`; the dizzy mole,
 `stunned`. All at ≈ −12 dBFS (−11.6 to −14.1, harness `sounds`), no GAIN entry. Not listened to by anyone yet.
 
 ## Avalanche and Cable car sounds (2026-10-29)
