@@ -70,12 +70,12 @@ local ON_HOLE  = 1.5 * T                        -- si al abrirse te has puesto e
 local SPACING  = 2.5 * T                        -- entre una y otra (el usuario: no varias en un solo lugar)
 local HIGH     = 1.5 * T                        -- sobre el suelo: "estás arriba"
 -- Ella misma come (si estás encima)
-local CHOMP_R, CHOMP_H = 1.9 * T, 2.0 * T       -- px: te tiene a tiro
-local CHOMP_WIND = { 0.5, 0.42, 0.35 }
-local CHOMP_BOX = 1.7 * T
-local CHOMP_CD  = 2.5
-local CHOMP_EXTRA = 0.5                         -- s cerrada si falla
-local CHOMP_SNAP = 0.15                         -- s cerrándose: lo que dura el mordisco
+local CHOMP_R, CHOMP_H = 2.3 * T, 2.2 * T       -- px: te tiene a tiro
+local CHOMP_WIND = { 0.16, 0.13, 0.1 }          -- (el usuario: mucho más rápida que la pequeña, que avisa 0,3 s)
+local CHOMP_BOX = 2.6 * T
+local CHOMP_CD  = 1.2
+local CHOMP_EXTRA = 0.3                         -- s cerrada si falla
+local CHOMP_SNAP = 0.08                         -- s cerrándose: lo que dura el mordisco
 -- Squash & stretch del mordisco (lo mismo que la planta chiquita: Plant:pose), a su tamaño
 local STRETCH_MIN, STRETCH_MAX = 0.2, 0.45      -- estirón (fracción de su alto)
 local LEAN_MAX  = 110                           -- px que se inclina la punta hacia ti
@@ -296,7 +296,7 @@ function Q:updateMouth(m, level, dt)
         local hit = dx * dx + dy * dy > PEEK * PEEK and level:collisionAt(m.tx + m.ax * HEAD_BOX, m.ty + m.ay * HEAD_BOX, false) ~= nil
         if hit or dx * dx + dy * dy >= m.reach * m.reach then
             if m.campT then m.state, m.t = 'camp', 0 else m.state, m.t = 'shut', 0 end
-            Sound.play('plantBite', 1, 0.8)
+            Sound.play('plantBite')
         end
     elseif m.state == 'camp' then
         -- ya falló: quieta y cerrada, ni te mira ni te come
@@ -533,7 +533,7 @@ function Q:updateBoss(dt, level)
             self:aimAt(b.x, b.y)
             self.hopped = false                                  -- (también en su plataforma: las enredaderas acaban ahí)
             self:enter('bomb')
-            Sound.play('queenBite', 1, 0.8)
+            Sound.play('queenBite')
             return
         end
     end

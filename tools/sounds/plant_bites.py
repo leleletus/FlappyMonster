@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-# tools/sounds/plant_bites.py — los MORDISCOS de las plantas (el usuario: "un sonido más realista"), con el tramo más fuerte de
-# 100 ms a -12 dBFS. Un mordisco de verdad no es un tono: dientes que chocan, algo que cruje a trozos muy seguidos, el golpe
+# tools/sounds/plant_bites.py — los MORDISCOS de las plantas (el usuario: "un sonido más realista"), saturados hasta TARGET (el
+# usuario: a -12 dBFS, como el resto, "casi ni se perciben": son muy cortos, y la música los tapa). Un mordisco de verdad no es un tono: dientes que chocan, algo que cruje a trozos muy seguidos, el golpe
 # sordo de la mandíbula, el hueco de la boca y un resto húmedo.
 #   enemies/carnivoreplant/bite.wav   plantBite: la planta chiquita y las Lanzas de la Reina
 #   bosses/carnqueen/bite.wav         queenBite: la Reina; más grave, más larga y con un golpe que se siente
@@ -59,12 +59,21 @@ def queen():
     ] + [(0.014 + at, g * 2.8) for at, g in grains(20, 0.30, 650, 4200, 0.006, 0.02)])
 
 
-def out(path, x):
-    x = x - np.mean(x)
+def rms100(x):
     n = int(SR * 0.1)
-    best = max(np.mean(x[i:i + n] ** 2) for i in range(0, max(1, len(x) - n + 1), n // 4))
-    x = x * (10 ** (-12 / 20) / np.sqrt(best + 1e-12))
-    x = x * min(1, 0.9 / np.max(np.abs(x)))                  # (sin recortar: el golpe es lo que da el mordisco)
+    return np.sqrt(max(np.mean(x[i:i + n] ** 2) for i in range(0, max(1, len(x) - n + 1), n // 4)))
+
+
+def out(path, x, target):
+    # saturación suave (tanh): sube lo flojo sin recortar a lo bruto, y además cruje más. Busca el empuje que llega a `target` dB
+    x = x - np.mean(x)
+    x = x / np.max(np.abs(x))
+    lo, hi = 1.0, 60.0
+    for _ in range(30):
+        d = (lo + hi) / 2
+        if 20 * np.log10(rms100(np.tanh(d * x) * 0.97)) < target: lo = d
+        else: hi = d
+    x = np.tanh(lo * x) * 0.97
     k = int(SR * 0.012)
     x[-k:] *= np.linspace(1, 0, k)
     os.makedirs(os.path.dirname(path), exist_ok=True)
@@ -74,16 +83,17 @@ def out(path, x):
     spec = np.abs(np.fft.rfft(x)) ** 2
     fr = np.fft.rfftfreq(len(x), 1 / SR)
     tot = spec.sum()
-    print('  %-52s %.2f s  pico %.2f  <200 Hz %2.0f %%  200-2k %2.0f %%  >2k %2.0f %%' % (
-        path, len(x) / SR, np.max(np.abs(x)), 100 * spec[fr < 200].sum() / tot,
+    print('  %-52s %.2f s  %.1f dB  pico %.2f  <200 Hz %2.0f %%  200-2k %2.0f %%  >2k %2.0f %%' % (
+        path, len(x) / SR, 20 * np.log10(rms100(x)), np.max(np.abs(x)), 100 * spec[fr < 200].sum() / tot,
         100 * spec[(fr >= 200) & (fr < 2000)].sum() / tot, 100 * spec[fr >= 2000].sum() / tot))
 
 
 if __name__ == '__main__':
     apply_ = '--apply' in sys.argv
     a, b = small(), queen()
-    out(os.path.join(PREV, 'plantBite.wav'), a)
-    out(os.path.join(PREV, 'queenBite.wav'), b)
+    TA, TB = -6.5, -5.5                                      # dB en los 100 ms más fuertes (el resto de sonidos: -12)
+    out(os.path.join(PREV, 'plantBite.wav'), a, TA)
+    out(os.path.join(PREV, 'queenBite.wav'), b, TB)
     if apply_:
-        out('assets/sounds/enemies/carnivoreplant/bite.wav', a)
-        out('assets/sounds/bosses/carnqueen/bite.wav', b)
+        out('assets/sounds/enemies/carnivoreplant/bite.wav', a, TA)
+        out('assets/sounds/bosses/carnqueen/bite.wav', b, TB)
