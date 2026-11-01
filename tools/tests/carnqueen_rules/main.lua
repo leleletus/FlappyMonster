@@ -7,6 +7,7 @@
 --   lanza         se lanza recta y traga al contacto
 --   campea        si falla, algunas se quedan quietas y tragan a quien las toque
 --   arriba        con enredaderas, muchas del techo y las paredes y ninguna del suelo
+--   atrapado      con el jugador tragado, las demás se retiran y no salen más
 --   salta         la Reina salta a su plataforma y vuelve
 --   bebes         las enredaderas matan a sus plantas
 --   bomba_azar    la bomba reaparece en sitios distintos
@@ -139,7 +140,7 @@ function CASES.esquiva()
     local m = boss.mouths[1]
     stepAll(level, es, { pa }, 3, function()
         m.campT = nil
-        if m.state == 'seek' and m.t > 0.26 then pa.x = 34 * T end
+        if m.state == 'seek' and m.t > 0.6 then pa.x = 34 * T end
         return m.state == 'shut' or m.state == 'hold'
     end)
     check('esquiva', m.state == 'shut' and not pa.gulped, 'apartado en el último tramo no te pilla: ' .. m.state)
@@ -208,13 +209,13 @@ function CASES.campea()
     local m = boss:spawnMouth(level, pa)
     m.campT = 2
     stepAll(level, es, { pa }, 3, function()
-        if m.state == 'seek' then pa.x = 40 * T end
+        if m.state == 'seek' then pa.x = 36 * T end
         return m.state == 'camp'
     end)
     check('campea', m.state == 'camp', 'falla y se queda: ' .. m.state)
     local x, t0 = m.tx, 0
     stepAll(level, es, { pa }, 1)
-    check('campea', m.state == 'camp' and m.tx == x, 'quieta')
+    check('campea', m.state == 'camp' and m.tx == x, ('quieta: %s t=%.2f tx %.0f→%.0f gulped=%s'):format(m.state, m.t, x, m.tx, tostring(pa.gulped)))
     pa.invT = 0; pa.x, pa.y = m.tx, m.ty
     stepAll(level, es, { pa }, 0.1)
     check('campea', pa.gulped and m.state == 'hold', 'tocarla te traga')
@@ -230,7 +231,23 @@ function CASES.arriba()
         most = math.max(most, #boss.mouths)
         for _, m in ipairs(boss.mouths) do if m.ny < 0 then floorN = floorN + 1 end end
     end)
-    check('arriba', most >= 4 and floorN == 0, ('con enredaderas, muchas: %d a la vez y ninguna del suelo'):format(most))
+    check('arriba', most >= 2 and most <= 3 and floorN == 0, ('con enredaderas, en la 1ª hasta 3: %d a la vez y ninguna del suelo'):format(most))
+end
+function CASES.atrapado()
+    local level, es, boss = arena()
+    still(boss)
+    local pa = playerAt(level, 20 * T)
+    local a = boss:spawnMouth(level, pa)
+    local b = boss:spawnMouth(level, pa)
+    b.t = -9                                                  -- (esta se queda en el aviso)
+    stepAll(level, es, { pa }, 3, function() return a.state == 'hold' end)
+    check('atrapado', a.state == 'hold', 'una te atrapa')
+    boss.mouthT = 0
+    local most = 0
+    stepAll(level, es, { pa }, 0.8, function()
+        for _, m in ipairs(boss.mouths) do if m ~= a and m.state ~= 'back' then most = most + 1 end end
+    end)
+    check('atrapado', most == 0 and a.state == 'hold', 'las demás se van y no sale ninguna: ' .. most .. ', quedan ' .. #boss.mouths)
 end
 function CASES.salta()
     local level, es, boss = arena()
@@ -366,7 +383,7 @@ function CASES.fases()
     local pa = playerAt(level, 20 * T)
     local most = 0
     stepAll(level, es, { pa }, 6, function() pa.invT = 9; if boss.mouthT > 0.3 then boss.mouthT = 0.01 end; most = math.max(most, #boss.mouths) end)
-    check('fases', most >= 4 and most <= 5, 'en la 3ª, hasta cinco Lanzas a la vez: ' .. most)
+    check('fases', most >= 3 and most <= 4, 'en la 3ª, hasta cuatro Lanzas a la vez: ' .. most)
 end
 function CASES.semilla()
     local level, es, boss = arena()

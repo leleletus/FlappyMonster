@@ -42,22 +42,24 @@ local FLOWER_R  = 42                            -- px: el radio de la flor (lo q
 local EAT_W, EAT_H = 120, 130                   -- px: medio ancho y alto de lo que se traga
 
 -- Ritmo por fase (1, 2, 3)
-local MOUTHS   = { 3, 4, 5 }                    -- Lanzas a la vez
+local MOUTHS   = { 2, 3, 4 }                    -- Lanzas a la vez
 local BURST    = { 1, 2, 3 }                    -- cuántas pueden brotar de golpe
-local MOUTH_CD = { 2.2, 1.7, 1.3 }              -- s entre una tanda y la siguiente
-local UP_MOUTHS = { 6, 7, 8 }                   -- ...si estás arriba o hay enredaderas (el usuario: muchísimas más)
-local UP_CD     = { 0.42, 0.34, 0.28 }
+local MOUTH_CD = { 2.4, 1.9, 1.5 }              -- s entre una tanda y la siguiente
+local UP_MOUTHS = { 3, 4, 5 }                   -- ...si estás arriba o hay enredaderas (el usuario: más; con 6-8, demasiadas)
+local UP_CD     = { 1.1, 0.9, 0.75 }
 local WARN_T   = { 0.7, 0.6, 0.5 }              -- s con el agujero abriéndose
-local OUT_T    = 0.14                           -- s asomando
-local SEEK_T   = { 0.34, 0.3, 0.26 }            -- s asomada, apuntándote, antes de lanzarse
-local SEEK_LOCK = 0.1                           -- s antes de lanzarse en que deja de apuntar: lo que hay para esquivarla
+local OUT_T    = 0.2                            -- s asomando
+local SEEK_T   = { 0.8, 0.68, 0.56 }            -- s de amago: te apunta, se encoge y tiembla antes de lanzarse
+local SEEK_LOCK = 0.24                          -- s antes de lanzarse en que deja de apuntar: lo que hay para esquivarla
 local LUNGE_V  = { 1300, 1500, 1700 }           -- px/s: se lanza como una lanza
 local OVERSHOOT = 1.5 * T                       -- se pasa de donde estabas
 local BACK_T   = 0.3
 local SHUT_T   = 0.3                            -- s cerrada tras fallar, antes de volver
 local CAMP     = 0.4                            -- cuántas se quedan campeando
 local CAMP_T   = { 2.5, 4 }                     -- s quieta, aún te traga al tocarla
-local PEEK     = 1.1 * T                        -- lo que asoma antes de lanzarse
+local PEEK     = 1.3 * T                        -- lo que asoma antes de lanzarse
+local RECOIL   = 0.55                           -- cuánto se encoge en el amago
+local CAUGHT_PAUSE = 1.5                        -- s sin sacar más tras soltarte
 local LONG     = 10 * T                         -- lo más largo de un tallo
 local SITE_MIN, SITE_NEAR, SITE_FAR = 2.4 * T, 5.5 * T, 9.5 * T   -- a qué distancia de ti puede brotar
 local UNDER    = 2.2 * T                        -- en el suelo: tan lejos en horizontal (el usuario: nunca debajo)
@@ -163,12 +165,13 @@ function Q:floorBelow(level, x, y)
 end
 
 -- Apunta: la cabeza asoma hacia el jugador
-local function aim(m, pa)
+local function aim(m, pa, pull)
     local dx, dy = pa.x - m.bx, pa.y - m.by
     local d = math.sqrt(dx * dx + dy * dy)
     if d < 1 then return end
     m.ax, m.ay = dx / d, dy / d
-    m.tx, m.ty = m.bx + m.ax * PEEK, m.by + m.ay * PEEK
+    local len = PEEK * (1 - RECOIL * (pull or 0))
+    m.tx, m.ty = m.bx + m.ax * len, m.by + m.ay * len
 end
 
 -- Dónde brotar: al azar en una superficie a su alcance; ni debajo, ni junto a otra, ni donde vas a estar. nil = ninguna vale
@@ -241,7 +244,7 @@ end
 function Q:updateMouth(m, level, dt)
     m.t = m.t + dt
     local ph = self:ph()
-    local pa = self:nearestPlayer(level)
+    local pa = self:freePlayer(level)
     if m.state == 'out' or m.state == 'seek' or m.state == 'lunge' or m.state == 'camp' then
         if self:mouthEats(m, level) then return false end
     end
@@ -254,9 +257,13 @@ function Q:updateMouth(m, level, dt)
         end
     elseif m.state == 'out' then
         if pa then aim(m, pa) end
-        if m.t >= m.outT then m.state, m.t = 'seek', 0 end
+        if m.t >= m.outT then
+            m.state, m.t = 'seek', 0
+            Sound.play('plantRustle', 1.6, 0.7)
+        end
     elseif m.state == 'seek' then
-        if pa and m.t < SEEK_T[ph] - SEEK_LOCK then aim(m, pa) end
+        -- el amago: se encoge apuntándote; el último tramo, fija: es cuando hay que apartarse
+        if pa and m.t < SEEK_T[ph] - SEEK_LOCK then aim(m, pa, m.t / (SEEK_T[ph] - SEEK_LOCK)) end
         if m.t >= SEEK_T[ph] then
             local d = pa and math.sqrt((pa.x - m.bx) ^ 2 + (pa.y - m.by) ^ 2) or PEEK
             m.reach = math.min(LONG, d + OVERSHOOT)
@@ -294,15 +301,37 @@ function Q:updateMouth(m, level, dt)
     return false
 end
 
+-- El jugador libre más cercano: a quien ya está tragado ni se le apunta
+function Q:freePlayer(level)
+    local best, bd
+    for _, pa in ipairs(level.players or {}) do
+        if not pa.gulped and not pa.dying and pa.alive ~= false then
+            local d = (pa.x - self.x) ^ 2 + (pa.y - self.y) ^ 2
+            if not bd or d < bd then best, bd = pa, d end
+        end
+    end
+    return best
+end
+
+-- Te han atrapado y no queda nadie libre (el usuario): las demás se van y no salen más; la que te tiene, sigue
+function Q:withdrawMouths()
+    self.mouthT = math.max(self.mouthT, CAUGHT_PAUSE)
+    for i = #self.mouths, 1, -1 do
+        local m = self.mouths[i]
+        if m.state == 'warn' then table.remove(self.mouths, i)
+        elseif m.state ~= 'hold' and m.state ~= 'back' then m.state, m.t = 'back', 0 end
+    end
+end
+
 -- Saca Lanzas según toque (→ en idle y durante las enredaderas). `up`: solo del techo y las paredes, y muchas más
 function Q:tickMouths(level, dt, up)
     local ph = self:ph()
     self.mouthT = self.mouthT - dt
-    local pa = self:nearestPlayer(level)
+    local pa = self:freePlayer(level)
     if not pa or self.mouthT > 0 or not self:mayAttack(level) then return end
     up = up or pa.y < self.groundY - HIGH
     local most = up and UP_MOUTHS[ph] or MOUTHS[ph]
-    for _ = 1, up and BURST[ph] + 1 or math.random(1, BURST[ph]) do  -- (varias a la vez)
+    for _ = 1, math.random(1, BURST[ph]) do                          -- (varias a la vez)
         if #self.mouths < most then self:spawnMouth(level, pa, up) end
     end
     self.mouthT = (up and UP_CD[ph] or MOUTH_CD[ph]) * rand(0.85, 1.15)
@@ -455,6 +484,7 @@ function Q:updateBoss(dt, level)
     self.levelRef = self.levelRef or level
     self.deadTimer = self.deadTimer + dt
     self.vx, self.vy = 0, 0
+    if #(level.players or {}) > 0 and not self:freePlayer(level) then self:withdrawMouths() end
     if self.chompCd > 0 then self.chompCd = math.max(0, self.chompCd - dt) end
     for i = #self.mouths, 1, -1 do
         if self:updateMouth(self.mouths[i], level, dt) then table.remove(self.mouths, i) end
@@ -679,7 +709,22 @@ function Q:drawMouth(m, camX, camY, dt, r, g, b, alpha)
     local hx, hy = Q.headPos(m)
     local len = math.sqrt((hx - m.bx) ^ 2 + (hy - m.by) ^ 2)
     c.gap = math.max(0.1, len / (c.n - 1))
-    c:advance(dt, 0.85, 0.35, nil, fillStalk, m.bx, m.by, m.nx, m.ny, hx, hy, m.ax, m.ay, len)
+    -- El amago tiembla más cuanto más cerca está de lanzarse, y parpadea en el tramo final
+    local tr, tg, tb = r, g, b
+    if m.state == 'seek' then
+        local seek = SEEK_T[self:ph()]
+        local u = math.min(1, m.t / seek)
+        local sh = math.floor(1 + u * 3)
+        if math.floor(m.t * 30) % 2 == 1 then sh = -sh end
+        hx, hy = hx - m.ay * sh, hy + m.ax * sh
+        if m.t >= seek - SEEK_LOCK and math.floor(m.t * 16) % 2 == 0 then tr, tg, tb = r, g * 0.45, b * 0.45 end
+    end
+    -- (muelle solo en reposo; moviéndose rápido el tallo va pegado a la cabeza: si no, se quedaba atrás y parecía suelta)
+    if m.state == 'seek' or m.state == 'camp' or m.state == 'hold' then
+        c:advance(dt, 0.85, 0.35, nil, fillStalk, m.bx, m.by, m.nx, m.ny, hx, hy, m.ax, m.ay, len)
+    else
+        c:place(fillStalk, m.bx, m.by, m.nx, m.ny, hx, hy, m.ax, m.ay, len)
+    end
     local stride = math.max(1, math.floor(8 / math.max(0.5, c.gap)))    -- (corto, sin dibujar discos unos encima de otros)
     for _, name in ipairs(LAYERS) do                       -- (contornos, sombras y luces: un tubo liso de 3 tonos)
         for j = 1, c.n - 1, stride do
@@ -693,6 +738,7 @@ function Q:drawMouth(m, camX, camY, dt, r, g, b, alpha)
     if m.state == 'hold' then name = 'head_prey'
     elseif m.state == 'seek' or (m.state == 'camp' and m.t % 0.9 < 0.3) then name = 'head_half' end
     local d = math.floor(math.atan2(m.ay, m.ax) / (math.pi * 2) * 16 + 0.5) % 16 + 1
+    love.graphics.setColor(tr, tg, tb, alpha)
     parts:drawFrame(parts:frameN(name, d), math.floor(hx - camX), math.floor(hy - camY), 0, MS, MS, 0.5, 0.5)
 end
 
