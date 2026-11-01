@@ -130,6 +130,22 @@ function love.update(dt)
     Input = setmetatable({ pressed = stub.pressed, down = stub.down }, { __index = package.loaded['input'] })
     if gStateMachine:_top() then gStateMachine:update(dt) end
     Input = package.loaded['input']
+    -- (DUELDBG=1: el duelo de ritmo del Cangrejo Groove, visto desde el cliente; captura en pleno duelo)
+    if os.getenv('DUELDBG') and boss and boss.duelInfo then
+        local info = boss:duelInfo()
+        if (info or boss.duel) and math.floor(t * 2) ~= log.dbgT then
+            log.dbgT = math.floor(t * 2)
+            local c = require('src/ui/RhythmDuel').current()
+            local nm, pos, part = Sound.musicPosition()
+            print(('   t %.1f duel %s/%s song %.2f audio %s %s %s clock %s jugando %s hecho %s notas %s frozen %s hp %s'):format(t, tostring(boss.duel and boss.duel.bar), tostring(boss.duel and boss.duel.bars),
+                boss.songT or -1, tostring(nm), tostring(pos), tostring(part), c and ('%.2f'):format(c.clock) or '-', c and tostring(c.playing) or '-', c and tostring(c.done) or '-',
+                c and (c.first .. '/' .. #c.notes) or '-', tostring(pa and pa.frozen), tostring(pa and pa.hp)))
+            if c and not log.duelShot and c.clock > c.bar * boss.BAR + 2 then
+                log.duelShot = true
+                love.graphics.captureScreenshot('duelo_online.png')
+            end
+        end
+    end
     if boss then
         if boss.state ~= log.lastState then
             log.lastState = boss.state

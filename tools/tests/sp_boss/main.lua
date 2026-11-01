@@ -64,6 +64,9 @@ function love.update(dt)
         last.barDone = true
         local n = tonumber(os.getenv('GROOVE_BAR'))
         boss.songT, boss.prevT = n * boss.BAR - 0.05, n * boss.BAR - 0.06
+        print('música: ', Sound.musicPosition())
+        print('sync', Sound.syncMusic('groove', boss.songT, 0))
+        print('música: ', Sound.musicPosition())
     end
     if boss and boss.duelInfo then
         local d = boss.duel
@@ -75,12 +78,19 @@ function love.update(dt)
             print(('%6.1fs duelo acabado; jefe=%s vida %d; notas %s'):format(t, boss.state, pa.hp, c and (c.hits .. '/' .. c.n) or '-'))
             last.duel = nil
         end
+        if d and os.getenv('DUELDBG') and math.floor(t * 2) ~= last.dbgT then
+            last.dbgT = math.floor(t * 2)
+            local c = require('src/ui/RhythmDuel').current()
+            local nm, pos, part = Sound.musicPosition()
+            print(('   t %.1f song %.2f audio %s %s %s clock %s jugando %s hecho %s notas %s pa.hp %d'):format(t, boss.songT, tostring(nm), tostring(pos), tostring(part), c and ('%.2f'):format(c.clock) or '-', c and tostring(c.playing) or '-', c and tostring(c.done) or '-', c and (c.first .. '/' .. #c.notes) or '-', pa.hp))
+        end
         if d and not last.shot and boss.songT > (d.bar + 2) * boss.BAR then
             last.shot = true
             love.graphics.captureScreenshot('duelo_real.png')
             print('captura: ' .. love.filesystem.getSaveDirectory() .. '/duelo_real.png; frozen=' .. tostring(pa.frozen) .. ' inv=' .. tostring(pa:isInvulnerable()))
         end
     end
+    if os.getenv('GOD') and pa then pa.hp, pa.lives = pa.hpMax, 3; pa.invT = math.max(pa.invT or 0, 0.2) end
     local camX0 = st.camX
     gameUpdate(dt)
     if last.killT and camX0 then last.camJump = math.max(last.camJump or 0, math.abs(st.camX - camX0)) end

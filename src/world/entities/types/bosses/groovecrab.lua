@@ -179,6 +179,8 @@ end
 
 function GC:onFightStart(n)
     self.songT, self.prevT = 0, -1e-6
+    local tb = os.getenv and tonumber(os.getenv('FM_TEST_GROOVE_BAR') or '')    -- (arneses: la pelea empieza en ese compás)
+    if tb then self.songT, self.prevT = tb * BAR, tb * BAR - 1e-6 end
     self.rage = require('src/core/Difficulty').flag('bossFury') == true
     self.phase = 1
     -- (el EVENTO del Mega Mashup lo dice en sus props: `decksFromStart` = con los platos desde el principio y SIN

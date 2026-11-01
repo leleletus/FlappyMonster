@@ -5,6 +5,8 @@
 --   nada       no pulsar nada: se vacía el medidor antes de acabar (hacia 1/3) y da fallo
 --   margen     una pulsación fuera de su margen no cuenta; dentro, sí
 --   vacio      pulsar sin nota no castiga
+--   revive     muerto o reapareciendo al empezar: en cuanto vive, salen las notas y juega
+--   sinchart   sin notas: acaba enseguida, sin castigo (nadie se queda esperando)
 --   jugadores  (informa) jugadores simulados con distinto error de tiempo: % que falla y % que noquea por dificultad
 --   tools/tests/run.sh rhythm_duel   (CASE=nombre)
 io.stdout:setvbuf('no')
@@ -111,6 +113,38 @@ function CASES.margen()
     local r2, c2 = play('normal', function(n) return n.t + W * 0.6 end)
     check('margen', c2.hits > c2.n * 0.9, ('dentro del margen: %d de %d'):format(c2.hits, c2.n))
 end
+function CASES.revive()
+    R.reset()
+    local boss, level = setup('normal')
+    local who = { alive = true, dying = true }
+    R.update(DT, level, who, nil, function() end)
+    local c = R.current()
+    check('revive', c and not c.playing, 'muriendo al empezar: aún no juega')
+    who.dying = false
+    boss.songT = boss.songT + 3
+    R.update(DT, level, who, nil, function() end)
+    check('revive', c.playing and c.n < #c.notes, ('reaparece: juega las %d notas que faltan de %d'):format(c.n, #c.notes))
+    local r
+    for _ = 1, 60 * 30 do
+        boss.songT = boss.songT + DT
+        R.update(DT, level, who, function(b, a, f) r = { a, f } end, function()
+            for i = c.first, math.min(c.first + 6, #c.notes) do
+                local n = c.notes[i]
+                if not n.judged and math.abs(n.t - c.clock) < 0.02 then R.press(n.lane) end
+            end
+        end)
+        if r then break end
+    end
+    check('revive', r and not r[2] and r[1] > 0.9, ('y puede ganar: %.0f %%'):format((r and r[1] or 0) * 100))
+end
+function CASES.sinchart()
+    R.reset()
+    local boss, level = setup('normal')
+    boss.DUEL = { normal = setmetatable({ chart = 'no_existe' }, { __index = GC.DUEL.normal }) }
+    local r
+    R.update(DT, level, { alive = true }, function(b, a, f) r = { a, f } end, function() end)
+    check('sinchart', r and r[2] == false, 'acaba al momento, sin castigo')
+end
 function CASES.vacio()
     R.reset()
     local boss, level = setup('normal')
@@ -162,7 +196,7 @@ end
 function love.load()
     if os.getenv('SHOT') then CASES.shot(); love.event.quit(0); return end
     local only = os.getenv('CASE')
-    for _, name in ipairs({ 'chart', 'facil', 'perfecto', 'nada', 'margen', 'vacio', 'jugadores' }) do
+    for _, name in ipairs({ 'chart', 'facil', 'perfecto', 'nada', 'margen', 'vacio', 'revive', 'sinchart', 'jugadores' }) do
         if not only or only == name then CASES[name]() end
     end
     print(fails == 0 and 'RESULTADO: OK' or ('RESULTADO: ' .. fails .. ' FALLOS'))

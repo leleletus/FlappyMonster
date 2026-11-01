@@ -44,10 +44,20 @@ function R.start(boss, info, diff, playing)
     local notes = R.build(boss, cfg.chart, info.bar, info.bars)
     local n = math.max(1, #notes)
     local lose = SWING / n
-    cur = { boss = boss, bar = info.bar, bars = info.bars, cfg = cfg, notes = notes, n = n, first = 1, meter = 50,
+    cur = { diff = diff, boss = boss, bar = info.bar, bars = info.bars, cfg = cfg, notes = notes, n = n, first = 1, meter = 50,
             lose = lose, gain = lose * (1 - cfg.failAt) / cfg.failAt, hits = 0, misses = 0, playing = playing,
             clock = boss.songT or 0, endT = (info.bar + info.bars) * boss.BAR, lit = { 0, 0, 0, 0 }, text = nil, textT = 0 }
     return cur
+end
+
+-- Lo que pasó en cada duelo, en la carpeta de datos (rhythm_duel.log): lo que no se puede ver sin el aparato del jugador
+local function logLine(c, what)
+    local nm, pos, part = nil, nil, nil
+    if Sound and Sound.musicPosition then nm, pos, part = Sound.musicPosition() end
+    local v = love.filesystem.read('version.txt') or '?'
+    pcall(love.filesystem.append, 'rhythm_duel.log', ('%s v%s dif=%s compas=%d x%d chart=%s notas=%d jugando=%s reloj=%.2f song=%.2f audio=%s/%s/%s aciertos=%d fallos=%d medidor=%.0f\n'):format(
+        what, v:gsub('%s', ''), tostring(c.diff), c.bar, c.bars, tostring(chart() and true or false), #c.notes, tostring(c.playing), c.clock, c.boss.songT or -1,
+        tostring(nm), tostring(pos), tostring(part), c.hits, c.misses, c.meter))
 end
 
 function R.current() return cur end
@@ -127,8 +137,16 @@ function R.update(dt, level, who, report, press)
     if not boss then cur = nil; return end
     if not cur or cur.bar ~= info.bar or cur.boss ~= boss then
         R.start(boss, info, level.difficulty, who ~= nil and not who.dying and who.alive ~= false)
+        logLine(cur, 'empieza')
     end
     local c = cur
+    -- Sin notas (el chart no se pudo leer): acaba ya, sin castigo. Nunca dejar a nadie congelado esperando
+    if #c.notes == 0 and not c.done then
+        c.done, c.empty, c.acc = true, true, 0
+        print('[RhythmDuel] duelo sin notas: el chart no se pudo leer o no tiene ese compás')
+        logLine(c, 'sin_notas')
+        if report then report(c.bar, 0, false) end
+    end
     c.clock = c.clock + dt
     local a = audioTime(c)
     local target = (a or boss.songT or c.clock) - offset()
@@ -136,6 +154,20 @@ function R.update(dt, level, who, report, press)
     else c.clock = c.clock + (target - c.clock) * math.min(1, dt * 8) end
     for l = 1, 4 do c.lit[l] = math.max(0, c.lit[l] - dt) end
     if c.textT > 0 then c.textT = c.textT - dt end
+    -- Si moría o reaparecía justo al empezar, entra ahora: lo que ya pasó no cuenta
+    if not c.playing and not c.done and who and not who.dying and who.alive ~= false then
+        c.playing = true
+        for i = c.first, #c.notes do
+            local n = c.notes[i]
+            if n.t > c.clock + c.cfg.window then break end
+            n.judged = true
+            c.first = i + 1
+        end
+        local left = math.max(1, #c.notes - c.first + 1)
+        c.n, c.lose = left, SWING / left
+        c.gain = c.lose * (1 - c.cfg.failAt) / c.cfg.failAt
+        logLine(c, 'entra_tarde')
+    end
     if c.playing and not c.done then
         if press then press() else readInput() end
         -- Las que ya pasaron
@@ -155,6 +187,7 @@ function R.update(dt, level, who, report, press)
             c.done, c.failed = true, c.meter <= 0
             c.acc = c.hits / c.n
             c.ko = not c.failed and c.acc >= c.cfg.koAt
+            logLine(c, 'acaba')
             if report then report(c.bar, c.acc, c.failed) end
         end
     end
@@ -210,7 +243,8 @@ function R.draw()
     local L = require 'src/core/Lang'
     g.setFont(FONT_MED)
     local msg
-    if c.done then msg = c.failed and 'rhythm.fail' or (c.ko and 'rhythm.ko' or 'rhythm.ok')
+    if c.empty then msg = nil
+    elseif c.done then msg = c.failed and 'rhythm.fail' or (c.ko and 'rhythm.ko' or 'rhythm.ok')
     elseif c.clock < c.bar * c.boss.BAR then msg = 'rhythm.ready'
     elseif not c.playing then msg = 'rhythm.watch'
     elseif c.textT > 0 then msg = c.text end

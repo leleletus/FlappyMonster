@@ -219,6 +219,8 @@ Friday Night Funkin' style. The player stands still, invulnerable; the crab keep
 | Extreme | 0 / 100 | 0 / 42 | 0 / 0 | 0 / 0 | 82 / 0 |
 | Xtra | 0 / 77 | 0 / 0 | 15 / 0 | 95 / 0 | 100 / 0 |
 
+**If anything goes wrong:** each duel writes `rhythm_duel.log` in the save folder (start, end, notes, clock, music). A player dead or respawning when it starts joins as soon as alive. A duel with no notes ends at once, with no penalty. History: the first version, 0.5.136, left the user frozen with strums and no notes; not reproduced in single player (test arena and real level), a natural fight or online; the hole found was deciding "is playing" only on the first frame. Tests need `sp_boss GROOVE_BAR=n` or `FM_TEST_GROOVE_BAR=n` with `online_boss DUELDBG=1`.
+
 Simulated players do not get tired or lost at 10 notes per second, so real results will be worse. **Pending the user:** feel, whether the chart is readable, the lanes, real devices. The existing attacks were measured against the new song: 61 of 62 shots on a pop; bar 16 of D fixed.
 
 ## The song's section D (2026-11-01)
