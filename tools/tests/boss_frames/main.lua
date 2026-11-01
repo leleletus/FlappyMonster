@@ -84,6 +84,17 @@ function love.load()
                 if pa.invT then pa.invT = 1 end
             end
         end
+        -- Reina Carnívora: una bomba lanzada a ella cada poco; aturdida no se la remata
+        if boss.def.name == 'carnqueen' and os.getenv('NEAR') then pa.x, pa.invT = boss.x - 3.5 * TILE_PX, 1 end
+        if boss.def.name == 'carnqueen' and boss.state == 'idle' and t - (hitDone.bomb or 0) > 7 then
+            hitDone.bomb = t
+            for _, e in ipairs(ents) do
+                if e.def.name == 'bombobject' and e.alive and e.state ~= 'exploding' then
+                    e.x, e.y, e.thrown, e.thrownBy, e.onGround, e.vx, e.vy = boss.x, boss:feetY() - 60, true, pa, false, 0, -5
+                    break
+                end
+            end
+        end
         -- golpea al jefe clavado (para ver el daño y, al final, la muerte)
         if boss.state == 'stuck' and boss.deadTimer > 1.0 and not hitDone[boss] and not os.getenv('CLAW') and not os.getenv('SMALL') then
             boss.hp = math.min(boss.hp, 1)

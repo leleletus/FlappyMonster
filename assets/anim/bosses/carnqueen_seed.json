@@ -1,0 +1,73 @@
+{
+  "id": "bosses/carnqueen_seed",
+  "scale": 4,
+  "origin": [
+    0.5,
+    0.5
+  ],
+  "fallback": "seed",
+  "frames": [
+    {
+      "h": 11,
+      "image": "assets/images/bosses/carnqueen/seed-Sheet.png",
+      "w": 11,
+      "x": 0,
+      "y": 0
+    },
+    {
+      "h": 11,
+      "image": "assets/images/bosses/carnqueen/seed-Sheet.png",
+      "w": 11,
+      "x": 11,
+      "y": 0
+    },
+    {
+      "h": 11,
+      "image": "assets/images/bosses/carnqueen/seed-Sheet.png",
+      "w": 11,
+      "x": 22,
+      "y": 0
+    },
+    {
+      "h": 11,
+      "image": "assets/images/bosses/carnqueen/seed-Sheet.png",
+      "w": 11,
+      "x": 33,
+      "y": 0
+    },
+    {
+      "h": 16,
+      "image": "assets/images/bosses/carnqueen/sprout-Sheet.png",
+      "w": 17,
+      "x": 0,
+      "y": 0
+    },
+    {
+      "h": 16,
+      "image": "assets/images/bosses/carnqueen/sprout-Sheet.png",
+      "w": 17,
+      "x": 17,
+      "y": 0
+    }
+  ],
+  "anims": {
+    "seed": {
+      "fps": 10,
+      "frames": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "loop": true
+    },
+    "sprout": {
+      "fps": 3,
+      "frames": [
+        5,
+        6
+      ],
+      "loop": false
+    }
+  }
+}

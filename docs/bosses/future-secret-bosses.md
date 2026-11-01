@@ -23,6 +23,7 @@ Common to all:
 - **Piece:** a **miner's helmet**, the splinter as its lamp.
 
 ## 2. The Carnivorous Queen — Jungle
+**Built as an entity: [carnqueen](carnqueen.md).** No level or collectible entry yet.
 - **Unlock:** in `templo_de_los_pesos`, an underground fake wall behind the scale. You reach it by launching yourself with the scale's catapult loaded with two weights.
 - **Lair:** a temple room overgrown with vines.
 - **Fight:**

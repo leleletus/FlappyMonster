@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # tools/art/bosses/make_carnivorous_queen.py — la REINA CARNÍVORA, jefa secreta de la jungla (docs/design/carnivorous-queen.md).
-# SOLO DISEÑOS PARA ELEGIR: no escribe nada en assets/, solo previas en FlappyMonster_pruebas/reina_carnivora/.
+# Elegida la A «Cepo Real», sin cara (2026-11-01): --apply escribe assets/; sin él, previas en FlappyMonster_pruebas/reina_carnivora/.
 #
 # Es la Planta Carnívora B «Cepo» crecida al tocar una astilla: mismas valvas (fuera verde, dentro magenta, pestañas
 # claras), mismas hojas de la base y la misma flor de cebo, que ahora es su punto débil y lleva la astilla como una
@@ -186,8 +186,7 @@ def look_A(name):
         fl, stage = (cx + sway, top - 1), 'bud'
         it.append(stem([(cx, hy), (cx + sway, top)], 1.2))
     it += trap((cx, hy), 0, 90 - lift, L, Wd)
-    it.append(P(E(cx, hy - 2.5, 5.5, 4.2), LEAFL))
-    it.append(eyes(cx, int(hy - 5), 3, stun=stun))
+    it.append(P(E(cx, hy - 2.5, 5.5, 4.2), LEAFL))         # (sin cara: el usuario eligió la A "sin la carita")
     return it, fl, stage, (cx, hy - 8)
 
 
@@ -844,8 +843,70 @@ def idx_of(tl, name):
     return 0
 
 
+# ══ EL PAQUETE: el diseño elegido (A, sin cara; el usuario, 2026-11-01) ═════════════════════════════════════════════
+def strip(ims, w, h):
+    sh = Image.new('RGBA', (w * len(ims), h), (0, 0, 0, 0))
+    for i, im in enumerate(ims): sh.alpha_composite(im, (i * w, (h - im.height) // 2))
+    return sh
+
+
+def apply():
+    import json
+    K = Kit('A')
+    W, H = K.L['W'], K.L['HH']
+    B = 'assets/images/bosses/carnqueen/'
+    I = 'assets/images/story/collectibles/'
+    hn = K.art['idle1'].size
+    heads = {}
+    for op, name in enumerate(('closed', 'half', 'wide', 'prey')):
+        ims = []
+        for d in range(16):
+            im = K.head(d, op)
+            ims.append(im.resize((im.width // K.k, im.height // K.k), Image.NEAREST))
+        heads[name] = ims
+    HN = heads['closed'][0].width
+    out = {B + 'body-Sheet.png': strip([K.art[f] for f in FRAMES], W, H),
+           B + 'flower_open.png': K.fl_art['open'], B + 'flower_bud.png': K.fl_art['bud'],
+           B + 'wear_dew_open.png': K.drop_art['open'], B + 'wear_dew_bud.png': K.drop_art['bud'],
+           B + 'seed-Sheet.png': strip(K.seed_art, 11, 11), B + 'sprout-Sheet.png': strip([sprout(0), sprout(1)], 17, 16),
+           B + 'socket-Sheet.png': strip(K.socket_art, 30, 10),
+           I + 'astilla_reina.png': icon(True), I + 'astilla_reina_empty.png': icon(False)}
+    for name, ims in heads.items(): out[B + f'head_{name}-Sheet.png'] = strip(ims, HN, HN)
+    for l, ln in enumerate(('line', 'shade', 'light')): out[B + f'stalk_{ln}-Sheet.png'] = strip([a[l] for a in K.seg_art], SEG_N, SEG_N)
+    for rel, im in out.items():
+        os.makedirs(os.path.dirname(os.path.join(ROOT, rel)), exist_ok=True)
+        im.save(os.path.join(ROOT, rel))
+    a = lambda fr, fps=8, loop=True: {"fps": fps, "frames": fr, "loop": loop}
+    def aset(aid, k, origin, sheets, anims):
+        frames = []
+        for rel, w, h, n in sheets:
+            frames += [{"h": h, "image": rel, "w": w, "x": i * w, "y": 0} for i in range(n)]
+        data = {"id": aid, "scale": k, "origin": origin, "fallback": next(iter(anims)), "frames": frames, "anims": anims}
+        with open(os.path.join(ROOT, 'assets/anim', aid + '.json'), 'w') as f: f.write(json.dumps(data, indent=2) + '\n')
+    aset('bosses/carnqueen', K.k, [0.5, 1], [(B + 'body-Sheet.png', W, H, len(FRAMES))],
+         {"idle": a([1, 2], 2), "tell": a([3]), "spit1": a([4]), "spit2": a([5]), "closed": a([6]), "gulp": a([7]), "blast": a([8]), "stun": a([9, 10], 2.5)})
+    sh, an, n = [], {}, 0
+    def add(name, rel, w, h, c):
+        nonlocal n
+        sh.append((rel, w, h, c)); an[name] = a(list(range(n + 1, n + c + 1)), 1); n += c
+    for name in heads: add('head_' + name, B + f'head_{name}-Sheet.png', HN, HN, 16)
+    for ln in ('line', 'shade', 'light'): add('stalk_' + ln, B + f'stalk_{ln}-Sheet.png', SEG_N, SEG_N, 5)
+    add('socket', B + 'socket-Sheet.png', 30, 10, 3)
+    fw, fh = K.fl_art['open'].size
+    add('flower_open', B + 'flower_open.png', fw, fh, 1); add('flower_bud', B + 'flower_bud.png', K.fl_art['bud'].width, K.fl_art['bud'].height, 1)
+    add('dew_open', B + 'wear_dew_open.png', K.drop_art['open'].width, K.drop_art['open'].height, 1); add('dew_bud', B + 'wear_dew_bud.png', K.drop_art['bud'].width, K.drop_art['bud'].height, 1)
+    aset('bosses/carnqueen_parts', K.k, [0.5, 0.5], sh, an)
+    aset('bosses/carnqueen_seed', SMALL_K, [0.5, 0.5], [(B + 'seed-Sheet.png', 11, 11, 4), (B + 'sprout-Sheet.png', 17, 16, 2)],
+         {"seed": a([1, 2, 3, 4], 10), "sprout": a([5, 6], 3, False)})
+    print('frame', W, H, 'FLC', FLC, 'cx', K.L['cx'], 'cabeza', HN, 'flor', K.fl_art['open'].size, K.fl_art['bud'].size, K.drop_art['open'].size, K.drop_art['bud'].size)
+    for f in FRAMES:
+        fl, st, m = K.anchor[f]
+        print(f, 'flor', fl, st, 'boca', m)
+
+
 def main():
     os.makedirs(OUT, exist_ok=True)
+    if '--apply' in sys.argv: return apply()
     only = sys.argv[sys.argv.index('--look') + 1] if '--look' in sys.argv else None
     kits = {i: Kit(i) for i in LOOKS}
     # (comprobación: 1 píxel de margen en todos los cuadros)

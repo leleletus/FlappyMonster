@@ -454,6 +454,7 @@ return {
         gianthopper = "GIANT HOPPER",
         giantbeetle = "GIANT RHINO BEETLE",
         giantscorpion = "TRIPLE STRIKE SCORPION",
+        carnqueen = "CARNIVOROUS QUEEN",
         groovecrab = "GROOVE CRAB",
         megagloomy = "MEGA GLOOMY CRABBY",
         snowboss = "BIG SNOWBALL",

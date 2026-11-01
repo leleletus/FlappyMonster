@@ -20,6 +20,7 @@ later, NOT built: [future-secret-bosses](future-secret-bosses.md). The four crab
 | The Mirror | `mirror` | [mirror](mirror.md) | `ruta_del_espejo` | 7 |
 | Mirror chase (not a fight) | `mirrorchase` | [mirror-chase](mirror-chase.md) | `huida_del_espejo` | — |
 | Triple Strike Scorpion (Escorpión Triple Aguijón, SECRET; no level yet) | `giantscorpion` | [giantscorpion](giantscorpion.md) | test arena only | — |
+| Carnivorous Queen (Reina Carnívora, SECRET; no level yet) | `carnqueen` | [carnqueen](carnqueen.md) | test arena only | — |
 | The Groove (El Groove, SECRET, after the game; fights to its music) | `groovecrab` | [groovecrab](groovecrab.md) | `isla_del_groove` (secret map node) | — |
 | Crab Mega Mashup (EVENT: the four crabs in turns, adaptive music; Free Play) | `crabmashup` (director) | [crab-mashup](crab-mashup.md) | `mashup_cangrejos` | — |
 

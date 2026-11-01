@@ -1,6 +1,6 @@
 # The Carnivorous Queen: visual designs
 
-Designs to choose from for the jungle's secret boss ([saved idea](../bosses/future-secret-bosses.md)). **Nothing is implemented and nothing is in `assets/`.**
+Designs to choose from for the jungle's secret boss ([saved idea](../bosses/future-secret-bosses.md)). **Chosen: A, without the face, built: [carnqueen](../bosses/carnqueen.md).**
 
 - Generator: `tools/art/bosses/make_carnivorous_queen.py` (previews only; `--still` skips the GIFs, `--look X` makes one GIF).
 - Previews: `FlappyMonster_pruebas/reina_carnivora/`: `vista_previa.png` (all looks at real scale on the temple, idle and stunned, plus silhouettes), `piezas_<A-D>.png`, `pelea_<A-D>.gif`.
@@ -60,4 +60,4 @@ All are drawn at ×5 except where stated.
 
 ## History
 
-- 2026-11-01: first round, four looks, waiting for the user's verdict.
+- 2026-11-01: first round, four looks. The user chose A «Cepo Real» without the eyes.

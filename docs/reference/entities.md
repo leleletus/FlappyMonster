@@ -50,6 +50,7 @@ and the network use; **Label** is the (Spanish) name in the editor. Own props = 
 
 | Id | Label | File | Flags | Own props |
 |---|---|---|---|---|
+| `carnqueen` | Reina Carnívora | `types/bosses/carnqueen.lua` | boss | `zone`: int = 0 · `hp`: int = 8 · `hpPerPlayer`: int = 3 · `title`: text =  · `title_en`: text =  · `event`: bool = false · `mashupRole`: enum = none · `fixedHp`: bool = false · `rageMode`: enum = auto · `wear`: bool = true · `angerAt`: number = 0.66666666666667 · `rageAt`: number = 0.33333333333333 |
 | `giantbeetle` | Escarabajo Rinoceronte Gigante | `types/bosses/giantbeetle.lua` | boss | `zone`: int = 0 · `hp`: int = 10 · `hpPerPlayer`: int = 4 · `title`: text =  · `title_en`: text =  · `event`: bool = false · `mashupRole`: enum = none · `fixedHp`: bool = false · `rageMode`: enum = auto · `rageAt`: number = 0.5 |
 | `gianthopper` | Saltarín Gigante | `types/bosses/gianthopper.lua` | boss | `zone`: int = 0 · `hp`: int = 10 · `hpPerPlayer`: int = 4 · `title`: text =  · `title_en`: text =  · `event`: bool = false · `mashupRole`: enum = none · `fixedHp`: bool = false · `rageMode`: enum = auto · `rageAt`: number = 0.5 |
 | `giantpuffer` | Pez Globo Gigante | `types/bosses/giantpuffer.lua` | boss | `zone`: int = 0 · `hp`: int = 10 · `hpPerPlayer`: int = 4 · `title`: text =  · `title_en`: text =  · `event`: bool = false · `mashupRole`: enum = none · `fixedHp`: bool = false · `rageMode`: enum = auto · `rageAt`: number = 0.5 |

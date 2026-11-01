@@ -1,0 +1,141 @@
+{
+  "id": "bosses/carnqueen",
+  "scale": 5,
+  "origin": [
+    0.5,
+    1
+  ],
+  "fallback": "idle",
+  "frames": [
+    {
+      "h": 38,
+      "image": "assets/images/bosses/carnqueen/body-Sheet.png",
+      "w": 56,
+      "x": 0,
+      "y": 0
+    },
+    {
+      "h": 38,
+      "image": "assets/images/bosses/carnqueen/body-Sheet.png",
+      "w": 56,
+      "x": 56,
+      "y": 0
+    },
+    {
+      "h": 38,
+      "image": "assets/images/bosses/carnqueen/body-Sheet.png",
+      "w": 56,
+      "x": 112,
+      "y": 0
+    },
+    {
+      "h": 38,
+      "image": "assets/images/bosses/carnqueen/body-Sheet.png",
+      "w": 56,
+      "x": 168,
+      "y": 0
+    },
+    {
+      "h": 38,
+      "image": "assets/images/bosses/carnqueen/body-Sheet.png",
+      "w": 56,
+      "x": 224,
+      "y": 0
+    },
+    {
+      "h": 38,
+      "image": "assets/images/bosses/carnqueen/body-Sheet.png",
+      "w": 56,
+      "x": 280,
+      "y": 0
+    },
+    {
+      "h": 38,
+      "image": "assets/images/bosses/carnqueen/body-Sheet.png",
+      "w": 56,
+      "x": 336,
+      "y": 0
+    },
+    {
+      "h": 38,
+      "image": "assets/images/bosses/carnqueen/body-Sheet.png",
+      "w": 56,
+      "x": 392,
+      "y": 0
+    },
+    {
+      "h": 38,
+      "image": "assets/images/bosses/carnqueen/body-Sheet.png",
+      "w": 56,
+      "x": 448,
+      "y": 0
+    },
+    {
+      "h": 38,
+      "image": "assets/images/bosses/carnqueen/body-Sheet.png",
+      "w": 56,
+      "x": 504,
+      "y": 0
+    }
+  ],
+  "anims": {
+    "idle": {
+      "fps": 2,
+      "frames": [
+        1,
+        2
+      ],
+      "loop": true
+    },
+    "tell": {
+      "fps": 8,
+      "frames": [
+        3
+      ],
+      "loop": true
+    },
+    "spit1": {
+      "fps": 8,
+      "frames": [
+        4
+      ],
+      "loop": true
+    },
+    "spit2": {
+      "fps": 8,
+      "frames": [
+        5
+      ],
+      "loop": true
+    },
+    "closed": {
+      "fps": 8,
+      "frames": [
+        6
+      ],
+      "loop": true
+    },
+    "gulp": {
+      "fps": 8,
+      "frames": [
+        7
+      ],
+      "loop": true
+    },
+    "blast": {
+      "fps": 8,
+      "frames": [
+        8
+      ],
+      "loop": true
+    },
+    "stun": {
+      "fps": 2.5,
+      "frames": [
+        9,
+        10
+      ],
+      "loop": true
+    }
+  }
+}

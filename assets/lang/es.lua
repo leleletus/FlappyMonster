@@ -454,6 +454,7 @@ return {
         gianthopper = "SALTARÍN GIGANTE",
         giantbeetle = "ESCARABAJO RINOCERONTE GIGANTE",
         giantscorpion = "ESCORPIÓN TRIPLE AGUIJÓN",
+        carnqueen = "REINA CARNÍVORA",
         groovecrab = "CANGREJO GROOVE",
         megagloomy = "MEGA CRABBY LÚGUBRE",
         snowboss = "GRAN BOLA DE NIEVE",
