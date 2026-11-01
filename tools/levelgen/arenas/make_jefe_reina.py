@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # tools/levelgen/arenas/make_jefe_reina.py → jefe_reina.json (arena de prueba de la REINA CARNÍVORA, jefa secreta de la jungla: una
 # sala del templo; aún sin nivel). Bombas que reaparecen a los dos lados y plataformas para llegar a la flor.
-#   python3 tools/levelgen/arenas/make_jefe_reina.py    (¡reescribe la arena! si la retocas en el editor, no lo ejecutes)
+#   python3 tools/levelgen/arenas/make_jefe_reina.py    (¡reescribe la arena! NO ejecutar: el usuario la redujo a mano en el editor)
 #   love . --editor tools/levelgen/arenas/jefe_reina.json    (probarla desde el editor)
 #
 # Zona: columnas 12-43 (32 de ancho), filas 3-13; suelo en la 14.

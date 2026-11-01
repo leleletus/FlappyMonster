@@ -101,8 +101,9 @@ function BombObject:dieBurst()
     Core.light(self, 0.05)
 end
 
--- Reaparece al azar en su tramo: sobre una superficie libre de esa columna, hasta RESPAWN_UP filas por encima de su casa
-local RESPAWN_UP = 7
+-- Reaparece al azar en su tramo: sobre una superficie libre de esa columna, de RESPAWN_DOWN filas por debajo de su casa a
+-- RESPAWN_UP por encima (su casa puede ser una plataforma: el suelo también cuenta)
+local RESPAWN_UP, RESPAWN_DOWN = 7, 5
 function BombObject:onRespawnPlace(level)
     local L, R = self.props.respawnLeft or 0, self.props.respawnRight or 0
     if not level or (L <= 0 and R <= 0) then return end
@@ -111,7 +112,7 @@ function BombObject:onRespawnPlace(level)
         local x = (math.floor(self.home.x / T) + math.random(-L, R) + 0.5) * T
         local tops = {}
         local r0 = math.floor(self.home.y / T) + 1
-        for r = r0, r0 - RESPAWN_UP, -1 do
+        for r = r0 + RESPAWN_DOWN, r0 - RESPAWN_UP, -1 do
             if level:collisionAt(x, r * T + 4, true) and not level:collisionAt(x, r * T - T / 2, true) then tops[#tops + 1] = r * T end
         end
         if #tops > 0 then

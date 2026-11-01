@@ -886,9 +886,12 @@ function Q:render(camX, camY)
         local i = (st == 'vines') and 3 or ((st == 'vine_back') and 2 or ((t < (self.vineWarnShow or 0.6)) and 1 or 2))
         love.graphics.setColor(1, 1, 1, alpha)
         local fr2 = vineSet:frameN('grow', i)
+        local vy = math.floor(self.vy0 - camY) + 4
         for vx = self.vx0, self.vx1 - 4 * T, 4 * T do       -- (cada tramo, 4 casillas)
-            vineSet:drawFrame(fr2, math.floor(vx - camX), math.floor(self.vy0 - camY) + 4, 0, 4, 4, 0, 1)
+            vineSet:drawFrame(fr2, math.floor(vx - camX), vy, 0, 4, 4, 0, 1)
         end
+        -- (el último, pegado al final: la sala no tiene por qué medir un múltiplo de 4 y todo lo que pincha se tiene que ver)
+        vineSet:drawFrame(fr2, math.floor(self.vx1 - 4 * T - camX), vy, 0, 4, 4, 0, 1)
     end
     -- Las bocas y las semillas
     local seen = {}
