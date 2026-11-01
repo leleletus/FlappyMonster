@@ -22,7 +22,8 @@
 #                   con otros bajos, el coro y el gancho de la pista). 8 + 108.
 #
 #   ~/.venvs/fm-music/bin/python tools/music/groove_mejora.py [A B C] → previas en FlappyMonster_pruebas/musica/groove_mejora/
-#   REPORT=1 → solo números · INSTALL=1 GROOVE=A|B|C → assets/music/bosses/groove_intro|_loop.ogg
+#   REPORT=1 → solo números · INSTALL=1 GROOVE=A|B|C → assets/music/bosses/groove_intro|_loop.ogg + tools/music/mid/groove.mid
+#   MIDI=1 [GROOVE=B] → solo tools/music/mid/groove.mid, sin renderizar: el slap y el gancho (lo que sigue el duelo de ritmo)
 import os, sys, collections
 import numpy as np
 
@@ -459,6 +460,37 @@ def readme(results):
     return '\n'.join(t) + '\n'
 
 
+def write_mid(v, path):
+    """El tema en MIDI (tipo 1, 150 BPM, 120 ticks la semicorchea): una pista por voz principal, con su fuerza de verdad (pop 122,
+    normal 98, fantasma 48). El compás 1 es el de la intro: 8 + bucle, como assets/charts/groove.json"""
+    import mido
+    def track(name, notes, ch_):
+        tr = mido.MidiTrack()
+        tr.append(mido.MetaMessage('track_name', name=name, time=0))
+        ev = []
+        for t0, n, d, vel in notes:
+            ev += [(t0 * 120, 1, n, vel), ((t0 + d) * 120 - 10, 0, n, 0)]
+        t = 0
+        for tt, on, n, vel in sorted(ev, key=lambda e: (e[0], e[1])):
+            tr.append(mido.Message('note_on' if on else 'note_off', channel=ch_, note=n, velocity=vel, time=tt - t))
+            t = tt
+        return tr
+    bass, hook, b0 = [], [], 0
+    for name, bars, _, _ in sections(v):
+        for i, t in enumerate(bars):
+            bass += [((b0 + i) * 16 + st, n, d, vl) for st, n, d, vl in BL(t)]
+            if name == 'D' and i < 15:
+                hook += [((b0 + i) * 16 + st, n, d, 106) for _, st, n, d in W.P(b0 + i + 1, HOOK[i % 8])]
+        b0 += len(bars)
+    mid = mido.MidiFile(type=1, ticks_per_beat=480)
+    tempo = mido.MidiTrack()
+    tempo.append(mido.MetaMessage('set_tempo', tempo=int(60e6 / BPM), time=0))
+    tempo.append(mido.MetaMessage('time_signature', numerator=4, denominator=4, time=0))
+    mid.tracks += [tempo, track('Slap bass', bass, 0), track('Gancho (sierra)', hook, 1)]
+    mid.save(path)
+    print(f'  {path}: {b0} compases, slap {len(bass)} notas, gancho {len(hook)}')
+
+
 def enc_mp3(y, path):
     """la previa en MP3: el códec sube los picos; si pasan de 0,97, se baja SOLO la previa y se codifica otra vez"""
     import soundfile as sf
@@ -473,6 +505,9 @@ def enc_mp3(y, path):
 
 
 if __name__ == '__main__':
+    if os.environ.get('MIDI'):
+        write_mid(os.environ.get('GROOVE', 'B'), os.path.join(F.MID_DIR, 'groove.mid'))
+        sys.exit(0)
     which = [a for a in sys.argv[1:] if a in VNAME] or list(VNAME)
     if os.environ.get('INSTALL'): which = [os.environ.get('GROOVE', 'A')]
     os.makedirs(PRUEBAS, exist_ok=True)
@@ -484,6 +519,7 @@ if __name__ == '__main__':
         if os.environ.get('REPORT'): continue
         if os.environ.get('INSTALL'):
             J.export(y, at, os.path.join(INSTALL_DIR, 'groove'))
+            write_mid(v, os.path.join(F.MID_DIR, 'groove.mid'))
             continue
         base = os.path.join(PRUEBAS, f'groove_{v}_{VNAME[v]}')
         J.export(y, at, base)
