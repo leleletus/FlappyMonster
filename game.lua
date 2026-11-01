@@ -115,7 +115,8 @@ function love.load()
         online_error       = function() return OnlineErrorState:new() end,
         online_results     = function() return OnlineResultsState:new() end,
     })
-    gStateMachine:change('update', { after = 'startup' })      -- busca versión nueva, luego el logo y el título
+    -- busca versión nueva, luego el logo y el título (`make … NO_INTRO=1` mete nointro.flag en el .love: sin el logo)
+    gStateMachine:change('update', { after = love.filesystem.getInfo('nointro.flag') and 'title' or 'startup' })
 end
 
 function love.update(dt)

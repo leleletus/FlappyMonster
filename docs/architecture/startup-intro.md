@@ -20,6 +20,10 @@ coin and letters hop one pixel → one shine crosses coin and name → three spa
 only at boot (returning to the title from the menus does not replay it; after an auto-update the game restarts, so
 it shows once, after the update). The frame sheet is released on `exit`.
 
+**Building without it:** `make <target> NO_INTRO=1` (any target: they all start from the `.love`) adds an empty
+`nointro.flag` to the package root, and `game.lua` then sends `update` straight to `title`. The marker is not tracked
+by git and the update server never distributes it, so it belongs to that build and survives its auto-updates.
+
 **The melody:** six notes in D major every 0.15 s (D5 A5 F#5 B5 A5 D6), then a D add9 chord at 0.90 s that rings
 while the logo is whole. 25 % pulse + triangle. The letters fall every 0.15 s and land 0.22 s after starting:
 `noteAt` (1.27) is the first landing, `chordAt` = `noteAt` + 0.90 the hop. `STEP` / `CHORD_AT` in
@@ -29,7 +33,7 @@ it has not been listened to.
 **Drawing:** pixel art like the rest of the game: nearest filter, the 320x180 screen at the largest INTEGER scale
 that fits (×4 at 1280x720), centred; the sky fills the whole logical screen, the stars tile around.
 
-**Tests:** `startup_intro` — boot goes through `startup`; the sheet holds every frame; black at the start, sky with
+**Tests:** `startup_intro` — boot goes through `startup` (with `nointro.flag`, straight to `title`); the sheet holds every frame; black at the start, sky with
 no logo before the animation, the melody plays once and exactly with the first landing, more logo at the end than
 mid-melody, black at the end, title at the planned time; skipping.
 

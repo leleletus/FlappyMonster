@@ -13,6 +13,9 @@
 #   make android-reset → limpia los cambios del build dentro de love-android
 #   make clean     → borra todo el directorio build/
 #
+# Opciones (valen para cualquier target, todos parten del .love):
+#   NO_INTRO=1     → sin el logo de mtvemo al arrancar: directo al título (make win64 NO_INTRO=1)
+#
 # Estructura esperada de resources/:
 #   resources/
 #   ├── switch/
@@ -71,6 +74,10 @@ lovefile:
 	@mkdir -p $(BUILD_DIR)/lovefile
 
 	@git ls-files -z -- $(DIST) | xargs -0 zip -9 -q $(BUILD_DIR)/lovefile/$(GAME_LOWER).love
+	@if [ "$(NO_INTRO)" = "1" ]; then \
+		echo "NO_INTRO=1: sin el logo de arranque"; \
+		cd $(BUILD_DIR)/lovefile && : > nointro.flag && zip -q $(GAME_LOWER).love nointro.flag && rm nointro.flag; \
+	fi
 
 	@mkdir -p $(RELEASE_DIR)
 	@rm -f $(RELEASE_DIR)/$(GAME_LOWER)-lovefile.zip

@@ -22,6 +22,11 @@ local plays, stops, steps, phase, want = 0, 0, 0, 'run', nil
 local POINTS, got = {}, {}
 
 function love.load(a)
+    -- (`make … NO_INTRO=1`: la marca en el .love; aquí se pone en la carpeta de guardado, que se lee igual)
+    love.filesystem.write('nointro.flag', '')
+    gameLoad(a)
+    check('sin logo', gStateMachine:_top().after == 'title', 'con nointro.flag pasa a: ' .. tostring(gStateMachine:_top().after))
+    love.filesystem.remove('nointro.flag')
     gameLoad(a)
     for _, cb in ipairs({ 'mousemoved', 'mousepressed', 'mousereleased', 'wheelmoved', 'touchpressed', 'touchmoved', 'touchreleased', 'focus' }) do love[cb] = function() end end
     love.audio.setVolume(0)
