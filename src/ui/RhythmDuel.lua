@@ -169,7 +169,21 @@ function R.update(dt, level, who, report, press)
         logLine(c, 'entra_tarde')
     end
     if c.playing and not c.done then
-        if press then press() else readInput() end
+        -- (nivel de prueba, duelOnly: se juega solo y cada nota suena con un clic: para OÍR si el chart cuadra con la canción)
+        if boss.duelOnly and boss:duelOnly() and not press then
+            for i = c.first, #c.notes do
+                local n = c.notes[i]
+                if n.t > c.clock then break end
+                if not n.judged then
+                    R.press(n.lane)
+                    Sound.play('scorpionClick', 1, 1)
+                end
+            end
+            if c.clock - (c.logT or 0) >= 10 then
+                c.logT = c.clock
+                logLine(c, 'reloj')
+            end
+        elseif press then press() else readInput() end
         -- Las que ya pasaron
         local W = c.cfg.window
         while c.first <= #c.notes do
