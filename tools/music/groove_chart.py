@@ -285,13 +285,45 @@ def write_midis(charts):
         mid.save(os.path.join(PREVIAS, 'chart_%s.mid' % k))
 
 
+D_BARS = range(72, 88)                                     # (la pista: 8 + 16 + 16 + 8 + 8 + 16)
+
+
+def from_midi(data):
+    """El usuario: el chart son DOS pistas del MIDI (tools/music/mid/groove.mid) y nada más: el slap en toda la canción y, en la pista,
+    el otro instrumento (el gancho), también en Difícil y más. Lo comprueba nota a nota contra el archivo."""
+    import mido
+    tr = {}
+    for t in mido.MidiFile(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'mid', 'groove.mid')).tracks[1:]:
+        x, on = 0, set()
+        for e in t:
+            x += e.time
+            if e.type == 'note_on' and e.velocity > 0: on.add(x // 120)
+        tr[t.name] = on
+    slap, hook = tr['Slap bass'], tr['Gancho (sierra)']
+    ch = data['charts']
+    for b in D_BARS:                                       # (mismas flechas que el gancho de Normal)
+        if str(b) in ch['normal']: ch['full'][str(b)] = ch['normal'][str(b)]
+        else: ch['full'].pop(str(b), None)
+    want = {s for s in slap if s // 16 not in D_BARS} | {s for s in hook if s // 16 in D_BARS}
+    got = {int(b) * 16 + r[i] for b, r in ch['full'].items() for i in range(0, len(r), 2)}
+    assert got == want, 'full debe ser las dos pistas del MIDI, 1:1 (sobran %d, faltan %d)' % (len(got - want), len(want - got))
+    for name in ('easy', 'normal'):
+        for b, r in ch[name].items():
+            for i in range(0, len(r), 2):
+                s = int(b) * 16 + r[i]
+                assert s in (hook if int(b) in D_BARS else slap), 'nota fuera de su pista en %s, compás %s' % (name, b)
+    return data
+
+
 def main():
     charts = build()
     check(charts)
+    for b in D_BARS: charts['full'][b] = charts['normal'].get(b, [])
     nbars = len(score())
     os.makedirs(os.path.dirname(OUT), exist_ok=True)
     data = {'s16': G.S16, 'bars': nbars,
             'charts': {k: {str(b): [x for p in v[b] for x in p] for b in v if v[b]} for k, v in charts.items()}}
+    data = from_midi(data)
     with open(OUT, 'w') as f:
         json.dump(data, f, separators=(',', ':'), sort_keys=True)
     report(charts, nbars)
