@@ -47,4 +47,5 @@ What swallows comes from each mouth's state (`netPackExtra`: phase, mouths, seed
 - 2026-11-01, third notes: 6-8 Lanzas up high were too many (now 3-5); once caught the others must not attack; at full speed the head came apart from its stalk, because the spring lagged (now the stalk is placed rigidly while moving fast); more visible, avoidable windup.
 - 2026-11-01, fourth notes: after a miss it must give up (closed, no aiming, no eating); smooth turning, because the stalk looked broken (the stalk's chain length was measured in a straight line while it followed a curve; no more spring, the stalk is always the exact curve); open mouths thinner, closed unchanged (`head_half`, `head_wide`).
 - 2026-11-01, fifth notes: jaws wide open while winding up and lunging, closed only when biting (catch or miss); screen shake on a catch.
+- 2026-11-01: "bocas más abiertas, mucho más": `head_wide` lobes at 72° each (were 26°; 50° with thicker lobes was "too fat").
 - **Pending the user:** feel, numbers, stalk lengths, own sounds. Nobody has played her.

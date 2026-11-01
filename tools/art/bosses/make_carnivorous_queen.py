@@ -401,7 +401,7 @@ class Kit:
         c = (n / 2, n / 2)
         ha = d16 * 360 / 16 + 90
         th = {0: 0, 1: 22, 2: 50, 3: 0}[op]
-        if self.id == 'A': th = {0: 0, 1: 13, 2: 26, 3: 0}[op]     # (el usuario: abierta, menos gorda; cerrada igual)
+        if self.id == 'A': th = {0: 0, 1: 13, 2: 72, 3: 0}[op]     # (el usuario: valvas finas, pero las fauces abiertísimas; cerrada igual)
         it = []
         if h['lid']:                                               # (C: una copa con su tapa)
             ar = math.radians(ha)
