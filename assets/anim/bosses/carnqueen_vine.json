@@ -8,24 +8,24 @@
   "fallback": "grow",
   "frames": [
     {
-      "h": 16,
+      "h": 24,
       "image": "assets/images/bosses/carnqueen/vine-Sheet.png",
-      "w": 16,
+      "w": 64,
       "x": 0,
       "y": 0
     },
     {
-      "h": 16,
+      "h": 24,
       "image": "assets/images/bosses/carnqueen/vine-Sheet.png",
-      "w": 16,
-      "x": 16,
+      "w": 64,
+      "x": 64,
       "y": 0
     },
     {
-      "h": 16,
+      "h": 24,
       "image": "assets/images/bosses/carnqueen/vine-Sheet.png",
-      "w": 16,
-      "x": 32,
+      "w": 64,
+      "x": 128,
       "y": 0
     }
   ],

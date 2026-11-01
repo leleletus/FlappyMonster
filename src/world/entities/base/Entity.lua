@@ -207,6 +207,7 @@ function Entity:updateCommonStates(dt, level)
         self.deadTimer = self.deadTimer + dt
         if self.deadTimer >= (self.props.respawn or 0) then
             self:resetToHome()
+            if self.onRespawnPlace then self:onRespawnPlace(level) end
             self.state, self.deadTimer = 'spawning', 0
             Sound.play('respawnFx')
         end

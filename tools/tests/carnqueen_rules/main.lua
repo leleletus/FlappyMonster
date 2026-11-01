@@ -2,8 +2,14 @@
 --   boca          se abre el agujero (aviso), sale hacia ti y te traga; machacando sales y la boca vuelve
 --   esquiva       apartado en el último tramo del aviso, se cierra en el vacío
 --   muerde        tragado sin machacar pierde vida poco a poco
---   no_debajo     una boca nunca brota bajo tus pies: a 2,4 casillas o más, y tiene que estirarse
---   busca         estirada, la cabeza te sigue; el último tramo, fija
+--   no_debajo     una Lanza nunca brota bajo tus pies ni junto a otra; si te pones encima del agujero, se cierra
+--   busca         asomada, te apunta
+--   lanza         se lanza recta y traga al contacto
+--   campea        si falla, algunas se quedan quietas y tragan a quien las toque
+--   arriba        con enredaderas, muchas del techo y las paredes y ninguna del suelo
+--   salta         la Reina salta a su plataforma y vuelve
+--   bebes         las enredaderas matan a sus plantas
+--   bomba_azar    la bomba reaparece en sitios distintos
 --   come          muy cerca, ella misma avisa y te traga; si te apartas, falla
 --   enredaderas   aviso sin daño; luego el piso pincha y arriba no; acaban
 --   varias        brotan varias a la vez
@@ -118,7 +124,7 @@ function CASES.boca()
         if order[#order] ~= m.state then order[#order + 1] = m.state end
         return m.state == 'hold'
     end)
-    check('boca', table.concat(order, ' ') == 'warn out seek bite hold', table.concat(order, ' '))
+    check('boca', table.concat(order, ' ') == 'warn out seek lunge hold', table.concat(order, ' '))
     check('boca', pa.gulped and pa.gulpBy == m and (pa.gulpKind or 0) == 0, 'te traga, como la planta')
     stepAll(level, es, { pa }, 2, function() return not pa.gulped end, function() stub.state.jump_pressed = true end)
     check('boca', not pa.gulped, 'machacando sales')
@@ -132,7 +138,8 @@ function CASES.esquiva()
     boss:spawnMouth(level, pa)
     local m = boss.mouths[1]
     stepAll(level, es, { pa }, 3, function()
-        if m.state == 'seek' and m.t > 0.45 then pa.x = 34 * T end
+        m.campT = nil
+        if m.state == 'seek' and m.t > 0.26 then pa.x = 34 * T end
         return m.state == 'shut' or m.state == 'hold'
     end)
     check('esquiva', m.state == 'shut' and not pa.gulped, 'apartado en el último tramo no te pilla: ' .. m.state)
@@ -152,26 +159,115 @@ function CASES.no_debajo()
     local level, es, boss = arena()
     still(boss)
     local pa = playerAt(level, 20 * T)
-    local nearest = 1e9
+    local nearest, crowd = 1e9, 1e9
     for _ = 1, 200 do
         boss.mouths = {}
-        boss:spawnMouth(level, pa)
-        local m = boss.mouths[1]
-        if m.ny < 0 then nearest = math.min(nearest, math.abs(m.bx - pa.x)) end
+        for _ = 1, 3 do boss:spawnMouth(level, pa) end
+        for a, m in ipairs(boss.mouths) do
+            if m.ny < 0 then nearest = math.min(nearest, math.abs(m.bx - pa.x)) end
+            for b = a + 1, #boss.mouths do
+                local o = boss.mouths[b]
+                crowd = math.min(crowd, math.sqrt((m.bx - o.bx) ^ 2 + (m.by - o.by) ^ 2))
+            end
+        end
     end
-    check('no_debajo', nearest >= 2.4 * T - 1, ('la más cercana, a %.1f casillas'):format(nearest / T))
+    check('no_debajo', nearest >= 2.2 * T - 1, ('la más cercana del suelo, a %.1f casillas'):format(nearest / T))
+    check('no_debajo', crowd >= 2.5 * T - 1, ('nunca juntas: entre dos, %.1f casillas o más'):format(crowd / T))
+    -- corriendo hacia el agujero: se cierra sin salir, no sale debajo
+    boss.mouths = {}
+    local m = boss:spawnMouth(level, pa)
+    pa.x, pa.y = m.bx, m.by - pa.h / 2
+    stepAll(level, es, { pa }, 1, function() pa.x = m.bx; return #boss.mouths == 0 or m.state ~= 'warn' end)
+    check('no_debajo', #boss.mouths == 0 and not pa.gulped, 'te pones encima: se cierra')
 end
 function CASES.busca()
     local level, es, boss = arena()
     still(boss)
     local pa = playerAt(level, 20 * T)
-    boss:spawnMouth(level, pa)
-    local m = boss.mouths[1]
+    local m = boss:spawnMouth(level, pa)
     stepAll(level, es, { pa }, 3, function() pa.invT = 9; return m.state == 'seek' end)
-    local x0 = m.tx
-    pa.x = pa.x + 90
-    stepAll(level, es, { pa }, 0.25, function() pa.invT = 9 end)
-    check('busca', m.tx > x0 + 20, ('la cabeza te sigue (%d → %d)'):format(x0, m.tx))
+    local a0 = m.ax
+    pa.x = m.bx + ((pa.x > m.bx) and -1 or 1) * 3 * T
+    stepAll(level, es, { pa }, 0.05, function() pa.invT = 9 end)
+    check('busca', math.abs(m.ax - a0) > 0.5, ('te apunta (%.2f → %.2f)'):format(a0, m.ax))
+end
+function CASES.lanza()
+    local level, es, boss = arena()
+    still(boss)
+    local pa = playerAt(level, 20 * T)
+    local m = boss:spawnMouth(level, pa)
+    stepAll(level, es, { pa }, 3, function() return m.state == 'lunge' end)
+    local n = 0
+    stepAll(level, es, { pa }, 1, function() n = n + 1; return m.state ~= 'lunge' end)
+    check('lanza', m.state == 'hold' and n / 60 < 0.35, ('te traga al contacto, en %.2f s desde que se lanza'):format(n / 60))
+end
+function CASES.campea()
+    local level, es, boss = arena()
+    still(boss)
+    local pa = playerAt(level, 20 * T)
+    local m = boss:spawnMouth(level, pa)
+    m.campT = 2
+    stepAll(level, es, { pa }, 3, function()
+        if m.state == 'seek' then pa.x = 40 * T end
+        return m.state == 'camp'
+    end)
+    check('campea', m.state == 'camp', 'falla y se queda: ' .. m.state)
+    local x, t0 = m.tx, 0
+    stepAll(level, es, { pa }, 1)
+    check('campea', m.state == 'camp' and m.tx == x, 'quieta')
+    pa.invT = 0; pa.x, pa.y = m.tx, m.ty
+    stepAll(level, es, { pa }, 0.1)
+    check('campea', pa.gulped and m.state == 'hold', 'tocarla te traga')
+end
+function CASES.arriba()
+    local level, es, boss = arena()
+    still(boss); boss.mouthT = 0
+    local pa = playerAt(level, 14 * T, 10 * T)
+    local most, floorN, bossUp = 0, 0, false
+    boss.vineT = 0
+    stepAll(level, es, { pa }, 3, function()
+        pa.invT = 9
+        most = math.max(most, #boss.mouths)
+        for _, m in ipairs(boss.mouths) do if m.ny < 0 then floorN = floorN + 1 end end
+    end)
+    check('arriba', most >= 4 and floorN == 0, ('con enredaderas, muchas: %d a la vez y ninguna del suelo'):format(most))
+end
+function CASES.salta()
+    local level, es, boss = arena()
+    still(boss); boss.vineT = 0
+    local ground = boss:feetY()
+    local pa = playerAt(level, 18 * T)
+    stepAll(level, es, { pa }, 4, function() pa.invT = 9; return boss.state == 'vines' and not boss.hopT end)
+    check('salta', boss.state == 'vines' and boss:feetY() == 7 * T, ('sube a su plataforma: pies en la fila %.1f'):format(boss:feetY() / T))
+    stepAll(level, es, { pa }, 8, function() pa.invT = 9; return boss.state == 'idle' end)
+    check('salta', boss:feetY() == ground, 'y vuelve al suelo')
+end
+function CASES.bebes()
+    local level, es, boss = arena()
+    still(boss); boss.vineT = 0
+    local free = boss:activePlants(level)
+    free.home.x, free.home.y = 16 * T, feet() - free.outerH / 2
+    free:resetToHome(); free:init()
+    local pa = playerAt(level, 30 * T)
+    check('bebes', free.alive, 'hay una planta')
+    stepAll(level, es, { pa }, 4, function() pa.invT = 9; return boss.state == 'vines' end)
+    stepAll(level, es, { pa }, 0.1, function() pa.invT = 9 end)
+    check('bebes', not free.alive or Entities ~= nil and free.state == 'dead_burst' or free.state == 'dead', 'las enredaderas la matan: ' .. tostring(free.state))
+end
+function CASES.bomba_azar()
+    local level, es = arena()
+    local b
+    for _, e in ipairs(es) do if e.def.name == 'bombobject' then b = e; break end end
+    local cols, tops = {}, {}
+    for _ = 1, 100 do
+        b:resetToHome(); b:onRespawnPlace(level)
+        cols[math.floor(b.x / T)] = true
+        tops[math.floor(b.y / T)] = true
+    end
+    local nc, nt = 0, 0
+    for _ in pairs(cols) do nc = nc + 1 end
+    for _ in pairs(tops) do nt = nt + 1 end
+    check('bomba_azar', nc >= 10 and nt >= 2, ('en %d columnas y %d alturas'):format(nc, nt))
 end
 function CASES.come()
     local level, es, boss = arena()
@@ -270,7 +366,7 @@ function CASES.fases()
     local pa = playerAt(level, 20 * T)
     local most = 0
     stepAll(level, es, { pa }, 6, function() pa.invT = 9; if boss.mouthT > 0.3 then boss.mouthT = 0.01 end; most = math.max(most, #boss.mouths) end)
-    check('fases', most == 4, 'en la 3ª, cuatro bocas a la vez: ' .. most)
+    check('fases', most >= 4 and most <= 5, 'en la 3ª, hasta cinco Lanzas a la vez: ' .. most)
 end
 function CASES.semilla()
     local level, es, boss = arena()

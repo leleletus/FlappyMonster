@@ -851,19 +851,44 @@ def strip(ims, w, h):
 
 
 def vine_frames():
-    """LAS ENREDADERAS del suelo, 3 cuadros de 16x16 que empalman de lado (asoman, crecen, con espinas)"""
+    """LAS ENREDADERAS del suelo: tallos irregulares que serpentean y se cruzan a distinta altura, con hojas, zarcillos en espiral
+    y espinas; 3 cuadros de 64x24 que empalman de lado (asoman, crecen, con espinas). Nada se repite dentro de un tramo"""
+    W, H = 64, 24
+    STR = ((1, 0.2, 3, 1.3, 1.0, 0.45), (2, 2.4, 5, 0.3, 0.8, 0.3), (1, 4.1, 2, 3.7, 0.7, 0.5))    # (armónicos enteros: empalman)
+    LEAVES = ((7, 0, 1), (19, 1, -1), (33, 2, 1), (46, 0, -1), (58, 1, 1))
+    TENDRIL = ((13, 1), (40, -1), (52, 1))
     out = []
-    for f, h in enumerate((4, 9, 14)):
-        im = Image.new('RGBA', (16, 16), (0, 0, 0, 0))
+    for f, amp in enumerate((0.3, 0.65, 1.0)):
+        im = Image.new('RGBA', (W, H), (0, 0, 0, 0))
         d = ImageDraw.Draw(im)
-        for x0, top, lean in ((2, h, 1), (8, max(2, h - 3), -1), (13, h - 1, 1)):
-            pts = [(x0, 15), (x0 + lean, 15 - top // 2), (x0, 15 - top)]
-            d.line(pts, fill=hx(LEAF[0]), width=3)
-            d.line(pts, fill=hx(LEAF[3] if lean > 0 else LEAF[2]), width=1)
-            if f == 2:                                               # (las espinas, claras: es lo que dice "no pises")
-                for y in range(15 - top + 1, 14, 3):
-                    im.putpixel((max(0, x0 - 2), y), hx(CILIA)); im.putpixel((min(15, x0 + 2), y + 1), hx(CILIA))
-                im.putpixel((x0, 15 - top), hx(CILIA))
+        base = H - 3
+        def y_of(st, x):
+            h1, p1, h2, p2, a1, a2 = st
+            v = a1 * (0.5 + 0.5 * math.sin(2 * math.pi * h1 * x / W + p1)) + a2 * (0.5 + 0.5 * math.sin(2 * math.pi * h2 * x / W + p2))
+            return base - amp * 11 * v
+        for k, st in enumerate(STR):
+            pts = [(x, y_of(st, x)) for x in range(-2, W + 3)]
+            d.line(pts, fill=hx(LEAF[0]), width=4 if k == 0 else 3)
+            d.line(pts, fill=hx(LEAF[2] if k != 1 else LEAF[1]), width=2 if k == 0 else 1)
+            for x in range(1 + k * 3, W, 7):                          # (la luz, de trecho en trecho)
+                im.putpixel((x, max(0, int(y_of(st, x)) - 1)), hx(LEAF[3]))
+        if f >= 1:
+            for lx, si, dr in LEAVES:                                 # (hojas: una punta, su contorno y su nervio)
+                ly = int(y_of(STR[si], lx))
+                tip = (lx + dr * 6, ly - 5 if f == 2 else ly - 3)
+                d.polygon([(lx, ly), (lx + dr * 2, ly - 4), tip, (lx + dr * 4, ly - 1)], fill=hx(LEAF[3]), outline=hx(LEAF[0]))
+                d.line([(lx + dr, ly - 1), (tip[0] - dr, tip[1] + 1)], fill=hx(LEAF[2]))
+            for tx, dr in TENDRIL:                                    # (un zarcillo que sube y se enrosca)
+                ty = int(min(y_of(st, tx) for st in STR))
+                for ax, ay in ((0, -1), (0, -2), (dr, -3), (2 * dr, -4), (3 * dr, -3), (3 * dr, -2), (2 * dr, -2)):
+                    if 0 <= ty + ay < H and 0 <= tx + ax < W: im.putpixel((tx + ax, ty + ay), hx(LEAF[2]))
+        if f == 2:                                                    # (las espinas, claras: lo que dice "no pises")
+            for k, st in enumerate(STR):
+                for n, x in enumerate(range(3 + k * 2, W - 1, 5)):
+                    y = int(y_of(st, x))
+                    up_ = n % 2 == 0
+                    for dy in ((-2, -3) if up_ else (2, 3)):
+                        if 0 <= y + dy < H: im.putpixel((x, y + dy), hx(CILIA))
         out.append(im)
     return out
 
@@ -887,7 +912,7 @@ def apply():
            B + 'flower_open.png': K.fl_art['open'], B + 'flower_bud.png': K.fl_art['bud'],
            B + 'wear_dew_open.png': K.drop_art['open'], B + 'wear_dew_bud.png': K.drop_art['bud'],
            B + 'seed-Sheet.png': strip(K.seed_art, 11, 11), B + 'sprout-Sheet.png': strip([sprout(0), sprout(1)], 17, 16),
-           B + 'socket-Sheet.png': strip(K.socket_art, 30, 10), B + 'vine-Sheet.png': strip(vine_frames(), 16, 16),
+           B + 'socket-Sheet.png': strip(K.socket_art, 30, 10), B + 'vine-Sheet.png': strip(vine_frames(), 64, 24),
            I + 'astilla_reina.png': icon(True), I + 'astilla_reina_empty.png': icon(False)}
     for name, ims in heads.items(): out[B + f'head_{name}-Sheet.png'] = strip(ims, HN, HN)
     for l, ln in enumerate(('line', 'shade', 'light')): out[B + f'stalk_{ln}-Sheet.png'] = strip([a[l] for a in K.seg_art], SEG_N, SEG_N)
@@ -916,7 +941,7 @@ def apply():
     aset('bosses/carnqueen_parts', K.k, [0.5, 0.5], sh, an)
     aset('bosses/carnqueen_seed', SMALL_K, [0.5, 0.5], [(B + 'seed-Sheet.png', 11, 11, 4), (B + 'sprout-Sheet.png', 17, 16, 2)],
          {"seed": a([1, 2, 3, 4], 10), "sprout": a([5, 6], 3, False)})
-    aset('bosses/carnqueen_vine', SMALL_K, [0, 1], [(B + 'vine-Sheet.png', 16, 16, 3)], {"grow": a([1, 2, 3], 5, False), "full": a([3], 1)})
+    aset('bosses/carnqueen_vine', SMALL_K, [0, 1], [(B + 'vine-Sheet.png', 64, 24, 3)], {"grow": a([1, 2, 3], 5, False), "full": a([3], 1)})
     print('frame', W, H, 'FLC', FLC, 'cx', K.L['cx'], 'cabeza', HN, 'flor', K.fl_art['open'].size, K.fl_art['bud'].size, K.drop_art['open'].size, K.drop_art['bud'].size)
     for f in FRAMES:
         fl, st, m = K.anchor[f]

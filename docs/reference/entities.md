@@ -99,7 +99,7 @@ and the network use; **Label** is the (Spanish) name in the editor. Own props = 
 | Id | Label | File | Flags | Own props |
 |---|---|---|---|---|
 | `apple` | Comida | `types/items/apple.lua` | pickup, wantsLevel | `skin`: enum = auto |
-| `bombobject` | Bomba (objeto) | `types/items/bombobject.lua` |  | `fuseTime`: number = 2 · `killRadius`: number = 1.2 · `hurtRadius`: number = 2.3 · `pushRadius`: number = 3.6 |
+| `bombobject` | Bomba (objeto) | `types/items/bombobject.lua` |  | `fuseTime`: number = 2 · `killRadius`: number = 1.2 · `hurtRadius`: number = 2.3 · `pushRadius`: number = 3.6 · `respawnLeft`: number = 0 · `respawnRight`: number = 0 |
 | `box` | Caja | `types/items/box.lua` |  | `respawn`: number = 5 |
 | `checkpoint` | Checkpoint | `types/items/checkpoint.lua` | checkpoint |  |
 | `extralife` | Vida extra | `types/items/extralife.lua` | pickup |  |

@@ -6,7 +6,8 @@
 --   * Cayendo o lanzada (en el aire y rápida): 1 de vida y aturde un momento
 --     a quien golpee.
 --   * REAPARECE (prop `respawn` > 0, el usuario): tras explotar vuelve a su sitio. Antes no podía y algunos niveles
---     usaban una bomba VIVA quieta para eso; desde 0.5.68 son bombas objeto.
+--     usaban una bomba VIVA quieta para eso; desde 0.5.68 son bombas objeto. Con `respawnLeft` / `respawnRight` (casillas)
+--     reaparece en un sitio al azar de ese tramo, en el suelo o sobre una plataforma (la decide quien simula: x e y viajan).
 -- Para un jefe futuro: BombObject:throw(vx, vy, lit, fuse) la lanza (ya
 -- encendida si lit).
 --   * SE PUEDE CARGAR (systems/Carry, el usuario): quieta, ARRIBA la coge SIN encenderla; al lanzarla se enciende.
@@ -100,6 +101,27 @@ function BombObject:dieBurst()
     Core.light(self, 0.05)
 end
 
+-- Reaparece al azar en su tramo: sobre una superficie libre de esa columna, hasta RESPAWN_UP filas por encima de su casa
+local RESPAWN_UP = 7
+function BombObject:onRespawnPlace(level)
+    local L, R = self.props.respawnLeft or 0, self.props.respawnRight or 0
+    if not level or (L <= 0 and R <= 0) then return end
+    local T = TILE_PX
+    for _ = 1, 12 do
+        local x = (math.floor(self.home.x / T) + math.random(-L, R) + 0.5) * T
+        local tops = {}
+        local r0 = math.floor(self.home.y / T) + 1
+        for r = r0, r0 - RESPAWN_UP, -1 do
+            if level:collisionAt(x, r * T + 4, true) and not level:collisionAt(x, r * T - T / 2, true) then tops[#tops + 1] = r * T end
+        end
+        if #tops > 0 then
+            self.x, self.y = x, tops[math.random(#tops)] - self.outerH / 2
+            self.baseY = self.y
+            return
+        end
+    end
+end
+
 -- ── Update ────────────────────────────────────────────────────────────────────
 function BombObject:updateCustom(dt, level)
     if Core.update(self, dt, level) then return true end
@@ -135,6 +157,11 @@ return {
     hide = { 'movement', 'attach', 'speed', 'startDir', 'patrol', 'turnAtEdges', 'flyMode', 'flyRange', 'bobAmp',
              'pauses', 'onTouch', 'stompable', 'points', 'dropOnSight', 'detectRange' },   -- (solo la reaparición)
     defaults = { movement = 'static' },
-    props = Core.props(),
+    props = (function()
+        local out = Core.props()
+        out[#out + 1] = { key = 'respawnLeft', kind = 'number', label = 'Reaparece al azar: casillas a la izquierda', group = 'Reaparición', default = 0, min = 0, max = 60, step = 1 }
+        out[#out + 1] = { key = 'respawnRight', kind = 'number', label = 'Reaparece al azar: casillas a la derecha', group = 'Reaparición', default = 0, min = 0, max = 60, step = 1 }
+        return out
+    end)(),
     editor = { sprite = 'assets/images/enemies/bomb/bombObject-Sheet.png', frameW = Core.FW },
 }

@@ -34,8 +34,8 @@ def build():
     for r in (11, 12, 13): put(52, r, FINISH)
     ents = [
         {'type': 'carnqueen', 'col': MID, 'row': FLOOR - 1},
-        {'type': 'bombobject', 'col': Z0 + 2, 'row': FLOOR - 1, 'props': {'respawn': 4}},
-        {'type': 'bombobject', 'col': Z1 - 2, 'row': FLOOR - 1, 'props': {'respawn': 4}},
+        {'type': 'bombobject', 'col': Z0 + 2, 'row': FLOOR - 1, 'props': {'respawn': 4, 'respawnLeft': 2, 'respawnRight': Z1 - Z0 - 2}},
+        {'type': 'bombobject', 'col': Z1 - 2, 'row': FLOOR - 1, 'props': {'respawn': 4, 'respawnLeft': Z1 - Z0 - 2, 'respawnRight': 2}},
         {'type': 'bosswall', 'col': Z0 - 3, 'row': 3, 'props': {'corner': {'col': Z0 - 1, 'row': FLOOR - 1}, 'zone': 1}},
         {'type': 'bosswall', 'col': Z1 + 1, 'row': 3, 'props': {'corner': {'col': Z1 + 3, 'row': FLOOR - 1}, 'zone': 1}},
     ]

@@ -24,15 +24,15 @@
   ],
   "entities": [
     {"col":27,"row":13,"type":"carnqueen"},
-    {"col":14,"props":{"respawn":4},"row":13,"type":"bombobject"},
-    {"col":41,"props":{"respawn":4},"row":13,"type":"bombobject"},
+    {"col":14,"props":{"respawn":4,"respawnLeft":2,"respawnRight":29},"row":13,"type":"bombobject"},
+    {"col":41,"props":{"respawn":4,"respawnLeft":29,"respawnRight":2},"row":13,"type":"bombobject"},
     {"col":9,"props":{"corner":{"col":11,"row":13},"zone":1},"row":3,"type":"bosswall"},
     {"col":44,"props":{"corner":{"col":46,"row":13},"zone":1},"row":3,"type":"bosswall"}
   ],
   "vents": [],
   "foliage": [],
   "bossZones": [
-    {"col":12,"h":11,"id":1,"row":3,"w":32, "music": "reina" }
+    {"col":12,"h":11,"id":1,"music":"reina","row":3,"w":32}
   ],
   "background": "jungle",
   "time": "day",
