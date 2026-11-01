@@ -241,6 +241,7 @@ function Q:mouthEats(m, level)
             m.tx, m.ty = hx, hy
             m.state, m.t = 'hold', 0
             Sound.play('plantCrunch', 0.9, 0.8)
+            Entity.emitFx('shake_small', hx, hy)
             return true
         end
     end
@@ -736,11 +737,11 @@ function Q:drawMouth(m, camX, camY, dt, r, g, b, alpha)
             parts:drawFrame(parts:frameN(name, math.min(5, math.floor((j - 1) * 5 / c.n) + 1)), math.floor(x - camX), math.floor(y - camY), 0, MS, MS, 0.5, 0.5)
         end
     end
-    -- (cerrada y fina casi siempre, como una lanza; se entreabre al apuntar. La sprite no cambió: lo que el
-    -- usuario vio "muy gorda" era la abierta aguantada mientras buscaba)
+    -- (el usuario: fauces abiertas del todo al cargar y al lanzarse; solo se cierra al morder: con presa o al fallar)
     local name = 'head_closed'
     if m.state == 'hold' then name = 'head_prey'
-    elseif m.state == 'seek' then name = 'head_half' end
+    elseif m.state == 'out' then name = 'head_half'
+    elseif m.state == 'seek' or m.state == 'lunge' then name = 'head_wide' end
     local d = math.floor(c.ang / (math.pi * 2) * 16 + 0.5) % 16 + 1
     love.graphics.setColor(tr, tg, tb, alpha)
     parts:drawFrame(parts:frameN(name, d), math.floor(hx - camX), math.floor(hy - camY), 0, MS, MS, 0.5, 0.5)
