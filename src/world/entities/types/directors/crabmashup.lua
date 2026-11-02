@@ -33,6 +33,7 @@ local CM = Entity.extend(Entity, { debugColor = { 1, 0.5, 0.9 },
 
 local T = TILE_PX
 CM.wantsLevel = true                        -- (BossZones.link le da levelRef: también en el cliente)
+CM.netAlways  = true                        -- (está lejos de los jugadores y lo lleva todo: viaja siempre en la foto)
 CM.CUES   = 'assets/music/bosses/crab_mashup/cues.json'
 CM.ROLES  = { 'tantrum', 'icy', 'gloomy', 'groove' }
 local LOOP = { tantrum = 'tantrum', icy = 'icy', gloomy = 'gloomy', groove = 'groove' }
@@ -360,6 +361,12 @@ function CM:crabDown(b)
             self.pend = { piece = 'final_' .. nx, at = cut, pos = (cut >= pc.music_end - 1e-3) and 0 or cut }
         end
     end
+end
+
+-- ¿Le toca pelear a este cangrejo ahora?
+function CM:isTurnOf(b)
+    if self.phase == 'crab' then return b == self.main[CM.ROLES[self.ci]] end
+    return self.phase == 'final' and b == self.fin[self.active]
 end
 
 -- Daño a un cangrejo: para el ranking (quién le dio)

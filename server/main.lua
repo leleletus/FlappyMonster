@@ -132,7 +132,8 @@ local buildResults   -- definida más abajo
 local DROWN_TOTAL     = 20
 local LEVELS_DIR      = 'assets/levels'
 local DEFAULT_LEVEL   = 'assets/levels/nivel01.json'
-local PLAYER_LIVES    = 3
+local PLAYER_LIVES    = tonumber(os.getenv('FM_TEST_LIVES')) or 3      -- (FM_TEST_*: solo los arneses, tools/tests/run.sh)
+local TEST_BOSSDMG    = tonumber(os.getenv('FM_TEST_BOSSDMG'))         -- (cada tantos s, 1 de daño a los jefes que se dejen)
 local SPAWN_STAGGER   = 48   -- px de separación horizontal entre jugadores al spawn
 local LEVEL_TIME_MAX  = 600
 
@@ -478,15 +479,13 @@ local function checkPlayerEnemyCollisions(sim, pid, ps, seq)
     -- Ground pound: empuja y aturde a los jugadores cercanos
     if pa.gpLanded and ps.gpPushTick ~= sim.tick then
         ps.gpPushTick = sim.tick                -- una vez por impacto (hay 2 pasadas por tick)
-        local PA = PlayerAdventure
         for opid, ops in pairs(sim.playerSims) do
             local o = ops.pa
             if opid ~= pid and not ops.isSpectator and not o.dying then
-                local dx, dy = o.x - pa.x, o.y - pa.y
-                if math.abs(dx) <= PA.GP_RADIUS_X and math.abs(dy) <= PA.GP_RADIUS_Y then
+                if Entities.interactions.poundReaches(pa, o) then
                     _currentSoundPlayerId = nil
                     _emitX, _emitY = o.x, o.y
-                    o:knockback(dx >= 0 and 1 or -1)
+                    o:knockback(o.x >= pa.x and 1 or -1)
                 end
             end
         end
@@ -723,6 +722,18 @@ local function stepRoom(room)
         e:update(Difficulty.dt(e, TICK_DT), sim.level)       -- (su ritmo: la dificultad)
     end
     _emitX, _emitY = nil, nil
+    if TEST_BOSSDMG then
+        sim.testDmgT = (sim.testDmgT or 0) + TICK_DT
+        if sim.testDmgT >= TEST_BOSSDMG then
+            sim.testDmgT = 0
+            for _, e in ipairs(sim.enemies) do
+                local ev = e.eventRef
+                if ev then                                 -- (evento: acaba el turno del que pelea, sea cual sea su ventana)
+                    if not e.eventFrozen and e:isActive() and ev:isTurnOf(e) then ev:crabDown(e) end
+                elseif e.def and e.def.boss and e.state ~= 'parts' then e:damage(1, 'stomp') end   -- (los trozos: que peguen de verdad)
+            end
+        end
+    end
     recordEnemyHistory(sim)
 
     -- Zonas de puntos: quien está dentro suma cada cierto tiempo
@@ -977,7 +988,7 @@ local function broadcastSnapshot(room)
         local extra = e:netPack()
         if extra then for k, v in ipairs(extra) do entry[base + k] = v end end
         elist[i] = entry
-        if e.def and e.def.boss then ebig[i] = true end
+        if (e.def and e.def.boss) or e.netAlways then ebig[i] = true end     -- (`netAlways`: un director, lejos de todos)
         if e.netBounds then ebox[i] = { e:netBounds() } end
       end
     end
@@ -1701,6 +1712,14 @@ function love.load()
         _emitX, _emitY = pa.x, pa.y
         local ok, err = pcall(fn)
         _currentSoundPlayerId, _emitX, _emitY = prev, px, py
+        if not ok then error(err, 0) end
+    end
+    -- Lo que hace un jefe al recibir un golpe: para todos, también para quien se lo dio (Interactions.hit)
+    Entities.interactions.asWorld = function(fn, ...)
+        local prev = _currentSoundPlayerId
+        _currentSoundPlayerId = nil
+        local ok, err = pcall(fn, ...)
+        _currentSoundPlayerId = prev
         if not ok then error(err, 0) end
     end
     -- Efectos de las entidades (pinchos que se clavan...): para todos

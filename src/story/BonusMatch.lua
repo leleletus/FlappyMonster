@@ -102,9 +102,8 @@ function BonusMatch:update(dt)
         if not player.dying and bot:push(player) then Sound.play('gpImpact') end
         -- tu ground pound cerca de él: lo empujas tú
         if player.gpLanded and not player.dying then
-            local dx, dy = bot.pa.x - player.x, bot.pa.y - player.y
-            if math.abs(dx) < Bot.PUSH_R * TILE_PX and math.abs(dy) < 1.3 * TILE_PX then
-                bot.pa:launch(((dx < 0) and -1 or 1) * Bot.PUSH_VX * 0.8, Bot.PUSH_VY)
+            if Interactions.poundReaches(player, bot.pa) then
+                bot.pa:launch(((bot.pa.x < player.x) and -1 or 1) * Bot.PUSH_VX * 0.8, Bot.PUSH_VY)
                 bot.pa.stunT = math.max(bot.pa.stunT or 0, 0.6)
                 Sound.play('stunned')
             end

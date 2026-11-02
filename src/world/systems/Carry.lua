@@ -83,18 +83,62 @@ function Carry.throw(pa, e)
 end
 
 -- Dejarlo con cuidado AL LADO (sin tocar al jugador: la bomba se enciende al tocarla), delante; si ahí hay pared,
--- detrás; si tampoco, a los pies
-local GAP = 6
+-- detrás; si tampoco, a los pies. Lo que tenga delante, si no es muy alto, le sirve de apoyo: una caja, un escalón
+-- (el usuario, 2026-11-02: siempre iba al suelo y no se podían apilar cajas).
+local GAP      = 6
+local STACK_UP = 2 * TILE_PX + 4     -- px sobre los pies hasta donde alcanza a dejarlo
+local NEAR_BOX = 28                  -- px: una caja a esta distancia cuenta como "delante" (como el alcance al coger)
+
+-- El cuerpo sólido que estorba a `e` con el centro en (x, y), y su caja
+local function bodyAt(level, e, x, y, w, h)
+    local bx, by = x - w / 2, y - h / 2
+    for _, o in ipairs(level.solidBodies or {}) do
+        if o ~= e and (o.solidFull or o.oneway) then         -- (una caja, un platillo; no un jefe)
+            local b = o:getOuterBounds()
+            if bx < b.x + b.w and bx + w > b.x and by < b.y + b.h and by + h > b.y then return o, b end
+        end
+    end
+end
+local function tileAt(level, x, y, w, h)
+    for _, px in ipairs({ x - w / 2 + 1, x, x + w / 2 - 1 }) do
+        for _, py in ipairs({ y - h / 2 + 1, y, y + h / 2 - 1 }) do
+            if level:entitySolidAt(px, py) then return true end
+        end
+    end
+    return false
+end
+
+-- Dónde queda en la dirección `d`: (x, y) o nil si no cabe (una pared más alta de lo que alcanza)
+local function spotAt(level, e, pa, d, feet)
+    local w, h = e.outerW or 0, e.outerH or 0
+    local x = pa.x + d * (pa:getOuterBounds().w / 2 + w / 2 + GAP)
+    local y = feet - h / 2 - 2
+    -- Una caja justo delante (o casi): encima de ella, sin que asome; y encima de lo que ya tenga encima
+    local o, b = bodyAt(level, e, x + d * NEAR_BOX, y, w, h)
+    while o do
+        if feet - b.y > STACK_UP then return nil end
+        x = (w <= b.w) and math.max(b.x + w / 2, math.min(b.x + b.w - w / 2, x)) or (b.x + b.w / 2)
+        y = b.y - h / 2 - 1
+        o, b = bodyAt(level, e, x, y, w, h)
+    end
+    -- Bloques: sube hasta donde quepa (un escalón), o no cabe
+    while tileAt(level, x, y, w, h) do
+        y = y - 4
+        if feet - (y + h / 2) > STACK_UP then return nil end
+    end
+    return x, y
+end
+
 function Carry.putDown(pa, e, level)
     release(e, pa)
     local b = pa:getOuterBounds()
-    local y = b.y + b.h - (e.outerH or 0) / 2 - 2
-    local off = b.w / 2 + (e.outerW or 0) / 2 + GAP
-    local x = pa.x
-    for _, d in ipairs({ pa.facing or 1, -(pa.facing or 1) }) do
-        local cx = pa.x + d * off
-        local edge = cx + d * (e.outerW or 0) / 2
-        if not (level and (level:entitySolidAt(edge, y) or level:entitySolidAt(cx, y))) then x = cx; break end
+    local feet = b.y + b.h
+    local x, y = pa.x, feet - (e.outerH or 0) / 2 - 2
+    if level then
+        for _, d in ipairs({ pa.facing or 1, -(pa.facing or 1) }) do
+            local sx, sy = spotAt(level, e, pa, d, feet)
+            if sx then x, y = sx, sy; break end
+        end
     end
     e.x, e.y = x, y
     e.vx, e.vy = 0, 0

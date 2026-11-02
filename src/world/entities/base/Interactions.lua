@@ -211,6 +211,32 @@ function Interactions.poundZone(pa)
     return { x = ob.x + 4, y = ob.y + ob.h - 24, w = ob.w - 8, h = 30 }
 end
 
+-- A quién empuja el impacto de un ground pound (el usuario, 2026-11-02: "es enorme"): SOLO a lo que está EN EL SUELO y a
+-- 1,5 casillas como mucho del epicentro (los pies de quien cae). Enemigos y jugadores: una regla para todos.
+Interactions.POUND_RADIUS = 1.5 * TILE_PX
+function Interactions.poundReaches(pa, o)
+    if not (o.onGround or (o.cattached and o.cny == -1)) then return false end        -- (trepador: solo sobre el suelo)
+    local a = pa:getOuterBounds()
+    local feet = a.y + a.h
+    local b = o:getOuterBounds()
+    local R = Interactions.POUND_RADIUS
+    return math.abs(o.x - pa.x) <= R and math.abs(b.y + b.h - feet) <= R
+end
+
+-- Lo que un jefe hace al recibir un golpe suena PARA TODOS, también para quien se lo dio: su cliente no predice los
+-- sonidos de los jefes (OnlineAdventureState:_checkLocalBounce). El servidor pone aquí cómo quitarle el dueño al sonido.
+function Interactions.asWorld(fn, ...) return fn(...) end
+
+-- Da el golpe y dice si hizo algo. Un jefe que no pierde vida no da puntos: el servidor comprueba contra el jefe que
+-- VEÍA el jugador (compensación del retardo), que aún no era invulnerable, y hay dos pasadas por tick: daba los puntos
+-- dos veces con un solo golpe (el usuario, 2026-11-02).
+function Interactions.hit(e, fn, ...)
+    if not (e.def and e.def.boss) then fn(...); return true end
+    local hp0 = e.hp
+    Interactions.asWorld(fn, ...)
+    return e.hp ~= hp0
+end
+
 -- Aplica las interacciones de un jugador con todas las entidades.
 --   cb.stomp(e, points, i)  cb.pickup(e, pickupDef, i)  cb.checkpoint(e, i)
 --   rewind(i, e, fn)        opcional (servidor): evalúa fn() con el estado
@@ -239,14 +265,14 @@ function Interactions.run(pa, entities, cb, rewind)
             if killed then Noise.src(nil); return end
         elseif result == 'stomp' then
             e.lastHitter = pa                               -- (quién le dio: el ranking del Mega Mashup)
-            e:stomp()
+            local dealt = Interactions.hit(e, e.stomp, e)
             pa:bounce(a, c, true)
-            if cb.stomp then cb.stomp(e, b, i) end
+            if cb.stomp and dealt then cb.stomp(e, b, i) end
         elseif result == 'pound' then
             e.lastHitter = pa
-            if e.pound then e:pound(pa) else e:stomp() end
+            local dealt = Interactions.hit(e, e.pound or e.stomp, e, pa)
             pa:bounce(a)
-            if cb.stomp then cb.stomp(e, b, i) end
+            if cb.stomp and dealt then cb.stomp(e, b, i) end
         elseif result == 'helmet' then
             -- Salto sobre un Gummy con casco: rebota, sin daño ni puntos
             pa:bounce(a)
@@ -277,9 +303,11 @@ function Interactions.run(pa, entities, cb, rewind)
     -- Impacto del ground pound: muere solo lo que queda aplastado justo
     -- debajo; lo que está cerca sale despedido y queda aturdido, igual que
     -- los otros jugadores.
-    if pa.gpLanded then
+    -- (una vez por impacto: en el servidor hay dos pasadas por tick)
+    if not pa.gpLanded then pa.gpZoneDone = false end
+    if pa.gpLanded and not pa.gpZoneDone then
+        pa.gpZoneDone = true
         local z = Interactions.poundZone(pa)
-        local rx, ry = pa.GP_RADIUS_X or 170, pa.GP_RADIUS_Y or 110
         for i, e in ipairs(entities) do
             if e.alive and e.state ~= 'dead' and e.state ~= 'carried' and not (e.isGhost and e:isGhost()) then
                 -- (lo que reacciona a un ground pound a su manera: `onPound(pa, zona)` → true = ya está — la Caja se
@@ -296,9 +324,8 @@ function Interactions.run(pa, entities, cb, rewind)
                     e:stomp()
                     if cb.stomp then cb.stomp(e, e.props.points, i) end
                 else
-                    local dx, dy = e.x - pa.x, e.y - pa.y
-                    if math.abs(dx) <= rx and math.abs(dy) <= ry and e:canBeKnocked() then
-                        e:knockback(dx >= 0 and 1 or -1)
+                    if Interactions.poundReaches(pa, e) and e:canBeKnocked() then
+                        e:knockback(e.x >= pa.x and 1 or -1)
                     end
                 end
             end

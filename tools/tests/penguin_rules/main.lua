@@ -312,11 +312,11 @@ function cases.culetazo()
     local a, sa = gpOn('walk')
     local b, sb = gpOn('dazed')
     local c, sc = gpOn('sled')
-    -- un ground pound a 2 casillas lo tumba de barriga
+    -- un ground pound a 1,2 casillas lo tumba de barriga (el alcance: 1,5)
     local level, es = room(24, 11, nil, nil, { penguin(10, 'right', { speed = 0 }) })
     local p = es[1]
     stepAll(level, es, {}, 0.3)
-    local pa = PlayerAdventure:new(p.x + 2 * T, FLOOR_Y - 4 * T)
+    local pa = PlayerAdventure:new(p.x + 1.2 * T, FLOOR_Y - 4 * T)
     pa.vy, pa.gpPhase, pa.onGround = 400, 'fall', false
     local knocked = false
     stepAll(level, es, { pa }, 0.8, function() if p.state == 'dazed' then knocked = true; return true end end)

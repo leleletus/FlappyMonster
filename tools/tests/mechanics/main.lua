@@ -84,6 +84,10 @@
 --   balanza_tope   un platillo se para en el suelo y en una caja (no los atraviesa); agachado encima NO se baja por él
 --   caja_choques   caja que cae en la cabeza del jugador, el aire que la empuja contra él y 60 carreras / saltos
 --                  contra ella: nunca se mete en él ni lo pasa al otro lado
+--   jefe_puntos    un golpe a un jefe da puntos una vez aunque el servidor lo compruebe dos veces (compensación del retardo)
+--   gp_radio       el impacto del ground pound: solo a lo que está en el suelo, a 1,5 casillas como mucho
+--   dejar_encima   agachado + ARRIBA delante de una caja: queda encima de ella (también de una pila); sin nada, al suelo
+--   jump_buffer    saltar 0,075 s antes de aterrizar salta al tocar el suelo; 0,2 s antes, no
 --   cargar_gp      ground pound llevando la caja pequeña o la bomba: la sigue llevando, ni se rompe ni se enciende
 --   balanza_impacto  una caja grande que cae desde alto en un platillo dispara la pequeña del otro; desde poco, solo
 --                  inclina; la fuerza crece con el peso y la velocidad y baja con el peso de lo que se lanza
@@ -2249,6 +2253,145 @@ function cases.cargar_gp()
     check('cargar_gp', ok, table.concat(parts, ' · '))
 end
 
+-- UN GOLPE, UNOS PUNTOS (online, el usuario 2026-11-02: salía dos veces el mensaje): el servidor pasa dos veces por tick
+-- y comprueba contra el jefe que veía el jugador (aún sin invulnerabilidad). El 2º "pisotón" no quita vida: sin puntos.
+function cases.jefe_puntos()
+    local level, es = room(30, 12, {}, { { type = 'megagummy', col = 15, row = 11, props = { points = 25 } } })
+    local b = es[1]
+    level.liveEntities, b.levelRef = es, level
+    b.hp, b.hpMax, b.inv, b.state, b.deadTimer = 20, 20, 0, 'dazed', 0
+    local pa = playerAt(level, 15, 11)
+    local gob = b:getOuterBounds()
+    local h = pa:getOuterBounds().h
+    pa.x, pa.y, pa.vy = b.x, gob.y - h / 2 + 8, 300
+    pa.prevY = pa.y - 20
+    local scored, saw = 0, 0
+    local function rewind(_, e, check)          -- (como el servidor: la foto antigua, sin invulnerabilidad)
+        local inv, st, ghost = e.inv, e.state, e.ghost
+        e.inv, e.state, e.ghost = 0, 'dazed', false
+        local r, x, y, z = check(pa, e)
+        e.inv, e.state, e.ghost = inv, st, ghost
+        if r == 'stomp' then saw = saw + 1 end
+        return r, x, y, z
+    end
+    local cb = { stomp = function() scored = scored + 1 end }
+    Interactions.run(pa, es, cb, rewind)
+    local hp1 = b.hp
+    Interactions.run(pa, es, cb, rewind)
+    check('jefe_puntos', saw == 2 and scored == 1 and hp1 == 19 and b.hp == 19,
+        ('la compensación vio %d pisotones · puntos %d veces · vida 20 → %d → %d'):format(saw, scored, hp1, b.hp))
+end
+
+-- EL IMPACTO DEL GROUND POUND (el usuario, 2026-11-02): solo empuja lo que está EN EL SUELO y a 1,5 casillas como mucho
+function cases.gp_radio()
+    local function knocked(dist, air)
+        local level, es = room(30, 12, {}, { { type = 'gummy', col = 15, row = 11 } })
+        local g = es[1]
+        settle(level, es)
+        g.moving = false
+        local pa = playerAt(level, 15, 11)
+        pa.x, pa.y = g.x - dist, g.y - 3 * T
+        pa.gpPhase, pa.gpT = 'fall', 0
+        if air then g.onGround = false end
+        level.players = { pa }
+        pa.gpLanded, pa.onGround = true, true
+        pa.y = g.y + (g.outerH - pa:getOuterBounds().h) / 2
+        Interactions.run(pa, es, {})
+        return g.state == 'stunned'
+    end
+    local near, edge, far, air = knocked(1.2 * T), knocked(1.5 * T), knocked(1.6 * T), knocked(1.2 * T, true)
+    -- otro jugador: la misma regla
+    local level = room(30, 12, {}, {})
+    local a, b = playerAt(level, 10, 11), playerAt(level, 11, 11)
+    a.onGround, b.onGround = true, true
+    b.x = a.x + 1.5 * T
+    local pNear = Interactions.poundReaches(a, b)
+    b.x = a.x + 1.6 * T
+    local pFar = Interactions.poundReaches(a, b)
+    b.x, b.onGround = a.x + T, false
+    local pAir = Interactions.poundReaches(a, b)
+    check('gp_radio', near and edge and not far and not air and pNear and not pFar and not pAir,
+        ('enemigo a 1,2 %s · a 1,5 %s · a 1,6 %s · en el aire %s · jugador a 1,5 %s · a 1,6 %s · en el aire %s'):format(
+        tostring(near), tostring(edge), tostring(far), tostring(air), tostring(pNear), tostring(pFar), tostring(pAir)))
+end
+
+-- DEJAR CON CUIDADO encima de otra caja (el usuario, 2026-11-02: siempre iba al suelo). Agachado + ARRIBA.
+local function careful(level, pa, es, secs)
+    level.solidBodies = Entities.solidBodies(es)
+    clear(); stub.state.crouch = true
+    sim(level, { pa }, es, 0.05)
+    stub.state.grab_pressed = true
+    sim(level, { pa }, es, 1 / 60)
+    clear()
+    sim(level, { pa }, es, secs or 0.8)
+end
+function cases.dejar_encima()
+    local parts, ok = {}, true
+    local function try(name, under, kind, wantUp)
+        local defs = { { type = kind, col = 5, row = 11, props = { fuseTime = 30 } } }
+        for _, u in ipairs(under) do defs[#defs + 1] = { type = u[1], col = 10, row = u[2] } end
+        local level, es = room(30, 12, {}, defs)
+        settle(level, es)
+        local e, pa = es[1], playerAt(level, 5, 11)
+        pa.x = e.x - 0.9 * T
+        clear(); stub.state.grab_pressed = true; sim(level, { pa }, es, 0.1); clear()
+        local good = e.carriedBy == pa
+        local top = math.huge
+        for i = 2, #es do top = math.min(top, es[i]:getOuterBounds().y) end
+        pa.x, pa.facing = es[2].x - (es[2].outerW / 2 + pa:getOuterBounds().w / 2 + 2), 1
+        sim(level, { pa }, es, 0.05)
+        careful(level, pa, es)
+        local b = e:getOuterBounds()
+        local rests = math.abs(b.y + b.h - top) <= 3
+        good = good and not e.carriedBy and rests == wantUp and e.alive
+        ok = ok and good
+        parts[#parts + 1] = ('%s: %s'):format(name, good and 'bien' or ('MAL (pies %.0f, cima %.0f)'):format(b.y + b.h, top))
+    end
+    try('caja pequeña sobre caja', { { 'box', 11 } }, 'smallbox', true)
+    try('caja pequeña sobre caja pequeña', { { 'smallbox', 11 } }, 'smallbox', true)
+    try('bomba sobre caja', { { 'box', 11 } }, 'bombobject', true)
+    try('sobre dos cajas apiladas', { { 'box', 11 }, { 'box', 10 } }, 'smallbox', true)
+    -- sin nada delante, a los pies; una pared alta delante, detrás
+    local level, es = room(30, 12, {}, { { type = 'smallbox', col = 5, row = 11 } })
+    settle(level, es)
+    local e, pa = es[1], playerAt(level, 5, 11)
+    pa.x = e.x - 0.9 * T
+    clear(); stub.state.grab_pressed = true; sim(level, { pa }, es, 0.1); clear()
+    pa.facing = 1
+    local feet = 11 * T                                  -- (el suelo)
+    careful(level, pa, es)
+    local b = e:getOuterBounds()
+    local floor = math.abs(b.y + b.h - feet) <= 3 and e.x > pa.x
+    ok = ok and floor
+    parts[#parts + 1] = ('sin nada delante, al suelo: %s (pies %.0f / %.0f, x %.0f / jugador %.0f, %s)'):format(tostring(floor), b.y + b.h, feet, e.x, pa.x, tostring(e.state))
+    check('dejar_encima', ok, table.concat(parts, ' · '))
+end
+
+-- JUMP BUFFER: pulsar saltar justo antes de aterrizar (sin saltos en el aire) salta al tocar el suelo; mucho antes, no
+function cases.jump_buffer()
+    local function run(height)
+        local level, es = room(30, 30, {}, {})
+        local pa = playerAt(level, 10, 29)
+        for _ = 1, 30 do sim(level, { pa }, es, 1 / 60) end
+        local ground = pa.y
+        pa.jumpsLeft, pa.onGround, pa.vy = 0, false, 600
+        pa.y = ground - height
+        clear(); stub.state.jump_pressed = true
+        sim(level, { pa }, es, 1 / 60); clear()
+        local jumped, landed = false, false
+        for _ = 1, 40 do
+            sim(level, { pa }, es, 1 / 60)
+            if pa.onGround then landed = true end
+            if landed and pa.vy < -100 then jumped = true end
+        end
+        return jumped, landed
+    end
+    local nearJ = run(45)        -- (0,075 s antes de tocar)
+    local farJ, farL = run(120)  -- (0,2 s antes)
+    check('jump_buffer', nearJ and farL and not farJ, ('0,075 s antes salta %s · 0,2 s antes salta %s (aterrizó %s)'):format(
+        tostring(nearJ), tostring(farJ), tostring(farL)))
+end
+
 -- El AIRE empuja una caja contra el jugador (el usuario: jugador a la izquierda, Soplón a la derecha soplando a la
 -- izquierda → el jugador aparecía al otro lado de la caja). Tiene que quedarse a su lado e ir empujado por ella
 function cases.aire_caja()
@@ -3682,7 +3825,7 @@ function love.load()
                          'bomba_activa', 'bomba_pisada', 'bomba_radios', 'bomba_mundo', 'bomba_objeto',
                          'hielo_solido', 'hielo_desgaste', 'hielo_gp', 'hielo_bomba', 'encerrado', 'trepador_canto', 'hielo_resbala', 'filo_propio', 'saltarin', 'saltarin_cueva', 'persecucion', 'persecucion_cuerpo', 'inofensivos', 'tapa_base', 'manzana',
                          'cryo_jugador', 'cryo_enemigo', 'cryo_activador', 'cryo_corte', 'lava', 'pocos_fps', 'ahogo_ganado', 'techo_pinchos',
-                         'caja_empuje', 'caja_rota', 'caja_borde', 'cargar', 'bomba_reaparece', 'islas', 'islas_arte', 'viento', 'cuerpo_mueve', 'cajas_golpes', 'balanza', 'soplon', 'semilla', 'ventisca', 'geiser', 'balanza_tope', 'caja_choques', 'cargar_gp', 'aire_caja', 'geiser_peso', 'bomba_cajas', 'cajas_fila', 'balanza_impacto', 'balanza_salto', 'balanza_techo', 'escarabajo', 'escarabajo_lanzado', 'escarabajo_ruta', 'escarabajo_manos', 'escarabajo_arrolla',
+                         'caja_empuje', 'caja_rota', 'caja_borde', 'cargar', 'bomba_reaparece', 'islas', 'islas_arte', 'viento', 'cuerpo_mueve', 'cajas_golpes', 'balanza', 'soplon', 'semilla', 'ventisca', 'geiser', 'balanza_tope', 'caja_choques', 'cargar_gp', 'gp_radio', 'dejar_encima', 'jump_buffer', 'jefe_puntos', 'aire_caja', 'geiser_peso', 'bomba_cajas', 'cajas_fila', 'balanza_impacto', 'balanza_salto', 'balanza_techo', 'escarabajo', 'escarabajo_lanzado', 'escarabajo_ruta', 'escarabajo_manos', 'escarabajo_arrolla',
                          'topo', 'topo_culetazo', 'topo_suelo', 'topo_borde', 'pirana', 'pirana_pisar', 'pirana_rebota', 'pirana_nada', 'planta', 'planta_pisar', 'planta_traga', 'planta_colgada', 'planta_come', 'planta_bomba' }) do
         if not os.getenv('ONLY') or (',' .. os.getenv('ONLY') .. ','):find(',' .. n .. ',', 1, true) then cases[n]() end
     end

@@ -1,10 +1,11 @@
 """Genera niveles en assets/levels/ desde código.
 
     python3 tools/levelgen/build.py --only nombre [nombre...]   # SOLO esos niveles
-    python3 tools/levelgen/build.py [--show [nombre]]           # TODOS (ver aviso)
+    python3 tools/levelgen/build.py --all [--show [nombre]]     # TODOS (ver aviso)
 
-AVISO: sin --only se reescriben TODOS los niveles generados, y se pierde lo que
-se haya retocado a mano en el editor (el usuario los retoca). Úsalo con --only.
+AVISO: con --all se reescriben TODOS los niveles generados, y se pierde lo que
+se haya retocado a mano en el editor (el usuario los retoca). Sin --only ni --all
+se niega a hacer nada.
 """
 import os, re, sys
 sys.path.insert(0, os.path.dirname(__file__))
@@ -23,6 +24,9 @@ if '--only' in sys.argv:
     for a in sys.argv[sys.argv.index('--only') + 1:]:
         if a.startswith('--'): break
         only.add(a)
+if not only and '--all' not in sys.argv:
+    sys.exit('build.py: nombra los niveles con --only <nivel...>. Sin nombres reescribiría TODOS y borraría los '
+             'retoques a mano; si de verdad es lo que quieres: --all.')
 out = os.path.join(os.path.dirname(__file__), '..', '..', 'assets', 'levels')
 if '--out' in sys.argv:                 # (otra carpeta: p. ej. la variante resuelta, OPEN=1, para level_solve)
     out = sys.argv[sys.argv.index('--out') + 1]

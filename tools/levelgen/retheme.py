@@ -21,7 +21,7 @@ bajo el agua, según el tema; nunca en pinchos, entidades, la salida, la meta,
 vents, bloques rompibles/especiales ni dentro de bloques de jefe.
 
 Uso (desde la raíz del repo):
-  python3 tools/levelgen/retheme.py                 todos los niveles de THEMES
+  python3 tools/levelgen/retheme.py --all           todos los niveles de THEMES (sin nombres ni --all se niega)
   python3 tools/levelgen/retheme.py valle_soleado   solo esos
   --force   aunque el nivel ya esté re-vestido (vuelve a poner decoraciones)
   --terrain vuelve a decidir también los bloques de tierra/césped/nieve/arena
@@ -628,7 +628,7 @@ DEEP_ONLY = '--deep' in sys.argv
 THEME_CHECK = '--theme' in sys.argv     # con --decor: también lo que no es del bioma del nivel
 if DEEP_ONLY: sys.argv += ['--tiles', '--terrain']
 
-FLAGS = {'--force', '--terrain', '--dry', '--tiles', '--sky', '--deep', '--decor', '--fix', '--theme', '--enemies',
+FLAGS = {'--all', '--force', '--terrain', '--dry', '--tiles', '--sky', '--deep', '--decor', '--fix', '--theme', '--enemies',
          '--bg', '--bg-all', '--out', '--holes'}
 
 if __name__ == '__main__':
@@ -671,6 +671,9 @@ if __name__ == '__main__':
         for n in (args or sorted(THEMES)):
             retheme_bg.run(n, '--force' in argv, '--dry' in argv, out)
         sys.exit(0)
+    # (sin nombres re-vestiría TODOS y pisaría lo retocado a mano: hay que pedirlo; mirar sin escribir sí se puede)
+    if not args and '--all' not in argv and '--dry' not in argv and not ('--decor' in argv and '--fix' not in argv):
+        sys.exit('retheme.py: nombra los niveles. Sin nombres re-viste TODOS; si de verdad es lo que quieres: --all.')
     if '--sky' in sys.argv:
         print('Fondo y hora:')
         for n in (args or sorted(SKY)): set_sky(n)

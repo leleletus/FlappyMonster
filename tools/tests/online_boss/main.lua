@@ -3,6 +3,9 @@
 -- cuando todos están dentro) y se quedan quietos. Desde el cliente se registra
 -- lo que llega del jefe por red (estados, vida) y cualquier error, y se hacen
 -- capturas (<save>/boss_*.png) en los estados que interesan.
+-- HIT=1: el cliente pega de verdad al jefe (y a los trozos del Rey Gummy) y se comprueba, con el servidor real: un
+-- mensaje de puntos por golpe, que quien pega OYE su golpe y que el jefe se puede vencer (cada trozo pierde vida).
+-- MASHUP=1: el director del Mega Mashup llega al cliente estando lejos: fase, música, escena; el cliente va a la arena.
 -- Si el nivel tiene inundaciones conectadas a la pelea (control 'boss', p. ej.
 -- fortaleza_malvada) comprueba lo que ve el cliente: en el mínimo antes de la
 -- pelea, activas durante ella (llega por red) y sin saltos del agua.
@@ -49,6 +52,27 @@ function love.load()
     gStateMachine = StateMachine:new({ online_adventure = function() return OnlineAdventureState:new() end,
                                        online_results = function() return Done.new() end,
                                        online_room = function() return Done.new() end })
+    -- HIT=1: cuenta lo que le llega de verdad a este cliente: mensajes de puntos y sonidos de golpe suyos que se reproducen
+    if os.getenv('HIT') then
+        local proc = OnlineAdventureState._processEvent
+        OnlineAdventureState._processEvent = function(self, ev)
+            self.hitLog = self.hitLog or { score = 0, sound = 0, doubles = 0, mine = 0 }
+            if ev.type == 'score' and ev.playerId == NC.myId then
+                self.hitLog.score = self.hitLog.score + 1
+                -- (dos mensajes del mismo golpe: casi en el mismo tick y en el mismo sitio)
+                local l = self.hitLog
+                if l.lastT and math.abs(ev.t - l.lastT) <= 3 then l.doubles = l.doubles + 1 end
+                l.lastT = ev.t
+            end
+            -- (un golpe a un jefe con NUESTRO id: nuestro cliente lo descartaría y no lo oiríamos)
+            if ev.type == 'sound' and ev.playerId == NC.myId and (ev.sound == 'kingHurt' or ev.sound == 'bossHurt' or ev.sound == 'megaHurt') then
+                self.hitLog.mine = self.hitLog.mine + 1
+            end
+            if ev.type == 'sound' and (ev.sound == 'kingHurt' or ev.sound == 'bossHurt' or ev.sound == 'megaHurt')
+               and ev.playerId ~= NC.myId then self.hitLog.sound = self.hitLog.sound + 1 end
+            return proc(self, ev)
+        end
+    end
     NC:on('login_success', function() NC:send('create_room', { name = 'Jefe', maxPlayers = 4 }) end)
     NC:on('room_error', function(d) print('room_error', d.key, d.msg) end)
     local phase = 0
@@ -86,7 +110,8 @@ function love.update(dt)
         bot.acc = bot.acc + dt
         while bot.acc >= P.TICK_DT do bot.acc = bot.acc - P.TICK_DT; bot.seq = bot.seq + 1
             local right, left, jump = STOP_X and bot.x and bot.x < STOP_X + 40, false, false
-            if boss and bot.x and bot.inArena and boss.state ~= 'dormant' then
+            -- (HIT=1: el bot no pega: no manda el tick que ve, sin compensación del retardo no es como un cliente de verdad)
+            if boss and bot.x and bot.inArena and boss.state ~= 'dormant' and not os.getenv('HIT') then
                 local d = bot.x - boss.x
                 if math.abs(d) < 4 * TILE_PX then
                     right, left = d > 0, d <= 0
@@ -127,6 +152,27 @@ function love.update(dt)
             s.jump = s.jump_pressed
         end
     end
+    -- HIT=1: va a por lo vulnerable y le cae encima
+    if os.getenv('HIT') and pa and boss and boss.zone and boss.zone.state == 'fight' and not pa.dying then
+        local tx
+        if boss.state == 'parts' then
+            local best
+            for _, p in ipairs(boss.parts or {}) do
+                if (p.st == 1 or p.st == 2) and (not best or math.abs(p.x - pa.x) < math.abs(best.x - pa.x)) then best = p end
+            end
+            tx = best and best.x
+        elseif boss.isVulnerable and boss:isVulnerable() and (boss.inv or 0) <= 0 then tx = boss.x end
+        s.right, s.left, s.jump, s.jump_pressed = false, false, false, false
+        if tx then
+            local d = tx - pa.x
+            s.right, s.left = d > 6, d < -6
+            if pa.onGround and math.abs(d) < 2.2 * TILE_PX then s.jump, s.jump_pressed = true, true end
+            if not pa.onGround and pa.vy < 200 and pa.jumpsLeft > 0 and pa.vy > -100 then s.jump, s.jump_pressed = true, true end
+        else
+            s.left = pa.x > boss.zone.x0 + 2 * TILE_PX       -- (a un rincón, a esperar: que no le aplaste)
+        end
+        pa.lives = 9
+    end
     Input = setmetatable({ pressed = stub.pressed, down = stub.down }, { __index = package.loaded['input'] })
     if gStateMachine:_top() then gStateMachine:update(dt) end
     Input = package.loaded['input']
@@ -143,6 +189,39 @@ function love.update(dt)
             if c and not log.duelShot and c.clock > c.bar * boss.BAR + 2 then
                 log.duelShot = true
                 love.graphics.captureScreenshot('duelo_online.png')
+            end
+        end
+    end
+    -- HIT=1: lo que llega y lo que se ve del jefe
+    if os.getenv('HIT') and boss then
+        log.hit = log.hit or { hp = boss.hp, drops = 0, partSeen = {}, parts = 0 }
+        local h = log.hit
+        if boss.hp and boss.hp < h.hp then h.drops = h.drops + 1 end
+        h.hp = boss.hp or h.hp
+        for i, p in ipairs(boss.parts or {}) do
+            h.parts = math.max(h.parts, i)
+            if p.hp and p.hp < 2 or p.st == 3 then h.partSeen[i] = true end
+        end
+        if boss.state and boss.state:match('^dying') then h.won = true end
+    end
+    -- MASHUP=1: lo que el cliente sabe del director
+    if os.getenv('MASHUP') and st and st.enemyRenderers then
+        for _, er in pairs(st.enemyRenderers) do
+            if er.def and er.def.name == 'crabmashup' then
+                log.cm = log.cm or { phases = {} }
+                if er.phase and er.phase ~= log.cm.last then
+                    log.cm.last = er.phase; log.cm.phases[#log.cm.phases + 1] = ('%.1f %s'):format(t, er.phase)
+                end
+                log.cm.piece = er.piece or log.cm.piece
+                log.cm.scene = st.level.sceneIdx or log.cm.scene
+                if er.phase == 'crab' and er.ci == 1 and st.localPa then log.cm.px = st.localPa.x end
+                -- (en qué arena está el cliente, con la escena que toca, mientras le toca pelear allí)
+                log.cmArenas = log.cmArenas or {}
+                local zi = (er.phase == 'final') and 5 or (er.phase == 'crab' and er.ci) or nil
+                local z = zi and er.zones and er.zones[zi]
+                if z and st.localPa and st.localPa.x >= z.x0 and st.localPa.x <= z.x1
+                   and st.level.sceneIdx == er:sceneOf(z) then log.cmArenas[zi] = true end
+                log.cm.er = er
             end
         end
     end
@@ -239,6 +318,29 @@ function love.update(dt)
             local ok = r.sawActive and r.preBad == 0 and r.maxStep <= lim and r.maxLv > f.lo + 0.5
             print(('%s inundación #%d (pelea de jefe): activa en la pelea=%s, fuera del mínimo antes=%d, máximo visto %.2f (mín %.2f máx %.2f), salto máximo %.3f casillas/fotograma (límite %.3f)'):format(
                 ok and 'OK   ' or 'FALLA', f.id, tostring(r.sawActive), r.preBad, r.maxLv, f.lo, f.hi, r.maxStep, lim))
+            if not ok then log.fail = true end
+        end
+        if os.getenv('HIT') then
+            local h, ev = log.hit or { parts = 0, partSeen = {}, drops = 0 }, st and st.hitLog or { score = 0, sound = 0, doubles = 0, mine = 0 }
+            local seen = 0
+            for _ in pairs(h.partSeen) do seen = seen + 1 end
+            local want = tonumber(os.getenv('WANTPARTS')) or 0
+            local ok = h.drops > 0 and ev.doubles == 0 and ev.mine == 0 and ev.score > 0 and (want == 0 or (seen >= want and h.won))
+            print(('%s golpes: bajó la vida %d veces · mensajes de puntos %d (dobles %d) · golpes que quien pega no oiría %d · trozos %d, heridos %d · vencido %s'):format(
+                ok and 'OK   ' or 'FALLA', h.drops, ev.score, ev.doubles, ev.mine, h.parts, seen, tostring(h.won)))
+            if not ok then log.fail = true end
+        end
+        if os.getenv('MASHUP') then
+            local c = log.cm or { phases = {} }
+            local reached = {}
+            for _, p in ipairs(c.phases) do reached[p:match('%S+$')] = true end
+            local inArena = c.px and c.er and c.er.zones and c.er.zones[1] and c.px >= c.er.zones[1].x0 and c.px <= c.er.zones[1].x1
+            local ok = reached.intro and reached.crab and c.piece ~= nil and inArena
+            -- (MASHUP=full, con FM_TEST_BOSSDMG en el servidor: todo el evento, y el cliente sigue a cada arena)
+            if os.getenv('MASHUP') == 'full' then ok = ok and reached.final and reached.outro and log.cmArenas and log.cmArenas[4] and log.cmArenas[5] end
+            print(('%s Mega Mashup en el cliente: fases %s · pieza %s · escena %s · en la arena del Tantrum %s'):format(
+                ok and 'OK   ' or 'FALLA', table.concat(c.phases, ', '), tostring(c.piece), tostring(c.scene), tostring(inArena)))
+            print('    arenas alcanzadas con su escena: ' .. table.concat((function() local o = {}; for i = 1, 5 do o[i] = tostring((log.cmArenas or {})[i] == true) end; return o end)(), ', '))
             if not ok then log.fail = true end
         end
         if log.roundOver then print(('Ronda terminada a los %.1f s'):format(log.roundOver)) end

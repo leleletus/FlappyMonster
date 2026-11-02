@@ -54,3 +54,4 @@ copies you; on top of that it has arena attacks (floating mirror portal, platfor
   touching the glass → `glassEscape` (1 HP + leap to the nearest reachable platform, GP
   onto it); back to copying when the event ends. Placed in ruta_del_espejo. Harness:
   `boss_sim LEVEL=ruta_del_espejo` (cristal / arriba / escapa / vuelve).
+- 2026-11-02, the user: the new ground pound balance applies to the Mirror (`Interactions.poundReaches`). Only the credits fight keeps the old push (`filmGp`, set by `CreditsFight`): that scripted fight lands on its music thanks to it (with the new rule the last hit moved from 15.6 s to 37 s).

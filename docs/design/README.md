@@ -12,6 +12,7 @@ and describe the real thing in the system's page.
 
 | What | Page |
 |---|---|
+| **The working plan of 2026-11-02:** online bugs, carrying, ground pound, editor, options, tests | [backlog-2026-11](backlog-2026-11.md) |
 | 4 future secret bosses: Mother Mole, Carnivorous Queen, Supreme Gust, Triple Strike Scorpion (at least 3 needed) | [bosses/future-secret-bosses](../bosses/future-secret-bosses.md) |
 | The Carnivorous Queen's looks (A chosen, built) | [carnivorous-queen](carnivorous-queen.md) |
 | Groove Crab's rhythm duel, Friday Night Funkin' style: charts, balance, risks (built) | [groove-rhythm-duel](groove-rhythm-duel.md) |

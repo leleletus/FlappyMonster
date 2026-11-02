@@ -26,7 +26,8 @@ concrete type.
   the UP button of the device in use (keyboard key, D-pad, touch D-pad) bobs over it. UP picks it up (also while
   crouching) and carries it over the head; UP again THROWS it forward (farther while running); CROUCH + UP puts it
   down CAREFULLY beside the player (in front; behind if there is a wall; never touching the player: a bomb lights when
-  touched) — "so nothing blows up". A ground pound while carrying: the PLAYER takes the impact and keeps carrying it (a box does not break, a bomb
+  touched) — "so nothing blows up". Whatever is in front and within reach (`STACK_UP`, 2 tiles above the feet) supports it:
+  a box up to `NEAR_BOX` px away (it lands fully on top, on a stack too), a Scale pan, a step of terrain. A ground pound while carrying: the PLAYER takes the impact and keeps carrying it (a box does not break, a bomb
   does not light: the user, 0.5.69); only a type with `onCarriedPound` uses it (the Seed is planted). Dying drops it.
 - **A type switches it on** with `carryable = true` (class) and optional hooks `canBeCarried()`, `onPickUp(pa)`,
   `onThrow(pa, vx, vy)`, `onPutDown(pa)`, `onCarriedPound(pa)`, `whileCarried(dt, level)` (0.5.78: the Rhino Beetle keeps
@@ -192,6 +193,8 @@ blown, stopping at walls and other icebergs, a box riding it, online parity).
 
 ## History and decisions
 
+- 2026-11-02 (the user): "no lo puedo poner sobre otra caja, lo cual limita bastante el gameplay": a careful put-down always
+  went level with the player's feet → it now rests on what is in front (`Carry.spotAt`). Tested: `mechanics dejar_encima`.
 - 2026-10-30 (the user): "La mecánica de la balanza que usa el boss para hacerle daño al jugador y que usa el jugador
   también para hacerle daño a él no se debe quedar solo en la pelea del boss: en cualquier otra circunstancia en la que
   se use una balanza como catapulta, si se lanza muy fuerte a cualquier entidad contra el techo, ésta debería quedar

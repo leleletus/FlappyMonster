@@ -27,6 +27,7 @@
 local Entity = require 'src/world/entities/base/Entity'
 local Boss   = require 'src/world/entities/base/Boss'
 local Difficulty = require 'src/core/Difficulty'
+local Interactions = require 'src/world/entities/base/Interactions'
 
 local Chase = Entity.extend(Entity, {
     debugColor = { 0.9, 0.2, 0.9 },
@@ -45,7 +46,6 @@ local RECOVER_T = 0.3
 local AIM_DASH, AIM_SHOVE = 0.55, 0.4        -- s de aviso
 local RUSH_V  = 1350
 local SHOVE_FROM, SHOVE_LEN = 4 * T, 7.5 * T
-local WAVE_R  = 1.7 * T              -- la onda del picado
 local GRACE   = 0.7                  -- s sin volver a golpear tras un golpe
 -- {vida, vx, vy, s sin control, s aturdido} (Boss.strike)
 local HIT_DIVE  = { 1, 620, -420, 0.3, 0.35 }
@@ -365,9 +365,9 @@ function Chase:updateCustom(dt, level)
         self.y = math.min(y1, self.y + DIVE_V * dt)
         self:hitPlayers(level, HIT_DIVE, -1)
         if self.y >= y1 then
-            -- la onda: empuja a los que estén cerca en el suelo (sin daño)
+            -- la onda: empuja a los que estén cerca en el suelo (sin daño; la misma regla que el ground pound del jugador)
             for _, p in ipairs(level.players or {}) do
-                if alive(p) and math.abs(p.x - self.x) < WAVE_R and math.abs(p.y - self.y) < T * 1.2 and self.graceT <= 0 then
+                if alive(p) and Interactions.poundReaches(self, p) and self.graceT <= 0 then
                     p:knockback((p.x >= self.x) and 1 or -1)
                 end
             end

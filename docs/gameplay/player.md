@@ -47,7 +47,11 @@ there to its animation. Used by the player, online players, Flappy mode and both
   when off-screen → caller subtracts a life and respawns).
 
 - `update(dt, level)` reads global `Input.pressed/down` ('jump','crouch',
-  'move_left','move_right'). Ground pound = press crouch in the air.
+  'move_left','move_right'). Ground pound = press crouch in the air. Its impact crushes what is right under the feet and pushes only what is ON
+  THE GROUND within 1.5 tiles of the epicentre, enemies and other players alike (`Interactions.poundReaches`; the user,
+  2026-11-02: it was 170 x 110 px, airborne ones included, "es enorme"). The Mirror's copied pound and the chaser's dive
+  wave use the same rule. Jump buffer: jump pressed in the air with no jumps left is remembered 0.1 s and fires on landing
+  (`JUMP_BUFFER`, in the own state online; needs a person to judge the feel).
 
 - Crouch: on the ground can't walk but CAN jump (crouch jump; the held direction
   sets vx = ±ADV_MOVE_SPD at takeoff, air control while airborne). Stays crouched

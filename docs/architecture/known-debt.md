@@ -55,8 +55,6 @@ from `FlappyMonster_originals`.
 - `tools/music/tentacle_nes.py` and `gloomy_nes.py` are imported as libraries by every live generator but still
   carry their own retired `main`; extracting the shared helpers into a module was avoided because it could alter
   approved tracks and cannot be verified by ear here.
-- `tools/levelgen/build.py` and `retheme.py` are dangerous by default (they act on EVERY level without arguments).
-  A guard that refuses to run without explicit level names would remove the trap.
 
 ## Product items still open
 
@@ -65,12 +63,6 @@ from `FlappyMonster_originals`.
 - Xbox pads have A / B swapped relative to the game's Nintendo layout; there is no remapping option.
 - The Switch "overlay" update mode has never been verified on a real console (`update/boot.log` tells the mode).
 - Hoppers are placed in no story level except `huida_del_espejo` and the dark caves (cripta_del_silencio, gruta_lugubre, templo_del_eco).
-- **Rework the boss-fight help on Extreme / Xtra Extreme** (the user, 2026-10-27, to do later): the food and extra
-  lives the `bossdrops` director drops from the sky (`src/world/entities/types/directors/bossdrops.lua`,
-  docs/gameplay/difficulty.md) often make those fights EASIER than on lower difficulties. Idea: a "smarter" director
-  that drops what the situation needs (e.g. food only when the player is hurt, a life only when they are about to lose
-  their last one, nothing while they are doing fine) instead of at random intervals — help that keeps the fight fair,
-  not easier.
 
 ## Google Play readiness (input for the next task; nothing here is done)
 

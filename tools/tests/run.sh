@@ -61,6 +61,7 @@ run_one() {
     # otra a medias (el usuario, 2026-10-30: una que se fue al fondo y otra lanzada a mano se pisaron y el arnés
     # "falló" sin culpa). La segunda ESPERA, y lo dice, a que acabe la primera.
     local lockfd
+    command -v flock >/dev/null || flock() { :; }    # (macOS no lo trae: sin esta espera)
     exec {lockfd}>"${TMPDIR:-/tmp}/fm_test_lock.$name"
     if ! flock -n "$lockfd"; then echo "   (ya hay otro $name en marcha: espero a que acabe)"; flock "$lockfd"; fi
     # Arena de prueba fuera de assets/levels → copia temporal
@@ -83,7 +84,10 @@ run_one() {
         for _ in $(seq 1 20); do port_up || break; sleep 0.25; done
         port_up && { pkill -9 -f "^love server" 2>/dev/null; sleep 0.5; }
         export FM_SERVER=localhost      # (los arneses online nunca hablan con el servidor real)
-        love server --headless > /tmp/fm_test_server.log 2>&1 &
+        # (FM_TEST_*: también para el servidor; solo este arnés)
+        local srv_env=()
+        for i in "${!envs[@]}"; do [[ ${envs[$i]} == FM_TEST_* ]] && srv_env+=("${envs[$i]}"); done
+        env ${srv_env[@]+"${srv_env[@]}"} love server --headless > /tmp/fm_test_server.log 2>&1 &
         server_pid=$!
         for _ in $(seq 1 40); do port_up && break; sleep 0.25; done
     fi
@@ -153,7 +157,9 @@ if [ "${1:-}" = all ]; then
           "online_smoke LEVEL=tools/tests/online_smoke/bola_de_nieve.json MODE=hunt SECS=14 WATCH=snowball WANT=windup,charge WANTSHOVE=1"
           "online_boss LEVEL=tools/levelgen/arenas/jefe_cangrejo.json NOSHOTS=1"
           "online_boss LEVEL=tools/tests/online_boss/fortaleza_flood.json NOSHOTS=1 SECS=40"
-          "online_boss LEVEL=tools/tests/online_boss/espejo.json NOSHOTS=1 SECS=30")
+          "online_boss LEVEL=tools/tests/online_boss/espejo.json NOSHOTS=1 SECS=30"
+          "online_boss LEVEL=tools/tests/online_boss/gummy_trozos.json NOSHOTS=1 SECS=100 HIT=1 WANTPARTS=3 FM_TEST_LIVES=99 FM_TEST_BOSSDMG=0.5"
+          "online_boss LEVEL=assets/levels/mashup_cangrejos.json NOSHOTS=1 SECS=115 MASHUP=full FM_TEST_LIVES=99 FM_TEST_BOSSDMG=0.5")
     ALONE=("gloomy_rules" "perf N=240 PROFILE=0")
     JOBS=${FM_JOBS:-$(( $( (sysctl -n hw.ncpu 2>/dev/null || nproc 2>/dev/null || echo 2) ) / 2 ))}
     [ "$JOBS" -ge 1 ] 2>/dev/null || JOBS=1

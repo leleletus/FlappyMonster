@@ -80,10 +80,9 @@ when asked. The user writes in Spanish. This does not apply to code, comments, c
   version and commit it prints. The script holds no secret; never type, print, copy or commit the SSH passphrase or
   read `~/.ssh/id_rsa_pass`. Restarting the server drops online players.
 - Commit messages in Spanish, ending with the `Co-Authored-By` line given by the session.
-- **Level tools are dangerous by default**: `tools/levelgen/build.py` ONLY with `--only <level>` (without it, and
-  with `--show`, it rewrites every level and destroys the user's hand edits); `tools/levelgen/retheme.py` ONLY with
-  level names (without names it runs over every level; an unknown flag now stops it; `--bg-all` puts the generated
-  background plane in every story level — only when asked).
+- **Level tools**: `tools/levelgen/build.py` ONLY with `--only <level>` and `tools/levelgen/retheme.py` ONLY with level
+  names: both refuse to run without them. Their `--all` rewrites every level and destroys the user's hand edits, and
+  `retheme.py --bg-all` puts the generated background plane in every story level: only when asked.
 - **Music is verified by numbers only**: always tell the user it was not listened to; run `tools/music/levels.py`
   after any track change. Composition rules: `docs/audio/music-guide.md`.
 - Untracked user files in the repo root are theirs: never commit them.

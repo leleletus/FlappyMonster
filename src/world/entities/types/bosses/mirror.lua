@@ -855,10 +855,11 @@ function Mirror:hitPlayers(level)
         local z = Interactions.poundZone(b)
         for _, pa in ipairs(level.players or {}) do
             if not pa.dying and pa.alive ~= false then
-                local dx, dy = pa.x - self.x, pa.y - self.y
+                local dx = pa.x - b.x
                 if Boss.overlap(z, pa:getInnerBounds()) then
                     Boss.withPlayer(pa, function() pa:hurt(GP_DAMAGE) end)
-                elseif math.abs(dx) <= PlayerAdventure.GP_RADIUS_X and math.abs(dy) <= PlayerAdventure.GP_RADIUS_Y then
+                -- (la misma regla que el del jugador: el usuario, 2026-11-02; `filmGp`: la pelea de los créditos, coreografiada con el de antes)
+                elseif (self.filmGp and math.abs(dx) <= 170 and math.abs(pa.y - self.y) <= 110) or (not self.filmGp and Interactions.poundReaches(b, pa)) then
                     pa:knockback(dx >= 0 and 1 or -1)
                 end
             end

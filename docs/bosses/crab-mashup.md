@@ -107,6 +107,10 @@ results / online ranking, and an EXIT (door / flag) goes back to Free Play.
 
 ## Online (co-op)
 
+- 2026-11-02 (the user: "no funciona en online"): the director never reached clients once they left its area → `netAlways`.
+  The whole event now runs in `online_boss MASHUP=full` (all 5 arenas with their scenes, final, exit), driven by a
+  test switch that ends each turn; a real online fight has not been played through by a person since.
+
 - Online boss levels are played in the **Race** mode, which is co-op: everyone in the same fight against the same
   crabs (the server's). Anyone's hits count; the per-turn number scales with the players (above).
 - The server decides cut points, seams and scene changes; everyone changes scene together.

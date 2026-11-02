@@ -28,6 +28,7 @@ local DANGER = { warp_out = true, portal = true, perch = true, leap = true, dive
 local HITTABLE = { fight = true, recover = true, laugh = true }
 
 function CreditsFight.new(pa, boss, opts)
+    boss.filmGp = true                  -- (su ground pound empuja como cuando se coreografió la pelea: mirror.lua)
     opts = opts or {}
     return setmetatable({ pa = pa, boss = boss, stub = P.newInputStub(), acc = 0, t = 0, mode = 'dance',
                           windows = opts.windows or { 3, 8.5, 15.8 }, win = 1, hp0 = boss.hp,

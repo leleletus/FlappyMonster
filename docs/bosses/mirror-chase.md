@@ -86,3 +86,4 @@ conflicts with the sections above, the sections above describe the current behav
   Every hit = 1 HP and a push, almost always BACKWARD, toward the auto-scroll edge, which is what kills (`GRACE` 0.7 s
   between hits). Laughs when a player dies. netPack {markX, markY, dir, kind}. Harness `mechanics persecucion` (all
   states and the three attacks seen, hits push backward, never leaves the screen, leaves at the end).
+- 2026-11-02, the user: the new ground pound balance also applies here: the dive wave uses `Interactions.poundReaches` (it was 1.7 tiles, airborne ones included).

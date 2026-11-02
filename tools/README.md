@@ -18,10 +18,11 @@ Run everything from the repo root. Documentation: `docs/README.md`. Python tools
 
 ## Three traps
 
-1. `python3 tools/levelgen/build.py` without `--only <level>` rewrites EVERY generated level (so does `--show`).
-2. `python3 tools/levelgen/retheme.py` has no `--help` and WITHOUT level names runs over every THEMES level. Pass
-   level names. (An unknown flag now stops it without touching anything; `--bg` refuses to run without names or
-   `--bg-all`.)
+1. `python3 tools/levelgen/build.py --all` rewrites EVERY generated level. Without `--only <level>` or `--all` it refuses
+   to run (since 2026-11-02).
+2. `python3 tools/levelgen/retheme.py --all` runs over every THEMES level. Without level names or `--all` it refuses to
+   write anything (since 2026-11-02; `--dry` and `--decor` without `--fix` only look). An unknown flag stops it without
+   touching anything; `--bg` refuses to run without names or `--bg-all`.
 3. Several art generators would overwrite sprites the user has since hand-edited. Check `docs/art/generators.md`.
 
 ## art/

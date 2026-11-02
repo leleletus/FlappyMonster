@@ -55,11 +55,10 @@ local GP_WINDUP     = 0.22     -- s suspendido en el aire antes de caer
 local GP_SPEED      = 1500     -- px/s de caída (bajo el agua ×GP_WATER)
 local GP_WATER      = 0.55
 -- Empujón que reciben otros jugadores cerca del impacto (online)
+local JUMP_BUFFER   = 0.1     -- s que se recuerda un salto pulsado en el aire sin saltos (Protocol: estado propio)
 local GP_PUSH_VX    = 900
 local GP_PUSH_VY    = -420
 local GP_STUN       = 0.8      -- s aturdido (sin control)
-PlayerAdventure.GP_RADIUS_X = 170
-PlayerAdventure.GP_RADIUS_Y = 110
 
 -- Efectos visuales (partículas): los pone el juego; el servidor los reenvía
 -- a los clientes y la re-simulación de la predicción los silencia.
@@ -331,7 +330,7 @@ function PlayerAdventure:respawn()
     self.drownAudT=0; self.drownDead=false
     self.prevInWater=false
     self.splashSt='out'; self.splashCD=0
-    self.gpPhase=nil; self.gpT=0; self.gpLanded=false; self.stunT=0; self.squashT=0; self.ctrlLockT=0; self.iceT=0
+    self.gpPhase=nil; self.gpT=0; self.gpLanded=false; self.jumpBufT=0; self.stunT=0; self.squashT=0; self.ctrlLockT=0; self.iceT=0
     self.frostT=0; self.stepVis=0; self.hardLaunch=nil; self.hardBy=nil
     self.gulped=false; self.gulpMash=0; self.gulpBiteT=0
     self.lightOn=false; self.lightBat=1; self.lightCd=0
@@ -522,7 +521,15 @@ function PlayerAdventure:_update(dt, level)
         if Input.down('move_right') then moveX=1 end
         if Input.down('move_left')  then moveX=-1 end
     end
-    if pJump and not stunned then
+    -- JUMP BUFFER (~0,1 s): saltar justo antes de tocar el suelo, sin saltos en el aire que gastar, salta al aterrizar
+    local wantJump = pJump
+    if pJump and not stunned and self.jumpsLeft <= 0 and not self.onGround then
+        self.jumpBufT = JUMP_BUFFER
+    elseif (self.jumpBufT or 0) > 0 then
+        self.jumpBufT = math.max(0, self.jumpBufT - dt)
+        if self.onGround and self.jumpsLeft > 0 and not stunned then wantJump, self.jumpBufT = true, 0 end
+    end
+    if wantJump and not stunned then
         local crouchJump = self.crouching and self.onGround and (self.squashT or 0) <= 0
         if not self.crouching or crouchJump then
             self:jump()

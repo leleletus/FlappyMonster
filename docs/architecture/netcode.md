@@ -134,7 +134,18 @@ player LOOKS (bosses always): the player's position, frozen while dying (the dea
 state. 0.5.62, the user: "boss walls sometimes blink for a frame" — the distance was measured from the falling body,
 so the walls above stopped coming, were put to rest (= hidden) and came back on respawn.
 
+An entity class with `netAlways = true` always travels, like a boss (the Mega Mashup director sits far from everyone: without
+this the client stayed on the first seam, 2026-11-02).
+
 ## Sounds over the network
+
+What a boss does when hit goes out with no owner (`Interactions.hit` → `asWorld`): clients do not predict boss sounds, so a
+sound tagged with the hitter was dropped by the hitter's own client (the user, 2026-11-02).
+
+**Lag compensation rule:** `checkPlayerEnemyCollisions` restores every scalar field of the entity after the check, and runs
+twice per tick. So `interact` must not leave its result in a field of the entity (King Gummy's touched piece did: only one
+piece took damage, immortal online), and a rewound "stomp" may hit a boss that is really invulnerable: points only when its
+`hp` went down.
 
 - Sounds decided only by the server (the causing client doesn't predict them) go in
   `Protocol.SHARED_SOUNDS` (helmetBreak, pufferPrick): the server sends them with no
@@ -166,6 +177,8 @@ so the walls above stopped coming, were put to rest (= hidden) and came back on 
   UI. `online_smoke` checks the round trip (client → bot → client).
 
 ## Protocol version history
+
+v106 jump buffer in the own state, ground pound of 1.5 tiles.
 
 Kept in the comment at the top of `src/network/Protocol.lua` (one line per version). Current: **91**. Milestones:
 v12 launches · v14 crouch jump · v16 King of the Hill · v18 Mega Crabby · v21 one invulnerability system · v22 ON/OFF

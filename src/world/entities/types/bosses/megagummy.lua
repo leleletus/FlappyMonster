@@ -551,7 +551,10 @@ function MG:furyAnchors()
 end
 
 -- Sin efectos (el cliente lo usa para predecir): con trozos, el trozo que toca (apunta cuál en
--- _hitPart para el stomp/pound que viene justo después)
+-- hitIdx para el stomp/pound que viene justo después). NO es un campo de la entidad: la compensación del retardo del
+-- servidor devuelve los campos simples a lo que valían al acabar de comprobar, y siempre se golpeaba al mismo trozo
+-- (el usuario: "solo 1 de los 3 recibe daño", inmortal online)
+local hitIdx
 function MG:interact(pa)
     if self.state == 'split' or DEATH[self.state] then return nil end
     if self.state ~= 'parts' then return Boss.interact(self, pa) end
@@ -564,12 +567,12 @@ function MG:interact(pa)
                 local side = (pa.x >= p.x) and 1 or -1
                 local top = pob.y + pob.h * 0.5 < ob.y + ob.h * 0.5
                 if pa.gpPhase == 'fall' and top then
-                    self._hitPart = i
+                    hitIdx = i
                     if p.inv > 0 then return 'bounce', bvy, side end
                     return 'pound', bvy, 0
                 end
                 if (pa.vy or 0) > 0 and pob.y + pob.h < ob.y + ob.h * 0.35 + 10 then
-                    self._hitPart = i
+                    hitIdx = i
                     if p.inv > 0 then return 'bounce', bvy, side end
                     return 'stomp', bvy, 0
                 end
@@ -580,11 +583,11 @@ function MG:interact(pa)
 end
 
 function MG:stomp()
-    if self.state == 'parts' then self:hitPart(self._hitPart, 1); return end
+    if self.state == 'parts' then self:hitPart(hitIdx, 1); return end
     Boss.stomp(self)
 end
 function MG:pound(pa)
-    if self.state == 'parts' then self:hitPart(self._hitPart, 2); return end
+    if self.state == 'parts' then self:hitPart(hitIdx, 2); return end
     self:damage(2, 'pound')
 end
 
