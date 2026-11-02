@@ -227,6 +227,9 @@ end
 function OnlineAdventureState:_setupHandlers()
     NC:on("game_init", function(data) self:_onGameInit(data) end)
     NC:on("s",  function(data) self:_onSnapshot(data) end)
+    NC:on("rhythm_pose", function(data)                                  -- (la pose de otro jugador en el duelo de ritmo)
+        if type(data) == 'table' then RhythmDuel.remotePose(data.id, data.lane, data.ok) end
+    end)
     NC:on("ev", function(data) self:_onEvents(data) end)
     NC:on("room_update", function(data)
         self.currentRoom = data
@@ -434,6 +437,8 @@ function OnlineAdventureState:update(dt)
     if self.level then
         RhythmDuel.update(dt, self.level, self.localPa, function(bar, acc, failed)
             NC:send('rhythm_result', { bar = bar, acc = acc, failed = failed })
+        end, nil, function(lane, ok)                                     -- (cada acierto / fallo: los demás te ven bailar)
+            NC:send('rhythm_pose', { lane = lane, ok = ok })
         end)
     end
     -- Indicador de conexión: ping + cuánto hace del último snapshot

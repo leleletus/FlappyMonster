@@ -213,9 +213,20 @@ Protocol 107.
   his arena turn and the final, except the duel parts: the event has no duel. Not played by the user yet: the buck's
   timing, the 37 px margin under the spikes, the no-air-jump launch and the background lanes are to judge.
 
+- 0.5.150, the user ("bastante chad"), three more points: (1) the two background lanes → something else showing exactly
+  the same; picked from four proposals (fireworks, neon tubes, rig spotlights, a giant dance pad): FIREWORKS — every
+  chart note (easy chart on the left half, normal on the right) climbs as a rocket from behind the crowd in its
+  arrow's colour and column and bursts exactly on its time (`drawFireworks`, `firework-Sheet.png`); (2) the monster's
+  own duel sprites: dance idle, one pose per arrow and one miss pose per arrow (picked over a single miss pose);
+  (3) the duel laid out as their sketch: dimmed world, the two dancers at the sides at mid height; online every
+  player is shown (picked over "only you"), and the arena copies are hidden (picked over "dimmed in the arena").
+  Not played by the user yet: the poses' look, the fireworks' density, the layout on phones and the Switch.
+
 ## The rhythm duel (the user's idea, 2026-11-01)
 
 Friday Night Funkin' style. The player stands still, invulnerable; the crab keeps dancing, can't be hit and does no harm; the song's exact notes rise to 4 grey strums and must be pressed on time.
+
+**On screen** (0.5.150, the user's sketch): the world DIMS (`RhythmDuel.drawDim`, under the HUD; it stays alive behind, and nothing can hurt anyone), and on top: the arrows a little left of centre, the meter to their right, and at mid height, each under its own spotlight on a small floor, the MONSTER on the left and the CRAB on the right (`GC:drawDuelCast`: his body only, scaled ×0.8, facing the centre), both dancing. Their copies in the arena are not drawn while it lasts (`RhythmDuel.hides`: in the duel's zone, frozen by it). The monster (`assets/anim/player.json` `duel_*`, `tools/art/player/make_duel_poses.py`): the pose of each arrow he hits for 0.34 s, the violet MISS pose of each one that gets past for 0.45 s, and between notes a two-frame dance on the beat. Online EVERY player in the duel dances there, in a row, smaller (scale 9 / 7 / 5 / 4 by count), in their room colour, yours marked with a yellow arrow: each hit / miss is sent as `rhythm_pose` and the server relays it to the rest of the room (`R.remotePose`); drawing only. Also in the test level.
 
 **His duel dance** (0.5.149, the user asked for a new dance for this section): like FNF's opponent he SINGS every arrow of the chart of that difficulty with its pose, for `SING_HOLD` 0.32 s — left / right: he faces that side and leans out with the big claw thrust; down: a squat; up: stretched with both claws up and the spring long — with his own sprite, `sing-Sheet.png` (mouth wide open with the tongue, then half open with the glasses' glint moved). `GC:singNow` / `chartAround` (stage part), from the song clock: same online.
 

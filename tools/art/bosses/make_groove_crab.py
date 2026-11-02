@@ -9,6 +9,7 @@
 # En la espalda lleva el TRAMPOLÍN del juego. Rejilla 18x10 (el ancho del Crabby helado) a escala 10 en el juego.
 #   · body-Sheet.png     3 cuadros 18x10: el cuerpo con las patas del Crabby de la costa (sus 3 cuadros de andar)
 #   · sing-Sheet.png     2 cuadros 18x10: CANTANDO (boca abierta y lengua): el baile del duelo de ritmo (0.5.149)
+#   · firework-Sheet.png 5 cuadros 15x15: los fuegos artificiales del fondo (cohete y estallido; 0.5.150)
 #   · bigclaw-Sheet.png  2 cuadros 12x9: la pinza grande (abierta, cerrada), dibujada mirando a la IZQUIERDA
 #   · claw-Sheet.png     2 cuadros 7x6: la pinza pequeña (abierta, cerrada)
 #   · tramp.png          el trampolín de la espalda (cojín y muelle de assets/images/mechanisms/trampoline/normal.png)
@@ -286,6 +287,34 @@ def sing_body(f):
     return grid(rows, PAL)
 
 
+# ── LOS FUEGOS ARTIFICIALES del fondo (0.5.150: en lugar de los dos carriles de flechas): cada nota del chart sube
+# como un cohete desde detrás del público y REVIENTA justo en su tiempo. 15x15, en blanco y grises (el juego los tiñe
+# del color de su flecha): 1 el cohete (chispa con estela), 2-5 el estallido que se abre y se apaga
+def firework(f):
+    import math
+    n = 15
+    im = Image.new('RGBA', (n, n), CLEAR)
+    px = im.load()
+    c = n // 2
+    W_, G_, D_ = (255, 255, 255, 255), (200, 200, 210, 255), (130, 130, 145, 255)
+    if f == 0:
+        px[c, 5] = W_; px[c - 1, 6] = G_; px[c, 6] = W_; px[c + 1, 6] = G_
+        for y, col in ((7, G_), (8, G_), (9, D_), (11, D_), (13, D_)): px[c, y] = col
+        return im
+    r = (1.6, 3.6, 5.2, 6.6)[f - 1]
+    spokes = 8 if f <= 2 else 12                                # (pocas en pequeño: si no, sale una rejilla)
+    for k in range(spokes):
+        a = k * 2 * math.pi / spokes
+        for t, col in ((r, W_ if f < 3 else G_), (r - 1.6, G_ if f < 4 else D_)):
+            if t <= 0: continue
+            x, y = int(round(c + math.cos(a) * t)), int(round(c + math.sin(a) * t))
+            if 0 <= x < n and 0 <= y < n: px[x, y] = col
+    if f <= 2:
+        px[c, c] = W_
+        for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)): px[c + dx, c + dy] = G_
+    return im
+
+
 # ── Los PLATOS DE DJ de la 2ª fase (uno en cada plataforma): písalos los dos a la vez y los bafles le dan ──
 def deck(f, lit):
     """Plato 24x10: caja CLARA con contorno oscuro (de noche, una oscura no se veía: el usuario, 0.5.53), el vinilo
@@ -362,6 +391,7 @@ def main():
         'panel-Sheet.png': strip([panel(None)] + [panel(c) for c in BEAT_COLS]),
         'ko-Sheet.png': strip([ko_body(0), ko_body(1)]),
         'sing-Sheet.png': strip([sing_body(0), sing_body(1)]),
+        'firework-Sheet.png': strip([firework(f) for f in range(5)]),
         'glasses.png': grid(GLASSES, PAL),
         'deck-Sheet.png': strip([deck(0, False)] + [deck(f, True) for f in range(3)]),
         'led-Sheet.png': strip([led(False), led(True), led(True, True)]),

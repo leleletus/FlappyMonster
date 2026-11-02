@@ -178,6 +178,7 @@ piece took damage, immortal online), and a rewound "stomp" may hit a boss that i
 
 ## Protocol version history
 
+v108 `rhythm_pose` (client → server → the rest of the room): each player's hit / miss pose in the rhythm duel.
 v107 Groove Crab: new state `buck`, its trampoline launches to a fixed height with no air jump, `backT` in its netPack.
 v106 jump buffer in the own state, ground pound of 1.5 tiles.
 

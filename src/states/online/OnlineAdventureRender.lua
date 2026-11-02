@@ -23,6 +23,27 @@ local INTRO_DUR, BANNER_DUR = P.INTRO_DUR, P.BANNER_DUR
 
 -- ── Render ────────────────────────────────────────────────────────────────────
 
+-- Quién baila en el minijuego del duelo (a la izquierda): tú y los demás que están en él, cada uno con su color
+function OnlineAdventureState:_duelCast()
+    if not RhythmDuel.current() then return nil end
+    local mine = self.myIdx and self.roster[self.myIdx]
+    local cast = {}
+    if self.localPaInit and not self.ownData.isSpectator and not self.localPa.dying then
+        cast[1] = { me = true, color = mine and mine.color }
+    end
+    for _, rp in pairs(self.remotePlayers) do
+        if rp.visible and not rp.dying and RhythmDuel.hides(self.level, rp.x, rp.y) then
+            cast[#cast + 1] = { id = rp.id, color = rp.color, k = tostring(rp.id) }
+        end
+    end
+    local first = (cast[1] and cast[1].me) and 2 or 1
+    local rest = {}
+    for i = first, #cast do rest[#rest + 1] = cast[i] end
+    table.sort(rest, function(a, b) return a.k < b.k end)                -- (siempre en el mismo orden)
+    for i, m in ipairs(rest) do cast[first + i - 1] = m end
+    return cast
+end
+
 function OnlineAdventureState:render()
     -- Temblor de pantalla (impactos, explosiones): solo al dibujar
     local shx, shy = Particles.shakeOffset()
@@ -74,7 +95,8 @@ function OnlineAdventureState:_renderScene()
     local adminId = self.currentRoom and self.currentRoom.adminId
     for _, rp in pairs(self.remotePlayers) do
         rp.isHost = (rp.id == adminId)
-        if rp.visible then rp:render(self.camX, self.camY) end
+        -- (en el duelo de ritmo no están en la arena: salen bailando en el minijuego — src/ui/RhythmDuel.lua —)
+        if rp.visible and not RhythmDuel.hides(self.level, rp.x, rp.y) then rp:render(self.camX, self.camY) end
     end
 
     -- Jugador propio ya en la meta
@@ -88,7 +110,7 @@ function OnlineAdventureState:_renderScene()
         local pa = self.localPa
         local sx, sy = pa.x, pa.y
         pa.x, pa.y = self.renderX, self.renderY
-        pa:render(self.camX, self.camY)
+        if not RhythmDuel.hides(self.level, pa.x, pa.y) then pa:render(self.camX, self.camY) end
         pa.isLocalView = true
         PointAreas.drawProgress(self.level, pa, self.renderX - self.camX, self.renderY - self.camY)
         Particles.render(self.camX, self.camY)
@@ -160,6 +182,7 @@ function OnlineAdventureState:_renderScene()
     local md = self.level.musicDirector
     if md and md.drawOverlay then md:drawOverlay() end
     -- HUD (antes, las franjas de cine de la entrada de un jefe: el HUD va encima)
+    RhythmDuel.drawDim()                                                 -- (el duelo de ritmo: el fondo se oscurece)
     BossHud.drawCinema(self.level)
     -- (todo el HUD se desvanece durante la entrada de un jefe: BossHud.fadeHud)
     BossHud.fadeHud(function()
@@ -169,7 +192,7 @@ function OnlineAdventureState:_renderScene()
         end
         self:_renderBossHUD()
     end)
-    RhythmDuel.draw()
+    RhythmDuel.draw(self:_duelCast())
 
     -- Overlays
     if self.showPause then self:_renderPauseOverlay() end

@@ -45,18 +45,7 @@ function GC.loadAssets()
             panel = SpriteStrip.load(DIR .. 'panel-Sheet.png', 32), ko = SpriteStrip.load(DIR .. 'ko-Sheet.png', FW),
             glasses = SpriteStrip.load(DIR .. 'glasses.png', 14), deck = SpriteStrip.load(DIR .. 'deck-Sheet.png', 24),
             led = SpriteStrip.load(DIR .. 'led-Sheet.png', 3), arrow = SpriteStrip.load(DIR .. 'arrow.png', 7),
-            sing = SpriteStrip.load(DIR .. 'sing-Sheet.png', FW) }
-    -- (las flechas del duelo de ritmo —src/ui/RhythmDuel.lua—, para las del fondo del escenario)
-    local function im(path)
-        local ok, i = pcall(love.graphics.newImage, path)
-        if ok then i:setFilter('nearest', 'nearest') end
-        return ok and i or nil
-    end
-    local R = 'assets/images/ui/rhythm/'
-    art.rhythm = { strums = im(R .. 'strums-Sheet.png'), hit = im(R .. 'strums_hit-Sheet.png'), notes = im(R .. 'notes-Sheet.png'), q = {} }
-    if art.rhythm.notes then
-        for i = 1, 4 do art.rhythm.q[i] = love.graphics.newQuad((i - 1) * 24, 0, 24, 24, 96, 24) end
-    else art.rhythm = nil end
+            sing = SpriteStrip.load(DIR .. 'sing-Sheet.png', FW), firework = SpriteStrip.load(DIR .. 'firework-Sheet.png', 15) }
 end
 local function quad(s, i) return s.images and s.images[i] or s.image, s.quads[i] end
 
@@ -121,7 +110,7 @@ function GC:chartAround(name, from, to)
                 local row = RD.row(name, cb)
                 for j = 1, row and #row or 0, 2 do
                     local d = b * 16 + row[j] - nowAbs
-                    if d >= from and d <= to then list[#list + 1] = { d = d, lane = row[j + 1] + 1 } end
+                    if d >= from and d <= to then list[#list + 1] = { d = d, lane = row[j + 1] + 1, at = b * 16 + row[j] } end
                 end
             end
         end
@@ -342,8 +331,8 @@ function GC:renderBack(camX, camY)
     love.graphics.rectangle('fill', math.floor(bx - camX) - 2, math.floor(by - camY) - 4 * T - bdrop, 4, 4 * T - 30)
     love.graphics.setColor(1, 1, 1, 1)
     love.graphics.draw(bi, bq, math.floor(bx - camX), math.floor(by - camY) - bdrop, 0, 6, 6, 6, 6)
-    -- las FLECHAS DEL CHART en dos pantallas del fondo (encienden con el ecualizador)
-    if dance then self:drawChartBack(camX, camY, kLight) end
+    -- los FUEGOS ARTIFICIALES del chart (salen con el ecualizador)
+    if dance then self:drawFireworks(camX, camY, kLight) end
     -- el PÚBLICO: cangrejos de todas las especies y Gummies, en silueta, saltando a contratiempo, con barras de luz.
     -- DOS filas (0.5.55, el usuario: "más audiencia, detrás y entre los que ya están"): la de atrás más pequeña, más
     -- oscura y más alta; la de delante, más apretada
@@ -395,38 +384,44 @@ function GC:renderBack(camX, camY)
     love.graphics.setColor(1, 1, 1, 1)
 end
 
--- LAS PANTALLAS DEL FONDO (0.5.149, el usuario: "más elementos de fondo, como las notas del chart, para que se sienta más
--- vivo"): dos carriles de Friday Night Funkin' a los lados de la bola, con las flechas de verdad de la canción (el chart
--- fácil a la izquierda, el normal a la derecha) subiendo a sus flechas grises, que se encienden al llegar. Tenues y
--- detrás de los bloques: fondo, no se confunden con lo que hace daño. En el duelo no (ya está el de verdad)
-local HW_LANE, HW_SCALE, HW_STEP, HW_AHEAD = 52, 2, 10, 16      -- px entre carriles, escala, px por semicorchea, semicorcheas
-function GC:drawChartBack(camX, camY, k)
-    local R = art.rhythm
-    if not R or k <= 0 or self:duelLive() then return end
+-- LOS FUEGOS ARTIFICIALES DEL FONDO (0.5.150; en la 0.5.149 eran dos carriles de flechas — el usuario: "algo diferente que
+-- represente exactamente lo mismo de otra manera" —): cada nota del chart de la canción (el fácil en la mitad izquierda,
+-- el normal en la derecha) sube como un COHETE desde detrás del público, del color de su flecha y en la columna de su
+-- carril, y REVIENTA justo en su tiempo. Detrás de los bloques y con mezcla aditiva: fondo, no se confunde con lo que
+-- hace daño. Del reloj de la canción: igual online
+local FW_COLS = { { 0.93, 0.28, 0.6 }, { 0.22, 0.78, 0.91 }, { 0.36, 0.84, 0.36 }, { 0.98, 0.8, 0.18 } }   -- (las flechas)
+local FW_RISE, FW_FADE = 10, 7                                  -- semicorcheas subiendo / reventando
+function GC:drawFireworks(camX, camY, k)
+    if not art.firework or k <= 0 then return end
     local zx0, zx1, zy0 = self:zoneBounds()
-    local sy = math.floor(zy0 + 1.6 * T - camY)                  -- (bajo el marcador y por encima de las plataformas)
+    local w = zx1 - zx0
+    local y0 = self.floorY - 1.3 * T                            -- (salen de detrás del público)
+    love.graphics.setBlendMode('add')
     for side, name in ipairs({ 'easy', 'normal' }) do
-        local list = self:chartAround(name, -2, HW_AHEAD)
-        local cx = zx0 + (zx1 - zx0) * ((side == 1) and 0.25 or 0.75)
-        local x0 = math.floor(cx - 1.5 * HW_LANE - camX)
-        -- el marco de la pantalla
-        love.graphics.setColor(0.05, 0.03, 0.1, 0.22 * k)
-        love.graphics.rectangle('fill', x0 - 34, sy - 32, 3 * HW_LANE + 68, HW_AHEAD * HW_STEP + 48)
-        for l = 1, 4 do
-            local lit = false
-            for _, n in ipairs(list) do if n.lane == l and n.d <= 0 and n.d > -1.5 then lit = true end end
-            love.graphics.setColor(1, 1, 1, (lit and 0.55 or 0.22) * k)
-            love.graphics.draw(lit and R.hit or R.strums, R.q[l], x0 + (l - 1) * HW_LANE, sy, 0, HW_SCALE, HW_SCALE, 12, 12)
-        end
-        for _, n in ipairs(list) do
-            if n.d > 0 then
-                local a = math.min(1, (HW_AHEAD - n.d) / 4) * 0.34 * k
-                love.graphics.setColor(1, 1, 1, a)
-                love.graphics.draw(R.notes, R.q[n.lane], x0 + (n.lane - 1) * HW_LANE, math.floor(sy + n.d * HW_STEP), 0,
-                                   HW_SCALE, HW_SCALE, 12, 12)
+        for _, n in ipairs(self:chartAround(name, -FW_FADE, FW_RISE)) do
+            local h = math.sin(n.at * 12.9898 + side * 78.233) * 43758.5453
+            h = h - math.floor(h)
+            local x = zx0 + w * ((side == 1) and 0.08 or 0.56) + (n.lane - 0.5) * w * 0.09 + (h - 0.5) * 0.5 * T
+            local by = zy0 + 1.0 * T + h * 1.8 * T
+            local c = FW_COLS[n.lane]
+            if n.d > 0 then                                     -- subiendo
+                local u = 1 - n.d / FW_RISE
+                local y = y0 + (by - y0) * (1 - (1 - u) * (1 - u))
+                love.graphics.setColor(c[1], c[2], c[3], k)
+                art.firework:draw(1, math.floor(x - camX), math.floor(y - camY), 0, 5, 5)
+            else                                                -- reventando (en su tiempo: d = 0)
+                local u = -n.d / FW_FADE
+                local fr = math.min(5, 2 + math.floor(u * 4))
+                love.graphics.setColor(c[1], c[2], c[3], (1 - u * u) * k)
+                art.firework:draw(fr, math.floor(x - camX), math.floor(by - camY), 0, 7, 7)
+                if u < 0.25 then                                -- (el fogonazo)
+                    love.graphics.setColor(c[1], c[2], c[3], (0.25 - u) * 1.2 * k)
+                    love.graphics.circle('fill', math.floor(x - camX), math.floor(by - camY), 70, 20)
+                end
             end
         end
     end
+    love.graphics.setBlendMode('alpha')
     love.graphics.setColor(1, 1, 1, 1)
 end
 
@@ -695,28 +690,8 @@ function GC:drawGlasses(camX, camY, alpha)
     love.graphics.setColor(1, 1, 1, 1)
 end
 
-function GC:render(camX, camY)
-    if self.state == 'dormant' and not EDITOR_VIEW then return end
-    if self.state == 'dead' or not art then return end
-    local st = self.state
-    local now = love.timer.getTime()
-    -- (`_bodyOnly`: solo él — el director del Mega Mashup lo dibuja pequeño al fondo —, sin pista, platos ni focos)
-    local extras = not self._bodyOnly
-    if extras and stageT(self) then self:drawFloor(camX, camY) end
-    if extras and (live(self) or self:isDying()) then self:drawDecks(camX, camY) end
-    if extras and live(self) then self:drawSpotlights(camX, camY) end
-    -- (¿anda? lo que avanzó desde el dibujo anterior)
-    self._walking = self._lx ~= nil and math.abs(self.x - self._lx) > 0.05 and st == 'groove'
-    self._lx = self.x
-    if st == 'dying_burst' then                                       -- (reventó: solo quedan sus gafas)
-        if not EDITOR_VIEW then self:drawGlasses(camX, camY, 1) end
-        love.graphics.setColor(1, 1, 1, 1)
-        return
-    end
-    local p = self:pose()
-    local alpha = self:ghostAlpha()
-    local f = p.face or ((self.facing or 1) * p.flip)
-    local fx, fy = math.floor(self.x - camX + 0.5) + p.jx, math.floor(self:feetY() - camY + 0.5)
+-- Su CUERPO (trampolín, cuerpo, pinzas, estrellitas) con los pies en (fx, fy) de pantalla y la postura p
+function GC:drawBody(fx, fy, p, f, alpha, st, now)
     local dizzy = (st == 'dying_daze' or st == 'stunned') and not EDITOR_VIEW
     if dizzy then BossFx.stars(fx, fy - 9 * MS, 9 * MS, 1.8 * MS, 7, alpha, 'back') end
     if self:flashRed() then love.graphics.setColor(1, 0.35, 0.35, alpha)
@@ -751,6 +726,47 @@ function GC:render(camX, camY)
     love.graphics.draw(si, sq, -f * 11.5 * MS, (-4 + sdy) * MS, 0, MS * f, MS, 3.5, 3)
     love.graphics.pop()
     if dizzy then BossFx.stars(fx, fy - 9 * MS, 9 * MS, 1.8 * MS, 7, alpha, 'front') end
+end
+
+-- En el MINIJUEGO del duelo (src/ui/RhythmDuel.lua, encima de todo): él, cantando y bailando como en la arena, con los
+-- pies en (x, y) de pantalla, a escala k, mirando hacia el centro (a la izquierda)
+function GC:drawDuelCast(x, y, k)
+    if not art then return end
+    local p = self:pose()
+    local f = p.face or -1
+    love.graphics.push()
+    love.graphics.translate(math.floor(x + p.jx * k), math.floor(y))
+    love.graphics.scale(k, k)
+    self:drawBody(0, 0, p, f, 1, self.state, love.timer.getTime())
+    love.graphics.pop()
+    love.graphics.setColor(1, 1, 1, 1)
+end
+
+function GC:render(camX, camY)
+    if self.state == 'dormant' and not EDITOR_VIEW then return end
+    if self.state == 'dead' or not art then return end
+    local st = self.state
+    local now = love.timer.getTime()
+    -- (`_bodyOnly`: solo él — el director del Mega Mashup lo dibuja pequeño al fondo —, sin pista, platos ni focos)
+    local extras = not self._bodyOnly
+    if extras and stageT(self) then self:drawFloor(camX, camY) end
+    if extras and (live(self) or self:isDying()) then self:drawDecks(camX, camY) end
+    if extras and live(self) then self:drawSpotlights(camX, camY) end
+    -- (¿anda? lo que avanzó desde el dibujo anterior)
+    self._walking = self._lx ~= nil and math.abs(self.x - self._lx) > 0.05 and st == 'groove'
+    self._lx = self.x
+    if st == 'dying_burst' then                                       -- (reventó: solo quedan sus gafas)
+        if not EDITOR_VIEW then self:drawGlasses(camX, camY, 1) end
+        love.graphics.setColor(1, 1, 1, 1)
+        return
+    end
+    local p = self:pose()
+    local alpha = self:ghostAlpha()
+    local f = p.face or ((self.facing or 1) * p.flip)
+    local fx, fy = math.floor(self.x - camX + 0.5) + p.jx, math.floor(self:feetY() - camY + 0.5)
+    -- (EN EL DUELO no está en la arena: sale en el minijuego, a un lado de las flechas — GC:drawDuelCast, RhythmDuel —)
+    local inDuel = self:duelLive() and not EDITOR_VIEW and self:isActive()
+    if not inDuel then self:drawBody(fx, fy, p, f, alpha, st, now) end
     if not EDITOR_VIEW then self:drawGlasses(camX, camY, alpha) end
     if not extras then love.graphics.setColor(1, 1, 1, 1); return end
     self:drawOver(camX, camY)
@@ -829,7 +845,7 @@ function GC:drawOver(camX, camY)
         end
     end
     self:drawCue(camX, camY, now)
-    BossFx.anger(self, self.rage and self:isActive(), self.x - camX, self:feetY() - camY - 16 * MS)
+    BossFx.anger(self, self.rage and self:isActive() and not self:duelLive(), self.x - camX, self:feetY() - camY - 16 * MS)
     love.graphics.setColor(1, 1, 1, 1)
 end
 

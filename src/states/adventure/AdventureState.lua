@@ -848,7 +848,8 @@ function AdventureState:_renderScene()
 
     PlayerAdventure.lightLevel = self.level          -- (en lo oscuro, filo blanco: cada monstruo según SU sitio)
     if self.bonus then self.bonus:render(self.camX, self.camY) end
-    self.player:render(self.camX, self.camY)
+    -- (en el duelo de ritmo no está en la arena: sale bailando en el minijuego — src/ui/RhythmDuel.lua —)
+    if not RhythmDuel.hides(self.level, self.player.x, self.player.y) then self.player:render(self.camX, self.camY) end
     PlayerAdventure.lightLevel = nil
     PointAreas.drawProgress(self.level, self.player, self.player.x - self.camX, self.player.y - self.camY)
     Particles.render(self.camX, self.camY)
@@ -912,6 +913,7 @@ function AdventureState:_renderScene()
     -- (un director de evento: siluetas de su intro y el fundido a negro de sus costuras — el Mega Mashup —)
     local md = self.level.musicDirector
     if md and md.drawOverlay then md:drawOverlay() end
+    RhythmDuel.drawDim()                  -- (el duelo de ritmo: el fondo se oscurece, bajo el HUD)
     BossHud.drawCinema(self.level)        -- (entrada de un jefe: franjas de cine, bajo el HUD)
 
     -- (todo el HUD se desvanece durante la entrada de un jefe: BossHud.fadeHud)

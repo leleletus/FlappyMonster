@@ -7,6 +7,8 @@
 --   vacio      pulsar sin nota no castiga
 --   revive     muerto o reapareciendo al empezar: en cuanto vive, salen las notas y juega
 --   sinchart   sin notas: acaba enseguida, sin castigo (nadie se queda esperando)
+--   poses      el monstruo: acertar pone la pose de su flecha, dejarla pasar la de fallo; cada una se avisa (online:
+--              rhythm_pose) y la de otro jugador se guarda (R.remotePose)
 --   jugadores  (informa) jugadores simulados con distinto error de tiempo: % que falla y % que noquea por dificultad
 --   tools/tests/run.sh rhythm_duel   (CASE=nombre)
 io.stdout:setvbuf('no')
@@ -67,6 +69,32 @@ local function play(diff, pressFor, bar, bars)
     return result, R.current()
 end
 local CASES = {}
+function CASES.poses()
+    R.reset()
+    local boss, level = setup('normal')
+    local who, sent = { alive = true }, {}
+    local onPose = function(l, ok) sent[#sent + 1] = { l, ok } end
+    boss.songT = boss.songT + GC.BAR                                    -- (ya en el duelo)
+    R.update(DT, level, who, nil, function() end, onPose)
+    local c = R.current()
+    local n1 = c.notes[c.first]
+    c.clock = n1.t
+    R.press(n1.lane)
+    local hitPose = c.pose and c.pose.lane == n1.lane and c.pose.ok
+    -- la siguiente se deja pasar
+    local n2 = c.notes[c.first + 1] or c.notes[c.first]
+    for _ = 1, 600 do
+        boss.songT = boss.songT + DT
+        R.update(DT, level, who, nil, function() end, onPose)
+        if c.misses > 0 then break end
+    end
+    local missPose = c.pose and c.pose.ok == false and c.pose.lane >= 1
+    R.remotePose(42, 3, true)
+    local rem = c.remote[42]
+    check('poses', hitPose and missPose and #sent >= 2 and sent[1][2] == true and rem and rem.lane == 3 and rem.ok,
+        ('acierto → pose %s=%s · fallo → pose de fallo=%s · avisos %d · otro jugador: carril %s'):format(n1.lane,
+            tostring(hitPose), tostring(missPose), #sent, tostring(rem and rem.lane)))
+end
 function CASES.chart()
     local data = json.decode(love.filesystem.read('assets/charts/groove.json'))
     check('chart', data.bars == GC.INTRO_BARS + GC.LOOP, 'compases: ' .. data.bars)
@@ -188,7 +216,8 @@ function CASES.shot()
     local cv = love.graphics.newCanvas(1280, 720)
     love.graphics.setCanvas(cv)
     love.graphics.clear(0.35, 0.5, 0.7, 1)
-    R.draw()
+    R.drawDim()
+    R.draw({ { me = true }, { id = 2, color = { 1, 0.3, 0.3 } }, { id = 3, color = { 0.3, 1, 0.4 } } })
     love.graphics.setCanvas()
     cv:newImageData():encode('png', 'duelo.png')
     print('imagen en ' .. love.filesystem.getSaveDirectory() .. '/duelo.png')
@@ -196,7 +225,7 @@ end
 function love.load()
     if os.getenv('SHOT') then CASES.shot(); love.event.quit(0); return end
     local only = os.getenv('CASE')
-    for _, name in ipairs({ 'chart', 'facil', 'perfecto', 'nada', 'margen', 'vacio', 'revive', 'sinchart', 'jugadores' }) do
+    for _, name in ipairs({ 'chart', 'facil', 'perfecto', 'nada', 'margen', 'vacio', 'revive', 'sinchart', 'poses', 'jugadores' }) do
         if not only or only == name then CASES[name]() end
     end
     print(fails == 0 and 'RESULTADO: OK' or ('RESULTADO: ' .. fails .. ' FALLOS'))

@@ -1163,6 +1163,21 @@ on("rhythm_result", function(data, client, player)
     end
 end)
 
+-- La POSE de un jugador en el duelo de ritmo (acierto / fallo de una flecha): solo dibujo; se reenvía a los demás de
+-- su sala, que lo ven bailar en el minijuego (src/ui/RhythmDuel.lua: R.remotePose)
+on("rhythm_pose", function(data, client, player)
+    if type(data) ~= "table" or not player.roomId or type(data.lane) ~= "number" then return end
+    local room = rooms[player.roomId]
+    if not room or room.state ~= "IN_GAME" then return end
+    local msg = { id = player.id, lane = math.max(1, math.min(4, math.floor(data.lane))), ok = data.ok == true }
+    for _, pid in ipairs(room.playerIds) do
+        if pid ~= player.id then
+            local c = findClientById(pid)
+            if c then c:send("rhythm_pose", msg) end
+        end
+    end
+end)
+
 server.onInvalidPacket = function(client, size)
     local p = client and players[client]
     if not p or p.kicked then return end

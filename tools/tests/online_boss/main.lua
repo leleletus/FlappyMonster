@@ -186,6 +186,11 @@ function love.update(dt)
             print(('   t %.1f duel %s/%s song %.2f audio %s %s %s clock %s jugando %s hecho %s notas %s frozen %s hp %s'):format(t, tostring(boss.duel and boss.duel.bar), tostring(boss.duel and boss.duel.bars),
                 boss.songT or -1, tostring(nm), tostring(pos), tostring(part), c and ('%.2f'):format(c.clock) or '-', c and tostring(c.playing) or '-', c and tostring(c.done) or '-',
                 c and (c.first .. '/' .. #c.notes) or '-', tostring(pa and pa.frozen), tostring(pa and pa.hp)))
+            -- (el bot manda su pose; el cliente debe verla llegar — rhythm_pose, reenviada por el servidor —)
+            if c and bot and bot.c then bot.c:send('rhythm_pose', { lane = 2, ok = true }) end
+            local nr = 0
+            for _ in pairs(c and c.remote or {}) do nr = nr + 1 end
+            if nr > 0 and not log.remoteSeen then log.remoteSeen = true; print('   pose de otro jugador recibida: OK') end
             if c and not log.duelShot and c.clock > c.bar * boss.BAR + 2 then
                 log.duelShot = true
                 love.graphics.captureScreenshot('duelo_online.png')
@@ -329,6 +334,10 @@ function love.update(dt)
             print(('%s golpes: bajó la vida %d veces · mensajes de puntos %d (dobles %d) · golpes que quien pega no oiría %d · trozos %d, heridos %d · vencido %s'):format(
                 ok and 'OK   ' or 'FALLA', h.drops, ev.score, ev.doubles, ev.mine, h.parts, seen, tostring(h.won)))
             if not ok then log.fail = true end
+        end
+        if os.getenv('DUELDBG') and log.duelShot ~= nil then           -- (hubo duelo: la pose del bot tiene que haber llegado)
+            print(('%s duelo de ritmo: pose de otro jugador recibida (rhythm_pose) %s'):format(log.remoteSeen and 'OK   ' or 'FALLA', tostring(log.remoteSeen == true)))
+            if not log.remoteSeen then log.fail = true end
         end
         if os.getenv('MASHUP') then
             local c = log.cm or { phases = {} }
