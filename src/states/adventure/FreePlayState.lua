@@ -7,7 +7,7 @@
 -- del modo historia.
 --
 -- Escala a muchos niveles: las fichas (src/world/level/LevelCatalog.lua) se cargan
--- poco a poco (un presupuesto de tiempo por fotograma) y se guardan para la
+-- en un hilo aparte (src/world/level/CatalogWorker.lua; sin hilo, aquí, poco a poco) y se guardan para la
 -- próxima vez; solo se dibujan las tarjetas visibles.
 --
 -- BUSCADOR (0.5.77, el usuario: "no lo logro encontrar"): arriba a la izquierda (bajo el rótulo en pantallas
@@ -21,6 +21,7 @@ local Clip          = require 'src/ui/Clip'
 local PixelIcons    = require 'src/ui/PixelIcons'
 local ModeSelectMenu = require 'src/ui/ModeSelectMenu'
 local LevelCatalog  = require 'src/world/level/LevelCatalog'
+local CatalogWorker = require 'src/world/level/CatalogWorker'
 local Modes         = require 'src/world/modes/Modes'
 local TextUtil      = require 'src/ui/TextUtil'
 local fitText       = TextUtil.fit
@@ -38,10 +39,12 @@ local TOP_WIDE, TOP_NARROW, BOTTOM_PAD = 152, 204, 56   -- (estrecha: el selecto
 local CARD_W, CARD_H, GAP = 372, 318, 24
 local PREV_H = 150
 local LOAD_BUDGET = 0.008          -- s por fotograma cargando fichas
+local POLL_BUDGET = 0.002          -- s por fotograma recogiendo las del hilo
 
 -- Fichas ya cargadas (entre visitas) y selección recordada
 local cache = {}                   -- [archivo] = ficha | { broken = error }
 local last = { sel = 1, scroll = 0 }
+local pending = true               -- ¿falta alguna ficha?
 
 local TOP = TOP_WIDE
 local function wide() return WINDOW_W >= 1200 end
@@ -57,6 +60,10 @@ end
 -- ── Ciclo de vida ─────────────────────────────────────────────────────────────
 function FreePlayState:enter()
     self.all = LevelCatalog.files()
+    local missing = {}
+    for _, f in ipairs(self.all) do if not cache[f] then missing[#missing + 1] = f end end
+    pending = #missing > 0
+    if pending then CatalogWorker.start(missing) end
     self.query, self.searching = last.query or '', false
     self.files = self.all
     self:_filter()
@@ -235,12 +242,8 @@ function FreePlayState:_cardAt(x, y)
     return (i >= 1 and i <= #self.files) and i or nil
 end
 
--- ── Update ────────────────────────────────────────────────────────────────────
-function FreePlayState:update(dt)
-    MenuScene.update(dt)
-    self.anim:update(dt)
-    self.t, self.diffT = self.t + dt, self.diffT + dt
-    -- Cargar fichas pendientes (primero la elegida y las visibles)
+-- Las fichas que faltan: las trae el hilo; si no hay hilo o no pudo con alguna, aquí, con un presupuesto por fotograma
+function FreePlayState:_loadCards()
     local t0 = love.timer.getTime()
     local cols, _, viewH = layout()
     local firstVis = math.floor(self.scroll / (CARD_H + GAP)) * cols + 1
@@ -248,17 +251,33 @@ function FreePlayState:update(dt)
     for i = firstVis, firstVis + cols * (math.ceil(viewH / (CARD_H + GAP)) + 1) do order[#order + 1] = i end
     local list = {}
     for _, i in ipairs(order) do list[#list + 1] = self.files[i] end
-    for _, f in ipairs(self.all) do list[#list + 1] = f end      -- (también las que el filtro esconde: se buscan por nombre)
-    local loaded = false
-    for _, f in ipairs(list) do
-        if f and not cache[f] then
-            local info, err = LevelCatalog.load(LevelCatalog.DIR .. '/' .. f, f)
-            cache[f] = info or { broken = tostring(err), file = f }
-            loaded = true
-            if love.timer.getTime() - t0 > LOAD_BUDGET then break end
+    local working = CatalogWorker.running()
+    local loaded = CatalogWorker.poll(cache, POLL_BUDGET)
+    if working then
+        for _, f in ipairs(list) do if f and not cache[f] then CatalogWorker.want(f) end end
+    else
+        for _, f in ipairs(self.all) do list[#list + 1] = f end      -- (también las que el filtro esconde: se buscan por nombre)
+        for _, f in ipairs(list) do
+            if f and not cache[f] then
+                local info, err = LevelCatalog.load(LevelCatalog.DIR .. '/' .. f, f)
+                cache[f] = info or { broken = tostring(err), file = f }
+                loaded = true
+                if love.timer.getTime() - t0 > LOAD_BUDGET then break end
+            end
         end
     end
     if loaded and self.query ~= '' then self:_filter() end
+    pending = false
+    for _, f in ipairs(self.all) do if not cache[f] then pending = true; break end end
+end
+
+-- ── Update ────────────────────────────────────────────────────────────────────
+function FreePlayState:update(dt)
+    MenuScene.update(dt)
+    self.anim:update(dt)
+    self.t, self.diffT = self.t + dt, self.diffT + dt
+    -- Cargar fichas pendientes (primero la elegida y las visibles)
+    if pending then self:_loadCards() end
 
     if self.searching or self.skipInput then              -- (escribiendo: las teclas son letras, no la navegación)
         self.skipInput = false

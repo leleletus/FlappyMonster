@@ -337,7 +337,9 @@ function Level:renderVents(camX, camY)
         for _, b in ipairs(vent.particles) do
             local bsx = math.floor(b.x - camX - b.iw)
             local bsy = math.floor(b.y - camY - b.ih)
-            love.graphics.draw(b.img, bsx, bsy, 0, BUB_SCALE, BUB_SCALE)
+            if bsy > -64 and bsy < WINDOW_H and bsx > -64 and bsx < WINDOW_W then       -- (fuera de la pantalla, nada)
+                love.graphics.draw(b.img, bsx, bsy, 0, BUB_SCALE, BUB_SCALE)
+            end
         end
 
         -- Burbujas de oxígeno (más brillantes)

@@ -682,15 +682,18 @@ end
 
 -- ¿Hay algo "sólido" justo delante (pinchos u otra entidad)? Las paredes ya
 -- las resuelve moveAndCollide.
+local AHEAD_B = {}
 function Entity:blockedAhead(level, dir)
     local hw, hh, probe = self.outerW / 2, self.outerH / 2, 4
     local bx = dir > 0 and (self.x + hw) or (self.x - hw - probe)
     local by, bh = self.y - hh + 2, self.outerH - 4
     if level.hasSpikeCellInBox and level:hasSpikeCellInBox(bx, by, probe, bh) then return true end
     if self:dangerAhead(level, dir) then return true end               -- (una zona de peligro: una planta carnívora)
-    for _, o in ipairs(level.liveEntities or {}) do
+    local live = level.liveEntities
+    if not live then return false end
+    for _, o in ipairs(live) do
         if o ~= self and not o.solidFull and (o.x - self.x) * dir > 0 and o:isObstacle() then   -- (los sólidos los choca moveAndCollide)
-            local ob = o:getOuterBounds()
+            local ob = o:getOuterBounds(AHEAD_B)
             if bx < ob.x + ob.w and bx + probe > ob.x and by < ob.y + ob.h and by + bh > ob.y then
                 return true
             end

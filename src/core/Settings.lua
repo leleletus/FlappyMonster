@@ -6,7 +6,7 @@
 
 local Lang = require 'src/core/Lang'
 
-local Settings = { language = Lang.DEFAULT, onlineName = '', rhythmOffset = 0 }   -- (rhythmOffset: ms de retardo del audio, duelo de ritmo)
+local Settings = { language = Lang.DEFAULT, onlineName = '', rhythmOffset = 0, showPerf = false }   -- (rhythmOffset: ms de retardo del audio, duelo de ritmo; showPerf: src/ui/PerfOverlay.lua)
 local FILE = 'options.cfg'
 
 function Settings.load()
@@ -20,6 +20,7 @@ function Settings.load()
                 if type(data.language) == 'string' then Settings.language = data.language end
                 if type(data.onlineName) == 'string' then Settings.onlineName = data.onlineName:sub(1, 32) end
                 if type(data.rhythmOffset) == 'number' then Settings.rhythmOffset = math.max(-300, math.min(300, data.rhythmOffset)) end
+                Settings.showPerf = data.showPerf == true
             end
         end
     end
@@ -27,7 +28,7 @@ function Settings.load()
 end
 
 function Settings.save()
-    local s = string.format('return { language = %q, onlineName = %q, rhythmOffset = %d }\n', Settings.language, Settings.onlineName, Settings.rhythmOffset or 0 or '')
+    local s = string.format('return { language = %q, onlineName = %q, rhythmOffset = %d, showPerf = %s }\n', Settings.language, Settings.onlineName, Settings.rhythmOffset or 0, tostring(Settings.showPerf == true))
     pcall(love.filesystem.write, FILE, s)
 end
 
@@ -40,6 +41,11 @@ end
 
 function Settings.setRhythmOffset(ms)
     Settings.rhythmOffset = math.max(-300, math.min(300, ms))
+    Settings.save()
+end
+
+function Settings.setShowPerf(on)
+    Settings.showPerf = on == true
     Settings.save()
 end
 

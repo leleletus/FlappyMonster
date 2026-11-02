@@ -17,6 +17,7 @@
 --   CALLERS=src/player/PlayerAdventure:getOuterBounds   quién llama a esa función y cuántas veces por fotograma
 --   GARB=1                                          BASURA POR FUNCIÓN: envuelve las funciones de los módulos de src/ y
 --                                                   cuenta los KB que crea cada una (sin contar las que llama)
+--   JIT=0 / JIT=1                                   fuerza el compilador de LuaJIT (en la Switch no existe y en ARM LÖVE lo apaga)
 -- Límites (FALLA si se pasan, con margen para máquinas lentas): basura por fotograma, recursos creados en régimen y
 -- crecimiento de memoria entre recargas. Los ms solo se informan (dependen de la máquina).
 io.stdout:setvbuf('no')
@@ -235,6 +236,40 @@ function SC.flappy()
     frameHook = nil; held = {}
 end
 
+-- Juego Libre: la 1ª visita carga todas las fichas y crea las miniaturas sobre la marcha. Cuentan los PICOS (lo que se
+-- nota al entrar y al bajar por la lista), no la media; la lista se recorre entera de arriba abajo.
+function SC.freeplay()
+    local ModeSelectMenu = require 'src/ui/ModeSelectMenu'
+    gStateMachine:change('title'); wait(30)                    -- (el fondo de los menús ya está cargado al llegar aquí)
+    love.filesystem.remove('freeplay_cards.dat')               -- (la 1ª vez de verdad: sin las fichas guardadas)
+    gStateMachine:change('free_play')
+    stats = { upd = {}, draw = {}, calls = {}, switches = {} }
+    local st = top()
+    local f = 0
+    frameHook = function()
+        f = f + 1
+        if f % 12 == 0 then top():_move(3) end
+    end
+    local frames = math.ceil(#st.all / 3) * 12 + 60
+    wait(frames)
+    frameHook = nil; held = {}
+    local s = stats
+    stats = nil
+    local over = 0
+    for i = 1, #s.upd do if s.upd[i] + (s.draw[i] or 0) > 16.7 then over = over + 1 end end
+    local worst = 1
+    for i = 1, #s.upd do if s.upd[i] > s.upd[worst] then worst = i end end
+    print(('   el peor update es el fotograma %d'):format(worst))
+    local tex = love.graphics.getStats()
+    print('── juego libre, 1ª visita (' .. #st.all .. ' niveles, ' .. frames .. ' fotogramas, llega a la tarjeta ' .. top().sel .. ')')
+    print(('   update  %.2f ms (p95 %.2f, máx %.2f)   dibujo %.2f ms (p95 %.2f, máx %.2f)'):format(
+        avg(s.upd), pct(s.upd, 0.95), pct(s.upd, 1), avg(s.draw), pct(s.draw, 0.95), pct(s.draw, 1)))
+    print(('   fotogramas de más de 16.7 ms: %d   texturas %.1f MB (%d canvases)'):format(over, tex.texturememory / 1048576, tex.canvases))
+    check('tirones', pct(s.upd, 1) + pct(s.draw, 1) < 33, ('juego libre: el peor update + el peor dibujo = %.1f ms (límite 33)'):format(pct(s.upd, 1) + pct(s.draw, 1)))
+    gStateMachine:change('title')
+    ModeSelectMenu.clearPreviews()
+end
+
 -- Censo de la memoria: tamaño de cada tabla alcanzable desde los globales y los módulos, por su camino
 local function census()
     local seen, out = {}, {}
@@ -309,7 +344,9 @@ function SC.fugas()
 end
 
 local function run()
-    local list = os.getenv('SCENES') or 'menu,level,level:assets/levels/caldera_roja.json,boss,map,flappy,fugas'
+    if os.getenv('JIT') == '0' then jit.off() elseif os.getenv('JIT') == '1' then jit.on() end
+    print(('JIT %s (%s)'):format(jit.status() and 'encendido' or 'apagado', jit.arch))
+    local list = os.getenv('SCENES') or 'menu,level,level:assets/levels/caldera_roja.json,boss,map,flappy,fugas,freeplay'
     for item in list:gmatch('[^,]+') do
         local nm, arg = item:match('^([^:]+):?(.*)$')
         if SC[nm] then SC[nm](arg ~= '' and arg or nil) else print('escena desconocida: ' .. nm); fails = fails + 1 end

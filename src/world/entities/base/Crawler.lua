@@ -308,15 +308,15 @@ end
 -- clava...); el Crabby lúgubre usa estas tal cual.
 function Crawler.mixin(Cls)
     local Entity = require 'src/world/entities/base/Entity'
-    local function box(self, w, h, base)
+    local function box(self, w, h, base, into)
         if Crawler.turning(self) then return Crawler.poseBox(self, -w / 2, -h / 2, w, h) end
         if Crawler.onWall(self) and self.cattached then
-            return { x = self.x - h / 2, y = self.y - w / 2, w = h, h = w }
+            return Entity.box(into, self.x - h / 2, self.y - w / 2, h, w)
         end
-        return base(self)
+        return base(self, into)
     end
-    function Cls:getOuterBounds() return box(self, self.outerW, self.outerH, Entity.getOuterBounds) end
-    function Cls:getInnerBounds() return box(self, self.innerW, self.innerH, Entity.getInnerBounds) end
+    function Cls:getOuterBounds(into) return box(self, self.outerW, self.outerH, Entity.getOuterBounds, into) end
+    function Cls:getInnerBounds(into) return box(self, self.innerW, self.innerH, Entity.getInnerBounds, into) end
     function Cls:surfaceNormal()
         if self.crawl and self.cattached then return Crawler.poseNormal(self) end
         return nil

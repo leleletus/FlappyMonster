@@ -93,8 +93,8 @@ local function helmetExtra(self)
     return math.max(0, (self.y - self.outerH / 2) - top)
 end
 
-function Gummy:getOuterBounds()
-    local b = Entity.getOuterBounds(self)
+function Gummy:getOuterBounds(into)
+    local b = Entity.getOuterBounds(self, into)
     if self.helmet and not self.flipped and self.state ~= 'dead' then
         local ex = helmetExtra(self)
         b.y, b.h = b.y - ex, b.h + ex

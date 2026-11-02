@@ -10,6 +10,7 @@ GPU memory is only freed when Lua's collector runs, and OpenAL voices are few.
 |---|---|
 | `tools/tests/perf/main.lua` | the harness (`run.sh perf`): real scenes at fixed 1/60 s steps — menu, levels, boss, Flappy, reloads |
 | `tools/tests/lib/garbage_profile.lua` | garbage BY FUNCTION: wraps every function of the loaded `src/` modules and counts the KB each one creates, without its callees (allocation-free wrapper) |
+| `src/ui/PerfOverlay.lua` | the on-screen meter for real devices (Settings → Performance, or F3; saved as `showPerf`): FPS, update / draw CPU ms (average, worst), Lua and texture memory, draw calls. Low FPS with low CPU ms means the GPU |
 | `server/main.lua` (`FM_PERF=1` / `2`) | the server logs every 10 s: ms per room step and per snapshot, KB created per step, Lua memory; `2` adds garbage by function |
 
 **What the harness reports, per scene:** update / draw CPU ms (avg, p95, max); **garbage** KB per frame (collector
@@ -54,10 +55,33 @@ update.
 | texture memory after 8 reloads of a level | +3.5 MB per stale scene canvas | flat |
 | draw calls, menu | 164 | 102 |
 
+**Why one core, and why the devices suffer (2026-11-02, the user: "all at 100 % on one core, others idle")**
+
+This is how LÖVE works, not a bug: all Lua and all GL calls run on one thread, and Lua states share nothing, so gameplay
+cannot be spread over cores without rewriting the simulation. What hurts is the cost per frame on devices WITHOUT THE
+JIT: `love-nx` (Switch) is built with no JIT at all (no trace or assembler symbols in `resources/switch/love.elf`) and
+LÖVE's `jitsetup` runs `jit.off()` on ARM. Never turn it on: `perf JIT=1` on an ARM Mac was much worse (`caldera_roja`:
+update 0.71 → 4.70 ms, garbage 38 → 377 KB per frame). Work that can leave the main thread does:
+`CatalogWorker`, see [free-play](../gameplay/free-play.md). Budget per frame with this in mind: every Lua call counts.
+
+Fixes of that round (this Mac, JIT off, before → after; device numbers are still to be read from the meter):
+
+| | before | after |
+|---|---|---|
+| Free Play first visit: frames over 16.7 ms · worst update + worst draw | 16 · 67 ms | 0 · 15 ms |
+| Free Play textures, all thumbnails (`PREVIEW_CELL` 6 → 4) | 26 MB total | 23 MB total, about 8 MB of it thumbnails (computed) |
+| `laberinto_submarino` draw calls (cells of a row merged in the water mesh) | 351–441 | 163 |
+| `caldera_roja` garbage per frame (`getOuterBounds(into)` in Gummy, Crabby, Crawler) | 37 KB | 26 KB |
+| `caldera_roja` draw CPU | 2.04 ms | 1.79 ms |
+
+Also: `Level:render` skips air cells, `liquidOfRaw` is a table lookup per raw value, `Level:bodyAt` rejects by x before
+the bounds call (about 1000 calls per frame in `caldera_roja`), vent bubbles off screen are not drawn. Not attempted without device
+numbers: caching tile chunks in canvases (GPU memory for CPU, every animated tile needs a flag), pre-compiling shaders.
+
 **How to extend:** a new scene = a function in `SC` of the harness (+ its name in the default `SCENES`). A new
 per-frame system: run `perf GARB=1` before committing it.
 
-**Tests:** `run.sh perf` (in the battery as `perf N=240 PROFILE=0`).
+**Tests:** `run.sh perf` (in the battery as `perf N=240 PROFILE=0`). Scene `freeplay`: first visit without saved cards, scrolling to the last card; fails if worst update + worst draw ≥ 33 ms. `JIT=0` / `JIT=1` forces the compiler.
 
 **Decisions / history**
 - 0.5.2 (2026-10-20): requested by the user ("a complete optimisation round: memory cleanup, optimise code"). The

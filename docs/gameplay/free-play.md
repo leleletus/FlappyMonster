@@ -6,7 +6,8 @@ half, or keyboard / pad: UP from the first row focuses it, ◀ ▶ change it, DO
 match against the bot.
 
 **Files:** `src/states/adventure/FreePlayState.lua`, `src/world/level/LevelCatalog.lua` (the ONE level-info builder,
-shared with the server's lobby catalog). **Harness:** `free_play`.
+shared with the server's lobby catalog), `src/world/level/CatalogWorker.lua` + `CatalogWorkerThread.lua` (the cards in
+a thread). **Harness:** `free_play`.
 
 ## Details
 
@@ -16,8 +17,12 @@ stars/lives/checkpoints, music, online-mode chips). Nothing is saved or unlocked
 test hub for beta testers until the story map exists). Level cards come from
 `src/world/level/LevelCatalog.lua` — the ONE level-info builder, also used by the server's
 lobby catalog (`LevelCatalog.info/load/files/buildPreview`; `RETIRED` = old test files
-an installed build still has; `_*` hidden). Loading is incremental (time budget per
-frame) and cached between visits; only visible cards are drawn; columns come from the
+an installed build still has; `_*` hidden). Cards are computed in a THREAD (`CatalogWorker`, stubs for
+`love.graphics` like the headless server, visible cards first) and saved in `freeplay_cards.dat` per game version and
+level file, so only the first visit computes them. The thread repeats main.lua's overlay (Switch updates are not
+mounted) and, on Switch, sleeps every 20000 VM instructions in case it lands on the game's core (unverified on a real
+console). With no thread, or if it fails, the state loads what is missing with a time budget per
+frame, as before. At most one thumbnail is built every 12 ms (`PREVIEW_GAP`); only visible cards are drawn; columns come from the
 current `WINDOW_W`. Input: arrows/ENTER/ESC, mouse hover + click, wheel, finger drag
 (`love.touchmoved/touchreleased` are now routed to states in logical coords). Levels are
 started with `{ level, returnTo = 'free_play' }`: AdventureState game over and

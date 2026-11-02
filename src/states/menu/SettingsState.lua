@@ -28,14 +28,15 @@ end
 local function layout()
     local w = math.min(MenuList.W, WINDOW_W - 2 * ARROW_W - 120)
     local h = MenuList.H
-    local y = math.floor(WINDOW_H * 0.40)
+    local y = math.floor(WINDOW_H * 0.33)
     local x = math.floor((WINDOW_W - w) / 2)
     return {
         value = { x = x, y = y, w = w, h = h },
         left  = { x = x - ARROW_W - 16, y = y, w = ARROW_W, h = h },
         right = { x = x + w + 16, y = y, w = ARROW_W, h = h },
-        offset = { x = x, y = y + h + 24, w = w, h = h },
-        credits = { x = x, y = y + 2 * h + 48, w = w, h = h },
+        offset = { x = x, y = y + h + 14, w = w, h = h },
+        perf = { x = x, y = y + 2 * h + 28, w = w, h = h },
+        credits = { x = x, y = y + 3 * h + 42, w = w, h = h },
     }
 end
 
@@ -63,6 +64,11 @@ function SettingsState:_offset(d)
     Sound.play('select', d > 0 and 1.08 or 0.94)
 end
 
+function SettingsState:_perf()
+    Settings.setShowPerf(not Settings.showPerf)
+    Sound.play('select', Settings.showPerf and 1.08 or 0.94)
+end
+
 -- Los créditos (y de vuelta aquí)
 function SettingsState:_credits()
     Sound.play('select', 1.25)
@@ -82,8 +88,8 @@ function SettingsState:update(dt)
     MenuScene.update(dt)
     self.anim:update(dt)
     if self.anim:busy() then return end
-    if Input.pressed('nav_down') then self.row = self.row % 3 + 1; Sound.play('select') end
-    if Input.pressed('nav_up') then self.row = (self.row + 1) % 3 + 1; Sound.play('select') end
+    if Input.pressed('nav_down') then self.row = self.row % 4 + 1; Sound.play('select') end
+    if Input.pressed('nav_up') then self.row = (self.row + 2) % 4 + 1; Sound.play('select') end
     if self.row == 1 then
         if Input.pressed('nav_left') then self:_step(-1) end
         if Input.pressed('nav_right') or Input.pressed('confirm') then self:_step(1) end
@@ -91,6 +97,9 @@ function SettingsState:update(dt)
         -- (el retardo del audio en el duelo de ritmo del Cangrejo Groove: depende del aparato)
         if Input.pressed('nav_left') then self:_offset(-10) end
         if Input.pressed('nav_right') then self:_offset(10) end
+    elseif self.row == 3 then
+        -- (el medidor de rendimiento: src/ui/PerfOverlay.lua)
+        if Input.pressed('nav_left') or Input.pressed('nav_right') or Input.pressed('confirm') then self:_perf() end
     elseif Input.pressed('confirm') or Input.pressed('flap') then
         return self:_credits()
     end
@@ -126,10 +135,13 @@ function SettingsState:render()
     local ox5, oy5, a5 = A:slide(5, 0, 220)
     local ob = (self.row == 2 and math.floor(self.t * 3) % 2 == 0) and -4 or 0
     MenuButton.draw(L('settings.rhythm_offset', { ms = tostring(Settings.rhythmOffset or 0) }), Lt.offset.x + ox5, Lt.offset.y + oy5 + ob, Lt.offset.w, Lt.offset.h, 'green', self.row == 2, { alpha = a5 })
+    -- El medidor de rendimiento
+    local op = (self.row == 3 and math.floor(self.t * 3) % 2 == 0) and -4 or 0
+    MenuButton.draw(L(Settings.showPerf and 'settings.perf_on' or 'settings.perf_off'), Lt.perf.x + ox5, Lt.perf.y + oy5 + op, Lt.perf.w, Lt.perf.h, 'orange', self.row == 3, { alpha = a5 })
     -- Créditos
     local ox4, oy4, a4 = A:slide(5, 0, 220)
-    local cb = (self.row == 3 and math.floor(self.t * 3) % 2 == 0) and -4 or 0
-    MenuButton.draw(L('credits.button'), Lt.credits.x + ox4, Lt.credits.y + oy4 + cb, Lt.credits.w, Lt.credits.h, 'purple', self.row == 2, { alpha = a4 })
+    local cb = (self.row == 4 and math.floor(self.t * 3) % 2 == 0) and -4 or 0
+    MenuButton.draw(L('credits.button'), Lt.credits.x + ox4, Lt.credits.y + oy4 + cb, Lt.credits.w, Lt.credits.h, 'purple', self.row == 4, { alpha = a4 })
 
     MenuList.footer(L('menu.desc_settings'), A, 6,
         L('settings.hint', { change = Input.label('nav_left') .. Input.label('nav_right'), back = Input.label('back') }))
@@ -141,7 +153,7 @@ function SettingsState:mousemoved(tx, ty)
     self.backHover = CornerButtons.hitBack(tx, ty)
     local Lt = layout()
     self.hover = (inside(Lt.left, tx, ty) and 'left') or (inside(Lt.right, tx, ty) and 'right') or nil
-    if inside(Lt.credits, tx, ty) then self.row = 3 elseif inside(Lt.offset, tx, ty) then self.row = 2 elseif inside(Lt.value, tx, ty) or self.hover then self.row = 1 end
+    if inside(Lt.credits, tx, ty) then self.row = 4 elseif inside(Lt.perf, tx, ty) then self.row = 3 elseif inside(Lt.offset, tx, ty) then self.row = 2 elseif inside(Lt.value, tx, ty) or self.hover then self.row = 1 end
 end
 
 function SettingsState:touchpressed(id, tx, ty)
@@ -151,7 +163,8 @@ function SettingsState:touchpressed(id, tx, ty)
     if inside(Lt.left, tx, ty) then self:_step(-1)
     elseif inside(Lt.right, tx, ty) or inside(Lt.value, tx, ty) then self:_step(1)
     elseif inside(Lt.offset, tx, ty) then self.row = 2; self:_offset(tx < Lt.offset.x + Lt.offset.w / 2 and -10 or 10)
-    elseif inside(Lt.credits, tx, ty) then self.row = 3; self:_credits() end
+    elseif inside(Lt.perf, tx, ty) then self.row = 3; self:_perf()
+    elseif inside(Lt.credits, tx, ty) then self.row = 4; self:_credits() end
 end
 
 return SettingsState

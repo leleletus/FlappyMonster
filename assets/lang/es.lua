@@ -221,6 +221,8 @@ return {
         watch = "MIRA EL DUELO",
     },
     settings = {
+        perf_on = "RENDIMIENTO: SÍ",
+        perf_off = "RENDIMIENTO: NO",
         rhythm_offset = "RETARDO DEL RITMO: {ms} MS",
         language = "IDIOMA",
         hint = "{change} cambiar      {back} volver",

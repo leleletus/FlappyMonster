@@ -35,7 +35,8 @@ local CARD_Y, CARD_W, CARD_H, CARD_GAP = 290, 320, 312, 40
 local VISIBLE = 3
 local PREV_H  = 206
 local ARROW_W, ARROW_H = 36, 110
-local PREVIEW_CELL = 6          -- px por celda al cachear la miniatura
+local PREVIEW_CELL = 4          -- px por celda al cachear la miniatura (todas juntas: unos 8 MB de vídeo)
+local PREVIEW_GAP = 0.012       -- s como mínimo entre miniatura y miniatura: una por fotograma, sin tirones
 
 local function clamp01(x) return x < 0 and 0 or (x > 1 and 1 or x) end
 
@@ -71,6 +72,7 @@ local CELL_COLORS = {
     M = { 0.35, 0.23, 0.13 }, J = { 0.18, 0.48, 0.23 }, T = { 0.37, 0.43, 0.35 },   -- (jungla: barro, su césped, sillar)
 }
 local previewCache = {}   -- [path .. tamaño] = Canvas
+local lastBuild = -1
 
 local function buildPreviewCanvas(prev, hideFinish)
     local rows = prev.rows
@@ -165,6 +167,9 @@ local function drawPreview(level, x, y, w, h, t, tint, mode)
     local key = level.path .. (hideFinish and '#sinmeta' or '')
     local canvas = previewCache[key]
     if canvas == nil then
+        local now = love.timer.getTime()
+        if now - lastBuild < PREVIEW_GAP then return end       -- (al fotograma siguiente: de momento, el cielo)
+        lastBuild = now
         canvas = buildPreviewCanvas(prev, hideFinish) or false
         previewCache[key] = canvas
     end

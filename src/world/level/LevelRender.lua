@@ -58,12 +58,21 @@ function Level:render(camX, camY, noPlane)
     local ctx = RENDER_CTX                 -- (una tabla para todo el fotograma y todos los fotogramas: sin basura)
     ctx.size, ctx.level, ctx.time = TILE_PX, self, t
 
+    local subCells = self.subCells
     for row = sr2, er2 do
+        local tilesRow = self.tiles[row]
         for col = sc2, ec2 do
-            local raw = self:getRaw(col, row)
+            local raw = tilesRow[col] or 0
             local px  = (col-1)*TILE_PX - camX
             local py  = (row-1)*TILE_PX - camY
 
+            -- (aire, la mayoría de las celdas: no dibuja nada)
+            if raw == 0 then
+                if subCells then
+                    ctx.x, ctx.y, ctx.col, ctx.row, ctx.raw = px, py, col, row, raw
+                    SubTiles.renderCell(self, col, row, px, py, ctx)
+                end
+            else
             -- Aspecto del tipo (el agua se pinta en renderWaterEffect). Los
             -- bloques cuyo trigger no usa el modo en juego (hiddenTriggers, p. ej.
             -- la meta en Cacería) no se dibujan: no tienen colisión.
@@ -98,6 +107,7 @@ function Level:render(camX, camY, noPlane)
                     local ox,oy = subOff[i][1], subOff[i][2]
                     drawMiniSpike(spikes[i].dir, px+ox, py+oy, HALF_PX, self.spikeSkin)
                 end
+            end
             end
         end
     end
@@ -214,17 +224,29 @@ function Level:renderWaterEffect(camX, camY, sceneCanvas)
     -- la escena como textura) y se dibujan de una vez: antes era un dibujo de pantalla entera por celda, recortado.
     local cw, ch = sceneCanvas:getDimensions()
     beginDistort(((ec2 - sc2 + 1) * (er2 - sr2 + 1)) * 2 + 64, cw, ch)
+    -- (las celdas seguidas de una fila, un solo rectángulo: cada vértice es una llamada a setVertex)
     for row = sr2, er2 do
+        local tilesRow = self.tiles[row]
+        local py = math.floor((row-1)*TILE_PX - camY)
+        local runX, runW, runCut
         for col = sc2, ec2 do
-            local m = liquidOfRaw(self:getRaw(col, row))
+            local m = liquidOfRaw(tilesRow[col] or 0)
             if m and m.distort then
                 local px = math.floor((col-1)*TILE_PX - camX)
-                local py = math.floor((row-1)*TILE_PX - camY)
                 -- (en la superficie, sin distorsión justo bajo la ola)
                 local cut = self:isWaterSurfaceCell(col, row) and WaterSurface.MARGIN or 0
-                addDistortRect(px, py + cut, TILE_PX, TILE_PX - cut)
+                if runX and runCut == cut and px == runX + runW then
+                    runW = runW + TILE_PX
+                else
+                    if runX then addDistortRect(runX, py + runCut, runW, TILE_PX - runCut) end
+                    runX, runW, runCut = px, TILE_PX, cut
+                end
+            elseif runX then
+                addDistortRect(runX, py + runCut, runW, TILE_PX - runCut)
+                runX = nil
             end
         end
+        if runX then addDistortRect(runX, py + runCut, runW, TILE_PX - runCut) end
     end
     Floods.renderDistort(self, camX, camY, addDistortRect, Level.liquidOfCell)
     if distortN > 0 then
@@ -247,8 +269,9 @@ function Level:renderWaterEffect(camX, camY, sceneCanvas)
     local floods = self.floods
     if floods and not floods[1] then floods = nil end
     for row = sr2, er2 do
+        local tilesRow = self.tiles[row]
         for col = sc2, ec2 do
-            local m = liquidOfRaw(self:getRaw(col, row))
+            local m = liquidOfRaw(tilesRow[col] or 0)
             if m and m.tint then
                 local tint = (self.coldWater and m.coldTint) or m.tint          -- (agua helada: Level:coldAt)
                 local cT, cB = (row-1)*TILE_PX, row*TILE_PX

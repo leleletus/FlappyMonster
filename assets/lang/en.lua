@@ -221,6 +221,8 @@ return {
         watch = "WATCH THE DUEL",
     },
     settings = {
+        perf_on = "PERFORMANCE: ON",
+        perf_off = "PERFORMANCE: OFF",
         rhythm_offset = "RHYTHM DELAY: {ms} MS",
         language = "LANGUAGE",
         hint = "{change} change      {back} back",

@@ -49,6 +49,7 @@ local PlayState                   = require 'src/states/flappy/PlayState'
 local PauseState                  = require 'src/states/adventure/PauseState'
 local AdventureState              = require 'src/states/adventure/AdventureState'
 local AdventureModeSelectState    = require 'src/states/menu/AdventureModeSelectState'
+local PerfOverlay                 = require 'src/ui/PerfOverlay'
 local FreePlayState               = require 'src/states/adventure/FreePlayState'
 local OnlineLoginState            = require 'src/states/online/OnlineLoginState'
 local OnlineHubState              = require 'src/states/online/OnlineHubState'
@@ -120,6 +121,7 @@ function love.load()
 end
 
 function love.update(dt)
+    PerfOverlay.beginStep()
     dt = math.min(dt, 0.05)
     Timer.update(dt)
     Sound.update(dt)
@@ -129,9 +131,11 @@ function love.update(dt)
     Notify.update(dt)
     Transition.update(dt)
     if not blocked and not Transition.blocking() then gStateMachine:update(dt) end
+    PerfOverlay.endUpdate(dt)
 end
 
 function love.draw()
+    PerfOverlay.beginStep()
     lovesize.begin()
         gStateMachine:render()
         MenuKit.flush()                     -- (el cursor de los menús, donde haya sitio: src/ui/menu/MenuKit)
@@ -142,6 +146,7 @@ function love.draw()
     -- negras de los móviles alargados): controles táctiles de los niveles
     local top = gStateMachine:_top()
     if top and top.drawScreen then top:drawScreen() end
+    PerfOverlay.endDraw()
 end
 
 function love.joystickadded(joystick)
@@ -214,6 +219,7 @@ end
 
 function love.keypressed(k)
     if k == 'f1' then DEBUG_HITBOX = not DEBUG_HITBOX end
+    if k == 'f3' then PerfOverlay.toggle() end
     -- (el botón / gesto ATRÁS de Android llega como escape: no es usar un teclado — escondía los controles táctiles)
     if not (Input.isMobile and k == 'escape') then Input.lastDevice = 'keyboard' end
     -- Reenviar al estado actual (para campos de texto en menús online)

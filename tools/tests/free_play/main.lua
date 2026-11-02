@@ -101,7 +101,40 @@ function love.update(dt)
             check('ayudas', hk:find('[ENTER]', 1, true) and hk:find('[F]', 1, true) and hp:find('[A]', 1, true)
                 and hp:find('[Y]', 1, true) and not hk:find('{', 1, true) and not hp:find('{', 1, true),
                 ('teclado: "%s" · mando: "%s"'):format(hk, hp))
-            shot('1280'); step = 'dif'; T = t
+            -- las fichas del HILO (src/world/level/CatalogWorker.lua) son iguales que las calculadas aquí
+            local LevelCatalog = require 'src/world/level/LevelCatalog'
+            local function same(a, b)
+                if type(a) ~= 'table' or type(b) ~= 'table' then return a == b end
+                for k, v in pairs(a) do if not same(v, b[k]) then return false end end
+                for k in pairs(b) do if a[k] == nil then return false end end
+                return true
+            end
+            local diff = {}
+            for i = 1, n do
+                local info = fp:info(i)
+                if not same(info, LevelCatalog.load(info.path, info.file)) then diff[#diff + 1] = info.file end
+            end
+            check('hilo', #diff == 0 and love.filesystem.getInfo('freeplay_cards.dat') ~= nil,
+                ('fichas del hilo distintas: %s; guardadas en disco: %s'):format(#diff > 0 and table.concat(diff, ' ') or 'ninguna',
+                    tostring(love.filesystem.getInfo('freeplay_cards.dat') ~= nil)))
+            -- con la SUPERPOSICIÓN (Switch: actualización sin montar) el hilo lee los niveles de la versión descargada
+            local base = 'update/slots/prueba_hilo/'
+            love.filesystem.createDirectory(base .. 'assets/levels')
+            local ovName = '_solo_en_la_version.json'
+            love.filesystem.write(base .. 'assets/levels/' .. ovName, love.filesystem.read(fp:info(1).path))
+            love.filesystem.remove('freeplay_cards.dat')
+            OV = { out = love.thread.newChannel(), req = love.thread.newChannel() }
+            OV.thread = love.thread.newThread('src/world/level/CatalogWorkerThread.lua')
+            OV.thread:start({ ovName }, OV.out, OV.req, base, 'prueba', false)
+            shot('1280'); step = 'ov'; T = t
+        end
+    elseif step == 'ov' then
+        local m = OV.out:peek()
+        if (m and (m.info or m.broken)) or OV.thread:getError() or t - T > 20 then
+            check('hilo_version', m and m.info and m.info.file == '_solo_en_la_version.json',
+                ('nivel que solo está en la versión descargada: %s'):format(tostring(m and (m.info and 'leído' or m.broken) or OV.thread:getError())))
+            UPDATE_RMRF('update/slots/prueba_hilo')
+            step, T = 'dif', t
         end
     elseif step == 'dif' and t - T > 0.3 then
         fp.sel = 1; pressNext('nav_up'); step, T = 'dif2', t
@@ -199,8 +232,13 @@ function love.update(dt)
     elseif step == 'vl4' and t - T > 0.5 then
         check('vista', MENU_W == 1600 and LEVEL_W == 1280 and WINDOW_W == 1600,
             ('ventana 1600x720: menú %d, nivel %d (fijo 16:9), tras salir %d'):format(MENU_W, LEVEL_W, WINDOW_W))
-        step, T = 'end', t
+        gStateMachine:change('settings'); resize(1280, 720)
+        require('src/core/Settings').showPerf = true           -- (el medidor, sin guardarlo)
+        step, T = 'cfg', t
+    elseif step == 'cfg' and t - T > 1.2 then
+        shot('settings'); step, T = 'end', t
     elseif step == 'end' and t - T > 0.5 then
+        require('src/core/Settings').showPerf = false
         print(fails == 0 and 'TODO OK' or (fails .. ' FALLOS'))
         print('capturas: ' .. love.filesystem.getSaveDirectory() .. '/free_play_*.png')
         love.event.quit(fails == 0 and 0 or 1)

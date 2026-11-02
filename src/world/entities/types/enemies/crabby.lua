@@ -223,7 +223,7 @@ end
 
 -- En una pared la hitbox está girada; girando en una esquina, con la pose real
 local stuckCenterY, dropTipY      -- (del clavado boca abajo: se definen con la caída, más abajo)
-function Crabby:getOuterBounds()
+function Crabby:getOuterBounds(into)
     if Crawler.turning(self) then
         return Crawler.poseBox(self, -self.outerW / 2, -self.outerH / 2, self.outerW, self.outerH)
     end
@@ -233,9 +233,9 @@ function Crabby:getOuterBounds()
     if self.state == 'drop_stuck' then              -- (clavado boca abajo: la caja, donde se ve el cuerpo)
         return { x = self.x - self.outerW / 2, y = stuckCenterY(self) - self.outerH / 2, w = self.outerW, h = self.outerH }
     end
-    return Entity.getOuterBounds(self)
+    return Entity.getOuterBounds(self, into)
 end
-function Crabby:getInnerBounds()
+function Crabby:getInnerBounds(into)
     if Crawler.turning(self) then
         return Crawler.poseBox(self, -self.innerW / 2, -self.innerH / 2, self.innerW, self.innerH)
     end
@@ -245,7 +245,7 @@ function Crabby:getInnerBounds()
     if self.state == 'drop_stuck' then
         return { x = self.x - self.innerW / 2, y = stuckCenterY(self) - self.innerH / 2, w = self.innerW, h = self.innerH }
     end
-    return Entity.getInnerBounds(self)
+    return Entity.getInnerBounds(self, into)
 end
 
 -- ── Estados comunes con sprite/pincho propios ────────────────────────────────

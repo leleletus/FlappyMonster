@@ -39,11 +39,14 @@ local hasSpikes        = TileCodec.hasSpikes
 -- Material líquido de una celda: el del propio tile si es líquido, o agua si
 -- la celda está waterlogged. nil = no hay líquido.
 local WATERLOGGED_MAT = 'water'
+local LIQUID_OF = {}          -- [raw] = material o false (se pregunta por cada celda visible en cada fotograma)
 local function liquidOfRaw(raw)
-    local m = TileTypes.get(tileBaseId(raw)).mat
-    if m.liquid then return m end
-    if isWaterloggedRaw(raw) then return Materials.get(WATERLOGGED_MAT) end
-    return nil
+    local m = LIQUID_OF[raw]
+    if m ~= nil then return m or nil end
+    m = TileTypes.get(tileBaseId(raw)).mat
+    if not m.liquid then m = isWaterloggedRaw(raw) and Materials.get(WATERLOGGED_MAT) or false end
+    LIQUID_OF[raw] = m
+    return m or nil
 end
 
 -- ── Spike hitbox (función pública vía Level._spikeHitbox) ────────────────────
@@ -462,6 +465,7 @@ end
 
 -- Objeto sólido "como un bloque" (solidFull: trampolines, morteros...) que
 -- contiene el punto, o nil. level.solidBodies lo rellena el juego cada paso.
+local EntityOuterBounds = require('src/world/entities/base/Entity').getOuterBounds
 local BODY_B = {}          -- (la caja de cada cuerpo, rellenada al probarlo: se llama muchas veces por paso)
 function Level:bodyAt(wx, wy, except)
     local bodies = self.solidBodies
@@ -469,8 +473,10 @@ function Level:bodyAt(wx, wy, except)
     for _, o in ipairs(bodies) do
         -- (las piezas de una entidad no la paran a ella misma: `owner`, p. ej. el trineo del Pingüino)
         if o.solidFull and o ~= except and o.alive ~= false and (except == nil or o.owner ~= except) then
-            local b = o:getOuterBounds(BODY_B)
-            if wx >= b.x and wx < b.x + b.w and wy >= b.y and wy < b.y + b.h then
+            -- (casi todos lejos: el descarte por la x ahorra la llamada, unas 1000 por fotograma con muchos enemigos)
+            local b = (o.getOuterBounds ~= EntityOuterBounds or (wx >= o.x - o.outerW / 2 and wx < o.x + o.outerW / 2))
+                      and o:getOuterBounds(BODY_B)
+            if b and wx >= b.x and wx < b.x + b.w and wy >= b.y and wy < b.y + b.h then
                 return o, { x = b.x, y = b.y, w = b.w, h = b.h }        -- (una copia: quien llama puede guardarla)
             end
         end
