@@ -88,14 +88,16 @@ not repeated here.
 
 - [x] (0.5.11) No harness for the full update download (publish → chunks → sha256 → install → restart).
 - [x] (0.5.11) No online harness with latency / jitter / packet loss.
-- [x] Hunt mode in the battery (0.5.8); the Evil Ship fight (`sp_boss LEVEL=fortaleza_malvada`) and the spike rain online (`online_smoke lluvia_pinchos WATCH=rainspike`) in the battery (0.5.11). A full rules harness for the Evil Ship (like the other bosses') is still missing.
-- [x] (0.5.11) `mechanics` `persecucion` depends on the random sequence — it now seeds its own RNG (`PSEED`, default 1). Still: with seeds 4 / 5 / 7 / 8 the Mirror never makes a push-only touch (it is left to chance); a forced probe would make it robust.
+- [x] Hunt mode in the battery (0.5.8); the Evil Ship fight (`sp_boss LEVEL=fortaleza_malvada`) and the spike rain online (`online_smoke lluvia_pinchos WATCH=rainspike`) in the battery (0.5.11). The Evil Ship's rules harness: `miniboss1_rules` (0.5.148).
+- [x] (0.5.11) `mechanics` `persecucion` depends on the random sequence — it now seeds its own RNG (`PSEED`, default 1). The push-only touch is forced in `persecucion_toque` (0.5.148).
 - [x] No test for a corrupt / truncated save or `options.cfg` round-trip. — `story_flow` `roto` (0.5.8); `menu_flow` `opciones` (0.5.11)
-- [ ] `perf`: no online-client or credits scene. The credits film's clock follows its music, which does not play in the perf harness (it stays on the title card): a scene would have to drive the film like `story_film` does. The online client needs the local server (perf is not an `online_*` harness). (The story-map scene was added in 0.5.11 and found 77 KB/frame of garbage, fixed; the boss scene is at 35 KB, not 54.)
+- [x] (0.5.148) `perf`: credits scene (`SCENES=credits`); the online client is measured by `online_smoke PERF=1`, which has the local server. (The story-map scene was added in 0.5.11 and found 77 KB/frame of garbage, fixed; the boss scene is at 35 KB, not 54.)
 - [x] (0.5.11) Particles: no pool, `table.remove(list, 1)` at the cap (O(n²) bursts).
 - [x] (0.5.11) Predictor allocates tables every tick / snapshot.
 - [x] (0.5.10) `docs/testing/harnesses.md` stale (contradicting intros, 16 harnesses missing); `free_play` README row
   malformed; stale line counts in known-debt; `save-data.md` misses `playTime` / `gameOvers`.
+
+- [ ] Battery failures seen on 2026-11-02, also without that day's changes: `bot_nav` (`ciudadela_alterna`), `gloomy_rules` (`parkour`), `project_check` on this Mac (`tools/music/ref` is linked from the docs but not in the repo). Under load `online_menus` and `online_smoke lluvia_pinchos` sometimes fail too; alone they pass.
 
 ## 7. Decisions for the user
 
@@ -107,7 +109,6 @@ not repeated here.
 
 ## 8. Features to add (decide with the user)
 
-- Options: music / SFX volume, mute, vibration, A/B swap (Xbox pads); `love.focus` must respect the volume.
 - Device-aware button glyphs (keyboard / Nintendo / Xbox / touch).
 - Tutorial / hint layer for touch players.
 - Boss rush; ghost time trials in Free Play (`PlayRecorder`).
@@ -115,6 +116,4 @@ not repeated here.
 - Online custom levels (upload from the editor, validated on the server).
 - Rejoin a running match / spectate; report / block, quick chat.
 - Story: damaged-slot restore, copy slot, retry from results, best time on the map, shard / film gallery.
-- Editor: autosave / crash recovery, `validate()` on save, playtest from cursor.
-- Jump buffer (~0.1 s).
 - Music re-encode at ~96–112 kbps (−30 MB) — needs a listening check.

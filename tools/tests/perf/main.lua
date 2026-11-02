@@ -10,7 +10,7 @@
 -- Y FUGAS (fugas): entra en el mismo nivel varias veces seguidas (RELOADS=6): la memoria de Lua y de texturas tiene que estabilizarse.
 --
 --   tools/tests/run.sh perf                          todas las escenas
---   SCENES=menu,level:assets/levels/x.json,boss,map,flappy,fugas   las que se digan
+--   SCENES=menu,level:assets/levels/x.json,boss,map,credits,flappy,fugas   las que se digan
 --   N=600 WARM=120 TOP=25                           fotogramas medidos, de calentamiento, funciones del perfil
 --   PROFILE=0                                       sin perfil
 --   SHOTS=1                                         captura al final de cada escena: <save>/perf_<escena>.png
@@ -228,6 +228,17 @@ function SC.map()
     Run.slot, Run.data = nil, nil
 end
 
+-- Los créditos: la película va muda (su reloj es el suyo, no el de la música, que en este arnés no avanza)
+function SC.credits()
+    gStateMachine:change('story_film', { film = 'credits' })
+    local film = top().film
+    film.mute = true
+    -- (los escenarios vivos del medio de la película, no el cartel del título)
+    local sc = film.tl.scenes
+    film.t = sc[math.max(2, math.floor(#sc / 2))].t0
+    measure('créditos', true)                    -- (cada escenario carga lo suyo al entrar)
+end
+
 function SC.flappy()
     gStateMachine:change('play', { difficulty = 'normal' })
     local f = 0
@@ -346,7 +357,7 @@ end
 local function run()
     if os.getenv('JIT') == '0' then jit.off() elseif os.getenv('JIT') == '1' then jit.on() end
     print(('JIT %s (%s)'):format(jit.status() and 'encendido' or 'apagado', jit.arch))
-    local list = os.getenv('SCENES') or 'menu,level,level:assets/levels/caldera_roja.json,boss,map,flappy,fugas,freeplay'
+    local list = os.getenv('SCENES') or 'menu,level,level:assets/levels/caldera_roja.json,boss,map,credits,flappy,fugas,freeplay'
     for item in list:gmatch('[^,]+') do
         local nm, arg = item:match('^([^:]+):?(.*)$')
         if SC[nm] then SC[nm](arg ~= '' and arg or nil) else print('escena desconocida: ' .. nm); fails = fails + 1 end

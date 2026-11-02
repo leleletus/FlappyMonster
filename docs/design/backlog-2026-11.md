@@ -41,9 +41,9 @@ move this page to the archive.
 - [x] (0.5.147) **C1. Guard on the level tools:** `build.py` and `retheme.py` refuse to run without level names.
 - [x] **C2. Smart boss-fight help:** already built (`bossdrops`, 0.5.62). Only `known-debt.md` was stale.
 - [x] (0.5.147, coded and tested; feel still to be judged by the user) **C3. Jump buffer (~0.1 s).** Needs the user's feel check.
-- [ ] **C4. Editor safety:** autosave / crash recovery, `validate()` on save, playtest from the cursor.
-- [ ] **C5. Options:** music / SFX volume, mute, vibration, A/B swap for Xbox pads.
-- [ ] **C6. Tests:** `perf` scenes for credits and the online client, full Evil Ship rules harness, forced push-only probe
+- [x] (0.5.148) **C4. Editor safety:** autosave / crash recovery, `validate()` on save, playtest from the cursor.
+- [x] (0.5.148) **C5. Options:** music / SFX volume, mute, A/B swap for Xbox pads. Vibration dropped: the game has no rumble at all, so there is nothing to switch off.
+- [x] (0.5.148) **C6. Tests:** `perf` scenes for credits and the online client, full Evil Ship rules harness, forced push-only probe
   for the Mirror.
 
 ## Later (the user: "el 7 lo hacemos luego")

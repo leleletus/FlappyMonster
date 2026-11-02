@@ -1,6 +1,6 @@
 -- src/states/menu/SettingsState.lua
--- Configuración (desde el menú principal). Por ahora solo el idioma
--- (src/core/Lang.lua + assets/lang/); se guarda con src/core/Settings.lua.
+-- Configuración (desde el menú principal): idioma (src/core/Lang.lua + assets/lang/), volúmenes, silencio, A / B del
+-- mando...; se guarda con src/core/Settings.lua.
 -- Mandos/teclado: izquierda/derecha (o confirmar) cambian, atrás vuelve; abajo: el botón de los CRÉDITOS (la película
 -- de los créditos, docs/story/credits.md; siempre se pueden ver desde aquí).
 -- Ratón/táctil: flechas o el nombre del idioma; el botón de los créditos.
@@ -24,20 +24,48 @@ local function langIndex()
     return 1
 end
 
--- Geometría compartida por dibujo, ratón y táctil: el botón del idioma con una flecha a cada lado
-local function layout()
+-- Las FILAS, de arriba abajo: el texto, su color, `step(d)` (izquierda / derecha) y `go()` (confirmar). Una opción nueva es
+-- una fila más; las que no caben se ven desplazándose con la seleccionada.
+local function vol(key, label)
+    return { color = 'green', text = function() return L(label, { n = tostring(Settings[key]) }) end,
+             step = function(_, d) Settings.set(key, math.max(0, math.min(10, Settings[key] + d))); Sound.play('select', d > 0 and 1.08 or 0.94) end }
+end
+local function flag(key, on, off, color)
+    local toggle = function() Settings.set(key, not Settings[key]); Sound.play('select', Settings[key] and 1.08 or 0.94) end
+    return { color = color, text = function() return L(Settings[key] and on or off) end, step = toggle, go = toggle }
+end
+local ROWS = {
+    { color = 'teal', text = function() return L.LANGUAGES[langIndex()].name end,
+      step = function(self, d) self:_step(d) end, go = function(self) self:_step(1) end },
+    vol('musicVol', 'settings.music'),
+    vol('sfxVol', 'settings.sfx'),
+    flag('muted', 'settings.mute_on', 'settings.mute_off', 'green'),
+    flag('swapAB', 'settings.swap_on', 'settings.swap_off', 'blue'),
+    -- (el retardo del audio en el duelo de ritmo del Cangrejo Groove: depende del aparato)
+    { color = 'pink', text = function() return L('settings.rhythm_offset', { ms = tostring(Settings.rhythmOffset or 0) }) end,
+      step = function(self, d) self:_offset(d * 10) end },
+    -- (el medidor de rendimiento: src/ui/PerfOverlay.lua)
+    { color = 'orange', text = function() return L(Settings.showPerf and 'settings.perf_on' or 'settings.perf_off') end,
+      step = function(self) self:_perf() end, go = function(self) self:_perf() end },
+    { color = 'purple', text = function() return L('credits.button') end, go = function(self) return self:_credits() end },
+}
+SettingsState.ROWS = ROWS
+
+-- Geometría compartida por dibujo, ratón y táctil: las filas que caben, desde `first`, con una flecha a cada lado
+local function layout(first)
     local w = math.min(MenuList.W, WINDOW_W - 2 * ARROW_W - 120)
-    local h = MenuList.H
-    local y = math.floor(WINDOW_H * 0.33)
+    local h, gap = 56, 10
+    local y = math.floor(WINDOW_H * 0.2)
     local x = math.floor((WINDOW_W - w) / 2)
-    return {
-        value = { x = x, y = y, w = w, h = h },
-        left  = { x = x - ARROW_W - 16, y = y, w = ARROW_W, h = h },
-        right = { x = x + w + 16, y = y, w = ARROW_W, h = h },
-        offset = { x = x, y = y + h + 14, w = w, h = h },
-        perf = { x = x, y = y + 2 * h + 28, w = w, h = h },
-        credits = { x = x, y = y + 3 * h + 42, w = w, h = h },
-    }
+    local fit = math.max(1, math.floor((WINDOW_H - 130 - y + gap) / (h + gap)))
+    local out = { fit = math.min(fit, #ROWS), rows = {} }
+    for i = 0, out.fit - 1 do
+        out.rows[first + i] = { x = x, y = y + i * (h + gap), w = w, h = h }
+    end
+    out.arrow = function(r)
+        return { x = r.x - ARROW_W - 16, y = r.y, w = ARROW_W, h = r.h }, { x = r.x + r.w + 16, y = r.y, w = ARROW_W, h = r.h }
+    end
+    return out
 end
 
 local function inside(r, x, y, pad)
@@ -47,7 +75,7 @@ end
 
 function SettingsState:enter()
     self.anim = MenuAnim.new({ n = 6 })
-    self.t, self.flash, self.row = 0, nil, 1
+    self.t, self.flash, self.row, self.first = 0, nil, 1, 1
     Sound.playMusic('menus')
 end
 
@@ -82,27 +110,28 @@ function SettingsState:_back()
     self.anim:leave(function() gStateMachine:change('main_menu', { selected = 3 }) end, 5)
 end
 
+-- Elegir una fila: la lista se desplaza para que se vea
+function SettingsState:_select(i)
+    self.row = i
+    local fit = layout(1).fit
+    if i < self.first then self.first = i elseif i >= self.first + fit then self.first = i - fit + 1 end
+end
+
 function SettingsState:update(dt)
     self.t = self.t + dt
     if self.flash then self.flash.t = self.flash.t + dt end
     MenuScene.update(dt)
     self.anim:update(dt)
     if self.anim:busy() then return end
-    if Input.pressed('nav_down') then self.row = self.row % 4 + 1; Sound.play('select') end
-    if Input.pressed('nav_up') then self.row = (self.row + 2) % 4 + 1; Sound.play('select') end
-    if self.row == 1 then
-        if Input.pressed('nav_left') then self:_step(-1) end
-        if Input.pressed('nav_right') or Input.pressed('confirm') then self:_step(1) end
-    elseif self.row == 2 then
-        -- (el retardo del audio en el duelo de ritmo del Cangrejo Groove: depende del aparato)
-        if Input.pressed('nav_left') then self:_offset(-10) end
-        if Input.pressed('nav_right') then self:_offset(10) end
-    elseif self.row == 3 then
-        -- (el medidor de rendimiento: src/ui/PerfOverlay.lua)
-        if Input.pressed('nav_left') or Input.pressed('nav_right') or Input.pressed('confirm') then self:_perf() end
-    elseif Input.pressed('confirm') or Input.pressed('flap') then
-        return self:_credits()
+    local n, row = #ROWS, self.row
+    if Input.pressed('nav_down') then self:_select(row % n + 1); Sound.play('select') end
+    if Input.pressed('nav_up') then self:_select((row + n - 2) % n + 1); Sound.play('select') end
+    local r = ROWS[self.row]
+    if r.step then
+        if Input.pressed('nav_left') then r.step(self, -1) end
+        if Input.pressed('nav_right') then r.step(self, 1) end
     end
+    if r.go and (Input.pressed('confirm') or (not r.step and Input.pressed('flap'))) then return r.go(self) end
     if Input.pressed('back') then self:_back() end
 end
 
@@ -110,38 +139,21 @@ function SettingsState:render()
     MenuScene.draw()
     MenuList.header(L('menu.settings'), 'blue', self.anim, 1)
 
-    local Lt = layout()
+    local Lt = layout(self.first)
     local A = self.anim
-    -- Etiqueta "IDIOMA"
-    local ox, oy, a = A:slide(2, 0, 220)
-    local label = L('settings.language')
-    local ls = 5
-    PixelFont.shadow(label, math.floor((WINDOW_W - PixelFont.width(label, ls)) / 2) + ox, Lt.value.y - 56 + oy, ls, a, { 1, 0.92, 0.3 })
-    -- El idioma (al cambiar, el botón da un saltito hacia el lado de la flecha)
-    local ox2, oy2, a2 = A:slide(3, 0, 220)
-    local kick = 0
-    if self.flash and self.flash.t < 0.14 then kick = self.flash.d * 8 end
+    local ox, oy, a = A:slide(3, 0, 220)
     local bob = (math.floor(self.t * 3) % 2 == 0) and -4 or 0
-    if self.row ~= 1 then bob = 0 end
-    MenuButton.draw(L.LANGUAGES[langIndex()].name, Lt.value.x + ox2 + kick, Lt.value.y + oy2 + bob, Lt.value.w, Lt.value.h, 'teal', self.row == 1, { alpha = a2 })
-    -- Flechas
-    local ox3, oy3, a3 = A:slide(4, 0, 220)
-    local pl = self.flash and self.flash.d < 0 and self.flash.t < 0.12
-    local pr = self.flash and self.flash.d > 0 and self.flash.t < 0.12
-    MenuButton.draw('<', Lt.left.x + ox3, Lt.left.y + oy3 + (pl and 4 or 0), Lt.left.w, Lt.left.h, 'yellow', self.hover == 'left', { alpha = a3 })
-    MenuButton.draw('>', Lt.right.x + ox3, Lt.right.y + oy3 + (pr and 4 or 0), Lt.right.w, Lt.right.h, 'yellow', self.hover == 'right', { alpha = a3 })
-
-    -- El retardo del ritmo
-    local ox5, oy5, a5 = A:slide(5, 0, 220)
-    local ob = (self.row == 2 and math.floor(self.t * 3) % 2 == 0) and -4 or 0
-    MenuButton.draw(L('settings.rhythm_offset', { ms = tostring(Settings.rhythmOffset or 0) }), Lt.offset.x + ox5, Lt.offset.y + oy5 + ob, Lt.offset.w, Lt.offset.h, 'green', self.row == 2, { alpha = a5 })
-    -- El medidor de rendimiento
-    local op = (self.row == 3 and math.floor(self.t * 3) % 2 == 0) and -4 or 0
-    MenuButton.draw(L(Settings.showPerf and 'settings.perf_on' or 'settings.perf_off'), Lt.perf.x + ox5, Lt.perf.y + oy5 + op, Lt.perf.w, Lt.perf.h, 'orange', self.row == 3, { alpha = a5 })
-    -- Créditos
-    local ox4, oy4, a4 = A:slide(5, 0, 220)
-    local cb = (self.row == 4 and math.floor(self.t * 3) % 2 == 0) and -4 or 0
-    MenuButton.draw(L('credits.button'), Lt.credits.x + ox4, Lt.credits.y + oy4 + cb, Lt.credits.w, Lt.credits.h, 'purple', self.row == 4, { alpha = a4 })
+    for i, box in pairs(Lt.rows) do
+        local on = i == self.row
+        local kick = (on and self.flash and self.flash.t < 0.14) and self.flash.d * 8 or 0
+        MenuButton.draw(ROWS[i].text(), box.x + ox + kick, box.y + oy + (on and bob or 0), box.w, box.h, ROWS[i].color, on, { alpha = a })
+        if on and ROWS[i].step then
+            local l, r = Lt.arrow(box)
+            local ox3, oy3, a3 = A:slide(4, 0, 220)
+            MenuButton.draw('<', l.x + ox3, l.y + oy3, l.w, l.h, 'yellow', self.hover == 'left', { alpha = a3 })
+            MenuButton.draw('>', r.x + ox3, r.y + oy3, r.w, r.h, 'yellow', self.hover == 'right', { alpha = a3 })
+        end
+    end
 
     MenuList.footer(L('menu.desc_settings'), A, 6,
         L('settings.hint', { change = Input.label('nav_left') .. Input.label('nav_right'), back = Input.label('back') }))
@@ -151,20 +163,39 @@ end
 
 function SettingsState:mousemoved(tx, ty)
     self.backHover = CornerButtons.hitBack(tx, ty)
-    local Lt = layout()
-    self.hover = (inside(Lt.left, tx, ty) and 'left') or (inside(Lt.right, tx, ty) and 'right') or nil
-    if inside(Lt.credits, tx, ty) then self.row = 4 elseif inside(Lt.perf, tx, ty) then self.row = 3 elseif inside(Lt.offset, tx, ty) then self.row = 2 elseif inside(Lt.value, tx, ty) or self.hover then self.row = 1 end
+    local Lt = layout(self.first)
+    local sel = Lt.rows[self.row]
+    self.hover = nil
+    if sel then
+        local l, r = Lt.arrow(sel)
+        self.hover = (inside(l, tx, ty) and 'left') or (inside(r, tx, ty) and 'right') or nil
+    end
+    for i, box in pairs(Lt.rows) do if inside(box, tx, ty, 3) then self:_select(i) end end
 end
 
 function SettingsState:touchpressed(id, tx, ty)
     if self.anim:busy() then return end
     if CornerButtons.hitBack(tx, ty) then return self:_back() end
-    local Lt = layout()
-    if inside(Lt.left, tx, ty) then self:_step(-1)
-    elseif inside(Lt.right, tx, ty) or inside(Lt.value, tx, ty) then self:_step(1)
-    elseif inside(Lt.offset, tx, ty) then self.row = 2; self:_offset(tx < Lt.offset.x + Lt.offset.w / 2 and -10 or 10)
-    elseif inside(Lt.perf, tx, ty) then self.row = 3; self:_perf()
-    elseif inside(Lt.credits, tx, ty) then self.row = 4; self:_credits() end
+    local Lt = layout(self.first)
+    local sel = Lt.rows[self.row]
+    if sel and ROWS[self.row].step then
+        local l, r = Lt.arrow(sel)
+        if inside(l, tx, ty) then return ROWS[self.row].step(self, -1) end
+        if inside(r, tx, ty) then return ROWS[self.row].step(self, 1) end
+    end
+    for i, box in pairs(Lt.rows) do
+        if inside(box, tx, ty, 3) then
+            local was = self.row == i
+            self:_select(i)
+            local row = ROWS[i]
+            -- (la fila ya elegida: confirmar, o la mitad izquierda / derecha baja o sube)
+            if was or not row.step then
+                if row.go then return row.go(self) end
+                return row.step(self, tx < box.x + box.w / 2 and -1 or 1)
+            end
+            return
+        end
+    end
 end
 
 return SettingsState

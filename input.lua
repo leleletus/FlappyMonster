@@ -103,6 +103,18 @@ local STICK_DEBOUNCE = 0.15
 local AXIS_OF = { nav_left = { 'leftx', -1 }, nav_right = { 'leftx', 1 }, nav_up = { 'lefty', -1 }, nav_down = { 'lefty', 1 } }
 local suppress, releasedAt, clock = {}, {}, 0
 
+-- A / B al revés (opción, mandos de Xbox: el de abajo confirma y salta). Los rótulos no cambian: en esos mandos ya dicen A y B
+local swapped = false
+function Input.setSwapAB(on)
+    if on == swapped then return end
+    swapped = on
+    for _, list in pairs(controls) do
+        for i, c in ipairs(list) do
+            if c == 'button:a' then list[i] = 'button:b' elseif c == 'button:b' then list[i] = 'button:a' end
+        end
+    end
+end
+
 function Input.load()
     player = baton.new({
         controls = controls,

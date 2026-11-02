@@ -7,6 +7,7 @@
 --   pkill -f "^love server"
 --
 -- (MODE: race | hunt | koth; SECS = duración, 16 por defecto)
+-- PERF=1: lo que cuesta el CLIENTE online de verdad (update y dibujo; falla si la media de update + dibujo pasa de 16,7 ms)
 -- LAG=ms LOSS=%: red MALA simulada en el cliente real — lo que manda y lo que recibe llega LAG ms tarde, y se pierde
 -- el LOSS % de las fotos ('s') y de los paquetes de inputs ('in'); falla si la predicción se queda atrás (el servidor
 -- tiene que ir confirmando inputs) o si hay errores
@@ -104,6 +105,7 @@ function love.load()
     bad:on('login_success', function() BADNAME = 'ACEPTADO' end)
     bad:connect()
 end
+PERFLOG = os.getenv('PERF') and { upd = 0, draw = 0, n = 0 } or nil
 function love.update(dt)
     t = t + dt
     Timer.update(dt); Sound.update(dt); NC:update(dt); bot.c:update(); bad:update()
@@ -137,7 +139,9 @@ function love.update(dt)
         bot.bits = {}
     end
     Input = setmetatable({ pressed = stub.pressed, down = stub.down }, { __index = package.loaded['input'] })
+    local perfT0 = love.timer.getTime()
     if gStateMachine:_top() then gStateMachine:update(dt) end
+    if PERFLOG then PERFLOG.upd, PERFLOG.n = PERFLOG.upd + love.timer.getTime() - perfT0, PERFLOG.n + 1 end
     Input = package.loaded['input']
     if st and st.localPaInit then frames = frames + 1 end
     if os.getenv('WANTOXY') and st and st.level then
@@ -190,6 +194,13 @@ function love.update(dt)
         clk.last, clk.lastT = left, t
     end
     if t > (tonumber(os.getenv('SECS')) or 16) then
+        if PERFLOG and not PERFLOG.done then
+            PERFLOG.done = true
+            local n = math.max(1, PERFLOG.n)
+            local u, d = PERFLOG.upd / n * 1000, PERFLOG.draw / n * 1000
+            print(('%s cliente online: update %.2f ms + dibujo %.2f ms de media, %d fotogramas (límite 16,7)'):format(u + d <= 16.7 and 'OK   ' or 'FALLA', u, d, n))
+            if u + d > 16.7 then print('FALLA rendimiento del cliente'); love.event.quit(1); return end
+        end
         if os.getenv('DIFF') and st and st.level then      -- la dificultad de la sala llega al cliente y a su jugador
             local want = ({ easy = 4 })[os.getenv('DIFF')] or 3
             print(('dificultad: sala %s → cliente %s, vida del jugador %s'):format(os.getenv('DIFF'), tostring(st.level.difficulty), tostring(st.localPa and st.localPa.hpMax)))
@@ -270,8 +281,10 @@ function love.update(dt)
     end
 end
 function love.draw()
+    local perfT0 = love.timer.getTime()
     lovesize.begin()
     if gStateMachine:_top() then gStateMachine:render() end
+    if PERFLOG then PERFLOG.draw = PERFLOG.draw + love.timer.getTime() - perfT0 end
     for i, n in ipairs({ 'skull', 'flag', 'hill', 'crown' }) do PixelIcons.draw(n, 20 + i * 40, 600, 3) end
     lovesize.finish()
 end

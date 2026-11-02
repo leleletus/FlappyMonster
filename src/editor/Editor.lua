@@ -241,7 +241,7 @@ local function drawDecoThumb(t, x, y, s)
 end
 
 -- ── Modelo / historial ────────────────────────────────────────────────────────
-local function markDirty() E.levelDirty = true; E.unsaved = true end
+local function markDirty() E.levelDirty = true; E.unsaved = true; E.autoDirty = true end
 
 local function pushUndo()
     table.insert(E.undo, E.model:snapshot())
@@ -427,16 +427,75 @@ local function save(path)
     path = path or E.model.path
     if not path then E.modal = { kind = 'saveas', name = E.model.name or 'nivel' }; return end
     local ok, err = E.model:save(path)
-    if ok then E.unsaved = false; msg('Guardado en ' .. path) else msg('No se pudo guardar: ' .. tostring(err), 'error') end
+    if not ok then return msg('No se pudo guardar: ' .. tostring(err), 'error') end
+    E.unsaved = false
+    E.clearAutosave()
+    -- (se guarda igual —no se pierde el trabajo—, pero que se vea si el nivel está mal)
+    E.warnings = E.model:validate()
+    local errs = 0
+    for _, w in ipairs(E.warnings) do if w[1] == 'error' then errs = errs + 1 end end
+    if errs > 0 then
+        E.rightTab = 'warn'
+        msg('Guardado en ' .. path .. ', pero con ' .. errs .. ' error(es): pestaña Avisos', 'warn')
+    else
+        msg('Guardado en ' .. path)
+    end
+end
+E.save = save
+
+-- ── Copia de seguridad ────────────────────────────────────────────────────────
+-- Cada AUTOSAVE_EVERY s, si hay cambios, una copia en la carpeta de guardado (nunca encima del nivel). Si el editor se
+-- cierra sin guardar o se cuelga, al volver a abrirlo ofrece recuperarla. Guardar o descartar la borra.
+local AUTOSAVE_EVERY = 30
+local AUTOSAVE, AUTOSAVE_PATH = 'editor_autosave.json', 'editor_autosave.path'
+function E.clearAutosave()
+    love.filesystem.remove(AUTOSAVE); love.filesystem.remove(AUTOSAVE_PATH)
+    E.autoDirty, E.autoT = false, 0
+end
+function E.autosave()
+    love.filesystem.write(AUTOSAVE, E.model:encode())
+    love.filesystem.write(AUTOSAVE_PATH, E.model.path or '')
+    E.autoDirty, E.autoT = false, 0
+end
+function E.autosaveTick(dt)
+    E.autoT = (E.autoT or 0) + dt
+    if E.autoDirty and E.autoT >= AUTOSAVE_EVERY then E.autosave() end
+end
+function E.offerRecovery()
+    if love.filesystem.getInfo(AUTOSAVE) then E.modal = { kind = 'recover' } end
+end
+function E.recover()
+    local json = require 'libs/json'
+    local ok, lvl = pcall(json.decode, love.filesystem.read(AUTOSAVE) or '')
+    E.modal = nil
+    if not (ok and type(lvl) == 'table') then E.clearAutosave(); return msg('La copia de seguridad está dañada', 'error') end
+    local path = love.filesystem.read(AUTOSAVE_PATH) or ''
+    path = path ~= '' and path or nil
+    local m, err = Model.fromData(lvl, path)
+    if not m then return msg(err, 'error') end
+    setModel(m, path)
+    E.unsaved = true                                 -- (aún no está en el nivel: hay que guardarlo)
+    msg('Copia de seguridad recuperada: guárdala con Ctrl+S', 'warn')
 end
 
 -- ── Modo prueba ───────────────────────────────────────────────────────────────
-local function startPlay()
+-- `fromCursor` (Mayús+F5): el jugador empieza en la casilla bajo el ratón, solo en esta prueba
+local function startPlay(fromCursor)
     local errs = 0
     for _, w in ipairs(E.warnings or {}) do if w[1] == 'error' then errs = errs + 1 end end
     if errs > 0 then E.rightTab = 'warn'; return msg('Corrige los errores (pestaña Avisos) antes de probar', 'error') end
+    local start = E.model.playerStart
+    if fromCursor then
+        local wx, wy = screenToWorld(love.mouse.getPosition())
+        local c, r = math.floor(wx / T()) + 1, math.floor(wy / T()) + 1
+        if not E.model:inBounds(c, r) or Tiles.get(Codec.id(E.model.tiles[r][c])).collision == 'solid' then
+            return msg('Pon el ratón en una casilla libre del mapa para probar desde ahí', 'error')
+        end
+        E.model.playerStart = { c, r }
+    end
     Editor.previewMusic(nil)
     love.filesystem.write(PLAYTEST, E.model:encode())
+    E.model.playerStart = start
     if not E.gameReady then G.load(E.gameArgs or {}); E.gameReady = true end
     if G.resize then G.resize(love.graphics.getDimensions()) end
     gStateMachine:change('adventure', { level = PLAYTEST })
@@ -542,6 +601,7 @@ function Editor.load(args, levelArg)
     local path = levelArg or 'assets/levels/nivel01.json'
     local m, err = Model.load(path)
     if m then setModel(m, path) else setModel(Model.new(30, 15, 'nuevo'), nil); msg(err, 'error') end
+    E.offerRecovery()                                  -- (¿se cerró con cambios sin guardar?)
 end
 
 function Editor.update(dt)
@@ -549,6 +609,7 @@ function Editor.update(dt)
     if E.soundReady and Sound then Sound.update(dt) end       -- (música de prueba: intro → bucle)
     if E.level then E.level:update(dt); E.level:updateFoliage(dt) end
     if E.msgT > 0 then E.msgT = E.msgT - dt end
+    E.autosaveTick(dt)
 
     -- Desplazamiento con teclado
     if not ui.hasFocus() and not E.modal then
@@ -655,7 +716,7 @@ function Editor.keypressed(k)
     elseif k == 'f1' then E.modal = { kind = 'help' }
     elseif k == 'delete' or k == 'backspace' then Editor.deleteSelected()
     elseif k == 'escape' then E.selected = nil; E.selDeco = nil
-    elseif k == 'f5' then startPlay()
+    elseif k == 'f5' then startPlay(love.keyboard.isDown('lshift', 'rshift'))
     elseif k == '=' or k == 'kp+' then E.zoom = math.min(3, E.zoom * 1.25)
     elseif k == '-' or k == 'kp-' then E.zoom = math.max(0.25, E.zoom / 1.25)
     elseif k == '0' then E.zoom = 1 end
@@ -722,6 +783,7 @@ function Editor.install(levelArg)
             msg('Hay cambios sin guardar. Cierra otra vez para salir sin guardar.', 'warn')
             return true
         end
+        E.clearAutosave()                              -- (salir a propósito: no hay nada que recuperar)
     end
 end
 

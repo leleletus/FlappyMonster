@@ -7,7 +7,7 @@ the save directory is searched before the game's own files.
 
 | File | Written by | Contents |
 |---|---|---|
-| `options.cfg` | `src/core/Settings.lua` | language, last accepted online name (`onlineName`), rhythm delay in ms (`rhythmOffset`, the Groove Crab's duel), performance meter on (`showPerf`) |
+| `options.cfg` | `src/core/Settings.lua` | language, last accepted online name (`onlineName`), music and sound volume 0-10 (`musicVol`, `sfxVol`), `muted`, A / B swapped (`swapAB`), rhythm delay in ms (`rhythmOffset`, the Groove Crab's duel), performance meter on (`showPerf`) |
 | `freeplay_cards.dat` | `src/world/level/CatalogWorkerThread.lua` | Free Play level cards (a cache, `bitser`: can be deleted; recomputed for each game version or changed level file) |
 | `<difficulty>_highscore.dat` (`SCORE_FILE`) | `src/states/flappy/PlayState.lua` | Flappy best score, one file per Flappy difficulty |
 | `story1.sav` … `story3.sav` | `src/story/Save.lua` | one story slot each: difficulty, lives, per-level best (rating, grade, points, time), done nodes, shards, bonus results, world rewards, points, play time (`playTime`), Game Overs (`gameOvers`), pre-level films already seen (`films`), extra lives already taken per level (`taken`), worlds open without the previous boss (`open`, from a migration), collectibles (`collect[id]` = true or a state such as `'stolen'`), secret exits used (`found[level]`), `version` |

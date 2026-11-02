@@ -221,6 +221,12 @@ return {
         watch = "WATCH THE DUEL",
     },
     settings = {
+        music = "MUSIC: {n}",
+        sfx = "SOUNDS: {n}",
+        mute_on = "MUTE: ON",
+        mute_off = "MUTE: OFF",
+        swap_on = "PAD A / B: SWAPPED",
+        swap_off = "PAD A / B: NORMAL",
         perf_on = "PERFORMANCE: ON",
         perf_off = "PERFORMANCE: OFF",
         rhythm_offset = "RHYTHM DELAY: {ms} MS",

@@ -88,6 +88,7 @@ function love.load()
     Input.lastDevice = Input.isMobile and 'touch' or (Input.isSwitch and 'gamepad' or 'keyboard')
     require('src/core/Lang').autoArgs = Input.hints       -- (teclas de las ayudas según el aparato)
     Sound.load()
+    require('src/core/Settings').apply()
 
     gStateMachine = StateMachine:new({
         update             = function() return UpdateState:new() end,   -- (actualización automática)
@@ -213,7 +214,7 @@ function love.focus(f)
         -- app en segundo plano calla)
         if Input.isMobile then love.audio.setVolume(0) end
     else
-        love.audio.setVolume(1)
+        love.audio.setVolume(require('src/core/Settings').muted and 0 or 1)
     end
 end
 

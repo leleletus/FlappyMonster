@@ -10,9 +10,14 @@ bar and left panel), `EditorInspector.lua` (the right panel: fields generated fr
 Selección / Nivel / Avisos), `EditorDialogs.lua` (dialogs, boss-zone and auto-scroll tools), `EditorModel.lua` (level
 data, save, `validate()`), `ui.lua` (widgets).
 
-Keys: 1-7 layers, P plane (Delante / Fondo), F1 shortcuts, F5 play-test (through `AdventureState`), Ctrl+O open,
+Keys: 1-7 layers, P plane (Delante / Fondo), F1 shortcuts, F5 play-test (through `AdventureState`), Shift+F5 play-test from the tile under the mouse (`playerStart` changes only in the test copy), Ctrl+O open,
 Ctrl+S save, K connect.
 **Harness:** `editor_open` (`LINKS=1`, `PLAY=<level>`, `PLANE=1`), `level_check` (runs the validator on every level).
+
+**Safety (2026-11-02):** every 30 s with changes, a copy in the save folder (`editor_autosave.json` + `.path`), never over the
+level; opening the editor after it closed without saving offers to recover it (`recover` dialog). Saving or discarding removes
+it. Saving also runs `validate()`: it still saves, and says so and opens the Avisos tab if there are errors.
+Harness: `editor_open SAFETY=1`.
 
 ## Details
 

@@ -84,6 +84,7 @@
 --   balanza_tope   un platillo se para en el suelo y en una caja (no los atraviesa); agachado encima NO se baja por él
 --   caja_choques   caja que cae en la cabeza del jugador, el aire que la empuja contra él y 60 carreras / saltos
 --                  contra ella: nunca se mete en él ni lo pasa al otro lado
+--   persecucion_toque  el Perseguidor, forzado: tocarlo solo empuja; la onda de su picado, 1,5 casillas y en el suelo
 --   jefe_puntos    un golpe a un jefe da puntos una vez aunque el servidor lo compruebe dos veces (compensación del retardo)
 --   gp_radio       el impacto del ground pound: solo a lo que está en el suelo, a 1,5 casillas como mucho
 --   dejar_encima   agachado + ARRIBA delante de una caja: queda encima de ella (también de una pila); sin nada, al suelo
@@ -2253,6 +2254,48 @@ function cases.cargar_gp()
     check('cargar_gp', ok, table.concat(parts, ' · '))
 end
 
+-- EL PERSEGUIDOR, forzado (antes el toque dependía del azar): tocarlo solo empuja, sin daño; la onda de su picado, la del
+-- ground pound: a 1,2 casillas en el suelo empuja, a 2 no, en el aire no (el usuario, 2026-11-02)
+function cases.persecucion_toque()
+    local function setup()
+        local tiles = {}
+        for r = 1, 11 do
+            tiles[r] = {}
+            for c = 1, 60 do tiles[r][c] = (r == 11 or c == 1 or c == 60) and 1 or 0 end
+        end
+        local lv = Level.fromData({ name = 'huida', width = 60, height = 11, playerStart = { 10, 10 }, tiles = tiles,
+            entities = { { type = 'mirrorchase', col = 20, row = 9, props = { rest = 99 } } },
+            autoScroll = { startCol = 1, endCol = 60, speed = 0, width = 20, margin = 0.6, countdown = 0 } })
+        local ch = Entities.create(lv.entities[1])
+        lv.liveEntities = { ch }
+        local AutoScroll = require 'src/world/systems/AutoScroll'
+        local pa = playerAt(lv, 20, 10)
+        for _ = 1, 5 do AutoScroll.update(lv, 1 / 60, function() end) end
+        ch.graceT = 0
+        return lv, ch, pa
+    end
+    local lv, ch, pa = setup()
+    ch:enter('recover')
+    ch.x, ch.y = pa.x, pa.y
+    local hp0 = pa.hp
+    ch:update(1 / 60, lv)
+    local pushed, unhurt = pa.vx ~= 0 or (pa.ctrlLockT or 0) > 0, pa.hp == hp0
+    local function wave(dist, air)
+        local l, c, p = setup()
+        c:enter('dive')
+        c.x = p.x - dist
+        c.markY = p:getOuterBounds().y + p:getOuterBounds().h
+        c.y = c.markY - c.outerH / 2 - 1
+        p.onGround = not air
+        p.stunT = 0
+        c:update(1 / 60, l)
+        return p.stunT > 0
+    end
+    local near, far, air = wave(1.2 * T), wave(2 * T), wave(1.2 * T, true)
+    check('persecucion_toque', pushed and unhurt and near and not far and not air,
+        ('tocarlo empuja=%s, sin daño=%s · onda a 1,2 %s · a 2 %s · en el aire %s'):format(tostring(pushed), tostring(unhurt), tostring(near), tostring(far), tostring(air)))
+end
+
 -- UN GOLPE, UNOS PUNTOS (online, el usuario 2026-11-02: salía dos veces el mensaje): el servidor pasa dos veces por tick
 -- y comprueba contra el jefe que veía el jugador (aún sin invulnerabilidad). El 2º "pisotón" no quita vida: sin puntos.
 function cases.jefe_puntos()
@@ -3825,7 +3868,7 @@ function love.load()
                          'bomba_activa', 'bomba_pisada', 'bomba_radios', 'bomba_mundo', 'bomba_objeto',
                          'hielo_solido', 'hielo_desgaste', 'hielo_gp', 'hielo_bomba', 'encerrado', 'trepador_canto', 'hielo_resbala', 'filo_propio', 'saltarin', 'saltarin_cueva', 'persecucion', 'persecucion_cuerpo', 'inofensivos', 'tapa_base', 'manzana',
                          'cryo_jugador', 'cryo_enemigo', 'cryo_activador', 'cryo_corte', 'lava', 'pocos_fps', 'ahogo_ganado', 'techo_pinchos',
-                         'caja_empuje', 'caja_rota', 'caja_borde', 'cargar', 'bomba_reaparece', 'islas', 'islas_arte', 'viento', 'cuerpo_mueve', 'cajas_golpes', 'balanza', 'soplon', 'semilla', 'ventisca', 'geiser', 'balanza_tope', 'caja_choques', 'cargar_gp', 'gp_radio', 'dejar_encima', 'jump_buffer', 'jefe_puntos', 'aire_caja', 'geiser_peso', 'bomba_cajas', 'cajas_fila', 'balanza_impacto', 'balanza_salto', 'balanza_techo', 'escarabajo', 'escarabajo_lanzado', 'escarabajo_ruta', 'escarabajo_manos', 'escarabajo_arrolla',
+                         'caja_empuje', 'caja_rota', 'caja_borde', 'cargar', 'bomba_reaparece', 'islas', 'islas_arte', 'viento', 'cuerpo_mueve', 'cajas_golpes', 'balanza', 'soplon', 'semilla', 'ventisca', 'geiser', 'balanza_tope', 'caja_choques', 'cargar_gp', 'gp_radio', 'dejar_encima', 'jump_buffer', 'jefe_puntos', 'persecucion_toque', 'aire_caja', 'geiser_peso', 'bomba_cajas', 'cajas_fila', 'balanza_impacto', 'balanza_salto', 'balanza_techo', 'escarabajo', 'escarabajo_lanzado', 'escarabajo_ruta', 'escarabajo_manos', 'escarabajo_arrolla',
                          'topo', 'topo_culetazo', 'topo_suelo', 'topo_borde', 'pirana', 'pirana_pisar', 'pirana_rebota', 'pirana_nada', 'planta', 'planta_pisar', 'planta_traga', 'planta_colgada', 'planta_come', 'planta_bomba' }) do
         if not os.getenv('ONLY') or (',' .. os.getenv('ONLY') .. ','):find(',' .. n .. ',', 1, true) then cases[n]() end
     end

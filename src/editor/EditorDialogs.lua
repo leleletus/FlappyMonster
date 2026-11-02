@@ -28,6 +28,11 @@ local function drawModal()
         ui.text(md.text, x + 20, y + 52, th.text, ui.font, w - 40)
         if ui.button('Descartar cambios', x + w - 290, y + h - 50, 160, 32, { textColor = th.danger }) then E.modal = nil; md.onYes() end
         if ui.button('Cancelar', x + w - 120, y + h - 50, 100, 32) then close() end
+    elseif md.kind == 'recover' then
+        ui.text('Copia de seguridad', x + 20, y + 16, th.warn, ui.fontLg)
+        ui.text('El editor se cerró con cambios sin guardar. ¿Recuperarlos?', x + 20, y + 52, th.text, ui.font, w - 40)
+        if ui.button('Recuperar', x + w - 290, y + h - 50, 160, 32) then E.recover() end
+        if ui.button('Descartar', x + w - 120, y + h - 50, 100, 32, { textColor = th.danger }) then E.clearAutosave(); close() end
     elseif md.kind == 'open' then
         ui.text('Abrir nivel', x + 20, y + 16, th.text, ui.fontLg)
         -- BUSCADOR (el usuario: "no lo logro encontrar"): por archivo y por nombre (español e inglés), sin tildes ni
@@ -143,7 +148,7 @@ local function drawModal()
         ui.text('Atajos de teclado', x + 20, y + 16, th.text, ui.fontLg)
         local cols = {
             { 'Archivo', { { 'Ctrl+N', 'Nivel nuevo' }, { 'Ctrl+O', 'Abrir' }, { 'Ctrl+S', 'Guardar' },
-                           { 'Ctrl+Mayús+S', 'Guardar como' }, { 'F5', 'Probar el nivel' }, { 'F10', 'Volver al editor (probando)' } } },
+                           { 'Ctrl+Mayús+S', 'Guardar como' }, { 'F5', 'Probar el nivel' }, { 'Mayús+F5', 'Probar desde el ratón' }, { 'F10', 'Volver al editor (probando)' } } },
             { 'Edición', { { 'Ctrl+Z / Ctrl+Y', 'Deshacer / rehacer' }, { 'Ctrl+D', 'Duplicar la entidad' },
                            { 'Supr', 'Eliminar la selección' }, { 'Esc', 'Quitar la selección' },
                            { 'X', 'Girar pincho / cambiar versión' }, { 'Clic derecho', 'Borrar' } } },

@@ -62,6 +62,14 @@ local function scaled(sd, g)
     return sd
 end
 
+-- Volumen de las OPCIONES (0..1; src/core/Settings.lua): × todo lo que suena. Las muestras y las pistas se mezclan a 1.
+local musicK, sfxK = 1, 1
+function Sound.setVolumes(mus, sfx)
+    if music and musicK > 0 then music:setVolume(music:getVolume() / musicK * mus)
+    elseif music then music:setVolume(mus * 0.7) end        -- (estaba a 0: su volumen se perdió; el de casi todas)
+    musicK, sfxK = mus, sfx
+end
+
 local voices = {}                     -- las voces de cada sonido (ver playClone): [name] = { n = siguiente a pisar, [i] }
 local function load(name, path, stype)
     voices[name] = nil                -- (sus voces eran copias del sonido anterior)
@@ -439,7 +447,7 @@ local function playClone(name, pitch, vol)
         end
     end
     v:setPitch(pitch)
-    v:setVolume(vol)
+    v:setVolume(vol * sfxK)
     v:play()
 end
 -- (para los arneses: cuántas fuentes tiene cada sonido)
@@ -468,7 +476,7 @@ function Sound.playTracked(name, pitch, volume)
     local src = sources[name]
     if not src then return end
     src:setPitch(pitch or 1.0)
-    src:setVolume(volume or 1.0)
+    src:setVolume((volume or 1.0) * sfxK)
     if not src:isPlaying() then src:play() end
     tracked[name] = src
 end
@@ -484,7 +492,7 @@ function Sound.loop(name, on, x, y, gain)
         return
     end
     local k = (x and Sound.falloff) and Sound.falloff(x, y, Sound.RANGE[name]) or 1
-    src:setVolume(k * (gain or 1))
+    src:setVolume(k * (gain or 1) * sfxK)
     if not src:isPlaying() then src:setLooping(true); src:play() end
     tracked[name] = src
 end
@@ -526,13 +534,13 @@ function Sound.playMusic(name, volume)
     -- Pista con intro que ya está en su bucle: sigue sonando
     local lp = loops[name]
     if lp and music == lp and lp:isPlaying() then
-        lp:setPitch(1.0); lp:setVolume(volume or 0.7)
+        lp:setPitch(1.0); lp:setVolume((volume or 0.7) * musicK)
         return
     end
     -- Siempre resetear pitch, aunque sea la misma pista
     if music == src and src:isPlaying() then
         src:setPitch(1.0)
-        src:setVolume(volume or 0.7)
+        src:setVolume((volume or 0.7) * musicK)
         return
     end
     if music then
@@ -540,7 +548,7 @@ function Sound.playMusic(name, volume)
         music:stop()
     end
     src:setPitch(1.0)
-    src:setVolume(volume or 0.7)
+    src:setVolume((volume or 0.7) * musicK)
     -- Empieza SIEMPRE desde el principio: stop() rebobina (una pista que se
     -- quedó en pausa al salir de la partida seguía desde donde estaba)
     src:stop()
@@ -582,10 +590,11 @@ function Sound.update(dt)
     end
 end
 
+-- (lo que piden y leen los estados, sin el volumen de las opciones: ese lo pone Sound.setVolumes)
 function Sound.setMusicVolume(v)
-    if music then music:setVolume(v) end
+    if music then music:setVolume(v * musicK) end
 end
-function Sound.musicVolume() return music and music:getVolume() or 0 end
+function Sound.musicVolume() return (music and musicK > 0) and music:getVolume() / musicK or 0 end
 
 -- ¿Está sonando la pista `name` (o cualquier música si name es nil)?
 function Sound.isMusicPlaying(name)
@@ -715,7 +724,7 @@ function Sound.followAdaptive(path, pid, pos, nxt)
         local src = adaptSource(map, path, id)
         if not src then return end
         if music and music ~= src then music:stop() end
-        src:setPitch(1.0); src:setVolume(vol)
+        src:setPitch(1.0); src:setVolume(vol * musicK)
         src:seek(math.max(0, at)); src:play()
         music, musicName, adaptCur = src, Sound.ADAPTIVE, id
     end

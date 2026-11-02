@@ -221,6 +221,12 @@ return {
         watch = "MIRA EL DUELO",
     },
     settings = {
+        music = "MÚSICA: {n}",
+        sfx = "SONIDOS: {n}",
+        mute_on = "SILENCIO: SÍ",
+        mute_off = "SILENCIO: NO",
+        swap_on = "MANDO A / B: AL REVÉS",
+        swap_off = "MANDO A / B: NORMAL",
         perf_on = "RENDIMIENTO: SÍ",
         perf_off = "RENDIMIENTO: NO",
         rhythm_offset = "RETARDO DEL RITMO: {ms} MS",

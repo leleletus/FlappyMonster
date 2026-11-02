@@ -36,12 +36,14 @@ if LINKS then arg[#arg + 1] = 'links.json' end
 local PLAY = os.getenv('PLAY')
 if PLAY then arg[#arg + 1] = PLAY end
 local PLANE = os.getenv('PLANE')
+local SAFETY = os.getenv('SAFETY')       -- (la copia de seguridad, los avisos al guardar y probar desde el ratón)
+if SAFETY then arg[#arg + 1] = 'assets/levels/nivel01.json' end
 if PLANE and not PLAY then arg[#arg + 1] = os.getenv('LEVEL') or 'assets/levels/nivel01.json' end
 -- (filtros) sin preferencias de otra pasada: el diálogo "Abrir" empieza sin filtros; y un nivel FUERA de la historia y
 -- de Worlds.MEMBERS, con fondo de fortaleza, en la carpeta de guardado (se borra al acabar): su isla se adivina por el fondo
 local GUESS_LEVEL = 'assets/levels/zz_fondo_prueba.json'
 love.filesystem.remove('editor_prefs.json')
-if not (PLAY or LINKS or PLANE) then
+if not (PLAY or LINKS or PLANE or SAFETY) then
     local json = require 'libs/json'
     local d = json.decode(love.filesystem.read('assets/levels/jardin_gummies.json'))
     d.name, d.name_en, d.background = 'Prueba por el fondo', 'Background guess test', 'fortress'
@@ -83,6 +85,65 @@ local function clickCell(c, r, b)
     love.mouse.getPosition = function() return mx, my end
     love.mousepressed(mx, my, b or 1); love.mousereleased(mx, my, b or 1)
     love.mouse.getPosition = realPos
+end
+function safetyCase()
+    local E = require('src/editor/Editor').state()
+    if frame ~= 5 then return end
+    local json = require 'libs/json'
+    local fs = love.filesystem
+    fs.remove('editor_autosave.json'); fs.remove('editor_autosave.path')
+    local m = E.model
+    local path0, start0 = m.path, m.playerStart
+    -- copia: con cambios, a los 30 s; sin cambios, nada; el nivel no se toca
+    local levelBefore = fs.read(m.path)
+    E.autoDirty, E.autoT = false, 0
+    E.autosaveTick(40)
+    local none = not fs.getInfo('editor_autosave.json')
+    m.name = 'CAMBIO SIN GUARDAR'
+    E.unsaved, E.autoDirty, E.autoT = true, true, 0
+    E.autosaveTick(10)
+    local early = not fs.getInfo('editor_autosave.json')
+    E.autosaveTick(21)
+    local wrote = fs.getInfo('editor_autosave.json') ~= nil and fs.read(m.path) == levelBefore
+    check('copia', none and early and wrote, ('sin cambios nada=%s · a los 10 s nada=%s · a los 31 s escrita, sin tocar el nivel=%s'):format(tostring(none), tostring(early), tostring(wrote)))
+    -- "se colgó": al abrir la ofrece; recuperada, vuelve el cambio, en el mismo nivel y sin guardar
+    m.name = 'otro'
+    E.offerRecovery()
+    local offered = E.modal and E.modal.kind == 'recover'
+    E.recover()
+    local back = E.model.name == 'CAMBIO SIN GUARDAR' and E.model.path == path0 and E.unsaved == true and not E.modal
+    check('recupera', offered and back, ('ofrece=%s · recuperado=%s'):format(tostring(offered), tostring(back)))
+    -- guardar: valida y borra la copia (sin escribir en el repo)
+    m = E.model
+    local realSave = m.save
+    m.save = function() return true end
+    m.playerStart = { -5, -5 }
+    E.rightTab = nil
+    E.save(path0)
+    m.save = realSave
+    local warned = E.rightTab == 'warn' and tostring(E.msg):find('error', 1, true) ~= nil and not fs.getInfo('editor_autosave.json')
+    check('valida', warned, 'guardar con errores: guarda, avisa y borra la copia: ' .. tostring(E.msg))
+    m.playerStart = start0 and { start0[1], start0[2] } or nil
+    E.warnings = m:validate()
+    -- probar desde el ratón: el nivel de prueba empieza ahí; el modelo no cambia. Casilla libre: la de encima del inicio
+    local c, r = m.playerStart[1], m.playerStart[2]
+    local mx = 292 + ((c - 0.5) * TILE_PX - E.camX) * E.zoom
+    local my = 46 + ((r - 0.5) * TILE_PX - E.camY) * E.zoom
+    local realPos = love.mouse.getPosition
+    love.mouse.getPosition = function() return mx, my end
+    local realDownK = love.keyboard.isDown
+    m.playerStart = { 1, 1 }
+    love.keyboard.isDown = function(...) for _, x in ipairs({ ... }) do if x == 'lshift' then return true end end return false end
+    love.keypressed('f5')
+    love.keyboard.isDown = realDownK
+    love.mouse.getPosition = realPos
+    local d = json.decode(fs.read('editor_playtest.json'))
+    local ok = d.playerStart[1] == c and d.playerStart[2] == r and m.playerStart[1] == 1 and E.mode == 'play'
+    check('desde', ok, ('el nivel de prueba empieza en %d,%d (ratón %d,%d); el del editor sigue en %d,%d'):format(d.playerStart[1], d.playerStart[2], c, r, m.playerStart[1], m.playerStart[2]))
+    E.unsaved = false
+    print(PL.ok and 'TODO OK' or 'HAY FALLOS')
+    fs.remove('editor_playtest.json')
+    love.event.quit(PL.ok and 0 or 1)
 end
 function planeCase()
     local E = require('src/editor/Editor').state()
@@ -276,6 +337,7 @@ function love.update(dt)
         if frame > 3000 then print('FALLA: la pelea no empezó'); love.event.quit(1) end
         return
     end
+    if SAFETY then return safetyCase() end
     if PLANE then return planeCase() end
     if LINKS then
         if frame == 5 then key('1') end

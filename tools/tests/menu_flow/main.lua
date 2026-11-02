@@ -185,6 +185,29 @@ local function run()
     press('nav_right', 0.3)
     local lang1 = L.current()
     shot('settings_lang')
+    -- LAS OPCIONES: volumen de la música y de los sonidos (se aplican y se guardan), silencio, A / B; la lista se desplaza
+    do
+        local S = require 'src/core/Settings'
+        local st = top()
+        Sound.playMusic('menus'); wait(0.05)
+        local v0 = Sound.musicVolume()
+        press('nav_down', 0.05); press('nav_left', 0.05); press('nav_left', 0.05)
+        local volOk = S.musicVol == 8 and math.abs(Sound.musicVolume() - v0) < 0.01       -- (lo pedido no cambia…)
+        S.set('muted', true); local muteOk = love.audio.getVolume() == 0
+        S.set('muted', false); muteOk = muteOk and love.audio.getVolume() == 1
+        S.set('swapAB', true)
+        Input.load()
+        S.set('swapAB', false); Input.load()
+        local readBack = love.filesystem.read('options.cfg') or ''
+        local saved = readBack:find('musicVol = 8', 1, true) ~= nil
+        for _ = 1, #st.ROWS - 1 do press('nav_down', 0.03) end               -- (hasta el último y da la vuelta)
+        local scrolled = st.row == 1 and st.first == 1
+        for _ = 1, #st.ROWS - 1 do press('nav_up', 0.03) end
+        shot('settings_rows')
+        press('nav_up', 0.03)                                               -- (de vuelta en el idioma)
+        S.set('musicVol', 10)
+        check('opciones_son', volOk and muteOk and saved and scrolled, ('música 8=%s · silencio=%s · guardado=%s · la lista da la vuelta=%s'):format(tostring(volOk), tostring(muteOk), tostring(saved), tostring(scrolled)))
+    end
     press('nav_left', 0.3)
     check('idioma', lang1 ~= lang0 and L.current() == lang0, ('%s → %s → %s'):format(lang0, lang1, L.current()))
     press('back', 0.6)
