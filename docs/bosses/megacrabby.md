@@ -21,6 +21,15 @@ are the USER's drawing: never overwrite). **Sounds:** `assets/sounds/bosses/mega
   online): squash & stretch per step/landing/windup/charge/drop, breathing, claw sway
   per animation (`Mega:pose2d`), struggle shake when stuck, continuous particles
   (`renderFx`: mega_step / mega_trail / mega_debris / mega_dirt); one-shot fx from the
+  **Fair chase** (0.5.152, the user: jumping over it, it walked under your landing spot and chained hits; after
+  hitting you in a charge it kept walking your way, faster, and pinned you — deaths without a mistake;
+  `Mega:chaseStep` / `Mega:keepAway`, inherited by the Icy one): with the target in the AIR it does not turn toward it
+  or chase its landing spot — it keeps its way at `AIR_SLOW` (0.6) or stays still — and after the target lands it
+  waits `REACT_T` (0.35 s) before turning (jumping over it works); after a contact hit (`BACKOFF_T` 1.6 s) and while
+  the target is invulnerable (just hit, respawned, frozen) it steps back to a `KEEP_GAP` (2.5 tiles) gap, faces it and
+  starts no attack; a charge into an invulnerable player stops instead of dragging them. Server-side only (no net
+  change). Measured with `boss_sim`: bot deaths 21 → 13 (normal), 22 → 16 (icy). The worn crown is 10 px wide like
+  its head (was 11: one px more on one side).
   sim: mega_slam, mega_land, mega_poof. States intro → chase (floor, nearest player, contact/spike = 1 HP + knockback via
   `hitPlayers`; claw boxes too; after a hit it backs off: recover) → windup → charge →
   recover (contact near a wall: `pushAway` bounces the player OVER the crab to the

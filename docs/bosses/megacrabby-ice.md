@@ -10,6 +10,9 @@ HAND-EDITED by the user). **Level:** `glaciar_cangrejo`; arena `tools/levelgen/a
 
 ## Behaviour
 
+Inherits the Mega Crabby's fair chase (0.5.152: no tracking a jumping player's landing spot, backs off after a hit
+and from invulnerable players — [megacrabby](megacrabby.md#behaviour)).
+
 - **Icy Mega Crabby** (`types/bosses/megacrabby_ice.lua`, "Mega Crabby helado", `boss.megacrabby_ice`): subclass of
   the Mega (ALL its states/attacks/intro/rests/death); art per class (`Mega.loadArt(dir, w, h, cw, ch, clawK,
   clawX, clawY, clawIn)` → `self.art`; the icy one 18x13 at MS 10 from `tools/art/bosses/make_icecrab_sprites.py`,

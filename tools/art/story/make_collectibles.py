@@ -138,11 +138,13 @@ CROWN_EMPTY = [
 CROWN_EMPTY_PAL = dict(CROWN_PAL, k=(SAND_EDGE, SAND_EDGE))
 
 # La corona PUESTA (cabeza del Mega Crabby, a su escala de píxel): más pequeña y simple, abraza la base de la púa
+# (0.5.152, el usuario: con 9+2 px de ancho no casaba con la cabeza, de 10, y sobraba un píxel por un lado: ahora 8+2,
+# simétrica sobre el centro del cuerpo — ancla ax = 5 —, la astilla de 2 px en medio)
 CROWN_WORN = [
-    "R...W...R",
-    "R.SWGHS.R",
-    "RSSWGHSSR",
-    "sssssssss",
+    "R..WH..R",
+    "R.SWHS.R",
+    "RSSWHSSR",
+    "ssssssss",
 ]
 
 # ── EL AMULETO (astilla_gloomy) ────────────────────────────────────────────────

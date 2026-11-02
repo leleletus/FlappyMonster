@@ -78,6 +78,15 @@ local LAND_RECOVER = 1.0            -- s quieto tras aterrizar
 local LAND_GRACE   = 1.4            -- s sin dañar por contacto tras aterrizar
 local CONTACT_GRACE = 1.0           -- s sin dañar por contacto tras un golpe
 local WALL_ESCAPE_VX, WALL_ESCAPE_VY = 560, -900   -- rebote para salir de una pared
+-- PERSEGUIR CON JUSTICIA (0.5.152, el usuario: al saltarle encima se ponía justo donde ibas a caer y encadenaba
+-- golpes; tras golpearte en la embestida seguía andando hacia ti, más rápido, y te dejaba atrapado sin haber fallado):
+-- * con el jugador EN EL AIRE no se gira hacia él ni le busca la caída: sigue hacia donde iba, más despacio (AIR_SLOW),
+--   o se queda quieto; al aterrizar tarda REACT_T s en darse la vuelta (saltarle por encima funciona);
+-- * tras golpear a alguien, y mientras el objetivo es invulnerable (recién golpeado, recién reaparecido, congelado),
+--   NO se le acerca ni le ataca: se aparta hasta KEEP_GAP casillas de hueco y espera (BACKOFF_T s como mínimo);
+-- * embistiendo contra alguien invulnerable se para (no le arrastra contra la pared).
+local AIR_SLOW, REACT_T = 0.6, 0.35
+local KEEP_GAP, BACKOFF_T = 2.5, 1.6
 -- Apuntar = SEGUIR al jugador (el techo: el cangrejo se mueve encima; la
 -- pared: la marca del suelo le persigue) y, al final, un instante quieto
 -- temblando para poder reaccionar
@@ -416,10 +425,22 @@ function Mega:hitPlayers(level)
                     Boss.withPlayer(pa, function() pa:hurt() end)
                     if not pa.dying then self:pushAway(level, pa, dir) end
                     self.graceT = CONTACT_GRACE           -- (no encadena golpes)
+                    self.backoffT = BACKOFF_T             -- (y se aparta: ver KEEP_GAP)
                     if self.state == 'chase' or self.state == 'charge' then
                         self.state, self.deadTimer, self.recoverFor = 'recover', 0, 0.6
                         self.chargeCd = math.max(self.chargeCd, 1.0)
                     end
+                    break
+                end
+            end
+        elseif self.state == 'charge' and not pa.dying and pa.alive ~= false then
+            -- (invulnerable delante: frena en vez de arrastrarle)
+            local pob = pa:getOuterBounds()
+            for _, b in ipairs(boxes) do
+                if Boss.overlap(pob, b) then
+                    self.state, self.deadTimer, self.recoverFor = 'recover', 0, 0.45
+                    self.chargeCd = math.max(self.chargeCd, 1.0)
+                    self.graceT = math.max(self.graceT or 0, CONTACT_GRACE)
                     break
                 end
             end
@@ -549,6 +570,37 @@ function Mega:targetX(level)
     return x
 end
 
+-- ¿Le deja en paz ahora? (recién golpeado por él, o invulnerable por lo que sea: ver KEEP_GAP)
+function Mega:keepAway(tgt)
+    return tgt ~= nil and ((self.backoffT or 0) > 0 or (tgt.isInvulnerable and tgt:isInvulnerable()) or false)
+end
+
+-- Hacia dónde anda persiguiendo a `tgt` (dx = tgt.x - self.x): -1, 0 o 1, y × su velocidad. Ver AIR_SLOW / KEEP_GAP
+function Mega:chaseStep(level, tgt, dx, dt)
+    local T, hw = TILE_PX, self.outerW / 2
+    local cur = self.walkDir or 0
+    if self:keepAway(tgt) then
+        -- se aparta (si la pared o su zona le dejan) hasta dejar KEEP_GAP casillas de hueco, mirándole
+        local face = (dx > 0) and 1 or ((dx < 0) and -1 or self.facing)
+        local back, z = -face, self.zone
+        local room = not z or ((back > 0) and (z.x1 - hw - self.x) or (self.x - z.x0 - hw)) > 8
+        local gap = math.abs(dx) - hw - TILE_PX / 2
+        self.reactT = REACT_T
+        return (gap < KEEP_GAP * T and room) and back or 0, 1, face
+    end
+    local want = (math.abs(dx) > 20) and sign(dx) or 0
+    if tgt and not tgt.onGround then
+        -- en el aire: no le busca la caída (no se gira; si iba hacia él, sigue, más despacio)
+        self.reactT = REACT_T
+        return (want == cur) and cur or 0, AIR_SLOW, (cur ~= 0) and cur or self.facing
+    end
+    if want ~= cur and cur ~= 0 and (self.reactT or 0) > 0 then
+        -- acaba de aterrizar al otro lado: un instante antes de darse la vuelta
+        return 0, 1, cur
+    end
+    return want, 1, (want ~= 0) and want or self.facing
+end
+
 -- Suelo que hay debajo de x (la marca de dónde caerá)
 function Mega:floorBelow(level, x, fromY)
     local floorLine = self.zone and self.zone.y1 or level.heightPx
@@ -674,7 +726,10 @@ function Mega:updateBoss(dt, level)
     local p, T = self.props, TILE_PX
     Crawler.advanceTurn(self, dt)
     if (self.graceT or 0) > 0 then self.graceT = math.max(0, self.graceT - dt) end
+    if (self.backoffT or 0) > 0 then self.backoffT = math.max(0, self.backoffT - dt) end
+    if (self.reactT or 0) > 0 then self.reactT = math.max(0, self.reactT - dt) end
     local st = self.state
+    if st ~= 'chase' then self.walkDir = 0 end
     self.deadTimer = self.deadTimer + dt
     local t = self.deadTimer
     local k = self:speedMult()
@@ -699,10 +754,10 @@ function Mega:updateBoss(dt, level)
             self:walk(level, dt, wdir * (p.chaseSpeed or 150) * WAIT_SPEED * k)
             if wdir ~= 0 then self:animWalk(dt, self.tuning.walkFps * WAIT_SPEED * k) end
         else
-            local dir = (math.abs(dx) > 20) and sign(dx) or 0
-            if dir ~= 0 then self.facing = dir end
-            self:walk(level, dt, dir * (p.chaseSpeed or 150) * k)
-            if dir ~= 0 then self:animWalk(dt, self.tuning.walkFps * k) end
+            local dir, slow, face = self:chaseStep(level, tgt, dx, dt)
+            self.walkDir, self.facing = dir, face
+            self:walk(level, dt, dir * (p.chaseSpeed or 150) * k * slow)
+            if dir ~= 0 then self:animWalk(dt, self.tuning.walkFps * k * slow) end
         end
         self.chargeCd = self.chargeCd - dt
         self.ceilT = self.ceilT + dt
@@ -710,7 +765,7 @@ function Mega:updateBoss(dt, level)
         self.summonT = self.summonT + dt
         self.restT = (self.restT or 0) + dt
         local summonsOn = (p.summonCount or 2) > 0 and (p.summonPool or 4) > 0
-        local may = self:mayAttack(level)                   -- (con un aliado: por turnos, Boss:mayAttack)
+        local may = self:mayAttack(level) and not self:keepAway(tgt)   -- (con un aliado: por turnos, Boss:mayAttack)
         if self.onGround and (p.restEvery or 5) > 0 and self.restT >= (p.restEvery or 5) then
             -- Descanso: se queda quieto respirando (un respiro para él y para el
             -- jugador); mientras tanto no cuentan los tiempos de los ataques
