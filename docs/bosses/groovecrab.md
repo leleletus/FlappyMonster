@@ -222,6 +222,11 @@ Protocol 107.
   player is shown (picked over "only you"), and the arena copies are hidden (picked over "dimmed in the arena").
   Not played by the user yet: the poses' look, the fireworks' density, the layout on phones and the Switch.
 
+- 0.5.151, the user: (1) less squash & stretch on the crab's singing poses (halved); (2) squash & stretch on the
+  monster too (`drawCast`: up stretches, down squashes, the sides widen, a miss shrinks a little, ~0.22 s; a small
+  bounce on every beat while idle); (3) the idle's 2nd frame had its head apart from the body (the head moved down
+  without its antenna tips: a gap row) → the whole head moves down; the arm of the up pose (and its miss) is shorter.
+
 ## The rhythm duel (the user's idea, 2026-11-01)
 
 Friday Night Funkin' style. The player stands still, invulnerable; the crab keeps dancing, can't be hit and does no harm; the song's exact notes rise to 4 grey strums and must be pressed on time.

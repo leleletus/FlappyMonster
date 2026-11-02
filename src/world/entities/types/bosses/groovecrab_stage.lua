@@ -175,12 +175,12 @@ function GC:pose()
             p.face = dir
             p.jx = dir * math.floor((hit and 2 or 1) * MS * (0.5 + 0.5 * k))
             p.bdx, p.bdy, p.bf = -2 - math.floor(2 * k), -3, hit and 2 or 1
-            p.sdy, p.sx, p.sy = 0, 1 + 0.06 * k, 1 - 0.04 * k
+            p.sdy, p.sx, p.sy = 0, 1 + 0.03 * k, 1 - 0.02 * k        -- (0.5.151: la mitad, el usuario)
         elseif lane == 2 then
-            p.sy, p.sx, p.tk = 1 - 0.18 * k, 1 + 0.12 * k, 1 - 0.25 * k
+            p.sy, p.sx, p.tk = 1 - 0.09 * k, 1 + 0.06 * k, 1 - 0.12 * k
             p.bdy, p.sdy, p.leg = 2, 2, 2
         else
-            p.sy, p.sx, p.tk = 1 + 0.1 * k, 1 - 0.06 * k, 1 + 0.25 * k
+            p.sy, p.sx, p.tk = 1 + 0.05 * k, 1 - 0.03 * k, 1 + 0.12 * k
             p.bdy, p.sdy, p.bf, p.sf = -6 - math.floor(4 * k), -5 - math.floor(3 * k), 2, 2
         end
     elseif st == 'buck' then

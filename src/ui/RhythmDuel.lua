@@ -275,8 +275,20 @@ local function drawCast(c, cast, x, feet)
         local px = math.floor(x + (i - (n + 1) / 2) * step)
         local pose = m.me and c.pose or c.remote[m.id]
         local name, fr = 'duel_idle', beat % 2 + 1
+        -- ESTIRAR Y APLASTAR (0.5.151, el usuario): al cantar cada flecha, fuerte al principio y aflojando (arriba se
+        -- estira, abajo se aplasta, a los lados se ensancha; fallando, se encoge un poco); en el baile, un botecito por tiempo
+        local qx, qy = 1, 1
         if pose and now - pose.t < (pose.ok and HOLD_OK or HOLD_MISS) then
             name, fr = (pose.ok and 'duel_' or 'duel_miss_') .. DIRS[pose.lane], 1
+            local u = math.max(0, 1 - (now - pose.t) / 0.22)
+            local dir = DIRS[pose.lane]
+            if not pose.ok then qx, qy = 1 + 0.06 * u, 1 - 0.08 * u
+            elseif dir == 'up' then qx, qy = 1 - 0.07 * u, 1 + 0.12 * u
+            elseif dir == 'down' then qx, qy = 1 + 0.1 * u, 1 - 0.14 * u
+            else qx, qy = 1 + 0.08 * u, 1 - 0.06 * u end
+        else
+            local ub = math.max(0, 1 - ((c.clock / (c.boss.BAR / 4)) % 1) / 0.3)
+            qx, qy = 1 + 0.04 * ub, 1 - 0.05 * ub
         end
         local clip = PS.clip(name)
         local rec = clip and clip.recs[math.min(#clip.recs, fr)]
@@ -284,7 +296,7 @@ local function drawCast(c, cast, x, feet)
             local col = m.color
             if col then love.graphics.setColor(0.6 + col[1] * 0.4, 0.6 + col[2] * 0.4, 0.6 + col[3] * 0.4, 1)
             else love.graphics.setColor(1, 1, 1, 1) end
-            love.graphics.draw(rec.image, rec.quad, px, feet, 0, k, k, math.floor(rec.w / 2), rec.h)
+            love.graphics.draw(rec.image, rec.quad, px, feet, 0, k * qx, k * qy, math.floor(rec.w / 2), rec.h)
             if m.me and n > 1 then                              -- (cuál eres tú)
                 local ty = feet - rec.h * k - 18
                 love.graphics.setColor(1, 0.9, 0.3, 1)

@@ -103,14 +103,14 @@ def pose(name, miss=False):
     if name == 'idle1':
         put(cv, head('front'), 2, 0); put(cv, BODY['idle1'], 0, 8)
     elif name == 'idle2':
-        put(cv, head('front')[1:], 2, 1); put(cv, BODY['idle2'], 0, 9)   # (sin la punta de las antenas: baja 1)
+        put(cv, head('front'), 2, 1); put(cv, BODY['idle2'], 0, 9)      # (toda la cabeza una fila más abajo, pegada al cuerpo)
     elif name == 'left':
         put(cv, head('shut' if miss else 'left'), 1, 0); put(cv, BODY['left'], 0, 8)
     elif name == 'right':
         put(cv, head('shut' if miss else 'right'), 3, 0); put(cv, mirror(BODY['left']), 0, 8)
     elif name == 'up':
         put(cv, head('shut' if miss else 'up'), 2, 0)
-        for y in range(1, 8): cv[y][11] = 'k'                           # (el brazo, señalando arriba)
+        for y in range(4, 8): cv[y][11] = 'k'                           # (el brazo, señalando arriba; 0.5.151: más corto)
         put(cv, BODY['up'], 0, 8)
     elif name == 'down':
         put(cv, head('shut' if miss else 'down'), 2, 2); put(cv, BODY['down'], 0, 10)
