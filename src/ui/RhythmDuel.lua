@@ -22,6 +22,13 @@ local function chart()
     return chartData
 end
 
+-- La fila del chart `name` del compás `cb` de la partitura: { semicorchea, carril (0-3), … } o nil (el fondo del escenario
+-- del Groove dibuja con esto sus flechas: groovecrab_stage.lua)
+function R.row(name, cb)
+    local c = chart()
+    return c and c.charts[name] and c.charts[name][tostring(cb)] or nil
+end
+
 -- Las notas del duelo: los compases [bar, bar + bars) de la canción, con el bucle. { t, lane }
 function R.build(boss, name, bar, bars)
     local c = chart()

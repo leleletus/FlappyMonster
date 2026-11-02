@@ -263,6 +263,10 @@ splinters ([story-mode](../story/story-mode.md#the-secrets-secret-exits-splinter
   wide (was 28: like the Gloomy's arena). (3) Longer, more varied loops and a 16-bar section of each crab's own in its
   final version; the music 2.5 dB quieter in game (docs/audio/music-history.md). Also in this round: the Gloomy buff
   and the Groove's deck cooldown (their pages).
+- 0.5.149: the Groove's changes of that release apply to both its turns here (ceiling spikes in zones 4 and 5 + the
+  buck, decks' platforms exploding on cooldown, the attack stopping on a knockout, easier notes, the background chart
+  lanes); the notes the waiting Groove throws in the final are slower too (`CM.NOTE_SPEED` 300 → 255, box 34 × 46 →
+  28 × 40). The duel changes don't apply: the event has no duel ([groovecrab](groovecrab.md)).
 - 0.5.65, the user: the Groove's decks came back switched on after hiding and spun too long (groovecrab.md); "a
   slight discontinuity" in the Groove loop → it ends with its theme's 4-bar return (docs/audio/music-history.md);
   the director's map of that loop also gained its B section (since 0.5.64 the Groove read bars 25-40 — its B — as

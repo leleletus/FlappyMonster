@@ -44,7 +44,19 @@ function GC.loadAssets()
             ball = SpriteStrip.load(DIR .. 'discoball-Sheet.png', 12), stick = SpriteStrip.load(DIR .. 'glowstick-Sheet.png', 3),
             panel = SpriteStrip.load(DIR .. 'panel-Sheet.png', 32), ko = SpriteStrip.load(DIR .. 'ko-Sheet.png', FW),
             glasses = SpriteStrip.load(DIR .. 'glasses.png', 14), deck = SpriteStrip.load(DIR .. 'deck-Sheet.png', 24),
-            led = SpriteStrip.load(DIR .. 'led-Sheet.png', 3), arrow = SpriteStrip.load(DIR .. 'arrow.png', 7) }
+            led = SpriteStrip.load(DIR .. 'led-Sheet.png', 3), arrow = SpriteStrip.load(DIR .. 'arrow.png', 7),
+            sing = SpriteStrip.load(DIR .. 'sing-Sheet.png', FW) }
+    -- (las flechas del duelo de ritmo —src/ui/RhythmDuel.lua—, para las del fondo del escenario)
+    local function im(path)
+        local ok, i = pcall(love.graphics.newImage, path)
+        if ok then i:setFilter('nearest', 'nearest') end
+        return ok and i or nil
+    end
+    local R = 'assets/images/ui/rhythm/'
+    art.rhythm = { strums = im(R .. 'strums-Sheet.png'), hit = im(R .. 'strums_hit-Sheet.png'), notes = im(R .. 'notes-Sheet.png'), q = {} }
+    if art.rhythm.notes then
+        for i = 1, 4 do art.rhythm.q[i] = love.graphics.newQuad((i - 1) * 24, 0, 24, 24, 96, 24) end
+    else art.rhythm = nil end
 end
 local function quad(s, i) return s.images and s.images[i] or s.image, s.quads[i] end
 
@@ -88,6 +100,56 @@ end
 -- (¿baila ya? con la música: en la pelea y vencido; en la entrada, quieto)
 local function dancing(self) return live(self) or self:isDying() end
 
+-- LAS NOTAS DEL CHART alrededor de ahora (assets/charts/groove.json, el chart `name`), en SEMICORCHEAS desde ahora (d < 0:
+-- ya pasó): { d, lane }. Por compases de la canción (GC:whereAt: también con la música del evento, a su tempo); se
+-- guarda por fotograma. Solo dibujo
+local RD
+function GC:chartAround(name, from, to)
+    local now = self.songT or 0
+    local c = self._chart
+    if c and c.t == now and c.name == name then return c.list end
+    RD = RD or require 'src/ui/RhythmDuel'
+    local b0, _, _, st0 = self:whereAt(now)
+    local list, seen = {}, {}
+    if b0 then
+        local nowAbs = b0 * 16 + st0
+        for i = -3, 12 do
+            local b, sec, k = self:whereAt(now + i * 0.4)
+            if b and not seen[b] then
+                seen[b] = true
+                local cb = (sec == 'I') and (k - 1) or ((GC.SEC_START[sec] or 0) + k - 1)
+                local row = RD.row(name, cb)
+                for j = 1, row and #row or 0, 2 do
+                    local d = b * 16 + row[j] - nowAbs
+                    if d >= from and d <= to then list[#list + 1] = { d = d, lane = row[j + 1] + 1 } end
+                end
+            end
+        end
+    end
+    self._chart = { t = now, name = name, list = list }
+    return list
+end
+-- (el chart del duelo en esta dificultad)
+function GC:duelChart()
+    local diff = self.levelRef and self.levelRef.difficulty or 'normal'
+    return (GC.DUEL[diff] or GC.DUEL.normal).chart
+end
+-- EL BAILE DEL DUELO (0.5.149, el usuario: "un baile extra nuevo para la sección de baile"): como el rival de Friday Night
+-- Funkin', CANTA cada flecha del chart con su pose — izquierda / abajo / arriba / derecha — y la boca abierta
+-- (sing-Sheet.png). → carril (1-4) y s desde la nota, o nil
+local SING_HOLD = 0.32
+function GC:singNow()
+    if not self:duelLive() then return nil end
+    local best
+    for _, n in ipairs(self:chartAround(self:duelChart(), -6, 0)) do
+        if not best or n.d > best.d then best = n end
+    end
+    if not best then return nil end
+    local age = -best.d * S16
+    if age > SING_HOLD then return nil end
+    return best.lane, age
+end
+
 -- ── La postura según el estado y el compás ──
 -- { pata (cuadro), sx, sy, trampolín (0..1.3), pinza grande (cuadro, dx, dy), pinza pequeña (cuadro, dy), temblor x }
 function GC:pose()
@@ -110,6 +172,37 @@ function GC:pose()
             local snap = (it >= P.SNAP1 and it < P.SNAP1 + 0.1) or (it >= P.SNAP2 and it < P.SNAP2 + 0.1)
             p.bf, p.bdy = snap and 2 or 1, (it >= P.SNAP1 and it < P.BOING) and -5 or 0
             if it >= P.BOING then p.tk = 1 + 0.35 * math.max(0, math.sin((it - P.BOING) * 18) * (1 - (it - P.BOING) / 0.8)) end
+        end
+    elseif st == 'groove' and not evDance and self:singNow() then
+        -- CANTA (el duelo): la pose de la flecha, fuerte al principio y aflojando; mira hacia su lado (izquierda y
+        -- derecha), se agacha (abajo) o se estira con las pinzas arriba (arriba). Desplazado y escalado: nunca girado
+        local lane, age = self:singNow()
+        local k = math.max(0, 1 - age / SING_HOLD)
+        local hit = age < 0.08
+        p.sing = (age < 0.12) and 1 or 2
+        p.leg = (nb % 2) * 2 + 1
+        if lane == 1 or lane == 4 then
+            local dir = (lane == 1) and -1 or 1
+            p.face = dir
+            p.jx = dir * math.floor((hit and 2 or 1) * MS * (0.5 + 0.5 * k))
+            p.bdx, p.bdy, p.bf = -2 - math.floor(2 * k), -3, hit and 2 or 1
+            p.sdy, p.sx, p.sy = 0, 1 + 0.06 * k, 1 - 0.04 * k
+        elseif lane == 2 then
+            p.sy, p.sx, p.tk = 1 - 0.18 * k, 1 + 0.12 * k, 1 - 0.25 * k
+            p.bdy, p.sdy, p.leg = 2, 2, 2
+        else
+            p.sy, p.sx, p.tk = 1 + 0.1 * k, 1 - 0.06 * k, 1 + 0.25 * k
+            p.bdy, p.sdy, p.bf, p.sf = -6 - math.floor(4 * k), -5 - math.floor(3 * k), 2, 2
+        end
+    elseif st == 'buck' then
+        -- EL CORCOVEO: agachado temblando con el muelle muy prieto (aviso) y, en el aire, estirado
+        if t < P.BUCK_WIND then
+            local k = math.min(1, t / 0.2)
+            p.sy, p.sx, p.tk = 1 - 0.22 * k, 1 + 0.14 * k, 0.55
+            p.jx = (math.floor(now * 40) % 2 == 0) and 2 or -2
+            p.bdy, p.sdy = 2, 2
+        else
+            p.sy, p.sx, p.tk, p.leg, p.bdy, p.sdy = 1.12, 0.9, 1.35, 2, -4, -4
         end
     elseif st == 'groove' then
         p.leg = (nb % 2) * 2 + 1
@@ -249,6 +342,8 @@ function GC:renderBack(camX, camY)
     love.graphics.rectangle('fill', math.floor(bx - camX) - 2, math.floor(by - camY) - 4 * T - bdrop, 4, 4 * T - 30)
     love.graphics.setColor(1, 1, 1, 1)
     love.graphics.draw(bi, bq, math.floor(bx - camX), math.floor(by - camY) - bdrop, 0, 6, 6, 6, 6)
+    -- las FLECHAS DEL CHART en dos pantallas del fondo (encienden con el ecualizador)
+    if dance then self:drawChartBack(camX, camY, kLight) end
     -- el PÚBLICO: cangrejos de todas las especies y Gummies, en silueta, saltando a contratiempo, con barras de luz.
     -- DOS filas (0.5.55, el usuario: "más audiencia, detrás y entre los que ya están"): la de atrás más pequeña, más
     -- oscura y más alta; la de delante, más apretada
@@ -269,6 +364,21 @@ function GC:renderBack(camX, camY)
     if self.props.bigStage then                                         -- (escenario grande: más bafles, en torres)
         spk = { zx0 + 0.9 * T, zx0 + 3.2 * T, zx0 + (zx1 - zx0) * 0.33, zx0 + (zx1 - zx0) * 0.67, zx1 - 3.2 * T, zx1 - 0.9 * T }
     end
+    -- NOTAS que salen flotando de los bafles: una por tiempo, sube y se desvanece en 3 tiempos (del compás: igual online)
+    if dance then
+        for i, sx0 in ipairs(spk) do
+            for j = 0, 2 do
+                local born = nb - j
+                local age = j + beat                                    -- (en tiempos)
+                local c = (born + i) % 4
+                local wob = math.floor(math.sin((born + i) * 1.7 + age * 2.2) * 14)
+                local nx = math.floor(sx0 - camX) + wob + ((born % 2 == 0) and -18 or 18)
+                local ny = math.floor(fy - 26 * 6 - camY + rise - age * 46)
+                love.graphics.setColor(1, 1, 1, 0.55 * (1 - age / 3) * math.min(1, age * 3))
+                art.note:draw(c * 2 + (born % 2) + 1, nx, ny, 0, 4, 4)
+            end
+        end
+    end
     for _, sx0 in ipairs(spk) do
         local si, sq = quad(art.speaker, kick and 2 or 1)
         love.graphics.setColor(1, 1, 1, 1)
@@ -280,6 +390,41 @@ function GC:renderBack(camX, camY)
             local rr = 60 + beat * 160
             love.graphics.circle('line', math.floor(sx0 - camX), math.floor(fy - 8.5 * 6 - camY), rr, 24)
             love.graphics.setLineWidth(1)
+        end
+    end
+    love.graphics.setColor(1, 1, 1, 1)
+end
+
+-- LAS PANTALLAS DEL FONDO (0.5.149, el usuario: "más elementos de fondo, como las notas del chart, para que se sienta más
+-- vivo"): dos carriles de Friday Night Funkin' a los lados de la bola, con las flechas de verdad de la canción (el chart
+-- fácil a la izquierda, el normal a la derecha) subiendo a sus flechas grises, que se encienden al llegar. Tenues y
+-- detrás de los bloques: fondo, no se confunden con lo que hace daño. En el duelo no (ya está el de verdad)
+local HW_LANE, HW_SCALE, HW_STEP, HW_AHEAD = 52, 2, 10, 16      -- px entre carriles, escala, px por semicorchea, semicorcheas
+function GC:drawChartBack(camX, camY, k)
+    local R = art.rhythm
+    if not R or k <= 0 or self:duelLive() then return end
+    local zx0, zx1, zy0 = self:zoneBounds()
+    local sy = math.floor(zy0 + 1.6 * T - camY)                  -- (bajo el marcador y por encima de las plataformas)
+    for side, name in ipairs({ 'easy', 'normal' }) do
+        local list = self:chartAround(name, -2, HW_AHEAD)
+        local cx = zx0 + (zx1 - zx0) * ((side == 1) and 0.25 or 0.75)
+        local x0 = math.floor(cx - 1.5 * HW_LANE - camX)
+        -- el marco de la pantalla
+        love.graphics.setColor(0.05, 0.03, 0.1, 0.22 * k)
+        love.graphics.rectangle('fill', x0 - 34, sy - 32, 3 * HW_LANE + 68, HW_AHEAD * HW_STEP + 48)
+        for l = 1, 4 do
+            local lit = false
+            for _, n in ipairs(list) do if n.lane == l and n.d <= 0 and n.d > -1.5 then lit = true end end
+            love.graphics.setColor(1, 1, 1, (lit and 0.55 or 0.22) * k)
+            love.graphics.draw(lit and R.hit or R.strums, R.q[l], x0 + (l - 1) * HW_LANE, sy, 0, HW_SCALE, HW_SCALE, 12, 12)
+        end
+        for _, n in ipairs(list) do
+            if n.d > 0 then
+                local a = math.min(1, (HW_AHEAD - n.d) / 4) * 0.34 * k
+                love.graphics.setColor(1, 1, 1, a)
+                love.graphics.draw(R.notes, R.q[n.lane], x0 + (n.lane - 1) * HW_LANE, math.floor(sy + n.d * HW_STEP), 0,
+                                   HW_SCALE, HW_SCALE, 12, 12)
+            end
         end
     end
     love.graphics.setColor(1, 1, 1, 1)
@@ -570,7 +715,7 @@ function GC:render(camX, camY)
     end
     local p = self:pose()
     local alpha = self:ghostAlpha()
-    local f = (self.facing or 1) * p.flip
+    local f = p.face or ((self.facing or 1) * p.flip)
     local fx, fy = math.floor(self.x - camX + 0.5) + p.jx, math.floor(self:feetY() - camY + 0.5)
     local dizzy = (st == 'dying_daze' or st == 'stunned') and not EDITOR_VIEW
     if dizzy then BossFx.stars(fx, fy - 9 * MS, 9 * MS, 1.8 * MS, 7, alpha, 'back') end
@@ -586,10 +731,16 @@ function GC:render(camX, camY)
     local A = art
     if p.tk > 0.02 then
         local ti, tq = quad(A.tramp, 1)
+        -- (a punto de corcovear: el trampolín parpadea en rojo — el aviso de que ahora lanza contra el techo —)
+        local warn = st == 'buck' and not EDITOR_VIEW and math.floor(now * 14) % 2 == 0
+        local r0, g0, b0, a0 = love.graphics.getColor()
+        if warn then love.graphics.setColor(1, 0.3, 0.3, alpha) end
         love.graphics.draw(ti, tq, 0, -(FH - 1) * MS, 0, MS, MS * p.tk, 8, 9)       -- (el muelle, metido un píxel en el caparazón)
+        if warn then love.graphics.setColor(r0, g0, b0, a0) end
     end
     local bi, bq
-    if p.ko then bi, bq = quad(A.ko, math.floor(now * 7) % 2 + 1)        -- (los ojos en X giran)
+    if p.sing then bi, bq = quad(A.sing, p.sing)                        -- (cantando: el duelo)
+    elseif p.ko then bi, bq = quad(A.ko, math.floor(now * 7) % 2 + 1)        -- (los ojos en X giran)
     else bi, bq = quad(A.body, p.leg) end
     love.graphics.draw(bi, bq, 0, 0, 0, -MS * f, MS, FW / 2, FH)
     local bx = f * (13 - math.floor(p.bdx + 0.5)) * MS        -- (bdx: hacia el cuerpo; en px de arte enteros)
@@ -683,7 +834,8 @@ function GC:drawOver(camX, camY)
 end
 
 -- AVISO DE NOTA: un pulso de luz en la punta de la pinza justo antes de cada nota (del reloj de la canción y su plan:
--- igual online) — se ve venir el disparo
+-- igual online) — se ve venir el disparo. CUE_T s antes (0.5.149: era 0,22; más fáciles de esquivar)
+local CUE_T = 0.32
 function GC:drawCue(camX, camY, now)
     if not (self:isActive() and self.state == 'snap') or EDITOR_VIEW then return end
     local _, sec, k, step = self:whereAt(self.songT or 0)
@@ -692,8 +844,8 @@ function GC:drawCue(camX, camY, now)
     for _, s in ipairs(plan.notes) do if s > step and (not nextS or s < nextS) then nextS = s end end
     if not nextS then return end
     local left = (nextS - step) * S16
-    if left > 0.22 then return end
-    local u = 1 - left / 0.22
+    if left > CUE_T then return end
+    local u = 1 - left / CUE_T
     local x, y = self:clawTip()
     love.graphics.setBlendMode('add')
     love.graphics.setColor(1, 1, 1, 0.25 + 0.55 * u)

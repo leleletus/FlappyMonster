@@ -45,7 +45,8 @@ snapshot; the client's music starts when it sees the fight, with the same delay 
   each way (shared `src/world/entities/base/BossWaves.lua`; jump them, 1 HP). It needs `MIN_WARN` 0.3 s crouched to
   jump (coming out of a hit it skips that hop). Calm in A it hops on odd bars; enraged, on every bar it can.
 - **Notes** (B and the even bars of the climax): raises the big claw and, on the bass POPS (`B_NOTES`: sixteenths 4
-  and 8 mostly), snaps and fires a NOTE at the nearest player (straight, 330 / 390 px/s enraged; 1 HP). Between notes
+  and 8 mostly), snaps and fires a NOTE at the nearest player (straight, 255 / 295 px/s enraged; box ±12 px; fan gap
+  0.42 rad; lob 1.2 s; claw cue 0.32 s before — all eased in 0.5.149; 1 HP). Between notes
   it walks towards you.
 - **Phase 1 — GOLDEN NOTE** (the only opening while HP > `rageAt`): on the band hit closing every 8 bars of A, B, the
   build and the climax (sixteenth 12, `GOLD_AT`) and on bar 5 of the solo (sixteenth 0) it fires a golden note aimed
@@ -62,8 +63,13 @@ snapshot; the client's music starts when it sees the fight, with the same delay 
   tile changes like PhaseBlocks; an occupied cell waits) so the attack is all there is; deck countdowns pause; when
   it ends they come back and the decks rise again (`drawDecks`, render-cached return time). An arrow bobs over every stopped deck. BOTH spinning at once → the BASS DROP: the
   two speakers fire rings and a beam at him (`dropT`, drawn `DROP_FX` 0.8 s) → knocked out. Decks can't be started
-  while he is knocked out or regrowing. If an arena has no such platforms (`decks = false`), phase 2 keeps the golden
+  while he is knocked out or regrowing. During the COOLDOWN after a drop (`DECK_COOL`), once the drop's flash is over,
+  the decks and their platforms EXPLODE and are gone (`GC:decksBlown` → `decksAway`; `chunk_break` debris of their
+  tile, a `boss_blast` per deck, `bossExplode` + `blockBreak`) and rise again when it ends (0.5.149). If an arena has no such platforms (`decks = false`), phase 2 keeps the golden
   note so he can still be hurt.
+- **Knocking him out STOPS what he was doing** (0.5.149): notes in flight burst, sand waves go, a buck ends, and the
+  dance floor stays off while 'stunned' / 'regrow' and in the bar he wakes up in (`backT`, in the netPack: a column
+  could otherwise fire with less than its 3-beat warning).
 - **Knocked out** ('stunned', `STUN_T` 2 bars; also the look of 'dying_daze'): stomp 1 / ground pound 2,
   ONE hit (2 until 2026-10-31), then 'regrow' (a new trampoline grows from his head). Look (`ko-Sheet.png`, `glasses.png`): his
   SUNGLASSES fly off in an arc and bounce on the floor behind him (back on his face in the first 0.35 s of 'regrow';
@@ -71,8 +77,16 @@ snapshot; the client's music starts when it sees the fight, with the same delay 
   hit SQUASHES him and he springs back, then he sways side to side (offset, never rotated) under a bigger star ring.
   The generic `stunned` wobble of the render wrapper is off (`GC.ownStunLook`): it rotated his whole render — dance
   floor included — around him.
-- **Trampoline**: unless knocked out, landing on it LAUNCHES you (`'launch'`, vy = jump × 1.85, also with a ground
-  pound; ~8.4 tiles up): the way onto the side platforms. Touching its BODY (shell and legs) = 1 HP and a push (not
+- **Trampoline**: unless knocked out, landing on it LAUNCHES you (`'launch'`, also with a ground pound) to a FIXED
+  height — the player's centre `LAUNCH_APEX` 571 px above the floor, the same as the old jump × 1.85 from him on the
+  floor, but also when he is mid-hop — and with NO air jump left (`GC:launchVy`; since 0.5.149): the way onto the side
+  platforms.
+- **Ceiling spikes and the BUCK** (0.5.149): row 3 of the zone — its invisible lid — is lined with down spikes (empty
+  cells with the two top sub-spikes: raw 1440) in his arena, `isla_del_groove` and both Groove zones of the Mashup. A
+  launch alone tops out ~37 px under them. A player who bounces on him `CAMP_N` 2 times in a row without touching the
+  ground (`onLaunch` counts, `watchCampers` resets on ground) makes him BUCK: state `buck`, `BUCK_WIND` 0.45 s crouched
+  with the trampoline blinking red, then a `BUCK_H` 1.6-tile hop of `BUCK_DUR` 0.9 s; while bucking his trampoline
+  launches at jump × `BUCK_LAUNCH` 2.75 → into the spikes. Not mid-hop, crouched, in a duel or frozen by the event. Touching its BODY (shell and legs) = 1 HP and a push (not
   knocked out); the CLAWS do no damage — the hitbox is only the body (`outerW` 0.78: 14 of 18 px).
 - **Rage** (phase 2; on Xtra Extreme from the start, still in phase 1): hops on every possible bar, more notes.
   HP 11 (+4 per extra player; × the difficulty's `bossHp`).
@@ -96,8 +110,8 @@ in whole art pixels, never rotated: pixel art); two stage SPOTLIGHTS from the to
 corners of the zone onto it, changing colour on every beat (additive cones).
 
 **Network:** netPackExtra `{songT·100, rage, markX, stunHits, phase, dropT·100 (-1), p2T·100 (-1), waves
-mood (0/1/2), mood songT·100 (-1), (BossWaves.pack), nNotes, {id, x, y, vx, vy, colour}…, nDecks, {x, y, on·10}…}`.
-Protocol 71.
+mood (0/1/2), mood songT·100 (-1), duel bar (-1), duel bars, backT·100 (-1), (BossWaves.pack), nNotes, {id, x, y, vx, vy, colour}…, nDecks, {x, y, on·10}…}`.
+Protocol 107.
 
 ## History and decisions
 
@@ -187,15 +201,29 @@ Protocol 71.
   back still spinning → while the decks are away they switch OFF (they return off); (2) "too easy" → a deck spins
   `DECK_T` 6 bars (9.6 s; was 10 bars, 16 s). Harness `groovecrab_rules` (`ocultos`, `platos`). Not played yet.
 
+- 0.5.149, the user (his level and the Mega Mashup): (1) a new dance for the duel → he SINGS the chart's arrows,
+  FNF style, own sprite `sing-Sheet.png`; (2) a livelier background → two dim FNF lanes on the stage (`drawChartBack`:
+  the real `easy` and `normal` charts of the song rising to their strums, which light up; not during the duel) and
+  notes floating out of the speakers on every beat; (3) the decks on cooldown looked like a mistake → their platforms
+  explode and hide until it ends; (4) "many players just keep bouncing on his trampoline" → spikes along the zone's
+  ceiling and the BUCK; to keep the spikes fair, the launch now goes to a fixed height and spends the air jump (a
+  launch + double jump already hit the zone's invisible lid; lowering the launch instead broke the climb to the
+  platforms — case `trepar`); (5) balance: a won duel hurts him directly, once per player; knocking him out stops the
+  current attack (the dance floor above all); notes slower and easier to dodge. In the Mashup all of it applies to
+  his arena turn and the final, except the duel parts: the event has no duel. Not played by the user yet: the buck's
+  timing, the 37 px margin under the spikes, the no-air-jump launch and the background lanes are to judge.
+
 ## The rhythm duel (the user's idea, 2026-11-01)
 
 Friday Night Funkin' style. The player stands still, invulnerable; the crab keeps dancing, can't be hit and does no harm; the song's exact notes rise to 4 grey strums and must be pressed on time.
+
+**His duel dance** (0.5.149, the user asked for a new dance for this section): like FNF's opponent he SINGS every arrow of the chart of that difficulty with its pose, for `SING_HOLD` 0.32 s — left / right: he faces that side and leans out with the big claw thrust; down: a squat; up: stretched with both claws up and the spring long — with his own sprite, `sing-Sheet.png` (mouth wide open with the tongue, then half open with the glasses' glint moved). `GC:singNow` / `chartAround` (stage part), from the song clock: same online.
 
 **Files:** `src/ui/RhythmDuel.lua` (the game, drawing, input) · `GC.DUEL`, `GC:planDuel`, `GC:finishDuel` in the boss · `assets/charts/groove.json` from `tools/music/groove_chart.py`, generated from the installed score, so **if the score changes, regenerate it** · sprites in `assets/images/ui/rhythm/` from `tools/art/ui/make_rhythm.py`.
 
 **When:** at the start of section D always; enraged, also one random phrase (A, B or C) per song loop. **Randomly 8 or 16 bars** (the user). One bar of warning before it, already frozen. Not while knocked out, not in the Mashup.
 
-| Difficulty | Chart | Notes/s | Window | On screen | Meter empties below | KO from | Can kill |
+| Difficulty | Chart | Notes/s | Window | On screen | Meter empties below | Hit from | Can kill |
 |---|---|---|---|---|---|---|---|
 | Easy | `easy`: pops and strong beats, 400 ms apart; hook in D | 1.9 | ±160 ms | 1.6 s | 50 % | 70 % | no |
 | Normal | `normal`: 200 ms apart; hook in D | 4.5 | ±130 ms | 1.3 s | 60 % | 80 % | no |
@@ -207,11 +235,11 @@ Friday Night Funkin' style. The player stands still, invulnerable; the crab keep
 
 **Ghost notes are out of the chart.** The user first asked for 1:1, then played it: "2 or 3 notes where only one should go". They are in the MIDI at velocity 48, but barely sound. **Hit feedback:** the strum jumps, a splash plays (`splash-Sheet.png`) and a click sounds on each hit (`scorpionClick`). The click began as an autoplay test the user asked for, to hear the chart against the song; after hearing it, the user's verdict on the chart without ghosts was "very good", and they kept the click as a mechanic and removed the autoplay.
 
-**Result:** a meter starts at 50 %; hits and misses are scaled so "empties below" is the break-even accuracy, whatever the note count. Empty: the duel ends, −1 HP (at most 1 per duel). From "KO from": knocked out, one free hit. In between: nothing. Pressing with no note costs nothing.
+**Result:** a meter starts at 50 %; hits and misses are scaled so "empties below" is the break-even accuracy, whatever the note count. Empty: the duel ends, −1 HP (at most 1 per duel). From "Hit from": he loses 1 HP right away, ONE PER PLAYER who did it (two players → −2; `GC:duelHit`, kind `duel`: no knockout, not counted as a stunned hit). Until 0.5.148 it knocked him out for one free hit, lost if you were far from him. In between: nothing. Pressing with no note costs nothing.
 
 **Sync:** judged against the music's real position (`Sound.musicPosition`), falling back to `songT`. Settings has a rhythm delay (±300 ms) for audio latency.
 
-**Single player, server, client:** the freeze comes from the song clock through `freezesPlayers` (`BossZones.frozenAt`): same in all three. **The judging is the exception to the rule that the server decides:** each client plays against its own music and sends `rhythm_result` (a modified client could fake it, accepted). A KO needs a majority of players. No result: nothing happens.
+**Single player, server, client:** the freeze comes from the song clock through `freezesPlayers` (`BossZones.frozenAt`): same in all three. **The judging is the exception to the rule that the server decides:** each client plays against its own music and sends `rhythm_result` (a modified client could fake it, accepted). Each player's good result is one hit. No result: nothing happens.
 
 **Measured with simulated players** (`rhythm_duel`, % fail / % KO over 40 duels of 8 bars; each player has a timing error and misses some notes):
 

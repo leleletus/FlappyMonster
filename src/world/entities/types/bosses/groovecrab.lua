@@ -27,6 +27,8 @@
 --     LED). Con los DOS girando a la vez, los bafles sueltan el BAJÓN contra él → noqueado igual que con la dorada.
 --   · Su TRAMPOLÍN te lanza muy alto si le caes encima (también con ground pound). Tocar su CUERPO = 1 de vida y
 --     empujón; las PINZAS no hacen daño (la caja es solo caparazón y patas).
+--   · TECHO DE PINCHOS y CORCOVEO (0.5.149): quien se queda rebotando en su trampolín le hace corcovear y sale contra
+--     los pinchos del techo de la zona; noquearlo PARA lo que hacía; ganar el duelo le quita 1 por jugador
 --   · ENFADADO (en la 2ª fase; en Xtra extremo desde el principio, aunque siga en la 1ª): salta en todos los compases
 --     que puede y dispara más notas. Vida 11 (+4 por jugador; la dificultad la escala).
 -- Entrada: cae del cielo en su sitio, chasquea dos veces las pinzas y rebota en su trampolín. Derrota: aturdido
@@ -39,7 +41,7 @@ local Boss   = require 'src/world/entities/base/Boss'
 local BossWaves = require 'src/world/entities/base/BossWaves'
 
 local GC = Entity.extend(Boss, {
-    ATTACKS  = { crouch = true, hop = true, snap = true },
+    ATTACKS  = { crouch = true, hop = true, snap = true, buck = true },
     OPENINGS = { stunned = true },
     debugColor = { 0.3, 0.9, 0.85 },
     -- (la caja: SOLO el caparazón y las patas — 14 de los 18 px de ancho, sin las pinzas, que no hacen daño —; de
@@ -69,6 +71,12 @@ local SONG = { { 'A', 16 }, { 'B', 16 }, { 'K', 8 }, { 'S', 8 }, { 'C', 16 }, { 
 local LOOP = 0
 for _, s in ipairs(SONG) do LOOP = LOOP + s[2] end
 GC.S16, GC.BAR, GC.INTRO_BARS, GC.LOOP = S16, BAR, INTRO_BARS, LOOP
+-- (el compás de la partitura —el de assets/charts/groove.json— en que empieza cada sección; lo usa el dibujo)
+GC.SEC_START = {}
+do
+    local at = INTRO_BARS
+    for _, sct in ipairs(SONG) do GC.SEC_START[sct[1]] = at; at = at + sct[2] end
+end
 -- EL DUELO DE RITMO (src/ui/RhythmDuel.lua lo juega cada cliente; aquí, lo que pasa en la pelea). Por dificultad: chart, margen (s a
 -- cada lado), s en pantalla, precisión por debajo de la cual se vacía el medidor, desde cuál lo noquea y si puede matar
 GC.DUEL = {
@@ -94,21 +102,39 @@ local MIN_WARN = 0.3                            -- s mínimos agachado (con la d
 local HOP_H, LICK_H = 3.2 * T, 1.4 * T          -- altura de un salto y de un saltito del solo
 local HOP_DUR = 8 * S16                         -- de la semicorchea 8 a la 0 del compás siguiente
 local WALK_SPD = 70                             -- px/s acercándose entre notas
-local NOTE_SPD = { 300, 345 }                   -- { normal, enfadado } (0.5.55: 330 / 390, "se pasa un poco" — el usuario)
-local NOTE_R = 16                               -- media caja de una nota
+-- (0.5.149, el usuario: "están bien pero puede llegar a ser algo injusto" → más lentas, caja más pequeña, abanico más
+-- abierto, el arco tarda más y el aviso en la pinza dura más; 0.5.55: 330 / 390 → 300 / 345)
+local NOTE_SPD = { 255, 295 }                   -- { normal, enfadado }
+local NOTE_R = 12                               -- media caja de una nota (era 16)
 local NOTE_LIFE = 4.0
 -- Los DIBUJOS de las notas (0.5.51, el usuario: "en diferentes patrones y más visibles"): cambian cada 2 compases
 --   aim  recta hacia ti · fan  tres en abanico (la del centro, hacia ti) · lob  en arco, cae donde estás. Enfadado
 --   (más notas por compás) no hay abanico: sería una lluvia. (Hubo una que ondulaba: "confunde bastante", 0.5.52)
 local NOTE_KINDS = { 'aim', 'fan', 'lob' }
-local FAN_A = 0.32                              -- rad entre las notas del abanico
-local LOB_G, LOB_T = 1100, 1.05                 -- gravedad y s de vuelo de la nota en arco
+local FAN_A = 0.42                              -- rad entre las notas del abanico (era 0.32: más hueco entre ellas)
+local LOB_G, LOB_T = 1100, 1.2                  -- gravedad y s de vuelo de la nota en arco (era 1,05)
 -- El BAILE (0.5.51: "que sea más móvil"): entre ataques cruza el escenario a pasitos en cada tiempo, mirándote,
 -- y nunca hacia ti si estás cerca
 local DANCE_STEP = 0.5 * T                      -- px por tiempo (se mueve en la 2ª mitad de cada tiempo)
 local DANCE_KEEP = 2.6 * T                      -- no se acerca andando a un jugador a menos de esto
-local LAUNCH = 1.85                             -- × la velocidad de salto: lo que lanza el trampolín
+-- Lo que lanza el trampolín: hasta una ALTURA FIJA (el centro del jugador a LAUNCH_APEX px del suelo: lo mismo que
+-- × 1,85 de la velocidad de salto con él en el suelo), le caigas encima con él en el suelo o en pleno salto, y SIN el
+-- salto del aire (0.5.149: con el techo de pinchos —en el techo invisible de la zona—, el doble salto en lo más alto
+-- del lanzamiento ya llegaba a él, y lanzado desde él saltando, aún más; así queda ~37 px por debajo. Bajarlo no
+-- vale: entonces ya no se llega a las plataformas de los platos — caso `trepar` —)
+local LAUNCH_APEX = 571
+local LAUNCH_MIN = 60                           -- px que sube como poco (si ya estás casi arriba)
 local GRACE  = 0.8                              -- s sin volver a dar a nadie tras un toque
+-- EL CORCOVEO (0.5.149, el usuario: "muchos jugadores se quedan rebotando en su trampolín"): el techo está lleno de
+-- pinchos y, si alguien le rebota encima CAMP_N veces seguidas sin pisar el suelo, se agacha (aviso) y pega un salto
+-- corto; mientras, su trampolín lanza mucho más fuerte (BUCK_LAUNCH): quien le caiga encima sale contra el techo
+local CAMP_N = 2                                -- rebotes seguidos sin tocar suelo (al siguiente, el corcoveo)
+local BUCK_WIND = 0.45                          -- s agachado avisando
+local BUCK_DUR = 0.9                            -- s del salto
+local BUCK_H = 1.6 * T                          -- altura del salto
+local BUCK_END = BUCK_WIND + BUCK_DUR + 0.3     -- s que dura todo (con el aterrizaje)
+local BUCK_LAUNCH = 2.75                        -- × la velocidad de salto (el normal: LAUNCH)
+GC.CAMP_N, GC.BUCK_END, GC.BUCK_LAUNCH, GC.LAUNCH_APEX = CAMP_N, BUCK_END, BUCK_LAUNCH, LAUNCH_APEX
 -- La nota dorada
 local GOLD_SPD, GOLD_BACK = 240, 640            -- px/s: hacia ti / de vuelta hacia él
 local GOLD_R = 24
@@ -135,6 +161,7 @@ GC.DECK_COOL = 12 * BAR                         -- s sin poder encender los plat
 P.T, P.MS, P.FW, P.FH, P.S16, P.BAR, P.BEAT = T, MS, FW, FH, S16, BAR, BEAT
 P.REGROW_T, P.STUN_T, P.BOOM_LEN, P.FLOOR_WARN = REGROW_T, STUN_T, BOOM_LEN, FLOOR_WARN
 P.NOTE_R, P.GOLD_R = NOTE_R, GOLD_R
+P.BUCK_WIND, P.BUCK_DUR = BUCK_WIND, BUCK_DUR
 P.DECK_T, P.DECK_W, P.DECK_H, P.DECK_IN, P.DROP_FX = DECK_T, DECK_W, DECK_H, DECK_IN, DROP_FX
 
 -- Golpes a los jugadores: { vida, vx, vy, s sin control, s aturdido }
@@ -303,10 +330,14 @@ end
 -- Lo que pasa en la pista AHORA: → nil o { lit = {i = true}, warn, boom, u (0..1 del aviso), beat (0..1 del tiempo) }
 -- UN dibujo por compás (0.5.51, el usuario: "más visibles y evitables"; antes dos, con 0,4 s de aviso): AVISO los 3
 -- primeros tiempos (FLOOR_WARN), la COLUMNA en el 4º (BOOM_LEN semicorcheas)
+-- NOQUEADO SE PARA (0.5.149, el usuario: "que el ataque actual se detenga, sobre todo las luces del suelo"): aturdido o
+-- recomponiéndose no hay pista, y tampoco en el compás en que se despierta (`backT`, el songT en que vuelve: si no,
+-- la columna saldría sin sus 3 tiempos de aviso). Viaja en el netPack: igual online
 function GC:floorNow()
-    if self:duelLive() then return nil end
+    if self:duelLive() or self.state == 'stunned' or self.state == 'regrow' then return nil end
     local b, sec, k, step = self:whereAt(self.songT or 0)
     if not GC.floorOn(sec, k) then return nil end
+    if self.backT and math.floor(self.backT / BAR + 1e-6) == b then return nil end
     local n = self:panels()
     local which = (k - 1) % 4 + 1
     return { lit = pattern(which, n), warn = step < FLOOR_WARN, boom = step >= FLOOR_WARN and step < FLOOR_WARN + BOOM_LEN,
@@ -396,10 +427,17 @@ end
 function GC:decksAway()
     if not self:goldOff() then return false end
     local _, sec, k = self:whereAt(self.songT or 0)
-    return GC.floorOn(sec, k)
+    return GC.floorOn(sec, k) or self:decksBlown()
+end
+-- ENFRIÁNDOSE TRAS EL BAJÓN (0.5.149, el usuario: "que sus plataformas exploten y se oculten, para no confundir al
+-- jugador y hacerle creer que algo hizo mal"): pasado el destello del bajón, los platos y sus plataformas REVIENTAN y
+-- no están hasta que acaba el enfriamiento (DECK_COOL); entonces vuelven a salir. Del reloj: igual online
+function GC:decksBlown()
+    if not self.dropT then return false end
+    return (self.songT or 0) - self.dropT >= DROP_FX and self:deckCool() > 0
 end
 -- Pone o quita las casillas de las plataformas (las de los bloques de fase de su zona); una ocupada espera
-function GC:setPlatforms(level, on)
+function GC:setPlatforms(level, on, blow)
     local TileTypes, TileCodec = require 'src/world/tiles/TileTypes', require 'src/world/tiles/TileCodec'
     local done, changed = true, false
     for _, pb in ipairs(level.phaseBlocks or {}) do
@@ -414,7 +452,10 @@ function GC:setPlatforms(level, on)
                         changed = true
                         level.brokenQueue = level.brokenQueue or {}
                         table.insert(level.brokenQueue, { cell.c, cell.r, want, 'set' })
-                        Entity.emitFx('spawn', (cell.c - 0.5) * T, (cell.r - 0.5) * T)
+                        if blow then                                -- (revienta: cascotes de su material)
+                            Entity.emitFx('chunk_break', (cell.c - 1) * T, (cell.r - 1) * T,
+                                { def = TileTypes.get(TileCodec.id(cell.raw)) })
+                        else Entity.emitFx('spawn', (cell.c - 0.5) * T, (cell.r - 0.5) * T) end
                     end
                 end
             end
@@ -426,9 +467,14 @@ function GC:updatePlatforms(level)
     if not self:goldOff() then return end
     local want = not self:decksAway()
     if self.platOn ~= want then
-        local done, changed = self:setPlatforms(level, want)
+        local blow = not want and self:decksBlown()
+        local done, changed = self:setPlatforms(level, want, blow)
         if done then self.platOn = want end
-        if changed then Sound.play(want and 'switchOn' or 'switchOff', 0.8) end
+        if changed and blow then
+            for _, d in ipairs(self.decks or {}) do Entity.emitFx('boss_blast', d.x, d.y - DECK_H / 2) end
+            Sound.play('bossExplode', 0.8, 1.1)
+            Sound.play('blockBreak', 1)
+        elseif changed then Sound.play(want and 'switchOn' or 'switchOff', 0.8) end
     end
 end
 
@@ -513,14 +559,67 @@ function GC:interact(pa)
     if self:trampOut() and (pa.vy or 0) > 0 then
         local tb, pob = self:trampBox(), pa:getOuterBounds()
         if overlap(pob, tb) and pob.y + pob.h <= tb.y + tb.h then
-            return 'launch', 0, -math.abs(ADV_JUMP_VEL) * LAUNCH
+            return 'launch', 0, self:launchVy(pa), 0
         end
     end
     return Boss.interact(self, pa)
 end
+-- (corcoveando: mucho más fuerte, contra los pinchos del techo; del estado y de dónde está el jugador: el cliente lo
+-- predice igual)
+function GC:launchVy(pa)
+    if self.state == 'buck' then return -math.abs(ADV_JUMP_VEL) * BUCK_LAUNCH end
+    local rise = math.max(LAUNCH_MIN, pa.y - (self.floorY - LAUNCH_APEX))
+    return -math.sqrt(2 * ADV_GRAVITY * rise)
+end
 function GC:onLaunch(pa)
-    Sound.play('trampoline', 0.9, 0.8)
+    Sound.play('trampoline', 0.9, self.state == 'buck' and 0.55 or 0.8)
     self.boingAt = love and love.timer and love.timer.getTime() or 0      -- (solo el dibujo: el muelle se mece)
+    if self.state == 'buck' then
+        Entity.emitFx('shake_big', self.x, self.y)
+        self:mood(CHEER)
+        return
+    end
+    -- (¿se queda rebotando? rebotes seguidos sin pisar el suelo: watchCampers los pone a 0)
+    self._camp = self._camp or setmetatable({}, { __mode = 'k' })
+    self._camp[pa] = (self._camp[pa] or 0) + 1
+end
+-- Quien pisa el suelo (o una plataforma) ya no está "rebotando"; con CAMP_N rebotes seguidos, toca corcovear
+function GC:watchCampers(level)
+    local camp = self._camp
+    if not camp then return false end
+    local want = false
+    for _, pa in ipairs(level.players or {}) do
+        if pa.onGround or pa.dying or pa.alive == false then camp[pa] = 0
+        elseif (camp[pa] or 0) >= CAMP_N then want = true end
+    end
+    return want
+end
+function GC:startBuck()
+    for pa in pairs(self._camp or {}) do self._camp[pa] = 0 end
+    self.buckT = self.songT
+    Sound.play('megaWindup', 0.7, 1.3)
+    self:enter('buck')
+end
+-- El corcoveo: agachado BUCK_WIND s y un salto de BUCK_H; luego, a lo suyo
+function GC:updateBuck(level)
+    local t = self.deadTimer
+    local y0 = self.floorY - self.outerH / 2
+    if t < BUCK_WIND then self.y = y0
+    elseif t < BUCK_WIND + BUCK_DUR then
+        local u = (t - BUCK_WIND) / BUCK_DUR
+        if not self._buckUp then self._buckUp = true; Sound.play('trampoline', 0.8, 0.6) end
+        self.y = y0 - BUCK_H * 4 * u * (1 - u)
+    else
+        if self._buckUp then
+            self._buckUp = nil
+            Entity.emitFx('gp_land', self.x, self.floorY)
+            Entity.emitFx('shake_small', self.x, self.y)
+            Sound.play('megaStep', 0.8)
+        end
+        self.y = y0
+        if t >= BUCK_END then self.buckT = nil; self:set('groove') end
+    end
+    self:touch(level)
 end
 
 -- ── Notas (y la dorada) ───────────────────────────────────────────────────────
@@ -620,6 +719,15 @@ function GC:knockOut()
         self.hop = nil
         self.y = self.floorY - self.outerH / 2
     end
+    -- (lo que estaba haciendo SE PARA: las notas en vuelo y las ondas se deshacen; la pista de baile, ver floorNow — el
+    -- usuario, 0.5.149)
+    for i = #self.notes, 1, -1 do
+        local n = self.notes[i]
+        if n.c < 4 then Entity.emitFx('king_sparkle', n.x, n.y); table.remove(self.notes, i) end
+    end
+    self.waves = {}
+    self.buckT, self._buckUp = nil, nil
+    self.y = self.floorY - self.outerH / 2                             -- (corcoveando, también al suelo)
     local b = self:getOuterBounds()
     Entity.emitFx('groove_tramp', self.x, b.y - 4 * MS)
     Entity.emitFx('king_confetti_big', self.x, b.y - 6 * MS)
@@ -645,14 +753,14 @@ function GC:onDamaged(n, kind)
     if self:isDying() then return end
     self:mood(BOO)                                                      -- (el público, triste: le abuchea a quien le pega)
     Entity.emitFx('shake_big', self.x, self.y)                          -- (cada golpe tiembla la pantalla: el usuario, 0.5.51)
-    self.stunHits = (self.stunHits or 0) + 1
+    if kind ~= 'duel' then self.stunHits = (self.stunHits or 0) + 1 end
     if self.phase ~= 2 and self.hp <= self.hpMax * (self.props.rageAt or 0.5) then
         self.phase, self.rage, self.p2T = 2, true, self.songT
         for i = #self.notes, 1, -1 do if self.notes[i].c >= 4 then table.remove(self.notes, i) end end
         Entity.emitFx('shake_roar', self.x, self.y)
         Sound.play('megaRoar', 0.6)
     end
-    if self.stunHits >= STUN_HITS then self:enter('regrow'); Sound.play('trampoline', 0.8, 0.5) end
+    if kind ~= 'duel' and self.stunHits >= STUN_HITS then self:enter('regrow'); Sound.play('trampoline', 0.8, 0.5) end
 end
 
 function GC:defeat()
@@ -751,19 +859,40 @@ function GC:finishDuel(level)
         return self:defeat()
     end
     local cfg = GC.DUEL[level.difficulty or 'normal'] or GC.DUEL.normal
-    local n, ko = 0, 0
+    local winners = {}
     for _, pa in ipairs(level.players or {}) do
         if not pa.dying and pa.alive ~= false then
-            n = n + 1
             pa.frozen = false                                            -- (ya no: si no, el golpe no le llegaría)
             local r = d.res[pa]
             if r and r.failed then
                 if (cfg.kills or (pa.hp or 0) > 1) and pa.hurt then pa:hurt(1) end
-            elseif r and r.acc >= cfg.koAt then ko = ko + 1 end
+            elseif r and r.acc >= cfg.koAt then winners[#winners + 1] = pa end
             pa.invT = math.max(pa.invT or 0, DUEL_AFTER)
         end
     end
-    if n > 0 and ko * 2 > n then self:knockOut() end                     -- (online: la mayoría)
+    -- GANARLO LE QUITA VIDA DIRECTAMENTE (0.5.149, el usuario: antes lo noqueaba y, lejos de él, el golpe se perdía):
+    -- 1 por cada jugador que lo hizo bien (dos bien → -2)
+    for _, pa in ipairs(winners) do
+        if not self:isActive() then break end
+        self:duelHit(pa)
+    end
+end
+-- Un golpe del duelo: no hace falta que esté noqueado (ni lo noquea)
+function GC:duelHit(pa)
+    self.lastHitter = pa
+    local hp0 = self.hp
+    self.hp = math.max(0, self.hp - 1)
+    Sound.play(self.hurtSound)
+    Entity.emitFx('boss_hit', self.x, self.y)
+    Entity.emitFx('king_confetti_big', self.x, self:getOuterBounds().y)
+    local ev = self.eventRef
+    if ev and ev.onCrabHit then ev:onCrabHit(self, hp0 - self.hp, pa) end
+    if self.hp <= 0 then
+        if ev and ev.crabDown then ev:crabDown(self) else self:defeat() end
+        return
+    end
+    self.inv, self.ghost = math.max(self.inv or 0, 0.4), false          -- (el destello rojo del golpe)
+    self:onDamaged(1, 'duel')
 end
 function GC:updateDuel(level, b, crossed)
     local d = self.duel
@@ -886,6 +1015,7 @@ function GC:updateBoss(dt, level)
     elseif self.state == 'regrow' then
         if t < REGROW_T then return end
         Sound.play('trampoline', 0.9, 1.0)
+        self.backT = self.songT                                         -- (este compás, sin pista: floorNow)
         self:set('groove')
     end
 
@@ -893,10 +1023,20 @@ function GC:updateBoss(dt, level)
     self:updateDuel(level, b, crossed)
     if self.state == 'stunned' or self:isDying() then return end        -- (lo acaba de noquear o matar el duelo)
     if self:duelLive() then
-        self.notes, self.waves = {}, {}
+        self.notes, self.waves, self.buckT = {}, {}, nil
+        self.y = self.floorY - self.outerH / 2                         -- (si corcoveaba)
         local pa = self:nearestPlayer(level)
         if pa then self:faceTo(pa.x) end
         self:set('groove')
+        return
+    end
+
+    -- EL CORCOVEO contra quien se queda rebotando en su trampolín (no en el aire ni a punto de saltar)
+    local campers = self:watchCampers(level)
+    if self.state == 'buck' then self:updateBuck(level); return end
+    if campers and self:isActive() and not self.hop and self.state ~= 'crouch' and not self:duelLive() and not self.eventFrozen then
+        self:startBuck()
+        self:updateBuck(level)
         return
     end
 
@@ -980,9 +1120,9 @@ end
 
 -- ── Red ───────────────────────────────────────────────────────────────────────
 -- { songT·100, enfadado 0/1, diana x, golpes aturdido, fase, bajón songT·100 (-1), 2ª fase songT·100 (-1), ánimo del
---   público (0/1/2), su songT·100 (-1), duelo: compás (-1) y compases, nOndas, {ondas…}, nNotas, {id, x, y, vx, vy, color}…, nPlatos, {x, y, girando s·10}… }
+--   público (0/1/2), su songT·100 (-1), duelo: compás (-1) y compases, vuelta del noqueo songT·100 (-1), nOndas, {ondas…}, nNotas, {id, x, y, vx, vy, color}…, nPlatos, {x, y, girando s·10}… }
 local NOTE_STRIDE, DECK_STRIDE = 6, 3
-local HEAD = 12                                 -- (donde empiezan las ondas)
+local HEAD = 13                                 -- (donde empiezan las ondas)
 local function readList(b, k, stride)
     local n = type(b[k]) == 'number' and b[k] or 0
     local list = {}
@@ -998,7 +1138,8 @@ function GC:netPackExtra()
     local out = { math.floor(self.songT * 100), self.rage and 1 or 0, self.markX or 0, self.stunHits or 0, self.phase or 1,
                   self.dropT and math.floor(self.dropT * 100) or -1, self.p2T and math.floor(self.p2T * 100) or -1,
                   self.moodKind or 0, self.moodAt and math.floor(self.moodAt * 100) or -1,
-                  self.duel and self.duel.bar or -1, self.duel and self.duel.bars or 0 }
+                  self.duel and self.duel.bar or -1, self.duel and self.duel.bars or 0,
+                  self.backT and math.floor(self.backT * 100) or -1 }
     BossWaves.pack(self.waves, out)
     out[#out + 1] = #self.notes
     for _, n in ipairs(self.notes) do
@@ -1025,6 +1166,7 @@ function GC:netApplyExtra(a, b, f)
     if type(b[10]) == 'number' and b[10] >= 0 then
         if not (self.duel and self.duel.bar == b[10]) then self.duel = { bar = b[10], bars = b[11] or 8, res = {} } end
     else self.duel = nil end
+    self.backT = (type(b[12]) == 'number' and b[12] >= 0) and b[12] / 100 or nil
     local waves, k = BossWaves.unpack(a, b, HEAD, f)
     self.waves = waves
     local prev = {}

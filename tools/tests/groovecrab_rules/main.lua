@@ -66,7 +66,7 @@ local function check(case, ok, msg)
     if not ok then fails = fails + 1 end
 end
 
-local ARENA = 'tools/levelgen/arenas/jefe_groove.json'
+local ARENA = os.getenv('ARENA') or 'tools/levelgen/arenas/jefe_groove.json'
 local GC
 local function arena(diff)
     local f = assert(io.open(ARENA, 'r'))
@@ -270,9 +270,11 @@ function cases.trampolin()
     level.players = {}
     stepAll(level, es, {}, 0.05)
     local tb = boss:trampBox()
-    local r1, _, vy = boss:interact(dropOn(level, boss.x, tb.y + 10, false))
+    local d1 = dropOn(level, boss.x, tb.y + 10, false)
+    local r1, _, vy = boss:interact(d1)
     local r2 = boss:interact(dropOn(level, boss.x, tb.y + 10, true))
-    local want = -math.abs(ADV_JUMP_VEL) * 1.85
+    -- (0.5.149: hasta una altura fija —el centro a LAUNCH_APEX del suelo—, no × 1,85)
+    local want = -math.sqrt(2 * ADV_GRAVITY * (d1.y - (boss.floorY - boss.LAUNCH_APEX)))
     local pa = playerAt(level, 14)
     stunIt(level, es, boss, pa)
     local r3 = boss:interact(dropOn(level, boss.x, boss:getOuterBounds().y, false))
@@ -730,7 +732,7 @@ function cases.duelo_ko()
         return boss, pa
     end
     local b, p = run('normal', 0.95, false)
-    check('duelo_ko', b.state == 'stunned' and b:isVulnerable(), 'buen resultado: noqueado y vulnerable, ' .. b.state)
+    check('duelo_ko', b.state ~= 'stunned' and b.hp == b.hpMax - 1, ('buen resultado: le quita 1 directamente (vida %d/%d), sin noquearlo: %s'):format(b.hp, b.hpMax, b.state))
     b, p = run('normal', 0.7, false)
     check('duelo_ko', b.state ~= 'stunned' and p.hp == 3, 'a medias: nada, vida ' .. p.hp)
     b, p = run('normal', 0.1, true, 3)
@@ -746,10 +748,136 @@ function cases.duelo_ko()
     songAt(boss, start - 1, 1)
     boss.duel = { bar = start, bars = 8, res = {} }
     boss:duelReport(p1, start, 0.95, false)
-    boss:duelReport(p2, start, 0.5, false)
+    boss:duelReport(p2, start, 0.95, false)
     boss:duelReport(p3, start, 0.5, false)
     stepAll(level, es, { p1, p2, p3 }, 0.05)
-    check('duelo_ko', boss.state ~= 'stunned', 'uno de tres no basta')
+    check('duelo_ko', boss.state ~= 'stunned' and boss.hp == boss.hpMax - 2, ('online, dos de tres bien: −2 (vida %d/%d)'):format(boss.hp, boss.hpMax))
+end
+
+-- (0.5.149) NOQUEADO SE PARA lo que hacía: en la pista de baile (la subida), con un aviso en marcha, la dorada lo noquea →
+-- sin pista aturdido, recomponiéndose ni en el compás en que vuelve; las notas en vuelo se deshacen
+function cases.ko_para()
+    local level, es, boss = arena()
+    local pa = playerAt(level, 14)
+    songAt(boss, barOf('S', 8), 4)
+    stepAll(level, es, { pa }, 0.05, function() pa.vx, pa.invT = 0, 9 end)
+    local before = boss:floorNow() ~= nil
+    boss.notes[#boss.notes + 1] = { id = 77, x = 20 * T, y = 9 * T, vx = 100, vy = 0, c = 1, t = 0 }
+    boss:knockOut()
+    local notes = #boss.notes
+    local during, woke, sameBar, nextBar = false, nil, nil, nil
+    stepAll(level, es, { pa }, 6, function()
+        pa.vx, pa.invT = 0, 9
+        if (boss.state == 'stunned' or boss.state == 'regrow') and boss:floorNow() then during = true end
+        if woke == nil and boss.state == 'groove' then woke = boss.songT end
+    end)
+    -- en el compás en que vuelve, no; en el siguiente (si es de pista), sí
+    local b = math.floor(woke / boss.BAR)
+    boss.songT = b * boss.BAR + 13 * boss.S16
+    sameBar = boss:floorNow()
+    check('ko_para', before and notes == 0 and not during and woke and sameBar == nil,
+        ('pista antes=%s · notas tras el noqueo: %d · pista aturdido=%s · vuelve a los %.2f s; ese compás, pista=%s'):format(
+            tostring(before), notes, tostring(during), woke or -1, tostring(sameBar ~= nil)))
+end
+
+-- (0.5.149) TECHO DE PINCHOS Y CORCOVEO: el lanzamiento normal + doble salto no llega a los pinchos; quien rebota CAMP_N
+-- veces seguidas sin pisar el suelo hace que corcovee y el siguiente rebote lo estampa contra el techo
+local function bounceLoop(level, es, boss, pa, secs, dbl)
+    local minTop, launches, states = 1e9, 0, {}
+    for i = 1, math.floor(secs * 60) do
+        level.players = { pa }
+        level.solidBodies = Entities.solidBodies(es)
+        for k in pairs(stub.state) do stub.state[k] = false end
+        -- (doble salto en lo más alto)
+        if dbl and not pa.onGround and pa.vy > -20 and pa.vy < 40 and (pa.jumpsLeft or 0) > 0 then stub.state.jump, stub.state.jump_pressed = true, true end
+        pa.x = boss.x
+        pa:update(DT, level)
+        local r, a, b, c = boss:interact(pa)
+        if r == 'launch' then
+            if os.getenv('DBG') then print(('  t=%d launch vy=%.0f estado=%s dt=%.2f y=%.0f'):format(i, b, boss.state, boss.deadTimer, pa.y)) end
+            pa:launch(a, b, c); boss:onLaunch(pa); launches = launches + 1
+        end
+        boss:update(DT, level)
+        boss.songT, boss.prevT = barOf('B', 8) * boss.BAR, barOf('B', 8) * boss.BAR - 1e-4  -- (sin notas)
+        states[boss.state] = true
+        if not pa.dying then minTop = math.min(minTop, pa:getOuterBounds().y) end
+        if os.getenv('DBG') and i % 6 == 0 then print(('    y=%.0f top=%.0f vy=%.0f'):format(pa.y, pa:getOuterBounds().y, pa.vy)) end
+        if pa.dying then break end
+    end
+    return minTop, launches, states
+end
+function cases.techo()
+    local level, es, boss = arena('hard')
+    local spikes = #level:getSpikesInBox(12 * T, 2 * T, 24 * T, T)
+    songAt(boss, barOf('B', 8), 0)
+    boss.x = 24 * T
+    local tb = boss:trampBox()
+    local pa = playerAt(level, 2)
+    local ob = pa:getOuterBounds()
+    pa.x, pa.y, pa.vy, pa.onGround = boss.x, tb.y - ob.h / 2 - 4, 300, false
+    pa.invT = 0
+    -- UN rebote y doble salto arriba: no llega
+    boss.CAMP_N_TEST = nil
+    local top1, n1 = bounceLoop(level, es, boss, pa, 1.25, true)
+    local safe = not pa.dying and n1 == 1
+    -- se queda rebotando: corcovea y lo estampa
+    local top2, n2, states = bounceLoop(level, es, boss, pa, 8, false)
+    -- desde él en pleno salto (el trampolín más alto) se llega a lo mismo
+    local _, _, boss2 = arena('hard')
+    songAt(boss2, barOf('A', 1), 0)
+    boss2.y = boss2.floorY - boss2.outerH / 2 - 3 * T
+    local hi = dropOn(level, boss2.x, boss2:trampBox().y + 10, false)
+    local _, _, vyHop = boss2:interact(hi)
+    local apexHop = hi.y - vyHop * vyHop / (2 * ADV_GRAVITY)
+    local apexWant = boss2.floorY - boss2.LAUNCH_APEX
+    check('techo', spikes >= 24 and safe and top1 > 2 * T + 13 + 15 and states.buck and pa.dying and math.abs(apexHop - apexWant) < 2,
+        ('pinchos en el techo: %d · un rebote + doble salto: lo más alto %.0f px (pinchos hasta 141), vivo=%s · rebotando: %d rebotes, corcovea=%s, muere en los pinchos=%s (lo más alto %.0f) · lanzado con él saltando: centro a %.0f (quiere %.0f)'):format(
+            spikes, top1, tostring(safe), n2 + n1, tostring(states.buck == true), tostring(pa.dying == true), top2, apexHop, apexWant))
+end
+
+-- (0.5.149) LAS PLATAFORMAS REVIENTAN durante el enfriamiento de los platos (tras el destello del bajón) y vuelven al acabar
+function cases.revientan()
+    local level, es, boss = arena()
+    local pa = playerAt(level, 24)
+    phase2(level, es, boss, pa)
+    platformsOn(level)
+    songAt(boss, barOf('A', 2), 0)
+    stepAll(level, es, { pa }, 0.1, function() pa.vx, pa.invT = 0, 9; pa.x = 24 * T end)
+    local on0, n = platCells(level)
+    local Entity = require 'src/world/entities/base/Entity'
+    local fx, chunks = Entity.fx, 0
+    Entity.fx = function(kind, ...) if kind == 'chunk_break' then chunks = chunks + 1 end; if fx then return fx(kind, ...) end end
+    boss:bassDrop()
+    stepAll(level, es, { pa }, 0.3, function() pa.vx, pa.invT = 0, 9; pa.x = 24 * T end)
+    local onFlash = platCells(level)
+    stepAll(level, es, { pa }, 1.0, function() pa.vx, pa.invT = 0, 9; pa.x = 24 * T end)
+    local onCool, away = platCells(level), boss:decksAway()
+    Entity.fx = fx
+    stepAll(level, es, { pa }, boss.DECK_COOL, function() pa.vx, pa.invT = 0, 9; pa.x = 24 * T; if boss.state ~= 'stunned' and boss.state ~= 'regrow' then boss.songT = math.max(boss.songT, 0) end end)
+    local onAfter = platCells(level)
+    check('revientan', on0 == n and onFlash == n and onCool == 0 and away and chunks == n and onAfter == n and not boss:decksAway(),
+        ('plataformas: antes %d/%d · en el destello del bajón %d · enfriándose %d (cascotes %d, platos fuera=%s) · al acabar %d'):format(
+            on0, n, onFlash, onCool, chunks, tostring(away), onAfter))
+end
+
+-- (0.5.149) EL BAILE DEL DUELO: canta las flechas del chart, cada una con su pose y la boca abierta
+function cases.canta()
+    local level, es, boss = arena('normal')
+    local start = duelBar(boss)
+    songAt(boss, start, 0)
+    boss.duel = { bar = start, bars = 8, res = {} }
+    local lanes, sung = {}, 0
+    for i = 0, 8 * 16 * 4 do
+        boss.songT = start * boss.BAR + i * boss.S16 / 4
+        boss._chart = nil
+        local lane = boss:singNow()
+        if lane then lanes[lane] = true; sung = sung + 1 end
+    end
+    local n = 0
+    for _ in pairs(lanes) do n = n + 1 end
+    boss.duel = nil
+    local off = boss:singNow()
+    check('canta', n == 4 and sung > 50 and off == nil, ('en el duelo canta: %d de 4 poses (%d muestras cantando) · fuera del duelo: %s'):format(n, sung, tostring(off)))
 end
 function cases.duelo_solo()
     local level, es, boss = arena('normal')
@@ -784,7 +912,7 @@ end
 function love.load(arg)
     local only = os.getenv('CASE')
     for _, n in ipairs({ 'reloj', 'salto', 'notas', 'dorada', 'aturdido', 'trampolin', 'tocar', 'pista', 'dibujos', 'baile', 'temblor', 'platos', 'enfriar', 'ocultos', 'publico', 'trepar', 'enfado',
-                         'solo', 'derrota', 'duelo', 'duelo_ko', 'duelo_solo', 'duelo_red', 'red' }) do
+                         'solo', 'derrota', 'duelo', 'duelo_ko', 'duelo_solo', 'duelo_red', 'ko_para', 'techo', 'revientan', 'canta', 'red' }) do
         if not only or only == n then
             local ok, err = xpcall(cases[n], debug.traceback)
             if not ok then check(n, false, 'error: ' .. tostring(err)) end

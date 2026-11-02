@@ -178,6 +178,7 @@ piece took damage, immortal online), and a rewound "stomp" may hit a boss that i
 
 ## Protocol version history
 
+v107 Groove Crab: new state `buck`, its trampoline launches to a fixed height with no air jump, `backT` in its netPack.
 v106 jump buffer in the own state, ground pound of 1.5 tiles.
 
 Kept in the comment at the top of `src/network/Protocol.lua` (one line per version). Current: **91**. Milestones:

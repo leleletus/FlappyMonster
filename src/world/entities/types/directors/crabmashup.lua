@@ -60,7 +60,7 @@ local FADE_OUT, TELEPORT_AT, FADE_IN = 0.45, 0.5, 0.55          -- s de la costu
 local WANDER = 75                                                 -- px/s paseando por el escenario
 local DIM = { wait = { 0.55, 0.55, 0.66 }, ko = { 0.45, 0.42, 0.52 } }   -- (más oscuros que el que pelea)
 CM.ICICLE_WARN, CM.ICICLE_FALL = 0.55, 900                        -- s de aviso, px/s
-CM.NOTE_SPEED = 300
+CM.NOTE_SPEED = 255                     -- (0.5.149: era 300; las del Groove, también más lentas — el usuario: "algo injusto")
 CM.BLACKOUT = { 0.3, 0.8, 0.45 }                                  -- s: se apaga, apagado, vuelve
 
 -- ── El mapa de la música (lo leen el director y Sound) ───────────────────────────
@@ -684,7 +684,7 @@ function CM:tickHazards(dt, level, players)
         n.x, n.y = n.x + n.vx * dt, n.y + n.vy * dt
         local hit = false
         for _, pa in ipairs(players) do
-            if math.abs(pa.x - n.x) < 34 and math.abs(pa.y - n.y) < 46 then
+            if math.abs(pa.x - n.x) < 28 and math.abs(pa.y - n.y) < 40 then    -- (0.5.149: era 34 × 46)
                 Boss.strike(pa, { 1, 260, -380, 0.25, 0 }, n.vx >= 0 and 1 or -1); hit = true
             end
         end

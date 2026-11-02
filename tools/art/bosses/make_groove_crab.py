@@ -8,6 +8,7 @@
 # con unas GAFAS DE SOL de visera metidas en el dibujo, una sonrisa, caparazón TURQUESA (la costa) y pinzas MAGENTA.
 # En la espalda lleva el TRAMPOLÍN del juego. Rejilla 18x10 (el ancho del Crabby helado) a escala 10 en el juego.
 #   · body-Sheet.png     3 cuadros 18x10: el cuerpo con las patas del Crabby de la costa (sus 3 cuadros de andar)
+#   · sing-Sheet.png     2 cuadros 18x10: CANTANDO (boca abierta y lengua): el baile del duelo de ritmo (0.5.149)
 #   · bigclaw-Sheet.png  2 cuadros 12x9: la pinza grande (abierta, cerrada), dibujada mirando a la IZQUIERDA
 #   · claw-Sheet.png     2 cuadros 7x6: la pinza pequeña (abierta, cerrada)
 #   · tramp.png          el trampolín de la espalda (cojín y muelle de assets/images/mechanisms/trampoline/normal.png)
@@ -265,6 +266,26 @@ def ko_body(f):
     return grid(rows, PAL)
 
 
+# ── CANTANDO (0.5.149, el baile del DUELO DE RITMO, estilo Friday Night Funkin': "canta" cada flecha del chart con una
+# pose): la boca ABIERTA de par en par con la lengua (le baja por debajo del caparazón) y, en el 2º cuadro, menos
+# abierta y con el brillo de las gafas corrido
+def sing_body(f):
+    legs = crabby_legs()[0 if f == 0 else 2]
+    rows = [list(r) for r in SHELL + legs]
+    if f == 0:
+        for i, c in zip(range(7, 11), 'wnnw'): rows[5][i] = c
+        for i, c in zip(range(6, 12), 'onmmno'): rows[6][i] = c
+        for i in range(7, 11): rows[7][i] = 'o'
+    else:
+        for i, c in zip(range(7, 11), 'wnnw'): rows[5][i] = c
+        for i, c in zip(range(7, 11), 'ommo'): rows[6][i] = c
+        rows[3][4], rows[3][11] = 'k', 'k'
+        rows[3][6], rows[3][13] = 'g', 'g'
+    rows = [''.join(r) for r in rows]
+    assert all(len(r) == 18 for r in rows), [len(r) for r in rows]
+    return grid(rows, PAL)
+
+
 # ── Los PLATOS DE DJ de la 2ª fase (uno en cada plataforma): písalos los dos a la vez y los bafles le dan ──
 def deck(f, lit):
     """Plato 24x10: caja CLARA con contorno oscuro (de noche, una oscura no se veía: el usuario, 0.5.53), el vinilo
@@ -340,6 +361,7 @@ def main():
         'glowstick-Sheet.png': strip([glowstick(c) for c in BEAT_COLS]),
         'panel-Sheet.png': strip([panel(None)] + [panel(c) for c in BEAT_COLS]),
         'ko-Sheet.png': strip([ko_body(0), ko_body(1)]),
+        'sing-Sheet.png': strip([sing_body(0), sing_body(1)]),
         'glasses.png': grid(GLASSES, PAL),
         'deck-Sheet.png': strip([deck(0, False)] + [deck(f, True) for f in range(3)]),
         'led-Sheet.png': strip([led(False), led(True), led(True, True)]),

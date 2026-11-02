@@ -108,6 +108,7 @@ def build():
     zc = base + 3
     for r in (10, 11, 12): stage[3 + zw + 3 + 5][r - 1] = enc(FINISH)
     for r in range(1, H + 1): stage[-1][r - 1] = enc(BORDER)
+    for c in range(3, 3 + zw): stage[c][2] = 1440   # (pinchos colgando del techo de la zona: el corcoveo del Groove — 0.5.149)
     cols += stage
     zones.append({'id': 5, 'col': zc, 'row': 3, 'w': zw, 'h': 10, 'music': 'groove', 'event': True})
     ents += [

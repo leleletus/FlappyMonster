@@ -4,7 +4,8 @@
 #
 # EL ESCENARIO (zona: columnas 12-35, filas 3-12; suelo en la 13), a cielo abierto:
 #
-#   ║                        ║     sin techo: su trampolín te lanza ~8 casillas (cabe en la zona)
+#   ║vvvvvvvvvvvvvvvvvvvvvvvvvv║     PINCHOS colgando en la fila 3, el techo invisible de la zona (0.5.149: contra quien se queda
+#   ║                        ║     rebotando en su trampolín; el lanzamiento normal + doble salto no llega, su CORCOVEO sí)
 #   ║                        ║
 #   ║                        ║
 #   ║====                ====║     ==  plataformas traspasables a los lados, SOLO en la 2ª fase (bloques de fase): las
@@ -21,6 +22,8 @@ sys.path.insert(0, HERE)
 from make_jefe_nieve import write, enc   # noqa: E402
 
 EMPTY, SOLID, BORDER, DROP, FINISH = 0, 1, 4, 10, 11
+# (celda vacía con pinchos HACIA ABAJO en sus dos subceldas de arriba: TileCodec, bits 5-10)
+CEIL_SPIKES = 1 * 2 ** 5 + 2 ** 7 + 1 * 2 ** 8 + 2 ** 10
 W, H = 48, 15
 Z0, Z1 = 12, 35
 FLOOR = 13
@@ -35,6 +38,7 @@ def build():
     for r in range(1, H + 1): put(1, r, BORDER); put(W, r, BORDER)
     for c in range(2, W):
         for r in range(FLOOR, H): put(c, r, SOLID)
+    for c in range(Z0, Z1 + 1): t[2][c - 1] = CEIL_SPIKES
     for c in list(range(Z0 + 1, Z0 + 5)) + list(range(Z1 - 4, Z1)): put(c, 8, DROP)
     for r in (10, 11, 12): put(44, r, FINISH)
     ents = [
