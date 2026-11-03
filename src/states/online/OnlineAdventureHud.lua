@@ -220,7 +220,7 @@ function OnlineAdventureState:_renderSpectatorOverlay()
         love.graphics.printf(L('oadv.arrived_wait'), 0, WINDOW_H - 58, WINDOW_W, 'center')
     else
         love.graphics.setColor(0.7, 0.7, 1, 0.8)
-        love.graphics.printf(L('oadv.spectator'), 0, WINDOW_H - 58, WINDOW_W, 'center')
+        love.graphics.printf(L(self.lateJoin and 'oadv.watching' or 'oadv.spectator'), 0, WINDOW_H - 58, WINDOW_W, 'center')
     end
 
     if not self.specOverlay then
@@ -232,7 +232,7 @@ function OnlineAdventureState:_renderSpectatorOverlay()
 
     local labels = {}
     for i, opt in ipairs(SPEC_OPTS) do labels[i] = L(opt) end
-    MenuKit.optionsWindow(finished and L('oadv.finished') or L('oadv.eliminated'), labels, { 'blue', 'grey' }, self.specSel, 1,
+    MenuKit.optionsWindow(finished and L('oadv.finished') or L(self.lateJoin and 'oadv.watching_title' or 'oadv.eliminated'), labels, { 'blue', 'grey' }, self.specSel, 1,
                           { titleColor = finished and { 1, 0.86, 0.36 } or { 0.72, 0.76, 1 } })
 end
 

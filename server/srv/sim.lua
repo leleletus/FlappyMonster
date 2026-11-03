@@ -35,26 +35,7 @@ local function initRoomSim(room)
         local c = S.findClientById(pid)
         if c then
             local spawnX = sx + (i - 1 - (N - 1) / 2) * SPAWN_STAGGER
-            local pa = S.PlayerAdventure:new(spawnX, sy)
-            pa:settle(level)        -- (de pie sobre el suelo ya en la cuenta atrás; el cliente lo recibe en game_init)
-            pa:applyDifficulty()
-            pa.lives = PLAYER_LIVES
-            pa.netId = pid          -- a quién atribuir sus sonidos (golpes de jefe)
-            sim.playerSims[pid] = {
-                id          = pid,
-                idx         = i,
-                pa          = pa,
-                queue       = {},     -- { {seq, bits}, ... } pendientes
-                lastRecvSeq = 0,
-                lastProcSeq = 0,      -- confirmado al cliente en cada snapshot
-                lastBits    = 0,
-                budget      = 0,
-                starve      = 0,
-                highQueue   = 0,
-                bounceSeq   = 0,
-                isSpectator = false,
-                score       = 0,
-            }
+            S.addPlayerSim(sim, pid, i, spawnX, sy, players[c])
         end
     end
 
@@ -70,6 +51,43 @@ local function initRoomSim(room)
     S.log("Simulacion iniciada para sala '" .. room.name .. "' — " .. sim.mode.label .. " en "
         .. room.level .. " — " .. #sim.enemies .. " enemigos, " .. N .. " jugadores.")
     return sim
+end
+
+-- El jugador `pid` en la partida (al empezar, o entrando con ella en marcha: `late` = mira hasta la próxima ronda, sin
+-- vidas). `token`: para VOLVER A ENTRAR si se le corta la conexión (lobby: hello con `rejoin`).
+local function addPlayerSim(sim, pid, idx, x, y, player, late)
+    local pa = S.PlayerAdventure:new(x, y)
+    pa:settle(sim.level)        -- (de pie sobre el suelo ya en la cuenta atrás; el cliente lo recibe en game_init)
+    pa:applyDifficulty()
+    pa.lives = late and 0 or PLAYER_LIVES
+    pa.netId = pid              -- a quién atribuir sus sonidos (golpes de jefe)
+    local ps = {
+        id          = pid,
+        idx         = idx,
+        pa          = pa,
+        name        = player.name, color = player.color,      -- (siguen aunque se le corte la conexión)
+        token       = string.format('%08x%08x', math.random(0, 0x7fffffff), math.random(0, 0x7fffffff)),
+        queue       = {},     -- { {seq, bits}, ... } pendientes
+        lastRecvSeq = 0,
+        lastProcSeq = 0,      -- confirmado al cliente en cada snapshot
+        lastBits    = 0,
+        budget      = 0,
+        starve      = 0,
+        highQueue   = 0,
+        bounceSeq   = 0,
+        isSpectator = late or false,
+        late        = late or nil,     -- (no sale en los resultados de esta ronda)
+        score       = 0,
+    }
+    sim.playerSims[pid] = ps
+    return ps
+end
+
+-- Vuelve a entrar quien se fue (mismo jugador, otra conexión): sus inputs vuelven a contar desde 0
+local function resumePlayerSim(ps)
+    ps.away = nil
+    ps.queue, ps.lastRecvSeq, ps.lastProcSeq, ps.lastBits = {}, 0, 0, 0
+    ps.budget, ps.starve, ps.highQueue, ps.viewTick = 0, 0, 0, nil
 end
 
 local function pushEvent(sim, ev)
@@ -313,10 +331,9 @@ buildResults = function(room, reason)
     local entries = {}
     for _, pid in ipairs(room.playerIds) do
         local ps = sim.playerSims[pid]
-        local c  = S.findClientById(pid)
-        if ps and c then
+        if ps and not ps.late then
             entries[#entries+1] = {
-                id = pid, name = players[c].name, color = players[c].color or {1,1,1},
+                id = pid, name = ps.name, color = ps.color or {1,1,1},
                 score = ps.score, finished = ps.finished or false, place = ps.place,
                 time = ps.finishTime and round(ps.finishTime * 100) / 100 or nil,
                 out = ps.isSpectator and not ps.finished, order = ps.idx, winner = false,
@@ -533,6 +550,7 @@ end
 
 
 -- (lo que usan las demás partes)
+S.addPlayerSim, S.resumePlayerSim = addPlayerSim, resumePlayerSim
 S.initRoomSim = initRoomSim
 S.pushEvent = pushEvent
 S.scalarState = scalarState

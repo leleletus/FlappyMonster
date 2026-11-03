@@ -9,7 +9,7 @@
 --   NameFilter.typed(texto)  → el texto solo con los caracteres permitidos (para el campo de escribir)
 --   NameFilter.isBlocked(texto) → ¿contiene algo vetado? (también para nombres de sala)
 --
--- CÓMO SE MANTIENE: para vetar una palabra, añádela a BLOCKED (se busca DENTRO del nombre) o a EXACT (solo si el
+-- CÓMO SE MANTIENE (las listas están en src/network/NameWords.lua): para vetar una palabra, añádela a BLOCKED (se busca DENTRO del nombre) o a EXACT (solo si el
 -- nombre entero, o un trozo separado por _ - o números, es esa palabra: para palabras cortas que aparecen dentro de
 -- otras inocentes). Escríbela en minúsculas, sin acentos y sin letras repetidas ("puta", no "puuta"): antes de
 -- comparar, el nombre se NORMALIZA — minúsculas, números y símbolos que imitan letras (4→a, 3→e, 1→i, 0→o, 5→s, 7→t,
@@ -17,27 +17,8 @@
 -- inocente queda vetada por contener otra, ponla en ALLOWED.
 local NameFilter = { MIN = 3, MAX = 14 }
 
-local BLOCKED = {
-    -- español
-    'puta', 'puto', 'putit', 'mierd', 'cabron', 'pendej', 'verga', 'coñ', 'cono', 'joder', 'jodet', 'jodid', 'malparid', 'gonorea',
-    'hijueput', 'hijodeput', 'hdp', 'maric', 'marica', 'zora', 'pinga', 'chinga', 'culer', 'mamon', 'mamaguev', 'guevon', 'huevon',
-    'pajer', 'pajill', 'polla', 'chupapi', 'chupame', 'mamada', 'violad', 'violar', 'violacion', 'pedofil', 'nazi', 'hitler',
-    'negrat', 'sudaca', 'retrasad', 'mongol', 'subnormal', 'prostitut', 'culiad', 'culiao', 'conchetumar', 'conchatumadre', 'ctm',
-    'vergon', 'pichula', 'cagar', 'cagad', 'cojon', 'gilipoll', 'capull', 'boludo', 'pelotud', 'forro', 'trolo',
-    -- inglés
-    'fuck', 'fuk', 'fck', 'shit', 'bitch', 'biatch', 'cunt', 'nigger', 'niger', 'nigga', 'niga', 'fagot', 'fag', 'dick', 'cock', 'pussy', 'pusy',
-    'whore', 'slut', 'bastard', 'asshole', 'ashole', 'jerkof', 'wank', 'penis', 'vagina', 'porn', 'sex', 'rape', 'rapist', 'pedo',
-    'retard', 'kys', 'kilyourself', 'suicid', 'cum', 'jizz', 'boob', 'tits', 'dildo', 'anal', 'anus', 'horny', 'milf', 'incest',
-    'terrorist', 'isis', 'heil',
-}
--- (solo si el nombre entero o uno de sus trozos es exactamente esto: aparecen dentro de palabras inocentes)
-local EXACT = { 'ass', 'culo', 'pito', 'pene', 'teta', 'tetas', 'ano', 'gay', 'homo', 'coño', 'pis', 'caca', 'semen', 'hoe', 'hell', 'damn', 'kkk' }
-local RESERVED = { 'admin', 'administrador', 'moderador', 'moderator', 'mod', 'server', 'servidor', 'system', 'sistema', 'host', 'anthropic', 'staff', 'dev' }
--- (inocentes que contienen una vetada)
-local ALLOWED = { 'cucumber', 'document', 'analog', 'analis', 'canal', 'banal', 'final', 'animal', 'manual', 'anual', 'sexto', 'sexta', 'essex',
-                  'cocktail', 'peacock', 'hancock', 'dickens', 'scunthorpe', 'grape', 'drape', 'scrape', 'therapist', 'conocer', 'conocid',
-                  'icono', 'cono_', 'mongolia', 'tarzan', 'forros', 'analia', 'analy', 'cumbre', 'cumbia', 'cumple', 'circum', 'acumul', 'document',
-                  'pedor', 'torpedo', 'pedal', 'expedic', 'cagarruta', 'recagad', 'transex', 'pollac', 'polland', 'apollo', 'pollo' }
+local W = require 'src/network/NameWords'          -- (las listas: un archivo de datos)
+local BLOCKED, EXACT, RESERVED, ALLOWED = W.BLOCKED, W.EXACT, W.RESERVED, W.ALLOWED
 
 local LEET = { ['4'] = 'a', ['@'] = 'a', ['3'] = 'e', ['1'] = 'i', ['!'] = 'i', ['0'] = 'o', ['5'] = 's', ['$'] = 's', ['7'] = 't', ['8'] = 'b', ['9'] = 'g' }
 

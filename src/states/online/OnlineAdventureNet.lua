@@ -15,6 +15,7 @@ local AutoScroll           = require 'src/world/systems/AutoScroll'
 local Floods               = require 'src/world/systems/Floods'
 local PointAreas           = require 'src/world/systems/PointAreas'
 local json                 = require 'libs/json'
+local Blocks               = require 'src/network/Blocks'
 local Protocol             = require 'src/network/Protocol'
 
 return function(OnlineAdventureState, P)
@@ -46,13 +47,18 @@ function OnlineAdventureState:_onGameInit(data)
     self.startTicks = tonumber(data.cd) or 0
 
     self.myIdx = data.idx
+    -- (volver a entrar si se corta: el token de esta partida; entró con ella en marcha: mira hasta la próxima ronda)
+    NC.rejoin = type(data.rejoin) == 'string' and { token = data.rejoin, name = NC.myName } or nil
+    self.lateJoin = data.late == true
+    if self.lateJoin then self.ownData.isSpectator = true end
     self.level.playerNames = {}                         -- (idx → nombre: el ranking del Mega Mashup)
     for _, r in ipairs(data.roster or {}) do
         self.roster[r.idx] = r
-        self.level.playerNames[r.idx] = r.name
+        local shown = Blocks.show(r.name)                -- (un bloqueado: src/network/Blocks.lua)
+        self.level.playerNames[r.idx] = shown
         if r.id then self.rosterById[r.id] = r end
         if r.idx ~= self.myIdx then
-            self.remotePlayers[r.idx] = OnlinePlayer:new(r.id, r.name, r.color)
+            self.remotePlayers[r.idx] = OnlinePlayer:new(r.id, shown, r.color)
         else
             -- Tras llegar a la meta el servidor deja de simularnos: nos
             -- dibujamos como "fantasma" en la meta con los datos del snapshot
@@ -373,12 +379,13 @@ function OnlineAdventureState:_processEvent(ev)
             Sound.play('finish')
             Sound.stopTracked('drowning'); self.audioDrowning = false
         else
-            self:_addBanner(L('oadv.reached_finish', { name = who and who.name or '?' }),
+            self:_addBanner(L('oadv.reached_finish', { name = who and Blocks.show(who.name) or '?' }),
                             place == 1 and L('oadv.countdown') or L('oadv.place', { n = place }),
                             who and who.color or {1, 1, 1}, true)
             Sound.play('point')
         end
     elseif ev.type == 'round_end' then
+        NC.rejoin = nil                                 -- (la partida acabó: ya no hay a dónde volver)
         if self.showGameOver then return end
         self.showGameOver        = true
         self.roundEnd            = ev

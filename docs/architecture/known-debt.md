@@ -45,8 +45,6 @@ from `FlappyMonster_originals`.
 
 ## Product items still open
 
-- Profanity word list for player names: importing a public list (LDNOOBW, es / en, pruned) into
-  `src/network/NameFilter.lua` was deferred.
 - The Switch "overlay" update mode has never been verified on a real console (`update/boot.log` tells the mode).
 - Hoppers are placed in no story level except `huida_del_espejo` and the dark caves (cripta_del_silencio, gruta_lugubre, templo_del_eco).
 

@@ -19,7 +19,7 @@ own player and reconciles against the last input the server acknowledges. Everyt
 | `src/network/Resolver.lua` | DNS lookup in a thread |
 | `src/network/Predictor.lua` | local prediction + reconciliation (the re-simulation is silent) |
 | `src/network/SnapshotBuffer.lua` | interpolation buffer for everything remote |
-| `src/network/NameFilter.lua` | player-name rules, shared by client and server |
+| `src/network/NameFilter.lua` · `NameWords.lua` | player-name rules, shared by client and server · its word lists (data; harness `name_filter`) |
 | `src/states/online/OnlineAdventureState.lua` (+ `OnlineAdventureNet`, `…Render`, `…Hud`) | the in-match client |
 | `src/player/OnlinePlayer.lua` | draws the other players |
 
@@ -181,8 +181,28 @@ piece took damage, immortal online), and a rewound "stomp" may hit a boss that i
   state. Client: first option of the player menu in the room ("DAR ADMIN" / "GIVE ADMIN", `PMENU_ADMIN`). No in-match
   UI. `online_smoke` checks the round trip (client → bot → client).
 
+- **Watching a running match (2026-11-02)** — `join_room` on a room IN_GAME no longer fails: the player joins as a
+  spectator (`addPlayerSim(..., late = true)`: no lives, `ps.late` keeps them out of this round's results), gets their own
+  `game_init` (`late = true`: the HUD says `oadv.watching`) and plays from the next round like anyone in the room.
+- **Rejoining after a cut (2026-11-02)** — every `game_init` carries a `rejoin` token (per player, per match). If the
+  connection drops mid-match the server keeps the player in the room and in the sim, standing still (`ps.away`), for
+  60 s (`REJOIN_T`, `S.checkAway` every `PING_TICK`); the room is deleted at once if nobody connected is left, and away
+  players leave at the end of the round. The client keeps the token (`NC.rejoin`, cleared at `round_end` or when leaving):
+  the connection-lost screen offers BACK TO THE MATCH, which logs in again by itself (`online_login { auto = true }`)
+  sending `hello { rejoin }`; the server matches token + name, gives the new connection the old player id, resets its
+  input sequence (`resumePlayerSim`) and sends `room_update` + that player's `game_init`. Harness: `online_menus`
+  `mirar`, `volver`.
+- **Block and report (2026-11-02)** — in the room, ANY player opens another player's menu (the admin also has give
+  admin / kick / ban). BLOCK is local: the name goes to `Settings.blocked` (options.cfg) and `src/network/Blocks.lua`
+  shows `room.blocked_name` instead of it everywhere (room list, name over the player, HUD, banners, results, the Mega
+  Mashup ranking); nobody is told. REPORT sends `report_player { playerId }` (same room only); the server appends a line
+  to `reports.log` in its save folder (UTC time, room, reporter, reported name + id + the first two parts of the IP) and
+  answers `reported` (`again = true` within 10 min for the same pair). Reports are read by hand: there is no moderation
+  tool. Harness: `online_menus` `bloquear`.
+
 ## Protocol version history
 
+v109 report_player, joining a running match to watch, rejoining after a cut (`hello.rejoin`, `game_init.rejoin / late`).
 v108 `rhythm_pose` (client → server → the rest of the room): each player's hit / miss pose in the rhythm duel.
 v107 Groove Crab: new state `buck`, its trampoline launches to a fixed height with no air jump, `backT` in its netPack.
 v106 jump buffer in the own state, ground pound of 1.5 tiles.

@@ -6,7 +6,8 @@
 --     el número de jugadores (◀ ▶) y los botones de abajo (ABAJO, ◀ a CANCELAR, confirmar cancela);
 --  4. sala: el bot entra; el host CAMBIA LA DIFICULTAD con el selector (a la derecha y a la izquierda, todas las de
 --     src/core/Difficulty.lua y "sin dificultad") y la sala del servidor la recibe; el menú de modo de juego;
---     el menú de un jugador (admin);
+--     entrar a mirar una partida en marcha y volver a ella tras un corte (`mirar`, `volver`);
+--     el menú de un jugador (admin); bloquear (el nombre deja de verse) y denunciar (llega y no se repite);
 --  5. la partida empieza (los dos listos) con la dificultad elegida; el menú de pausa;
 --  6. resultados (datos de prueba) y la pantalla de error;
 --  7. contraseña de una sala privada del bot.
@@ -61,7 +62,8 @@ local function newBot(nm)
     b.c:on('connect', function() b.c:send('hello', { v = P.VERSION, name = nm }) end)
     b.c:on('login_success', function(d) b.logged, b.id = true, d.id end)
     b.c:on('room_update', function(d) b.room = d end)
-    b.c:on('game_init', function() b.inGame = true end)
+    b.c:on('room_error', function(d) b.err = d end)
+    b.c:on('game_init', function(d) b.inGame, b.init = true, d end)
     b.c:connect()
     bots[#bots + 1] = b
     return b
@@ -210,7 +212,31 @@ local function run()
     press('confirm', 0.3)
     check('jugador', st.sub == 'pmenu', 'el admin abre el menú de un jugador')
     shots('room_player')
-    press('back', 0.2)
+    -- BLOQUEAR y DENUNCIAR (todos, no solo el admin): el nombre deja de verse; la denuncia llega y la segunda, "otra vez"
+    do
+        local Blocks = require 'src/network/Blocks'
+        local target = st.currentRoom.players[2]
+        local function pick(act)
+            for i, it in ipairs(st.pmenu) do if it[3] == act then st.pmenuSel = i end end
+            press('confirm', 0.4)
+        end
+        local hasItems = false
+        for _, it in ipairs(st.pmenu) do if it[3] == 'block' then hasItems = true end end
+        pick('block')
+        local blocked = Blocks.has(target.name) and Blocks.show(target.name) ~= target.name
+        local toasts = {}
+        local realToast = Notify.toast
+        Notify.toast = function(m, k) toasts[#toasts + 1] = m; return realToast(m, k) end
+        press('confirm', 0.3); pick('report_player'); wait(0.5)
+        press('confirm', 0.3); pick('report_player'); wait(0.5)
+        Notify.toast = realToast
+        local L = require 'src/core/Lang'
+        local repOk = toasts[1] == L('room.reported') and toasts[2] == L('room.report_again')
+        press('confirm', 0.3); pick('block')                        -- (desbloquear)
+        local unblocked = not Blocks.has(target.name)
+        check('bloquear', hasItems and blocked and repOk and unblocked, ('opciones=%s · bloqueado (se ve "%s")=%s · denuncia + "otra vez"=%s (%s) · desbloqueado=%s'):format(
+            tostring(hasItems), tostring(Blocks.show(target.name)), tostring(blocked), tostring(repOk), table.concat(toasts, ' | '), tostring(unblocked)))
+    end
 
     -- ── 5. la partida ────────────────────────────────────────────────────
     b1.c:send('set_ready', { ready = true })
@@ -225,6 +251,35 @@ local function run()
     shots('game')
     press('pause', 0.4)
     shots('pause')
+    press('pause', 0.3)
+
+    -- ── 5b. ENTRAR A MIRAR una partida en marcha y VOLVER A ENTRAR tras un corte ──
+    do
+        local roomId = b1.room and b1.room.id
+        local b3 = newBot('Bolita')
+        waitFor(function() return b3.logged end, 4)
+        b3.c:send('join_room', { id = roomId, password = '1234' })
+        waitFor(function() return b3.init ~= nil end, 4)
+        check('mirar', b3.init and b3.init.late == true and type(b3.init.rejoin) == 'string',
+            ('entra con la partida en marcha: game_init=%s, mirando=%s %s'):format(tostring(b3.init ~= nil), tostring(b3.init and b3.init.late),
+            b3.err and ('(error: ' .. tostring(b3.err.key or b3.err.msg) .. ')') or ''))
+        local myIdx, token = top().myIdx, NC.rejoin and NC.rejoin.token
+        NC:disconnect()                                              -- (se corta)
+        wait(0.6)
+        gStateMachine:change('online_error', { code = 'ERR_CONNECTION_LOST', msg = 'corte' })
+        wait(0.3)
+        local offered = top().canRejoin == true
+        shots('rejoin_offer')
+        press('confirm', 0.2)
+        for k = 1, 10 do
+            wait(0.5)
+            if os.getenv('DBG') then print('  volver:', name(top()), top().connecting, top().auto, NC.rejoin and NC.rejoin.name, NC.connected, top().errorMsg) end
+            if name(top()) == 'OnlineAdventureState' and top().localPaInit then break end
+        end
+        local back = name(top()) == 'OnlineAdventureState' and top().myIdx == myIdx and NC.rejoin and NC.rejoin.token == token
+        check('volver', offered and back, ('ofrece volver=%s · de vuelta en la partida con su jugador (%s → %s)=%s'):format(
+            tostring(offered), tostring(myIdx), tostring(top().myIdx), tostring(back)))
+    end
 
     -- ── 6. resultados y error ────────────────────────────────────────────
     NC:disconnect()

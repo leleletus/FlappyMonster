@@ -38,8 +38,12 @@ function OnlineLoginState:enter(args)
         return
     end
 
+    -- (VOLVER A LA PARTIDA desde el error de red: entra solo, con el nombre de la partida)
+    self.auto = args and args.auto and NC.rejoin ~= nil
+    if self.auto and NC.rejoin.name then self.fields[FIELD_NICK] = NC.rejoin.name end
+
     -- En móvil / Android: abrir teclado virtual al entrar (hay un único campo de texto)
-    love.keyboard.setTextInput(true)
+    if not self.auto then love.keyboard.setTextInput(true) end
 
     -- Handlers de red
     NC:on("login_success", function(data)
@@ -69,6 +73,7 @@ function OnlineLoginState:enter(args)
         end
         self:_showError(Lang.fromServer(data, 'login.failed'))
     end)
+    if self.auto then self:_tryConnect() end
 end
 
 function OnlineLoginState:_showError(msg)

@@ -97,7 +97,7 @@ not repeated here.
 - [x] (0.5.10) `docs/testing/harnesses.md` stale (contradicting intros, 16 harnesses missing); `free_play` README row
   malformed; stale line counts in known-debt; `save-data.md` misses `playTime` / `gameOvers`.
 
-- [ ] Battery failures seen on 2026-11-02, also without that day's changes: `bot_nav` (`ciudadela_alterna`), `gloomy_rules` (`parkour`), `project_check` on this Mac (`tools/music/ref` is linked from the docs but not in the repo). Under load `online_menus` and `online_smoke lluvia_pinchos` sometimes fail too; alone they pass.
+- [ ] Battery failures seen on 2026-11-02, also without that day's changes: `bot_nav` (`ciudadela_alterna`), `gloomy_rules` (`parkour`), `project_check` on this Mac (`tools/music/ref` is linked from the docs but not in the repo). Under load `online_menus`, `online_smoke lluvia_pinchos` and `free_play` (a stack trace from FreePlayState.lua:303, the threaded cards of 0.5.146) sometimes fail too; alone they pass.
 
 ## 7. Decisions for the user
 

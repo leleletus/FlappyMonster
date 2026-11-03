@@ -1,4 +1,5 @@
 local IceDrips = require 'src/fx/IceDrips'
+local Blocks = require 'src/network/Blocks'
 local LavaFx   = require 'src/fx/LavaFx'
 local Sky      = require 'src/fx/Sky'
 local Snowfall = require 'src/fx/Snowfall'
@@ -360,6 +361,7 @@ function OnlineAdventureState:_executePause(sel)
     if chosen == 'common.resume' then
         self.showPause = false
     elseif chosen == 'oadv.leave_hub' then
+        NC.rejoin = nil
         NC:send("leave_room", {})
     elseif chosen == 'room.stop' then
         NC:send("stop_game", {})
@@ -709,14 +711,14 @@ function OnlineAdventureState:_renderBossHUD()
                     local od = self.ownData
                     if not od.finished then
                         local pa = self.localPa
-                        e = { name = r.name, color = r.color, hp = pa.hp, hpMax = pa.hpMax, key = r,
+                        e = { name = Blocks.show(r.name), color = r.color, hp = pa.hp, hpMax = pa.hpMax, key = r,
                               dead = od.isSpectator or pa.dying }
                     end
                 else
                     local rp = self.remotePlayers[idx]
                     if rp and rp.visible and not rp.finished then
                         -- (la vida máxima es la de la dificultad de la sala, la misma para todos: 4 en Fácil)
-                        e = { name = r.name, color = r.color, hp = rp.hp, hpMax = self.localPa and self.localPa.hpMax or 3, key = r,
+                        e = { name = Blocks.show(r.name), color = r.color, hp = rp.hp, hpMax = self.localPa and self.localPa.hpMax or 3, key = r,
                               dead = rp.isSpectator or rp.dying }
                     end
                 end

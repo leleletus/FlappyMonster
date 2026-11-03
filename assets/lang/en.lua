@@ -247,6 +247,7 @@ return {
         failed = "Could not log in.",
     },
     err = {
+        rejoin = "BACK TO THE MATCH",
         unknown = "Unknown error",
         unreachable = "Could not connect to the server.",
         lost = "The connection to the server was lost.",
@@ -303,6 +304,12 @@ return {
         join_hint = "{ok} Join   {back} Cancel",
     },
     room = {
+        block = "BLOCK",
+        unblock = "UNBLOCK",
+        report = "REPORT",
+        blocked_name = "(BLOCKED)",
+        reported = "Report sent: the server has logged it.",
+        report_again = "You already reported them recently.",
         difficulty_label = "DIFFICULTY",
         difficulty_hint = "{desc}    {lr} change",
         give_admin = "GIVE ADMIN",
@@ -379,6 +386,9 @@ return {
         ["why.no_point_areas"] = "the level has no point zones",
     },
     srv = {
+        joined_watch = "{name} joins to watch: they play next round",
+        rejoined = "{name} is back",
+        dropped = "{name} lost connection: 60 s to come back",
         version = "Incompatible version. Update the game.",
         bad_name = "Invalid name.",
         name_taken = "That name is already in use.",
@@ -479,6 +489,8 @@ return {
         snowboss = "BIG SNOWBALL",
     },
     oadv = {
+        watching = "Watching: you play next round",
+        watching_title = "WATCHING",
         wait = "WAIT",
         leave_hub = "LEAVE TO HUB",
         at_finish = "FINISHED!",

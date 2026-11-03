@@ -527,6 +527,7 @@ function love.update(dt)
     pingTimer = pingTimer + dt
     if pingTimer >= PING_TICK then
         pingTimer = 0
+        S.checkAway()                    -- (los que se fueron en plena partida: ¿volvieron? server/srv/lobby.lua)
         for _, room in pairs(rooms) do
             if #room.playerIds > 0 then guarded(room, 'estado de la sala', S.broadcastRoomUpdate, room) end
         end

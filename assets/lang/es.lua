@@ -247,6 +247,7 @@ return {
         failed = "No se pudo iniciar sesión.",
     },
     err = {
+        rejoin = "VOLVER A LA PARTIDA",
         unknown = "Error desconocido",
         unreachable = "No se pudo establecer conexión con el servidor.",
         lost = "Se perdió la conexión con el servidor.",
@@ -303,6 +304,12 @@ return {
         join_hint = "{ok} Unirse   {back} Cancelar",
     },
     room = {
+        block = "BLOQUEAR",
+        unblock = "DESBLOQUEAR",
+        report = "DENUNCIAR",
+        blocked_name = "(BLOQUEADO)",
+        reported = "Denuncia enviada: el servidor la ha apuntado.",
+        report_again = "Ya lo denunciaste hace poco.",
         difficulty_label = "DIFICULTAD",
         difficulty_hint = "{desc}    {lr} cambiar",
         give_admin = "DAR ADMIN",
@@ -379,6 +386,9 @@ return {
         ["why.no_point_areas"] = "el nivel no tiene zonas de puntos",
     },
     srv = {
+        joined_watch = "{name} entra a mirar: jugará la próxima ronda",
+        rejoined = "{name} ha vuelto",
+        dropped = "A {name} se le cortó la conexión: tiene 60 s para volver",
         version = "Versión incompatible. Actualiza el juego.",
         bad_name = "Nombre inválido.",
         name_taken = "Ese nombre ya está en uso.",
@@ -479,6 +489,8 @@ return {
         snowboss = "GRAN BOLA DE NIEVE",
     },
     oadv = {
+        watching = "Mirando: juegas la próxima ronda",
+        watching_title = "MIRANDO",
         wait = "ESPERAR",
         leave_hub = "SALIR AL HUB",
         at_finish = "¡EN LA META!",

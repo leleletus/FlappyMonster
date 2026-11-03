@@ -26,18 +26,32 @@ local SUB_MODES  = 'modes'   -- menú "MODO DE JUEGO" (admin)
 local FOCUS_PLAYERS = 'players'
 local FOCUS_ACTIONS = 'actions'
 
--- Opciones del menú de jugador
-local PMENU_ADMIN  = 1     -- ceder el admin a ese jugador (quien lo cede deja de serlo)
-local PMENU_KICK   = 2
-local PMENU_BAN    = 3
-local PMENU_CANCEL = 4
-local PMENU_LABELS = { 'room.give_admin', 'room.kick', 'room.ban', 'hub.cancel' }   -- claves de idioma
-local PMENU_COLORS = { 'yellow', 'orange', 'red', 'grey' }                           -- (colores de botón)
+local Blocks = require 'src/network/Blocks'
+local Notify = require 'src/ui/Notify'
+
+-- Opciones del menú de jugador: el admin además cede el admin, expulsa y banea; todos pueden BLOQUEAR (su nombre deja
+-- de verse en este aparato: src/network/Blocks.lua) y DENUNCIAR (lo apunta el servidor). La última: cancelar.
+local function pmenuItems(isAdmin, target)
+    local list = {}
+    if isAdmin then
+        list[#list + 1] = { 'room.give_admin', 'yellow', 'give_admin' }   -- (quien lo cede deja de serlo)
+        list[#list + 1] = { 'room.kick', 'orange', 'kick_player' }
+        list[#list + 1] = { 'room.ban', 'red', 'ban_player' }
+    end
+    list[#list + 1] = { (target and Blocks.has(target.name)) and 'room.unblock' or 'room.block', 'purple', 'block' }
+    list[#list + 1] = { 'room.report', 'pink', 'report_player' }
+    list[#list + 1] = { 'hub.cancel', 'grey', 'cancel' }
+    return list
+end
 
 -- ── Enter ─────────────────────────────────────────────────────────────────────
 
 function OnlineRoomState:enter(args)
     args = args or {}
+    -- (una sala con la partida en marcha: entrar a mirarla o volver a ella — el servidor ya mandó game_init —)
+    -- (se cambia en el primer update: cambiar de estado dentro de enter dejaba este a medio hacer)
+    if args.room and args.room.state == "IN_GAME" then self.toGame = args.room; return end
+    self.toGame = nil
 
     self.currentRoom   = args.room or {}
     self.isReady       = false
@@ -47,7 +61,7 @@ function OnlineRoomState:enter(args)
     self.focus         = FOCUS_ACTIONS
     self.playerSel     = 1
     self.actionSel     = 1
-    self.pmenuSel      = PMENU_CANCEL
+    self.pmenuSel      = 1
 
     self.t             = 0
     self.anim, self.winAnim = MenuAnim.new(), MenuAnim.new()
@@ -92,6 +106,7 @@ function OnlineRoomState:_setupHandlers()
     end)
     NC:on("room_left",   function(data) gStateMachine:change('online_hub') end)
     NC:on("kicked",       function(data) Notify.roomExit('kicked', data) end)
+    NC:on("reported",     function(data) Notify.toast(Lang(data and data.again and 'room.report_again' or 'room.reported')) end)
     NC:on("banned",       function(data) Notify.roomExit('banned', data) end)
     NC:on("room_closed",  function(data) Notify.roomExit('room_closed', data) end)
     NC:on("room_error",  function(data)
@@ -176,7 +191,7 @@ function OnlineRoomState:_startBlocker()
     local waiting, meWaiting = {}, false
     for _, p in ipairs(players) do
         if not p.isReady then
-            if p.id == NC.myId then meWaiting = true else waiting[#waiting + 1] = p.name end
+            if p.id == NC.myId then meWaiting = true else waiting[#waiting + 1] = Blocks.show(p.name) end
         end
     end
     if meWaiting and #waiting == 0 then
@@ -223,6 +238,7 @@ end
 -- ── Update ────────────────────────────────────────────────────────────────────
 
 function OnlineRoomState:update(dt)
+    if self.toGame then return gStateMachine:change('online_adventure', { room = self.toGame }) end
     MenuScene.update(dt)
     self.anim:update(dt); self.winAnim:update(dt)
     self.t = self.t + dt
@@ -249,12 +265,12 @@ function OnlineRoomState:update(dt)
     if self.sub == SUB_PMENU then
         if Input.pressed('nav_up') then
             self.pmenuSel = self.pmenuSel - 1
-            if self.pmenuSel < 1 then self.pmenuSel = #PMENU_LABELS end
+            if self.pmenuSel < 1 then self.pmenuSel = #self.pmenu end
             Sound.play('select')
         end
         if Input.pressed('nav_down') then
             self.pmenuSel = self.pmenuSel + 1
-            if self.pmenuSel > #PMENU_LABELS then self.pmenuSel = 1 end
+            if self.pmenuSel > #self.pmenu then self.pmenuSel = 1 end
             Sound.play('select')
         end
         if Input.pressed('confirm') then
@@ -314,10 +330,8 @@ function OnlineRoomState:update(dt)
         end
         if Input.pressed('confirm') then
             local sel = players[self.playerSel]
-            if isAdmin and sel and sel.id ~= NC.myId then
-                self.sub      = SUB_PMENU
-                self.winAnim  = MenuAnim.new()
-                self.pmenuSel = PMENU_CANCEL
+            if sel and sel.id ~= NC.myId then
+                self:_openPmenu(isAdmin, sel)
                 Sound.play('select')
             end
         end
@@ -343,14 +357,18 @@ function OnlineRoomState:update(dt)
     end
 end
 
+function OnlineRoomState:_openPmenu(isAdmin, target)
+    self.pmenu = pmenuItems(isAdmin, target)
+    self.sub, self.winAnim, self.pmenuSel = SUB_PMENU, MenuAnim.new(), #self.pmenu
+end
+
 function OnlineRoomState:_executePmenu(players)
     local target = players[self.playerSel]
-    if self.pmenuSel == PMENU_ADMIN and target then
-        NC:send("give_admin", { playerId = target.id })
-    elseif self.pmenuSel == PMENU_KICK and target then
-        NC:send("kick_player", { playerId = target.id })
-    elseif self.pmenuSel == PMENU_BAN and target then
-        NC:send("ban_player",  { playerId = target.id })
+    local act = self.pmenu and self.pmenu[self.pmenuSel] and self.pmenu[self.pmenuSel][3]
+    if target and act == 'block' then
+        Blocks.toggle(target.name)
+    elseif target and act ~= 'cancel' then
+        NC:send(act, { playerId = target.id })
     end
     self.sub = SUB_MAIN
 end
@@ -396,11 +414,12 @@ function OnlineRoomState:_layout()
         L.buttons[i] = { x = rightX + 52, y = by + (i - 1) * (bh + BTN_GAP), w = rightW - 52, h = bh }
     end
     -- Menú de acción sobre un jugador (ventana)
-    local mh = #PMENU_LABELS * (PM_BH + PM_GAP) + 120
+    local nItems = #(self.pmenu or {})
+    local mh = nItems * (PM_BH + PM_GAP) + 120
     local pw = math.min(PM_W, WINDOW_W - 120)
     L.pmenu = { x = math.floor((WINDOW_W - pw) / 2), y = math.floor((WINDOW_H - mh) / 2), w = pw, h = mh }
     L.pmenuBtns = {}
-    for i = 1, #PMENU_LABELS do
+    for i = 1, nItems do
         L.pmenuBtns[i] = { x = L.pmenu.x + 72, y = L.pmenu.y + 96 + (i - 1) * (PM_BH + PM_GAP), w = pw - 112, h = PM_BH }
     end
     return L
@@ -414,6 +433,7 @@ end
 -- ── Hover del mouse: mueve la selección real al elemento bajo el cursor ──────
 
 function OnlineRoomState:mousemoved(tx, ty)
+    if self.toGame then return end
     if self.sub == SUB_MODES then
         if self.modeMenu then self.modeMenu:hover(tx, ty) end
         return
@@ -449,6 +469,7 @@ end
 -- ── Táctil / clic ─────────────────────────────────────────────────────────────
 
 function OnlineRoomState:touchpressed(id, tx, ty)
+    if self.toGame then return end
     local room    = self.currentRoom
     local players = room and room.players or {}
     local isAdmin = room and (room.adminId == NC.myId)
@@ -477,9 +498,7 @@ function OnlineRoomState:touchpressed(id, tx, ty)
             self.focus, self.playerSel = FOCUS_PLAYERS, i
             Sound.play('select')
             local sel = players[i]
-            if isAdmin and sel and sel.id ~= NC.myId then
-                self.sub, self.pmenuSel, self.winAnim = SUB_PMENU, PMENU_CANCEL, MenuAnim.new()
-            end
+            if sel and sel.id ~= NC.myId then self:_openPmenu(isAdmin, sel) end
             return
         end
     end
@@ -504,6 +523,7 @@ end
 -- ── keypressed (solo texto / teclas que Input.pressed no cubre) ───────────────
 
 function OnlineRoomState:keypressed(k)
+    if self.toGame then return end
     -- Sin lógica adicional: todo se maneja vía Input.pressed en update().
     -- Solo se intercepta escape aquí como fallback por compatibilidad.
     if k == "escape" then
@@ -600,6 +620,7 @@ end
 -- ── Render ────────────────────────────────────────────────────────────────────
 
 function OnlineRoomState:render()
+    if self.toGame then return end
     MenuScene.backdrop('online')                 -- (ladrillos del Flappy: src/ui/menu/MenuScene)
 
     local A       = self.anim
@@ -652,7 +673,7 @@ function OnlineRoomState:render()
                         p.isReady and { 0.45, 0.9, 0.5 } or { 0.2, 0.25, 0.42 }, a, true)
         local nameMax = (x + r.w - 28 - math.max(pw, pgw)) - nx
         local you = isSelf and (' ' .. Lang('room.you')) or ''
-        local name = fitText(FONT_MED, p.name or '?', nameMax - (isSelf and FONT_SMALL:getWidth(you) + 6 or 0))
+        local name = fitText(FONT_MED, Blocks.show(p.name) or '?', nameMax - (isSelf and FONT_SMALL:getWidth(you) + 6 or 0))
         MenuKit.text(FONT_MED, name, nx, nameY, nameMax, 'left', { col[1] * 0.6 + 0.4, col[2] * 0.6 + 0.4, col[3] * 0.6 + 0.4 }, a)
         if isSelf then
             MenuKit.text(FONT_SMALL, you, nx + FONT_MED:getWidth(name) + 4, nameY + 4, 200, 'left', { 0.6, 0.85, 1 }, a)
@@ -702,12 +723,13 @@ function OnlineRoomState:render()
         local M = L.pmenu
         local _, poy, pa = self.winAnim:slide(1, 0, 160)
         MenuKit.box('window', M.x, M.y + poy, M.w, M.h, pa)
-        local title = Lang('room.action_on', { name = target and target.name or '?' })
+        local title = Lang('room.action_on', { name = target and Blocks.show(target.name) or '?' })
         MenuKit.text(FONT_MED, fitText(FONT_MED, title, M.w - 40), M.x, M.y + 36 + poy, M.w, 'center', { 1, 0.86, 0.36 }, pa)
-        for i, lbl in ipairs(PMENU_LABELS) do
+        for i, it in ipairs(self.pmenu or {}) do
+            local lbl = it[1]
             local r = L.pmenuBtns[i]
             local sel = i == self.pmenuSel
-            MenuButton.draw(Lang(lbl), r.x, r.y + poy + bobOf(self.t, sel), r.w, r.h, PMENU_COLORS[i], sel, { alpha = pa, scale = MenuButton.textScale(Lang(lbl), r.w - 48, 4) })
+            MenuButton.draw(Lang(lbl), r.x, r.y + poy + bobOf(self.t, sel), r.w, r.h, it[2], sel, { alpha = pa, scale = MenuButton.textScale(Lang(lbl), r.w - 48, 4) })
             if sel then MenuKit.marker(r.x, r.y + poy + bobOf(self.t, sel), r.w, r.h, self.t, pa) end
         end
         MenuKit.hint(Lang('menu.hint', { move = Input.label('nav_up') .. Input.label('nav_down'),

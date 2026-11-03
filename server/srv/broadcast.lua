@@ -73,21 +73,20 @@ end
 
 -- Datos estáticos de la partida: se envían UNA vez (fiable) al empezar, así
 -- los snapshots no repiten nombres, colores ni IDs largos.
-local function sendGameInit(room)
+-- `only`: solo a ese jugador (entra con la partida en marcha o vuelve a entrar)
+local function sendGameInit(room, only)
     local sim = room.sim
     local roster = {}
     for _, pid in ipairs(room.playerIds) do
-        local c  = S.findClientById(pid)
         local ps = sim.playerSims[pid]
-        if c and ps then
-            table.insert(roster, { idx=ps.idx, id=pid, name=players[c].name,
-                                   color=players[c].color or {1,1,1} })
+        if ps then
+            table.insert(roster, { idx=ps.idx, id=pid, name=ps.name, color=ps.color or {1,1,1} })
         end
     end
     for _, pid in ipairs(room.playerIds) do
         local c  = S.findClientById(pid)
         local ps = sim.playerSims[pid]
-        if c and ps then
+        if c and ps and (not only or only == pid) then
             c:send("game_init", {
                 tick     = sim.tick,
                 idx      = ps.idx,
@@ -99,6 +98,8 @@ local function sendGameInit(room)
                 difficulty = room.difficulty,   -- (nil = sin dificultad)
                 level    = sim.levelRaw,        -- el nivel viaja al cliente
                 cd       = sim.startTicks,      -- cuenta atrás del principio (ticks), StartCountdown
+                rejoin   = ps.token,            -- (para volver a entrar si se corta: hello con `rejoin`)
+                late     = ps.late,             -- (entró con la partida en marcha: mira hasta la próxima ronda)
             })
         end
     end
@@ -233,6 +234,8 @@ local function broadcastSnapshot(room)
 end
 
 local function endGame(room, reason)
+    -- (los que se fueron en plena partida y no volvieron salen ya: en la sala de espera no se puede esperar a nadie)
+    for _, ps in pairs(room.sim and room.sim.playerSims or {}) do if ps.away then S.dropAway(room, ps) end end
     room.state = "WAITING"
     room.sim   = nil
     for _, pid in ipairs(room.playerIds) do

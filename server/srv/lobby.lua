@@ -175,9 +175,56 @@ on("hello", function(data, client, p)
         end
     end
     p.id, p.name, p.verified = S.newPlayerId(), name, true
-    S.log("Registrado: '" .. name .. "' (" .. p.ip .. ")")
+    -- VOLVER A ENTRAR: con el `rejoin` que dio game_init y el mismo nombre, a la partida en marcha que se le cortó
+    local room, ps = S.findAway(data.rejoin, name)
+    if room then p.id = ps.id end
+    S.log("Registrado: '" .. name .. "' (" .. p.ip .. ")" .. (room and (" — vuelve a '" .. room.name .. "'") or ""))
     client:send("login_success", { name=name, id=p.id })
+    if room then
+        p.roomId, p.color, p.isReady = room.id, ps.color, false
+        S.resumePlayerSim(ps)
+        S.broadcastRoomUpdate(room)
+        S.sendGameInit(room, ps.id)
+        S.announceToRoom(room, 'srv.rejoined', { name = name }, 'join')
+    end
 end, true)
+
+-- ── Volver a entrar ──────────────────────────────────────────────────────────
+-- A quien se le corta la conexión en plena partida no se le saca: su jugador se queda quieto en la partida (`away`)
+-- REJOIN_T s, por si vuelve (hello con su `rejoin`). Pasado ese tiempo, o si ya no queda nadie conectado, sale.
+local REJOIN_T = 60
+function S.findAway(token, name)
+    if type(token) ~= 'string' or #token ~= 16 then return nil end
+    for _, room in pairs(rooms) do
+        for _, ps in pairs(room.sim and room.sim.playerSims or {}) do
+            if ps.away and ps.token == token and ps.name:lower() == name:lower() then return room, ps end
+        end
+    end
+end
+local function anyoneHere(room)
+    for _, pid in ipairs(room.playerIds) do if S.findClientById(pid) then return true end end
+    return false
+end
+function S.dropAway(room, ps)
+    for i, pid in ipairs(room.playerIds) do
+        if pid == ps.id then table.remove(room.playerIds, i); break end
+    end
+    room.sim.playerSims[ps.id] = nil
+    S.announceToRoom(room, 'srv.left', { name = ps.name }, 'leave')
+    if room.adminId == ps.id and room.playerIds[1] then room.adminId = room.playerIds[1] end
+end
+function S.checkAway()
+    local now = love.timer.getTime()
+    for id, room in pairs(rooms) do
+        for _, ps in pairs(room.sim and room.sim.playerSims or {}) do
+            if ps.away and now - ps.away > REJOIN_T then S.dropAway(room, ps) end
+        end
+        if #room.playerIds == 0 or not anyoneHere(room) then
+            rooms[id] = nil
+            S.log("Sala '" .. room.name .. "' eliminada (nadie conectado).")
+        end
+    end
+end
 
 -- Clientes antiguos (protocolo v1): avisar en su pantalla de login.
 on("set_nickname", function(data, client, p)
@@ -225,7 +272,9 @@ on("join_room", function(data, client, player)
     end
     local room = rooms[tostring(data.id or ""):sub(1, 12)]
     if not room then client:send("room_error",Lang.message('srv.room_not_found')); return end
-    if room.state ~= "WAITING" then client:send("room_error",Lang.message('srv.room_in_game')); return end
+    -- (con la partida en marcha se entra a MIRAR: sin vidas hasta la próxima ronda — addPlayerSim `late` —)
+    local late = room.state == "IN_GAME" and room.sim and not room.sim.ended
+    if room.state ~= "WAITING" and not late then client:send("room_error",Lang.message('srv.room_in_game')); return end
     if #room.playerIds >= room.maxPlayers then client:send("room_error",Lang.message('srv.room_full')); return end
     if room.bannedNames[player.name:lower()] or room.bannedIPs[player.ip] then
         client:send("room_error",Lang.message('srv.banned_here', nil,
@@ -247,9 +296,16 @@ on("join_room", function(data, client, player)
     player.roomId  = room.id
     player.isReady = false
     player.color   = PLAYER_COLORS[#room.playerIds] or {1,1,1}
-    S.log(player.name .. " se unio a '" .. room.name .. "'")
+    S.log(player.name .. " se unio a '" .. room.name .. "'" .. (late and " (mirando)" or ""))
+    if late then
+        local idx = 0
+        for _, ps in pairs(room.sim.playerSims) do idx = math.max(idx, ps.idx) end
+        local sx, sy = room.sim.level:getSpawnPx()
+        S.addPlayerSim(room.sim, player.id, idx + 1, sx, sy, player, true)
+    end
     S.broadcastRoomUpdate(room)
-    S.announceToRoom(room, 'srv.joined', { name = player.name }, 'join')
+    if late then S.sendGameInit(room, player.id) end
+    S.announceToRoom(room, late and 'srv.joined_watch' or 'srv.joined', { name = player.name }, 'join')
 end)
 
 on("leave_room", function(data, client, player)
@@ -410,6 +466,28 @@ on("kick_player", function(data, client, admin)
     S.log(admin.name .. " kickeo a " .. tname)
 end)
 
+-- DENUNCIAR a otro jugador de la misma sala (cualquiera, no solo el admin): se apunta en `reports.log` (la carpeta de
+-- guardado del servidor) con la hora, la sala, quién y a quién (su nombre, su id y un trozo de su IP), para revisarlo a
+-- mano. Una denuncia por pareja cada REPORT_EVERY s (si no, `again`).
+local REPORT_EVERY = 600
+local reported = {}
+on("report_player", function(data, client, player)
+    if type(data) ~= "table" or not player.roomId then return end
+    local targetId = tostring(data.playerId or ""):sub(1, 32)
+    local tc = S.findClientById(targetId)
+    if targetId == player.id or not tc or players[tc].roomId ~= player.roomId then return end
+    local key, now = player.id .. '>' .. targetId, love.timer.getTime()
+    if reported[key] and now - reported[key] < REPORT_EVERY then client:send("reported", { again = true }); return end
+    reported[key] = now
+    local t, room = players[tc], rooms[player.roomId]
+    local ipPart = (t.ip or '?'):match('^(%d+%.%d+)') or '?'
+    local line = ('%s\tsala=%s\tdenuncia=%s\ta=%s (%s, ip %s.*)\n'):format(os.date('!%Y-%m-%d %H:%M:%S'),
+        room and room.name or '?', player.name or '?', t.name or '?', targetId, ipPart)
+    love.filesystem.append('reports.log', line)
+    S.log('DENUNCIA: ' .. (player.name or '?') .. ' a ' .. (t.name or '?'))
+    client:send("reported", {})
+end)
+
 -- CEDER EL ADMIN a otro jugador de la sala: él pasa a ser el admin y quien lo cede deja de serlo en el acto (solo hay
 -- un admin, `room.adminId`); todos lo ven en el siguiente room_update. Vale en la sala de espera y con la partida en marcha.
 on("give_admin", function(data, client, admin)
@@ -499,6 +577,15 @@ server:on("disconnect", function(data, client)
     S.log("Desconectado: '" .. (player.name or player.ip) .. "'")
     if player.roomId then
         local room = rooms[player.roomId]
+        local ps = room and room.sim and not room.sim.ended and room.sim.playerSims[player.id]
+        if ps and not ps.isSpectator then
+            -- (en plena partida: se queda quieto esperando a que vuelva — S.checkAway —)
+            ps.away, ps.queue, ps.lastBits = love.timer.getTime(), {}, 0
+            players[client] = nil
+            S.announceToRoom(room, 'srv.dropped', { name = player.name }, 'leave')
+            if not anyoneHere(room) then S.checkAway() end
+            return
+        end
         if room then removePlayerFromRoom(player, room, false) end
     end
     players[client] = nil

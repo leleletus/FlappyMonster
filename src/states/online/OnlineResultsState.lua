@@ -8,6 +8,7 @@
 -- y al terminar vuelve al lobby de la sala.
 
 local BaseState    = require 'src/core/BaseState'
+local Blocks = require 'src/network/Blocks'
 local NC           = require 'src/network/NetworkClient'
 local Modes        = require 'src/world/modes/Modes'
 local PixelIcons   = require 'src/ui/PixelIcons'
@@ -115,7 +116,7 @@ function OnlineResultsState:enter(args)
     elseif self.meWinner then
         self.title, self.titleCol = L('results.you_won'), {1, 0.9, 0.2}
     elseif nw == 1 then
-        self.title, self.titleCol = L('results.wins', { name = self.winners[1].name }), self.winners[1].color
+        self.title, self.titleCol = L('results.wins', { name = Blocks.show(self.winners[1].name) }), self.winners[1].color
     elseif nw > 1 then
         self.title, self.titleCol = L('results.n_win', { n = nw }), {1, 0.9, 0.2}
     else
@@ -355,7 +356,7 @@ function OnlineResultsState:_renderPodium()
             if fall >= 1 then
                 local nameY = y + hop - ih * sc / 2 - 22
                 love.graphics.setFont(FONT_SMALL)
-                shadowText(fitText(FONT_SMALL, e.name, PODIUM_W + 20), cx - 100, nameY, 200, 'center',
+                shadowText(fitText(FONT_SMALL, Blocks.show(e.name), PODIUM_W + 20), cx - 100, nameY, 200, 'center',
                            c[1], c[2], c[3], 1)
                 if e.winner then
                     local px = 3
@@ -439,7 +440,7 @@ function OnlineResultsState:_renderBoard()
             if showDetail then
                 nameMax = w - DETAIL_R - FONT_SMALL:getWidth((detailText(e))) - 16 - (nx - rx)
             end
-            local name = fitText(FONT_MED, e.name .. (mine and ' ' .. L('room.you') or ''), nameMax)
+            local name = fitText(FONT_MED, Blocks.show(e.name) .. (mine and ' ' .. L('room.you') or ''), nameMax)
             shadowText(name, nx, ty, nameMax + 20, 'left', c[1] * 0.7 + 0.3, c[2] * 0.7 + 0.3, c[3] * 0.7 + 0.3, k)
 
             -- Puntos con conteo

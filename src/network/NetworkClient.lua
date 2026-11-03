@@ -23,6 +23,7 @@ local NC = {
     _connectTimer  = nil,   -- nil = no hay intento en curso; número = segundos transcurridos
     _resolving     = nil,   -- { job, port, name } mientras se resuelve el nombre del servidor
     pendingGameInit = nil,  -- último game_init recibido (por si llega antes del estado)
+    rejoin = nil,           -- { token, name } de la partida en marcha: para volver a entrar si se corta
 }
 
 -- ── API pública ───────────────────────────────────────────────────────────────
@@ -96,7 +97,8 @@ function NC:_open(host, port, name)
 
     -- Al conectar a nivel ENet: handshake con versión de protocolo + nickname
     self.client:on("connect", function()
-        self.client:send("hello", { v = Protocol.VERSION, name = name })
+        -- (`rejoin`: el de la última partida, por si se cortó en medio — server/srv/lobby.lua S.findAway —)
+        self.client:send("hello", { v = Protocol.VERSION, name = name, rejoin = self.rejoin and self.rejoin.token })
     end)
 
     -- El servidor cerró la conexión (evento ENet DISCONNECT)
@@ -133,7 +135,7 @@ function NC:_open(host, port, name)
     -- Dispatchers estáticos para el resto de eventos del juego
     local events = {
         "room_list", "room_update", "room_announce",
-        "room_left", "kicked", "banned", "room_closed",
+        "room_left", "kicked", "banned", "room_closed", "reported",
         "room_error", "level_catalog", "s", "ev",
         "rhythm_pose",                              -- (la pose de otro jugador en el duelo de ritmo)
     }
