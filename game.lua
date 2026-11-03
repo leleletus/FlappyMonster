@@ -111,11 +111,13 @@ function love.load()
         story_collection   = function() return require('src/states/story/StoryCollectionState'):new() end, -- Historia: la Colección (encima del mapa)
         story_film         = function() return require('src/states/story/StoryFilmState'):new() end,   -- Historia: cinemáticas (intro y final)
         online_login       = function() return OnlineLoginState:new() end,
+        online_menu        = function() return require('src/states/online/OnlineMenuState'):new() end,   -- salas · desafío · récords
         online_hub         = function() return OnlineHubState:new() end,
         online_room        = function() return OnlineRoomState:new() end,
         online_adventure   = function() return OnlineAdventureState:new() end,
         online_error       = function() return OnlineErrorState:new() end,
         online_results     = function() return OnlineResultsState:new() end,
+        online_records     = function() return require('src/states/online/OnlineRecordsState'):new() end,   -- récords y desafío del día
     })
     -- busca versión nueva, luego el logo y el título (`make … NO_INTRO=1` mete nointro.flag en el .love: sin el logo)
     gStateMachine:change('update', { after = love.filesystem.getInfo('nointro.flag') and 'title' or 'startup' })

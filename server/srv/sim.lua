@@ -543,6 +543,7 @@ local function stepRoom(room)
             sim.ended = reason
             local ev = buildResults(room, reason)
             ev.t = sim.tick
+            if S.recordRound then pcall(S.recordRound, room, ev) end        -- (récords y desafío del día: records.lua)
             table.insert(sim.events, ev)
         end
     end

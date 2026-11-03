@@ -34,7 +34,9 @@ local function removePlayerFromRoom(player, room, silent)
     end
 
     if room.adminId == player.id then
+        -- (el primero que SIGA conectado: uno que se fue en plena partida no puede ser admin)
         room.adminId = room.playerIds[1]
+        for _, pid in ipairs(room.playerIds) do if S.findClientById(pid) then room.adminId = pid; break end end
         local newName = S.findPlayerNameById(room.adminId)
         S.announceToRoom(room, 'srv.new_host', { name = newName }, 'admin')
         S.log("Nuevo admin de '" .. room.name .. "': " .. newName)
@@ -211,7 +213,9 @@ function S.dropAway(room, ps)
     end
     room.sim.playerSims[ps.id] = nil
     S.announceToRoom(room, 'srv.left', { name = ps.name }, 'leave')
-    if room.adminId == ps.id and room.playerIds[1] then room.adminId = room.playerIds[1] end
+    if room.adminId == ps.id then
+        for _, pid in ipairs(room.playerIds) do if S.findClientById(pid) then room.adminId = pid; break end end
+    end
 end
 function S.checkAway()
     local now = love.timer.getTime()
@@ -261,17 +265,14 @@ end)
 
 -- Contraseñas falladas, por IP (por conexión, volver a conectar las ponía a cero): [ip] = { fails, lockUntil, t }
 local joinLocks = {}
-on("join_room", function(data, client, player)
-    if type(data) ~= "table" then return end
-    if player.roomId then client:send("room_error",Lang.message('srv.already_in_room')); return end
+-- Entrar en una sala (join_room y el desafío del día: server/srv/records.lua)
+function S.joinRoom(client, player, room, password)
     local now = love.timer.getTime()
     for ip, j in pairs(joinLocks) do if now - j.t > 600 and now >= j.lockUntil then joinLocks[ip] = nil end end
     local jl = joinLocks[player.ip]
     if jl and now < jl.lockUntil then
         client:send("room_error",Lang.message('srv.too_many_tries')); return
     end
-    local room = rooms[tostring(data.id or ""):sub(1, 12)]
-    if not room then client:send("room_error",Lang.message('srv.room_not_found')); return end
     -- (con la partida en marcha se entra a MIRAR: sin vidas hasta la próxima ronda — addPlayerSim `late` —)
     local late = room.state == "IN_GAME" and room.sim and not room.sim.ended
     if room.state ~= "WAITING" and not late then client:send("room_error",Lang.message('srv.room_in_game')); return end
@@ -280,7 +281,7 @@ on("join_room", function(data, client, player)
         client:send("room_error",Lang.message('srv.banned_here', nil,
                                    { kind = "banned", room = room.name })); return
     end
-    if room.password ~= "" and room.password ~= S.cleanText(data.password, PASSWORD_MAX) then
+    if room.password ~= "" and room.password ~= S.cleanText(password, PASSWORD_MAX) then
         jl = jl or { fails = 0, lockUntil = 0 }
         joinLocks[player.ip] = jl
         jl.fails, jl.t = jl.fails + 1, now
@@ -306,6 +307,14 @@ on("join_room", function(data, client, player)
     S.broadcastRoomUpdate(room)
     if late then S.sendGameInit(room, player.id) end
     S.announceToRoom(room, late and 'srv.joined_watch' or 'srv.joined', { name = player.name }, 'join')
+end
+
+on("join_room", function(data, client, player)
+    if type(data) ~= "table" then return end
+    if player.roomId then client:send("room_error",Lang.message('srv.already_in_room')); return end
+    local room = rooms[tostring(data.id or ""):sub(1, 12)]
+    if not room then client:send("room_error",Lang.message('srv.room_not_found')); return end
+    S.joinRoom(client, player, room, data.password)
 end)
 
 on("leave_room", function(data, client, player)
@@ -331,7 +340,7 @@ on("start_game", function(data, client, player)
     if not room then return end
     if room.adminId ~= player.id then client:send("room_error",Lang.message('srv.only_host_start')); return end
     if room.state == "IN_GAME"   then client:send("room_error",Lang.message('srv.already_playing')); return end
-    if #room.playerIds < 2       then client:send("room_error",Lang.message('srv.need_two')); return end
+    if #room.playerIds < 2 and not room.daily then client:send("room_error",Lang.message('srv.need_two')); return end   -- (el desafío del día, solo)
 
     for _, pid in ipairs(room.playerIds) do
         local c = S.findClientById(pid)
@@ -377,6 +386,7 @@ local function adminRoom(client, player)
     if not room then return nil end
     if room.adminId ~= player.id then client:send("room_error",Lang.message('srv.only_host')); return nil end
     if room.state ~= "WAITING" then return nil end
+    if room.daily then client:send("room_error",Lang.message('srv.daily_fixed')); return nil end   -- (el desafío del día no se cambia)
     return room
 end
 

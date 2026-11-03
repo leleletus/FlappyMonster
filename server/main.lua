@@ -164,7 +164,7 @@ S.TARGET_QUEUE, S.TRIM_AFTER, S.MAX_QUEUE, S.STARVE_TICKS, S.NEAR_X, S.NEAR_Y = 
 S.MAX_SEQ_AHEAD, S.MAX_FRAME_TICKS, S.PLAYER_COLORS, S._inp, S.DROWN_TOTAL, S.LEVELS_DIR = MAX_SEQ_AHEAD, MAX_FRAME_TICKS, PLAYER_COLORS, _inp, DROWN_TOTAL, LEVELS_DIR
 S.DEFAULT_LEVEL, S.PLAYER_LIVES, S.TEST_BOSSDMG, S.SPAWN_STAGGER, S.server = DEFAULT_LEVEL, PLAYER_LIVES, TEST_BOSSDMG, SPAWN_STAGGER, server
 S.players, S.rooms, S.serverLog = players, rooms, serverLog
-for _, part in ipairs({ 'util', 'catalog', 'sim', 'broadcast', 'lobby' }) do require('srv.' .. part)(S) end
+for _, part in ipairs({ 'util', 'catalog', 'sim', 'broadcast', 'lobby', 'records' }) do require('srv.' .. part)(S) end
 
 -- ─────────────────────────────────────────────────────────────────────────────
 --  UI del servidor (consola visual)

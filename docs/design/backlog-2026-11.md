@@ -51,18 +51,9 @@ move this page to the archive.
 - [x] (0.5.149, committed after the other session's 0.5.149-0.5.152: the next release is 0.5.153) **D1. Code cleanup:** dead code removed · sound catalog as data (`assets/sounds/index.json`) · server split
   into `server/srv/` · shared glue in `src/world/systems/Sim.lua` and one entity update order. The two loops still run
   the step in a different ORDER (known-debt item 1): unifying it is a design decision left open.
-- [ ] **D2. Online:** profanity filter for names (0.5.153: word lists as data + `name_filter`) · report / block (0.5.153) ·
-  rejoin after a cut / watch a running match (0.5.153) · leaderboards · daily challenge.
-  **Left for next time (the user, 2026-11-03: "luego terminamos con lo que falte"), design already decided:**
-  - LEADERBOARDS: a new server part `server/srv/records.lua`; `records.json` in the server's save folder: top 10 race
-    times per level (name, time, date; best per name), written at round end from the race results. Messages
-    `get_records { level? }` → `records` (no level: index of levels with records + today's daily). Client: a new screen
-    `OnlineRecordsState` (button in the hub): left, the levels with records (first: today's challenge); right, its top 10.
-  - DAILY CHALLENGE: the server picks one race level without bosses per UTC day (hash of the date) and keeps one public
-    room for it (`join_daily` creates or joins it; race mode, that level, can start with ONE player). Its finishes also go
-    to the board `daily[<date>]`. Hub button "Desafío del día".
-  - Harness: an `online_menus` case (records written after a race, the index and top 10 arrive; daily room joinable and
-    startable alone).
+- [x] (0.5.153 / 0.5.154) **D2. Online:** profanity filter word lists as data + `name_filter` · report / block · rejoin
+  after a cut / watch a running match (0.5.153) · leaderboards and the daily challenge (0.5.154, `server/srv/records.lua`,
+  `OnlineRecordsState`; see netcode).
 - [ ] **D3. Game modes:** boss rush (the user: it finally separates the race levels from the boss levels) · ghost time trials.
 - [ ] **D4. Story extras** (agreed with the user): copy a save slot · RETRY on the story results screen (replay the same
   level straight away) · RETRY in the single-player pause menu · a Theater in the Collection (rewatch unlocked films:

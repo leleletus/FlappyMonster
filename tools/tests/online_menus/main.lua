@@ -6,6 +6,7 @@
 --     el número de jugadores (◀ ▶) y los botones de abajo (ABAJO, ◀ a CANCELAR, confirmar cancela);
 --  4. sala: el bot entra; el host CAMBIA LA DIFICULTAD con el selector (a la derecha y a la izquierda, todas las de
 --     src/core/Difficulty.lua y "sin dificultad") y la sala del servidor la recibe; el menú de modo de juego;
+--     récords tras una carrera de dos bots (`records`, con META) y el desafío del día (`diario`);
 --     entrar a mirar una partida en marcha y volver a ella tras un corte (`mirar`, `volver`);
 --     el menú de un jugador (admin); bloquear (el nombre deja de verse) y denunciar (llega y no se repite);
 --  5. la partida empieza (los dos listos) con la dificultad elegida; el menú de pausa;
@@ -36,7 +37,18 @@ local function name(st)
     for k, v in pairs(package.loaded) do if v == getmetatable(st) then return (k:match('[^/]+$')) end end
     return tostring(st)
 end
-local function botsUpdate() for _, b in ipairs(bots) do b.c:update() end end
+local function botsUpdate()
+    for _, b in ipairs(bots) do
+        -- (un bot que CORRE: a la derecha, un input por paso — para llegar a la meta de los récords —)
+        -- (al ritmo del reloj de verdad, 60 por segundo: el arnés va más rápido y el servidor lo echaba por flood)
+        local now = love.timer.getTime()
+        if b.run and b.inGame and now - (b.lastIn or 0) >= 1 / 60 then
+            b.lastIn, b.seq = now, (b.seq or 0) + 1
+            b.c:send('in', { s = b.seq, b = { P.encodeInput(false, true, false, false, false, false) } })
+        end
+        b.c:update()
+    end
+end
 local function tick()
     local cur = pressed; pressed = {}
     Input = setmetatable({ pressed = function(x) return cur[x] == true end, down = function() return false end },
@@ -61,7 +73,7 @@ local function newBot(nm)
     b.c:setSerialization(bitser.dumps, bitser.loads)
     b.c:on('connect', function() b.c:send('hello', { v = P.VERSION, name = nm }) end)
     b.c:on('login_success', function(d) b.logged, b.id = true, d.id end)
-    b.c:on('room_update', function(d) b.room = d end)
+    b.c:on('room_update', function(d) b.room = d; if d.state == 'WAITING' and b.inGame then b.ended = true end end)
     b.c:on('room_error', function(d) b.err = d end)
     b.c:on('game_init', function(d) b.inGame, b.init = true, d end)
     b.c:connect()
@@ -87,8 +99,21 @@ local function run()
     type_('Prueba')
     shots('login')
     press('confirm', 0)                       -- (Enter = la acción confirm, como en el juego)
-    waitFor(function() return name(top()) == 'OnlineHubState' end, 6)
-    check('login', name(top()) == 'OnlineHubState', 'el nombre conecta y abre la lista de salas → ' .. name(top()))
+    waitFor(function() return name(top()) == 'OnlineMenuState' end, 6)
+    local atMenu = name(top()) == 'OnlineMenuState'
+    wait(0.6)
+    shots('menu')
+    -- el menú online: SALAS (el hub), DESAFÍO DEL DÍA, RÉCORDS; SALAS abre la lista y su VOLVER vuelve al menú
+    press('confirm', 0.1)
+    waitFor(function() return name(top()) == 'OnlineHubState' end, 4)
+    local hubOk = name(top()) == 'OnlineHubState'
+    wait(0.4)
+    top():_leave(); wait(0.6)
+    local backOk = name(top()) == 'OnlineMenuState' and NC:isConnected()
+    press('confirm', 0.1)
+    waitFor(function() return name(top()) == 'OnlineHubState' end, 4)
+    check('login', atMenu and hubOk and backOk, ('el nombre conecta y abre el menú online=%s · SALAS → lista=%s · VOLVER → menú, sigue conectado=%s'):format(
+        tostring(atMenu), tostring(hubOk), tostring(backOk)))
 
     -- ── 2. lista ─────────────────────────────────────────────────────────
     st = top()
@@ -279,6 +304,66 @@ local function run()
         local back = name(top()) == 'OnlineAdventureState' and top().myIdx == myIdx and NC.rejoin and NC.rejoin.token == token
         check('volver', offered and back, ('ofrece volver=%s · de vuelta en la partida con su jugador (%s → %s)=%s'):format(
             tostring(offered), tostring(myIdx), tostring(top().myIdx), tostring(back)))
+    end
+
+    -- ── 5c. RÉCORDS y DESAFÍO DEL DÍA ────────────────────────────────────
+    do
+        local META = os.getenv('META')                                  -- (un nivel con la meta a 5 casillas)
+        for _, b in ipairs(bots) do b.c:disconnect() end                -- (el servidor admite 4 conexiones por IP)
+        wait(1)                                                         -- (siguen actualizándose: que la desconexión salga)
+        bots = {}
+        local b4, b5, b6 = newBot('Corre1'), newBot('Corre2'), newBot('Diario')
+        waitFor(function() return b4.logged and b5.logged and b6.logged end, 4)
+        b4.c:send('create_room', { name = 'Carrera', isPublic = true, password = '', maxPlayers = 4 })
+        waitFor(function() return b4.room end, 3)
+        b4.c:send('set_mode', { mode = 'race', level = META })
+        b5.c:send('join_room', { id = b4.room.id })
+        wait(0.5)
+        b4.c:send('set_ready', { ready = true }); b5.c:send('set_ready', { ready = true })
+        wait(0.3)
+        b4.c:send('start_game', {})
+        waitFor(function() return b4.inGame and b5.inGame end, 4)
+        b4.run, b5.run = true, true
+        -- (en segundos de VERDAD: el servidor simula a su ritmo — cuenta atrás y la carrera —, el arnés va más rápido)
+        local t0 = love.timer.getTime()
+        while not b4.ended and love.timer.getTime() - t0 < 20 do tick(); coroutine.yield() end
+        b4.run, b5.run = false, false
+        local got
+        NC:on('records', function(d) got = d end)
+        NC:send('get_records', {})
+        waitFor(function() return got ~= nil end, 3)
+        local entry
+        for _, e in ipairs(got and got.index or {}) do if e.level == META then entry = e end end
+        got = nil
+        NC:send('get_records', { level = META })
+        waitFor(function() return got ~= nil end, 3)
+        local list = got and got.list or {}
+        check('records', entry and entry.best and (entry.best.name == 'Corre1' or entry.best.name == 'Corre2') and #list >= 1 and list[1].name == entry.best.name,
+            ('carrera terminada=%s · en el índice=%s (mejor %s %s) · top del nivel: %d marcas'):format(tostring(b4.ended), tostring(entry ~= nil),
+            entry and entry.best and entry.best.name or '-', entry and entry.best and tostring(entry.best.time) or '-', #list))
+        -- la pantalla de récords con lo que llegó (captura)
+        do
+            local index = { index = { { level = META, name = 'Prueba de récords', best = list[1] or { name = '?', time = 0 } },
+                                      { level = 'x', name = 'Valle Soleado', best = { name = 'Gummy', time = 74.31 } } },
+                            daily = { date = '2026-11-03', level = 'assets/levels/torre_viento.json', name = 'Torre del Viento',
+                                      list = { { name = 'Diario', time = 95.2 }, { name = 'Prueba', time = 101.75 } } } }
+            gStateMachine:change('online_records'); wait(0.6)          -- (desde el menú online)
+            top():_onRecords(index); wait(0.3)
+            shots('records')
+        end
+        -- el desafío del día: una sala pública con el nivel del día, se puede empezar solo y no se cambia
+        b6.c:send('join_daily', {})
+        waitFor(function() return b6.room ~= nil end, 3)
+        local r = b6.room or {}
+        b6.c:send('set_mode', { mode = 'koth' })
+        wait(0.3)
+        local fixed = b6.err and b6.err.key == 'srv.daily_fixed'
+        b6.c:send('set_ready', { ready = true }); wait(0.2)
+        b6.c:send('start_game', {})
+        waitFor(function() return b6.inGame end, 4)
+        check('diario', r.daily ~= nil and r.level ~= nil and r.mode == 'race' and fixed and b6.inGame == true,
+            ('sala del día %s en %s (%s) · no se cambia=%s · empieza solo=%s'):format(tostring(r.daily), tostring(r.level), tostring(r.mode),
+            tostring(fixed), tostring(b6.inGame)))
     end
 
     -- ── 6. resultados y error ────────────────────────────────────────────

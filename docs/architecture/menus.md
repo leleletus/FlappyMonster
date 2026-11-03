@@ -104,7 +104,12 @@ at 1280 / 960 / 1600 (`<save>/menu_*.png`). `story_flow` waits while a cartridge
 
 ## Online screens
 
-**What:** the whole online area (login, room list, create-room wizard, password, room, game-mode menu, pause and
+**Flow (2026-11-03, the user's design):** login → the ONLINE MENU (`OnlineMenuState`: ROOMS · DAILY CHALLENGE · RECORDS;
+back = disconnect, to the login) → ROOMS = the room list (`OnlineHubState`, its BACK returns to the menu still connected) ·
+DAILY CHALLENGE = `join_daily`, straight into today's room · RECORDS = `OnlineRecordsState` (back to the menu). The room
+list keeps its three buttons (create, refresh, back); the user rejected putting daily and records there ("no queda bien").
+
+**What:** the whole online area (login, online menu, room list, records, create-room wizard, password, room, game-mode menu, pause and
 spectator windows in a match, results board, network error) is built from the same pieces as the other menus: the
 living background with its panel, a coloured title banner (purple for online, red for the error), muted 9-slice
 buttons with the cursor marking the selected one, and the boxes below. Names typed by players (rooms, players) are
@@ -115,7 +120,7 @@ drawn in the normal font (the pixel font lacks most symbols); labels, buttons an
 | `src/ui/menu/MenuKit.lua` | the shared pieces: `box(kind)` — `well` (sunken: text fields, lists), `card`, `card_sel` (white edge), `window` (on top of everything) —, `field` (text field with block cursor; `mask` for passwords), `section` (pixel-font label + rule), `stepper` (◀ value ▶ button; `stepperSide` = which arrow was tapped), `arrow`, `marker` (the cursor, also used by `MenuList`; see `cursor.png`), `title` (`MenuList.header`, or the normal font on the same banner when the pixel font lacks a letter: `PixelFont.has`), `hint`, `dim`, `text` |
 | `assets/images/ui/menus/cursor.png` | the menu CURSOR (a gold arrowhead with a notch, 8×11, pointing right; `make_menu_ui.py`). **Smart placement** (`MenuKit.marker` / `place` / `flush`): every button, box, panel and text drawn in the frame records its rect (`MenuKit.occupy`, called by `MenuButton.draw` / `panel`, `MenuKit.box` / `text`, `PixelFont.draw`); screens only *ask* for the cursor and `game.lua` draws it after the screen. It tries LEFT, RIGHT, ABOVE, BELOW the selected button and takes the first spot that is inside the smallest box containing the button (the screen if none) and touches nothing else; it is rotated to point at the button and nudges toward it. No free spot → no cursor. `MenuKit.dim` clears the list (what is under a window does not count) |
 | `assets/images/ui/menus/box.png` | the four boxes (8×8 cells, cut 2), written by `tools/art/ui/make_menu_ui.py` |
-| `src/states/online/OnlineLoginState.lua`, `OnlineHubState.lua`, `OnlineRoomState.lua`, `OnlineErrorState.lua` | each has ONE layout function used by drawing, mouse and touch; enter / leave with `MenuAnim` (windows slide in with their own) |
+| `src/states/online/OnlineLoginState.lua`, `OnlineMenuState.lua`, `OnlineHubState.lua`, `OnlineRecordsState.lua`, `OnlineRoomState.lua`, `OnlineErrorState.lua` | each has ONE layout function used by drawing, mouse and touch; enter / leave with `MenuAnim` (windows slide in with their own) |
 | `MenuKit.optionsWindow` / `optionsLayout` / `optionAt` | the OPTIONS WINDOW of every pause and end of match: single-player pause (`src/states/adventure/PauseState.lua`), the level's game over (`AdventureState`, with the story's note), the online pause and spectator windows; one geometry for drawing, mouse and touch; the buttons are centred on THEIR OWN width (the smart cursor finds its own room: 0.5.5, the user saw them shifted to one side) |
 | `src/states/adventure/FreePlayState.lua` | Free Play with the same pieces (teal banner, ◀ difficulty ▶ selector, cards as boxes) |
 | `src/ui/ModeSelectMenu.lua` | the game-mode menu (online room and Free Play): tabs are buttons in the mode's `button` colour (`src/world/modes/<mode>.lua`), level cards are boxes |

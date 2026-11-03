@@ -103,10 +103,10 @@ function OnlineHubState:_setSub(sub)
 end
 
 -- Vuelve al login (desconecta)
+-- (VOLVER: al menú online — salas, desafío, récords —; la conexión sigue)
 function OnlineHubState:_leave()
     if self.anim:busy() then return end
-    NC:disconnect()
-    self.anim:leave(function() gStateMachine:change('online_login') end)
+    self.anim:leave(function() gStateMachine:change('online_menu') end)
 end
 
 function OnlineHubState:_sendPassword()
@@ -513,7 +513,7 @@ function OnlineHubState:_renderList()
         local count = string.format("%d/%d", room.currentPlayers or 0, room.maxPlayers or 0)
         local cw = PixelFont.width(count, 3)
         PixelFont.shadow(count, sx - 28 - cw, y + math.floor((r.h - PixelFont.height(3)) / 2), 3, a)
-        local name = fitText(FONT_MED, room.name or '?', sx - 56 - cw - nx)
+        local name = fitText(FONT_MED, room.daily and L('hub.daily_room', { date = room.daily }) or room.name or '?', sx - 56 - cw - nx)
         MenuKit.text(FONT_MED, name, nx, cy, sx - nx, 'left', sel and { 1, 1, 1 } or { 0.88, 0.9, 1 }, a)
     end
     -- flechas de que hay más salas arriba / abajo

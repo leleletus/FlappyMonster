@@ -40,6 +40,7 @@ local function broadcastRoomUpdate(room)
         state=room.state, adminId=room.adminId, players=playerList,
         mode=room.mode, level=room.level, levelName=cur and cur.name or nil, levelName_en=cur and cur.name_en or nil, levels=levels,
         difficulty=room.difficulty,                      -- (id de src/core/Difficulty.lua; nil = sin dificultad)
+        daily=room.daily,                                -- (el desafío del día: fecha; su nivel y modo no se cambian)
     }
     for _, pid in ipairs(room.playerIds) do
         local c = S.findClientById(pid)
@@ -66,6 +67,7 @@ local function buildPublicRoomList()
             currentPlayers=#room.playerIds,
             maxPlayers=room.maxPlayers,
             state=room.state,
+            daily=room.daily,                               -- (el desafío del día: cada cliente lo nombra en su idioma)
         })
     end
     return list

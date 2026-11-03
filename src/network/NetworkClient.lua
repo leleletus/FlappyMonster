@@ -135,7 +135,7 @@ function NC:_open(host, port, name)
     -- Dispatchers estáticos para el resto de eventos del juego
     local events = {
         "room_list", "room_update", "room_announce",
-        "room_left", "kicked", "banned", "room_closed", "reported",
+        "room_left", "kicked", "banned", "room_closed", "reported", "records",
         "room_error", "level_catalog", "s", "ev",
         "rhythm_pose",                              -- (la pose de otro jugador en el duelo de ritmo)
     }

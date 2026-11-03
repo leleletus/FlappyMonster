@@ -34,7 +34,7 @@ function OnlineLoginState:enter(args)
 
     -- Si ya estamos conectados, ir directo al hub
     if NC:isConnected() then
-        gStateMachine:change('online_hub')
+        gStateMachine:change('online_menu')
         return
     end
 
@@ -49,7 +49,7 @@ function OnlineLoginState:enter(args)
     NC:on("login_success", function(data)
         self.connecting = false
         require('src/core/Settings').setOnlineName((self.fields[FIELD_NICK] or ''):match('^%s*(.-)%s*$'))
-        gStateMachine:change('online_hub')
+        gStateMachine:change('online_menu')
     end)
     NC:on("connection_lost", function(data)
         self.connecting = false
@@ -126,7 +126,7 @@ end
 
 function OnlineLoginState:_tryConnect()
     if self.connecting then return end
-    if NC:isConnected() then gStateMachine:change('online_hub'); return end
+    if NC:isConnected() then gStateMachine:change('online_menu'); return end
 
     local nick = (self.fields[FIELD_NICK] or ""):match("^%s*(.-)%s*$")
 
