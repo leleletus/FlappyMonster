@@ -10,6 +10,10 @@
 -- en un hilo aparte (src/world/level/CatalogWorker.lua; sin hilo, aquí, poco a poco) y se guardan para la
 -- próxima vez; solo se dibujan las tarjetas visibles.
 --
+-- PESTAÑAS (2026-11-03, el usuario: "separar los niveles de carrera de los de jefes"): CARRERAS (los niveles sin zona de
+-- jefe) y JEFES (con zona de jefe; la primera tarjeta, el BOSS RUSH: todas las peleas seguidas). Arriba de las tarjetas;
+-- teclado / mando: ARRIBA desde la primera fila les da el foco (◀ ▶ cambian), ARRIBA otra vez, la dificultad. Buscar
+-- mira en las dos. Al volver de un Boss Rush sale su resumen.
 -- BUSCADOR (0.5.77, el usuario: "no lo logro encontrar"): arriba a la izquierda (bajo el rótulo en pantallas
 -- estrechas). Se abre con / o Ctrl+F, o tocándolo (en el móvil sale el teclado); escribir filtra las tarjetas por
 -- nombre (español e inglés), archivo, jefe y música, sin tildes ni mayúsculas (TextUtil.matches). Intro o ↓ vuelven a
@@ -35,7 +39,7 @@ local FreePlayState = BaseState:new()
 
 -- Geometría (alto lógico 720; el ancho cambia según la pantalla: columnas y
 -- márgenes se calculan al dibujar, nunca al cargar el archivo)
-local TOP_WIDE, TOP_NARROW, BOTTOM_PAD = 152, 204, 56   -- (estrecha: el selector de dificultad va bajo el rótulo)
+local TOP_WIDE, TOP_NARROW, BOTTOM_PAD = 224, 276, 56   -- (y bajo el rótulo, las pestañas CARRERAS / JEFES)   -- (estrecha: el selector de dificultad va bajo el rótulo)
 local CARD_W, CARD_H, GAP = 372, 318, 24
 local PREV_H = 150
 local LOAD_BUDGET = 0.008          -- s por fotograma cargando fichas
@@ -43,7 +47,10 @@ local POLL_BUDGET = 0.002          -- s por fotograma recogiendo las del hilo
 
 -- Fichas ya cargadas (entre visitas) y selección recordada
 local cache = {}                   -- [archivo] = ficha | { broken = error }
-local last = { sel = 1, scroll = 0 }
+local last = { sel = 1, scroll = 0, tab = 'race' }   -- (tab: 'race' | 'boss')
+local RUSH = '*bossrush'           -- (la tarjeta del BOSS RUSH, la primera de la pestaña JEFES: src/story/BossRush.lua)
+local BossRush = require 'src/story/BossRush'
+local Ghost    = require 'src/story/Ghost'
 local pending = true               -- ¿falta alguna ficha?
 
 local TOP = TOP_WIDE
@@ -58,7 +65,10 @@ local function layout()
 end
 
 -- ── Ciclo de vida ─────────────────────────────────────────────────────────────
-function FreePlayState:enter()
+function FreePlayState:enter(args)
+    self.rushResult = args and args.rush or nil              -- (el resumen de un Boss Rush que acaba de terminar)
+    if self.rushResult then last.tab = 'boss' end
+    self.tabFocus = false
     self.all = LevelCatalog.files()
     local missing = {}
     for _, f in ipairs(self.all) do if not cache[f] then missing[#missing + 1] = f end end
@@ -86,6 +96,7 @@ end
 -- ── Buscador ──────────────────────────────────────────────────────────────────
 -- Lo que se busca de un nivel: archivo, nombres, jefes y música (lo que aún no ha cargado: solo el archivo)
 local function searchText(f)
+    if f == RUSH then return 'boss rush ' .. L('free.rush') end
     local info = cache[f]
     if not info or info.broken then return f end
     local parts = { f, info.name or '', info.name_en or '', L.localName(info) or '', info.music or '' }
@@ -95,8 +106,15 @@ end
 function FreePlayState:_filter()
     local cur = self.files and self.files[self.sel or 1]
     local out = {}
+    -- (buscando: en todos; si no, los de la pestaña — y en JEFES, primero el Boss Rush —)
+    local boss = last.tab == 'boss'
+    if self.query == '' and boss then out[1] = RUSH end
     for _, f in ipairs(self.all) do
-        if TextUtil.matches(self.query, searchText(f)) then out[#out + 1] = f end
+        if self.query ~= '' then
+            if TextUtil.matches(self.query, searchText(f)) then out[#out + 1] = f end
+        elseif LevelCatalog.hasBossZone(f) == boss then
+            out[#out + 1] = f
+        end
     end
     self.files = out
     self.sel = 1
@@ -151,6 +169,7 @@ end
 
 -- Ficha del nivel i (nil mientras se carga)
 function FreePlayState:info(i)
+    if self.files[i] == RUSH then return { rush = true } end
     return cache[self.files[i]]
 end
 
@@ -190,13 +209,22 @@ end
 function FreePlayState:_play(i)
     local info = self:info(i)
     if not info or info.broken then return end
+    if info.rush then
+        Sound.play('select')
+        self.sel = i
+        last.sel, last.scroll = self.sel, self.scrollTarget
+        BossRush.start(last.diff)
+        return
+    end
     Sound.play('select')
     self.sel = i
     last.sel, last.scroll = self.sel, self.scrollTarget
     -- (arena de Rey de la Colina: contra el BOT, como los bonus de la historia — src/story/BonusMatch.lua)
     local bonus = (info.pointAreas or 0) > 0 and (info.finish or 0) == 0
                   and { onEnd = function() gStateMachine:change('free_play') end } or nil
-    gStateMachine:change('adventure', { level = info.path, returnTo = 'free_play', bonus = bonus, difficulty = last.diff })
+    -- (las carreras, contra el fantasma de su mejor tiempo: src/story/Ghost.lua)
+    local ghost = not bonus and (info.finish or 0) > 0 and (info.bosses or 0) == 0
+    gStateMachine:change('adventure', { level = info.path, returnTo = 'free_play', bonus = bonus, difficulty = last.diff, ghost = ghost })
 end
 
 -- DIFICULTAD con la que se prueban los niveles (src/core/Difficulty.lua): ORIGINAL (ninguna: el juego de siempre) →
@@ -221,6 +249,22 @@ function FreePlayState:_diffRect()
     local w, h = wide() and 340 or 300, 56
     if wide() then return WINDOW_W - 48 - w, 56, w, h end
     return x0 + cols * CARD_W + (cols - 1) * GAP - w, 140, w, h
+end
+
+-- Las pestañas CARRERAS / JEFES: encima de las tarjetas, centradas
+function FreePlayState:_tabRects()
+    local w, h, gap = 260, 48, 20
+    local x = math.floor((WINDOW_W - 2 * w - gap) / 2)
+    local y = TOP - h - 14
+    return { race = { x = x, y = y, w = w, h = h }, boss = { x = x + w + gap, y = y, w = w, h = h } }
+end
+function FreePlayState:_setTab(tab)
+    if tab == last.tab then return end
+    last.tab = tab
+    self.scroll, self.scrollTarget = 0, 0
+    self:_filter()
+    self.sel = 1
+    Sound.play('select', tab == 'boss' and 1.08 or 0.94)
 end
 
 function FreePlayState:_back()
@@ -250,7 +294,7 @@ function FreePlayState:_loadCards()
     local order = { self.sel }
     for i = firstVis, firstVis + cols * (math.ceil(viewH / (CARD_H + GAP)) + 1) do order[#order + 1] = i end
     local list = {}
-    for _, i in ipairs(order) do list[#list + 1] = self.files[i] end
+    for _, i in ipairs(order) do if self.files[i] ~= RUSH then list[#list + 1] = self.files[i] end end
     local working = CatalogWorker.running()
     local loaded = CatalogWorker.poll(cache, POLL_BUDGET)
     if working then
@@ -286,18 +330,27 @@ function FreePlayState:update(dt)
         return
     end
 
+    -- (el resumen de un Boss Rush: confirmar o volver lo cierran)
+    if self.rushResult then
+        if Input.pressed('confirm') or Input.pressed('back') or Input.pressed('flap') then self.rushResult = nil; Sound.play('select') end
+        return
+    end
     local cols2 = layout()
     if self.diffFocus then                        -- foco en el selector: ◀ ▶ la cambian; abajo / confirmar vuelve a la lista
         if Input.pressed('nav_left')  then self:_cycleDifficulty(-1) end
         if Input.pressed('nav_right') then self:_cycleDifficulty(1) end
         if Input.pressed('nav_down') or Input.pressed('confirm') or Input.pressed('flap') then
-            self.diffFocus = false; Sound.play('select')
+            self.diffFocus, self.tabFocus = false, true; Sound.play('select')
         end
+    elseif self.tabFocus then                     -- foco en las pestañas: ◀ ▶ cambian; arriba, la dificultad; abajo, las tarjetas
+        if Input.pressed('nav_left') or Input.pressed('nav_right') then self:_setTab(last.tab == 'race' and 'boss' or 'race') end
+        if Input.pressed('nav_up') then self.tabFocus, self.diffFocus = false, true; Sound.play('select') end
+        if Input.pressed('nav_down') or Input.pressed('confirm') or Input.pressed('flap') then self.tabFocus = false; Sound.play('select') end
     else
         if Input.pressed('nav_left')  then self:_move(-1) end
         if Input.pressed('nav_right') then self:_move(1) end
         if Input.pressed('nav_up') then
-            if self.sel <= cols2 then self.diffFocus = true; Sound.play('select') else self:_move(-cols2) end
+            if self.sel <= cols2 then self.tabFocus = true; Sound.play('select') else self:_move(-cols2) end
         end
         if Input.pressed('nav_down')  then self:_move(cols2) end
         if Input.pressed('confirm') or Input.pressed('flap') then self:_play(self.sel) end
@@ -325,7 +378,11 @@ function FreePlayState:mousemoved(x, y)
 end
 
 function FreePlayState:touchpressed(id, x, y)
+    if self.rushResult then self.rushResult = nil; return end
     if CornerButtons.hitBack(x, y) then self:_back(); return end
+    for tab, r in pairs(self:_tabRects()) do                     -- las pestañas
+        if x >= r.x and x <= r.x + r.w and y >= r.y and y <= r.y + r.h then self:_setTab(tab); return end
+    end
     do                                            -- el buscador: tocarlo lo abre (y el teclado en el móvil)
         local sx, sy, sw, sh = self:_searchRect()
         if x >= sx and x <= sx + sw and y >= sy and y <= sy + sh then self:_startSearch(); self.eatSlash = false; return end
@@ -390,7 +447,7 @@ end
 
 function FreePlayState:drawCard(i, x, y)
     local info = self:info(i)
-    local sel = (i == self.sel) and not self.diffFocus
+    local sel = (i == self.sel) and not self.diffFocus and not self.tabFocus
     local a = self.selAnim[i] or 0
     a = a + ((sel and 1 or 0) - a) * math.min(1, love.timer.getDelta() * 12)
     self.selAnim[i] = a
@@ -410,6 +467,32 @@ function FreePlayState:drawCard(i, x, y)
     end
 
     local tx, w = x + 18, CARD_W - 36
+    if info and info.rush then
+        -- la tarjeta del BOSS RUSH: cuántas peleas, y el mejor tiempo con esta dificultad
+        local n = #BossRush.levels()
+        local k = 0.6 + 0.4 * math.sin(self.t * 3)
+        love.graphics.setColor(0.9, 0.25, 0.25, 0.55 + 0.35 * k)
+        love.graphics.setLineWidth(4)
+        love.graphics.rectangle('line', x - 4, y - 4, CARD_W + 8, CARD_H + 8)
+        love.graphics.setLineWidth(1)
+        local title = L('free.rush')
+        local ps = 5
+        while ps > 3 and PixelFont.width(title, ps) > w do ps = ps - 1 end
+        PixelFont.shadow(title, math.floor(x + (CARD_W - PixelFont.width(title, ps)) / 2), y + 52, ps, 1, sel and { 1, 0.86, 0.36 } or { 1, 0.5, 0.45 })
+        local best = BossRush.best(last.diff or 'none')
+        local lines = { L('free.rush_count', { n = n, lives = BossRush.LIVES }), L('free.rush_desc'),
+                        best and L('free.rush_best', { t = string.format('%d:%05.2f', math.floor(best / 60), best % 60) }) or L('free.rush_nobest') }
+        local ly = y + 130
+        for _, s2 in ipairs(lines) do
+            local _, wl = FONT_SMALL:getWrap(s2, w)
+            for _, ln in ipairs(wl) do
+                MenuKit.text(FONT_SMALL, ln, tx, ly, w, 'center', sel and { 0.92, 0.94, 1 } or { 0.7, 0.75, 0.92 })
+                ly = ly + 18
+            end
+            ly = ly + 14
+        end
+        return
+    end
     if not info then
         MenuKit.text(FONT_SMALL, L('free.loading'), x, y + CARD_H / 2 - 5, CARD_W, 'center', { 0.6, 0.66, 0.85 })
     elseif info.broken then
@@ -453,6 +536,11 @@ function FreePlayState:drawCard(i, x, y)
         if info.checkpoints > 0 then l3[#l3 + 1] = plural('free.checkpoints', info.checkpoints) end
         if #l3 > 0 then lines[#lines + 1] = table.concat(l3, ' · ') end
         if info.music then lines[#lines + 1] = L('free.music', { name = info.music }) end
+        local best = (info.bosses or 0) == 0 and Ghost.best(info.path)          -- (contrarreloj: su mejor tiempo)
+        if best then
+            table.insert(lines, 1, L('free.ghost_best', { t = Ghost.mmss(best) }))
+            if #lines > 4 then table.remove(lines) end                         -- (caben 4 líneas)
+        end
         for k, s in ipairs(lines) do
             MenuKit.text(FONT_SMALL, fitText(FONT_SMALL, s, w), tx, ty + 30 + (k - 1) * 17, w, 'left',
                          sel and { 0.86, 0.9, 1 } or { 0.62, 0.68, 0.86 })
@@ -525,6 +613,18 @@ function FreePlayState:render()
         if self.diffFocus then MenuKit.marker(dx, dy + doy + push, dw, dh, self.t, da) end
     end
 
+    -- Las pestañas CARRERAS / JEFES
+    do
+        local _, toy, ta = A:slide(2, 0, -200, 0, -200)
+        for _, tab in ipairs({ 'race', 'boss' }) do
+            local r = self:_tabRects()[tab]
+            local on = last.tab == tab
+            MenuButton.draw(L(tab == 'race' and 'free.tab_race' or 'free.tab_boss'), r.x, r.y + toy, r.w, r.h,
+                            on and (tab == 'race' and 'teal' or 'red') or 'grey', on and self.tabFocus, { alpha = ta, scale = 3 })
+            if on and self.tabFocus then MenuKit.marker(r.x, r.y + toy, r.w, r.h, self.t, ta) end
+        end
+    end
+
     if #self.files == 0 then
         local none = (#self.all > 0) and L('free.search_none', { q = self.query }) or L('free.empty')
         MenuKit.text(FONT_MED, none, 0, WINDOW_H / 2, WINDOW_W, 'center', { 0.75, 0.8, 0.95 })
@@ -559,6 +659,25 @@ function FreePlayState:render()
 
     MenuKit.hint(L('free.hint'), A, 4)
     CornerButtons.drawBack(self.backHover)
+
+    -- El resumen de un Boss Rush que acaba de terminar
+    local R = self.rushResult
+    if R then
+        MenuKit.dim(0.6)
+        local w, h = math.min(640, WINDOW_W - 80), 280
+        local x, y = math.floor((WINDOW_W - w) / 2), math.floor((WINDOW_H - h) / 2)
+        MenuKit.box('window', x, y, w, h, 1)
+        local title = L(R.all and 'free.rush_done' or 'free.rush_over')
+        PixelFont.shadow(title, math.floor(x + (w - PixelFont.width(title, 4)) / 2), y + 28, 4, 1, R.all and { 1, 0.86, 0.36 } or { 1, 0.5, 0.45 })
+        local mm = function(t) return string.format('%d:%05.2f', math.floor(t / 60), t % 60) end
+        local lines = { L('free.rush_cleared', { n = R.cleared, total = R.total }), L('free.rush_time', { t = mm(R.time or 0) }) }
+        if R.record then lines[#lines + 1] = L('free.rush_record')
+        elseif R.best then lines[#lines + 1] = L('free.rush_best', { t = mm(R.best) }) end
+        for k, ln in ipairs(lines) do
+            MenuKit.text(FONT_MED, ln, x, y + 96 + (k - 1) * 36, w, 'center', (R.record and k == 3) and { 1, 0.86, 0.36 } or { 0.9, 0.92, 1 }, 1)
+        end
+        MenuKit.text(FONT_SMALL, L('free.rush_close', { ok = Input.label('confirm') }), x, y + h - 36, w, 'center', { 0.7, 0.75, 0.92 }, 1)
+    end
 end
 
 return FreePlayState

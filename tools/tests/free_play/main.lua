@@ -137,7 +137,20 @@ function love.update(dt)
             step, T = 'dif', t
         end
     elseif step == 'dif' and t - T > 0.3 then
-        fp.sel = 1; pressNext('nav_up'); step, T = 'dif2', t
+        fp.sel = 1; pressNext('nav_up'); step, T = 'dif1b', t
+    elseif step == 'dif1b' and t - T > 0.1 then
+        -- (arriba desde la primera fila: las PESTAÑAS — ▶ pasa a JEFES, con el Boss Rush primero; ◀ vuelve —; arriba otra vez,
+        -- la dificultad)
+        TAB = { focus = fp.tabFocus }
+        pressNext('nav_right'); step, T = 'dif1c', t
+    elseif step == 'dif1c' and t - T > 0.1 then
+        TAB.boss = fp.files[1] == '*bossrush' and #fp.files > 1
+        for k = 2, #fp.files do if not require('src/world/level/LevelCatalog').hasBossZone(fp.files[k]) then TAB.boss = false end end
+        shot('tab_boss')
+        pressNext('nav_left'); step, T = 'dif1d', t
+    elseif step == 'dif1d' and t - T > 0.1 then
+        TAB.race = fp.files[1] ~= '*bossrush'
+        pressNext('nav_up'); step, T = 'dif2', t
     elseif step == 'dif2' and t - T > 0.1 then
         DIF = { focus = fp.diffFocus }
         pressNext('nav_right'); step, T = 'dif3', t
@@ -148,9 +161,13 @@ function love.update(dt)
         pressNext('nav_left'); step, T = 'dif5', t
     elseif step == 'dif5' and t - T > 0.1 then
         DIF.left = fp.diffT < 0.2 and fp.sel == 1
+        pressNext('nav_down'); step, T = 'dif5b', t
+    elseif step == 'dif5b' and t - T > 0.1 then
         pressNext('nav_down'); step, T = 'dif6', t
     elseif step == 'dif6' and t - T > 0.1 then
-        check('dificultad', DIF.focus and DIF.right and DIF.left and not fp.diffFocus and fp.sel == 1,
+        check('pestanas', TAB.focus and TAB.boss and TAB.race, ('arriba → pestañas %s · ▶ JEFES: Boss Rush y solo niveles de jefe %s · ◀ CARRERAS %s'):format(
+            tostring(TAB.focus), tostring(TAB.boss), tostring(TAB.race)))
+        check('dificultad', DIF.focus and DIF.right and DIF.left and not fp.diffFocus and not fp.tabFocus and fp.sel == 1,
             ('arriba → foco %s, ▶ cambia %s, ◀ cambia %s, abajo → lista %s'):format(tostring(DIF.focus),
                 tostring(DIF.right), tostring(DIF.left), tostring(not fp.diffFocus)))
         step, T = 'buscar', t
@@ -236,7 +253,81 @@ function love.update(dt)
         require('src/core/Settings').showPerf = true           -- (el medidor, sin guardarlo)
         step, T = 'cfg', t
     elseif step == 'cfg' and t - T > 1.2 then
-        shot('settings'); step, T = 'end', t
+        shot('settings'); step, T = 'rush', t
+    elseif step == 'rush' and t - T > 0.3 then
+        -- BOSS RUSH: cada nivel empieza en la arena de su primer jefe y la pelea arranca sola (sin tocar nada); vencidos
+        -- los jefes, el nivel termina y sigue el siguiente; con el último, el resumen en el Juego Libre y el récord
+        require('src/core/Settings').showPerf = false
+        local BossRush = require 'src/story/BossRush'
+        local list = BossRush.levels()
+        local bad = {}
+        local function steps(n) for _ = 1, n do top():update(1 / 60) end end
+        for _, f in ipairs(list) do
+            gStateMachine:change('adventure', { level = 'assets/levels/' .. f, returnTo = 'free_play', atBoss = true, endOnBoss = true })
+            steps(300)
+            local z = top().level.bossZones[1]
+            if not (z and (z.state == 'intro' or z.state == 'fight')) then bad[#bad + 1] = f .. '=' .. tostring(z and z.state) end
+        end
+        check('rush_arena', #list >= 8 and #bad == 0, ('%d peleas; sin empezar sola: %s'):format(#list, #bad == 0 and 'ninguna' or table.concat(bad, ', ')))
+        -- la cadena: dos peleas, vencidas a mano (zonas superadas)
+        love.filesystem.remove('bossrush.dat')
+        local realLevels = BossRush.levels
+        BossRush.levels = function() return { list[1], list[2] } end
+        BossRush.start(nil)
+        local first = top().levelPath
+        steps(200)                                                 -- (la cuenta atrás del principio)
+        for _, zz in ipairs(top().level.bossZones) do zz.state = 'cleared' end
+        steps(240)                                                 -- (la celebración, y al siguiente)
+        local second = top().levelPath
+        local chained = second ~= first and top().rush and top().rush.i == 2
+        steps(200)
+        for _, zz in ipairs(top().level.bossZones) do zz.state = 'cleared' end
+        steps(240)
+        local fp2 = top()
+        local R = fp2.rushResult
+        BossRush.levels = realLevels
+        check('rush_cadena', chained and R and R.all and R.cleared == 2 and R.record and BossRush.best(nil) ~= nil,
+            ('1ª → 2ª pelea=%s · resumen: todas=%s, vencidos %s, récord=%s guardado=%s'):format(tostring(chained), tostring(R and R.all),
+            tostring(R and R.cleared), tostring(R and R.record), tostring(BossRush.best(nil))))
+        shot('rush_result')
+        love.filesystem.remove('bossrush.dat')
+        step, T = 'ghost', t
+    elseif step == 'ghost' and t - T > 0.3 then
+        -- CONTRARRELOJ: la primera llegada a la meta guarda el fantasma; la siguiente partida lo tiene; una más lenta no lo pisa
+        local Ghost = require 'src/story/Ghost'
+        local path = os.getenv('META') or 'assets/levels/valle_soleado.json'
+        love.filesystem.remove('ghosts/' .. path:match('([^/]+)%.json$') .. '.dat')
+        local function steps(n) for _ = 1, n do top():update(1 / 60) end end
+        local function run(secs)
+            gStateMachine:change('adventure', { level = path, returnTo = 'free_play', ghost = true })
+            local st0 = top()
+            steps(200 + math.floor(secs * 60))                       -- (la cuenta atrás y la carrera)
+            st0:win()
+            return st0
+        end
+        GH = { path = path, run = run, steps = steps }
+        GH.b1 = (function() run(1); return Ghost.best(path) end)()
+        -- (la 2ª partida: se deja correr de verdad unos fotogramas — que se DIBUJE el fantasma — y se captura)
+        gStateMachine:change('adventure', { level = path, returnTo = 'free_play', ghost = true })
+        GH.st = top()
+        steps(200)
+        step, T = 'ghost2', t
+    elseif step == 'ghost2' and t - T > 0.6 then
+        local Ghost = require 'src/story/Ghost'
+        shot('ghost'); step, T = 'ghost3', t
+    elseif step == 'ghost3' and t - T > 0.3 then
+        local Ghost = require 'src/story/Ghost'
+        local path, run = GH.path, GH.run
+        local hasGhost = GH.st.ghost and GH.st.ghost.draw ~= nil
+        GH.st:win()
+        local b2 = Ghost.best(path)                                  -- (más rápida: el récord nuevo)
+        run(3)
+        local b3 = Ghost.best(path)
+        local b1 = GH.b1
+        check('fantasma', b1 ~= nil and hasGhost and b2 < b1 and b3 == b2, ('1ª llegada guarda %.2f s · la 2ª lo ve=%s y mejora a %.2f · una más lenta no lo pisa (%.2f)'):format(
+            b1 or -1, tostring(hasGhost), b2 or -1, b3 or -1))
+        gStateMachine:change('free_play')
+        step, T = 'end', t
     elseif step == 'end' and t - T > 0.5 then
         require('src/core/Settings').showPerf = false
         print(fails == 0 and 'TODO OK' or (fails .. ' FALLOS'))

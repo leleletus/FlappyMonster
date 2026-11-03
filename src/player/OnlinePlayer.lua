@@ -173,7 +173,7 @@ function OnlinePlayer:render(camX, camY)
         love.graphics.setFont(FONT_SMALL)
         love.graphics.setColor(1, 0.85, 0.2, 0.95)
         love.graphics.printf(L('oadv.finish_place', { n = self.place }), sx - 60, nameY - 16, 120, 'center')
-    elseif self.isSpectator then
+    elseif self.isSpectator and not self.ghost then                 -- (el fantasma del contrarreloj: sin la etiqueta)
         love.graphics.setFont(FONT_SMALL)
         love.graphics.setColor(0.7, 0.7, 1, 0.7)
         love.graphics.printf("SPEC", sx - 40, nameY - 16, 80, 'center')

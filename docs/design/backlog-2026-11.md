@@ -54,7 +54,8 @@ move this page to the archive.
 - [x] (0.5.153 / 0.5.154) **D2. Online:** profanity filter word lists as data + `name_filter` · report / block · rejoin
   after a cut / watch a running match (0.5.153) · leaderboards and the daily challenge (0.5.154, `server/srv/records.lua`,
   `OnlineRecordsState`; see netcode).
-- [ ] **D3. Game modes:** boss rush (the user: it finally separates the race levels from the boss levels) · ghost time trials.
+- [x] (0.5.155) **D3. Game modes:** Free Play tabs RACES / BOSSES, BOSS RUSH (`src/story/BossRush.lua`), ghost time trials
+  (`src/story/Ghost.lua`); see docs/gameplay/free-play.md. Online Race rooms still list every level.
 - [ ] **D4. Story extras** (agreed with the user): copy a save slot · RETRY on the story results screen (replay the same
   level straight away) · RETRY in the single-player pause menu · a Theater in the Collection (rewatch unlocked films:
   intro, ending, chase, lair, credits) · a shard gallery (the shards collected per world).

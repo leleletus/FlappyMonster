@@ -123,6 +123,23 @@ function AdventureState:enter(args)
     self.player:settle(self.level)             -- (de pie sobre el suelo desde el primer fotograma: la cuenta atrás)
     self.player:applyDifficulty()
     if self.startLives then self.player.lives = self.startLives end
+    -- BOSS RUSH (src/story/BossRush.lua): se empieza ya dentro de la arena del primer jefe y el nivel acaba al vencerlos
+    self.endOnBoss, self.rush = args.endOnBoss, args.rush
+    -- CONTRARRELOJ (Juego Libre, carreras): se graba la partida y corre el fantasma del mejor tiempo (src/story/Ghost.lua)
+    if args.ghost then
+        local Ghost = require 'src/story/Ghost'
+        local best = Ghost.load(self.levelPath)
+        self.ghost = { rec = Ghost.recorder(), draw = best and Ghost.drawer(best) }
+    end
+    local z = args.atBoss and (self.level.bossZones or {})[1]
+    if z then
+        local gx, gy = self.level:findGround(z.col + 2, z.col, z.col + z.w - 1, z.row, z.row + z.h - 1)
+        if gx then
+            self.player.x, self.player.y = gx, gy
+            self.player:settle(self.level)
+            self.player.spawnX, self.player.spawnY = self.player.x, self.player.y
+        end
+    end
     self.level.players = { self.player }       -- para trampas/entidades que "ven" al jugador
     -- Grabación de la partida para analizarla (FM_RECORD=1; ver src/core/PlayRecorder.lua)
     if PlayRecorder.enabled() and not self.demo then self.rec = PlayRecorder.new(self.levelPath, self.level.name) end
@@ -457,6 +474,10 @@ end
 AdventureState.WIN_TIME = 2.6
 function AdventureState:win()
     self.won, self.wonT = true, 0
+    -- (contrarreloj: ¿su mejor tiempo? se guarda el fantasma nuevo y se dice)
+    if self.ghost and require('src/story/Ghost').finish(self.levelPath, self.levelTime, self.ghost.rec) then
+        self:spawnPopup(L('free.ghost_record'), self.player.x, self.player.y - 90)
+    end
     if self.shards then self.shards:collectAll() end       -- (un fragmento suelto sin recoger no se pierde)
     self.player:grantInvulnerability(AdventureState.WIN_TIME + 2)
     Sound.stopMusic()
@@ -572,6 +593,7 @@ function AdventureState:update(dt)
     -- Cap del tiempo: congelar en 600 al morir por tiempo
     if not self.player.dying and not self.won then
         self.levelTime = math.min(self.levelTime + dt, Sim.TIME_LIMIT)
+        if self.ghost then require('src/story/Ghost').record(self.ghost.rec, dt, self.player) end
     end
 
     -- Límite de 10 minutos: muerte instantánea con todas las vidas
@@ -642,6 +664,12 @@ function AdventureState:update(dt)
     -- Colisiones jugador ↔ entidades
     self:checkEnemyCollisions()
     if not (self.demo and self.demo.noBossCtl) then self:updateBoss(dt) end      -- (los créditos: jefes sin pelea de verdad)
+    -- (Boss Rush: vencidos todos sus jefes, el nivel termina — sin ir a la meta —)
+    if self.endOnBoss and not self.won and not self.player.dying and #(self.level.bossZones or {}) > 0 then
+        local all = true
+        for _, bz in ipairs(self.level.bossZones) do if bz.state ~= 'cleared' then all = false end end
+        if all then self:win() end
+    end
     for _, ev in ipairs(AutoScroll.update(self.level, dt)) do
         if ev.type == 'scroll_start' and not ev.quiet then self.bossBanner = { text = L('hud.go'), t = 0, col = { 0.4, 1, 0.5 } } end
     end
@@ -836,6 +864,7 @@ function AdventureState:_renderScene()
     PlayerAdventure.lightLevel = self.level          -- (en lo oscuro, filo blanco: cada monstruo según SU sitio)
     if self.bonus then self.bonus:render(self.camX, self.camY) end
     -- (en el duelo de ritmo no está en la arena: sale bailando en el minijuego — src/ui/RhythmDuel.lua —)
+    if self.ghost and self.ghost.draw then self.ghost.draw(self.levelTime, self.camX, self.camY) end   -- (el fantasma, detrás)
     if not RhythmDuel.hides(self.level, self.player.x, self.player.y) then self.player:render(self.camX, self.camY) end
     PlayerAdventure.lightLevel = nil
     PointAreas.drawProgress(self.level, self.player, self.player.x - self.camX, self.player.y - self.camY)

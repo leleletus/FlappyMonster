@@ -5,7 +5,22 @@ hub (for beta testers and for development). It also offers a difficulty selector
 half, or keyboard / pad: UP from the first row focuses it, ◀ ▶ change it, DOWN / confirm go back to the cards; ORIGINAL → every id of `Difficulty.ORDER`, remembered) and starts King-of-the-Hill arenas as a
 match against the bot.
 
-**Files:** `src/states/adventure/FreePlayState.lua`, `src/world/level/LevelCatalog.lua` (the ONE level-info builder,
+**Tabs (2026-11-03, the user: "por fin separar los niveles de carrera de los de jefes"):** RACES (levels with no boss
+zone) and BOSSES (with one: `LevelCatalog.hasBossZone`, read from the JSON without loading the level). UP from the first
+row focuses the tabs (◀ ▶ change), UP again the difficulty. A search looks in both. BOSSES starts with the **BOSS RUSH**
+card (`src/story/BossRush.lua`): every boss fight in a row — story bosses world by world, each followed by its secret
+bosses, then any other boss-zone level; not EVENT levels —, each level starting inside its first boss arena
+(`AdventureState` `atBoss`) and ending when its bosses are beaten (`endOnBoss`, no finish line). Lives carry over (starts
+with 5); losing them all ends it. Total time = the sum of the fights; the best with all beaten is kept per difficulty in
+`bossrush.dat`. Back in Free Play a summary window shows bosses beaten, time and record.
+
+**Ghost time trials (2026-11-03):** RACE levels (a finish, no boss, not a King-of-the-Hill bonus) are played with
+`ghost = true`: `src/story/Ghost.lua` records the player every 1/20 s (x, y, frame, facing); on reaching the finish, a
+better time saves it to `ghosts/<level>.dat`; next time the ghost runs alongside (drawn as a translucent `OnlinePlayer`
+with its time, behind the player; it touches nothing). The card shows the record. Harness: `free_play` `pestanas`,
+`rush_arena`, `rush_cadena`, `fantasma`.
+
+**Files:** `src/states/adventure/FreePlayState.lua`, `src/story/BossRush.lua`, `src/story/Ghost.lua`, `src/world/level/LevelCatalog.lua` (the ONE level-info builder,
 shared with the server's lobby catalog), `src/world/level/CatalogWorker.lua` + `CatalogWorkerThread.lua` (the cards in
 a thread). **Harness:** `free_play`.
 

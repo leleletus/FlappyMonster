@@ -41,6 +41,17 @@ function LevelCatalog.files()
     return out
 end
 
+-- ¿Es un nivel de JEFE? (tiene zonas de jefe) — rápido, sin cargar el nivel: mira el JSON. Lo usa el Juego Libre (sus
+-- pestañas CARRERAS / JEFES) y el Boss Rush (src/story/BossRush.lua). Se recuerda por archivo.
+local bossCache = {}
+function LevelCatalog.hasBossZone(file)
+    if bossCache[file] == nil then
+        local raw = love.filesystem.read(LevelCatalog.DIR .. '/' .. file) or ''
+        bossCache[file] = raw:find('"bossZones"%s*:%s*%[%s*{') ~= nil
+    end
+    return bossCache[file]
+end
+
 -- Miniatura: un carácter por celda ('.' vacío, '#' sólido, 'B' borde, 'D'
 -- tierra, 'G' césped, '=' plataforma, '~' agua, 'X' peligro, 'F' meta, '^'
 -- pinchos, 'm' mini bloques, 'P' zona de puntos) + entidades y punto de inicio. La dibuja ModeSelectMenu.drawPreview.
