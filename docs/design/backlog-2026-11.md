@@ -2,7 +2,7 @@
 
 The user's list of 2026-11-02, in working order. Online bugs first (they break play today), then the two gameplay
 changes, then the rest. Tick an item in the commit that does it and say in which version. When everything is done,
-move this page to the archive.
+move this page to the archive. (2026-11-03: everything except the open decision of known-debt item 1 is done.)
 
 "Cause" below is what reading the code showed before fixing; each fix must be proved by a harness.
 
@@ -56,6 +56,6 @@ move this page to the archive.
   `OnlineRecordsState`; see netcode).
 - [x] (0.5.155) **D3. Game modes:** Free Play tabs RACES / BOSSES, BOSS RUSH (`src/story/BossRush.lua`), ghost time trials
   (`src/story/Ghost.lua`); see docs/gameplay/free-play.md. Online Race rooms still list every level.
-- [ ] **D4. Story extras** (agreed with the user): copy a save slot · RETRY on the story results screen (replay the same
+- [x] (0.5.156) **D4. Story extras** (agreed with the user; see docs/story/story-mode.md): copy a save slot · RETRY on the story results screen (replay the same
   level straight away) · RETRY in the single-player pause menu · a Theater in the Collection (rewatch unlocked films:
   intro, ending, chase, lair, credits) · a shard gallery (the shards collected per world).

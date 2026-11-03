@@ -7,6 +7,7 @@
 -- con el iris. BORRAR es un botón DEBAJO del cartucho elegido (nunca encima de su información).
 -- Flechas / ratón / toque; ENTER entra; SUPR (o el botón) borra; ESC vuelve.
 local BaseState     = require 'src/core/BaseState'
+local MenuKit = require 'src/ui/menu/MenuKit'
 local MenuScene     = require 'src/ui/menu/MenuScene'
 local MenuAnim      = require 'src/ui/menu/MenuAnim'
 local MenuList      = require 'src/ui/menu/MenuList'
@@ -59,10 +60,16 @@ local function cartRect(i)
     local x0 = math.floor((WINDOW_W - total) / 2)
     return x0 + (i - 1) * (w + GAP), math.floor(WINDOW_H * 0.24), w, h, s
 end
+-- (bajo el cartucho elegido, dos botones: COPIAR a la izquierda y BORRAR a la derecha)
 local function delRect(i)
     local x, y, w, h = cartRect(i)
-    local bw, bh = math.min(w, 200), 52
-    return math.floor(x + (w - bw) / 2), y + h + 22, bw, bh
+    local bw, bh = math.floor(math.min(w, 320) / 2) - 6, 52
+    return math.floor(x + w / 2 + 6), y + h + 22, bw, bh
+end
+local function copyRect(i)
+    local x, y, w, h = cartRect(i)
+    local bw, bh = math.floor(math.min(w, 320) / 2) - 6, 52
+    return math.floor(x + w / 2 - 6 - bw), y + h + 22, bw, bh
 end
 local function inside(px, py, x, y, w, h) return px >= x and px <= x + w and py >= y and py <= y + h end
 
@@ -152,6 +159,26 @@ function StorySlotState:_delete(i)
     self:reload()
 end
 
+-- COPIAR (el usuario, 2026-11-02): la partida elegida a un hueco VACÍO (se elige después: solo los vacíos; ATRÁS
+-- cancela). Sin hueco vacío, un aviso.
+function StorySlotState:_copyStart(i)
+    if not self.slots[i] then return end
+    local empty
+    for k = 1, Save.SLOTS do if not self.slots[k] then empty = empty or k end end
+    if not empty then Notify.toast(L('story.copy_none'), 'error'); Sound.play('headBump'); return end
+    self.copyFrom, self.confirm, self.btnRow = i, nil, nil
+    self.sel = empty
+    Sound.play('select', 1.1)
+end
+function StorySlotState:_copyTo(k)
+    if not self.copyFrom or self.slots[k] then Sound.play('headBump'); return end
+    Save.write(k, self.slots[self.copyFrom].data)
+    self.copyFrom = nil
+    self.sel = k
+    Sound.play('checkpoint')
+    self:reload()
+end
+
 function StorySlotState:_back()
     if self.anim:busy() then return end
     Sound.play('select', 0.85)
@@ -177,9 +204,33 @@ function StorySlotState:update(dt)
         if Input.pressed('back') then self.pick = nil; Sound.play('select', 0.85) end
         return
     end
+    -- (copiando: el cursor solo va por los huecos vacíos; confirmar copia, ATRÁS cancela)
+    if self.copyFrom then
+        local function moveEmpty(d)
+            for step = 1, Save.SLOTS do
+                local k = (self.sel - 1 + d * step) % Save.SLOTS + 1
+                if not self.slots[k] then self.sel = k; Sound.play('select', d > 0 and 1.08 or 0.94); return end
+            end
+        end
+        if Input.pressed('nav_left') then moveEmpty(-1) end
+        if Input.pressed('nav_right') then moveEmpty(1) end
+        if Input.pressed('confirm') or Input.pressed('flap') then self:_copyTo(self.sel) end
+        if Input.pressed('back') then self.sel, self.copyFrom = self.copyFrom, nil; Sound.play('select', 0.85) end
+        return
+    end
+    -- (ABAJO, en un cartucho usado: sus botones COPIAR / BORRAR; ◀ ▶ eligen, confirmar, ARRIBA vuelve)
+    if self.btnRow then
+        if Input.pressed('nav_left') or Input.pressed('nav_right') then self.btnRow = 3 - self.btnRow; self.confirm = nil; Sound.play('select') end
+        if Input.pressed('nav_up') or Input.pressed('back') then self.btnRow, self.confirm = nil, nil; Sound.play('select', 0.85); return end
+        if Input.pressed('confirm') or Input.pressed('flap') then
+            if self.btnRow == 1 then self:_copyStart(self.sel) else self:_delete(self.sel) end
+        end
+        return
+    end
+    if Input.pressed('nav_down') and self.slots[self.sel] then self.btnRow = 1; Sound.play('select'); return end
     local function move(d) self.sel = (self.sel - 1 + d) % Save.SLOTS + 1; self.confirm = nil; self.selT = 0; Sound.play('select', d > 0 and 1.08 or 0.94) end
     if Input.pressed('nav_left') or Input.pressed('nav_up') then move(-1) end
-    if Input.pressed('nav_right') or Input.pressed('nav_down') then move(1) end
+    if Input.pressed('nav_right') or (Input.pressed('nav_down') and not self.slots[self.sel]) then move(1) end
     if Input.pressed('confirm') or Input.pressed('flap') then
         if self.confirm == self.sel then self:_delete(self.sel) else self:_open(self.sel) end
         return
@@ -192,8 +243,9 @@ function StorySlotState:update(dt)
 end
 
 function StorySlotState:keypressed(key)
-    if self.pick or self.inserting then return end
+    if self.pick or self.inserting or self.copyFrom then return end
     if key == 'delete' or key == 'backspace' then self:_delete(self.sel) end
+    if key == 'c' then self:_copyStart(self.sel) end                  -- (C: copiar)
 end
 
 function StorySlotState:mousemoved(x, y)
@@ -219,11 +271,16 @@ function StorySlotState:touchpressed(id, x, y)
     end
     if CornerButtons.hitBack(x, y) then return self:_back() end
     for i = 1, Save.SLOTS do
+        if self.copyFrom then
+            if inside(x, y, cartRect(i)) then self.sel = i; self:_copyTo(i) end
+        else
         if self.slots[i] and i == self.sel and inside(x, y, delRect(i)) then self:_delete(i); return end
+        if self.slots[i] and i == self.sel and inside(x, y, copyRect(i)) then self:_copyStart(i); return end
         if inside(x, y, cartRect(i)) then
             self.sel = i
             if self.confirm == i then self.confirm = nil else self:_open(i) end
             return
+        end
         end
     end
 end
@@ -314,12 +371,18 @@ function StorySlotState:render()
             lift = -LIFT - 12 + math.floor(k * k * (h * 0.6) / 4) * 4
         end
         self:_drawCart(i, x + ox, y + oy + lift, s, sel, a * ((self.pick and 0.5) or 1))
-        -- BORRAR, debajo del elegido (segunda pulsación = confirmar)
-        if sel and self.slots[i] and not self.inserting then
+        -- COPIAR y BORRAR, debajo del elegido (BORRAR: segunda pulsación = confirmar)
+        if sel and self.slots[i] and not self.inserting and not self.copyFrom then
+            local cx, cy, cw, ch = copyRect(i)
+            local onC = self.btnRow == 1
+            MenuButton.draw(L('story.copy'), cx + ox, cy + oy, cw, ch, onC and 'blue' or 'grey', onC, { alpha = a, scale = 3 })
+            if onC then MenuKit.marker(cx + ox, cy + oy, cw, ch, self.t, a) end
             local dx, dy, dw, dh = delRect(i)
             local ask = self.confirm == i
-            MenuButton.draw(L(ask and 'story.delete_sure' or 'story.delete'), dx + ox, dy + oy, dw, dh, ask and 'red' or 'grey', ask,
+            local onD = self.btnRow == 2
+            MenuButton.draw(L(ask and 'story.delete_sure' or 'story.delete'), dx + ox, dy + oy, dw, dh, ask and 'red' or 'grey', ask or onD,
                             { alpha = a, scale = 3 })
+            if onD then MenuKit.marker(dx + ox, dy + oy, dw, dh, self.t, a) end
         end
     end
     -- Elegir dificultad (partida nueva)
@@ -344,6 +407,12 @@ function StorySlotState:render()
                         L('difficulty.hint'))
     else
         local s = self.slots[self.sel]
+        if self.copyFrom then
+            MenuList.footer(L('story.copy_pick', { n = self.copyFrom }), A, Save.SLOTS + 2, L('story.copy_hint'))
+            love.graphics.setColor(1, 1, 1, 1)
+            CornerButtons.drawBack(self.backHover)
+            return
+        end
         MenuList.footer(s and L('story.slot_desc', { world = s.world, shards = s.shards, total = s.shardsTotal }) or L('story.slot_empty'),
                         A, Save.SLOTS + 2, L('story.slot_hint'))
     end

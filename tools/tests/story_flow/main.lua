@@ -349,7 +349,7 @@ function love.update(dt)
         -- pierde una vida y coge DOS vidas extra: saliendo a medias cuenta la perdida y no las ganadas
         st.player.lives = st.player.lives - 1 + 2
         st.stats.deaths = st.stats.deaths + 1
-        gStateMachine:push('pause'); top().selected = 2
+        gStateMachine:push('pause'); top().selected = #top().options
         pressNext('confirm'); go('go3')
     elseif step == 'go3' and t - T > 0.5 then
         QUIT_LIVES = Run.data.lives
@@ -1062,12 +1062,43 @@ function love.update(dt)
             tostring(CAN.fwd), tostring(CAN.fwdMsg), tostring(CAN.back), tostring(CAN.backMsg), tostring(locked),
             tostring(CAN.musicMid), tostring(CAN.musicF), tostring(CAN.musicB)))
         Run.data.done, Run.data.open = CAN.keep, CAN.keepOpen
+        -- REINTENTAR desde los resultados: CONTINUAR / REINTENTAR; REINTENTAR vuelve a entrar en el mismo nivel
+        gStateMachine:change('story_results', { level = W1[1].id, result = { time = 90, deaths = 1, hits = 2, kills = 3, killable = 6, stars = 1, starsTotal = 4 },
+            summary = { rating = 80, grade = 'B', parts = {}, points = 100 }, map = { world = 1, node = 1 }, color = { 0.36, 0.62, 0.36 } })
+        go('retry1')
+    elseif step == 'retry1' and t - T > 0.5 then
+        st.t = st.tEnd + 0.1
+        pressNext('nav_right'); go('retry2')
+    elseif step == 'retry2' and t - T > 0.2 then
+        shot('results_retry')
+        RT = { btn = st.btn }
+        pressNext('confirm'); go('retry3')
+    elseif step == 'retry3' and t - T > 4 then
+        local a = top()
+        RT.inLevel = a.levelPath == Worlds.path(W1[1].id)
+        check('reintentar_res', RT.btn == 2 and RT.inLevel, ('◀ ▶ elige REINTENTAR=%s · vuelve a entrar en %s=%s'):format(
+            tostring(RT.btn == 2), W1[1].id, tostring(RT.inLevel)))
         gStateMachine:change('story_map', { world = 1, node = 1 }); go('del')
     elseif step == 'del' and t - T > 0.3 then
         resize(1280, 720)
         pressNext('back'); go('del2')
     elseif step == 'del2' and t - T > 0.5 then
         shot('slots_used')
+        -- COPIAR: la partida 1 a un hueco vacío (el cursor salta a él); la copia es igual; luego se borra
+        st:_copyStart(1)
+        local target = st.sel
+        local picking = st.copyFrom == 1 and not st.slots[target]
+        st:_copyTo(target)
+        local a, b = love.filesystem.read('story1.sav'), love.filesystem.read('story' .. target .. '.sav')
+        check('copiar', picking and b ~= nil and st.slots[target] ~= false and st.slots[target].done == st.slots[1].done,
+            ('elige el hueco vacío %s=%s · copiada (archivo %s, progreso %s = %s)'):format(tostring(target), tostring(picking),
+            tostring(b ~= nil), tostring(st.slots[target] and st.slots[target].done), tostring(st.slots[1] and st.slots[1].done)))
+        st.sel, st.btnRow = 1, 1                                   -- (con sus botones COPIAR / BORRAR a la vista)
+        COPYT = target
+        shot('slots_copy'); go('del2b')
+    elseif step == 'del2b' and t - T > 0.5 then
+        st.btnRow = nil
+        st:_delete(COPYT); st:_delete(COPYT)
         st:_delete(1); st:_delete(1); go('del3')
     elseif step == 'del3' and t - T > 0.3 then
         check('borrar', st.slots[1] == false and love.filesystem.getInfo('story1.sav') == nil,

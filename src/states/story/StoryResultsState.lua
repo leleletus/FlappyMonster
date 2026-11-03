@@ -122,10 +122,22 @@ function StoryResultsState:exit() Sound.stopMusic() end
 
 function StoryResultsState:_podiumX() return math.floor(math.min(320, WINDOW_W * 0.25)) end
 
-function StoryResultsState:_continue()
+-- Acabada la animación, dos botones: CONTINUAR (al mapa) y REINTENTAR (el mismo nivel otra vez, sin pasar por el mapa:
+-- el mapa lo vuelve a abrir solo — StoryMapState `replay` —; el usuario, 2026-11-02). Se elige con ◀ ▶.
+local BTN_W, BTN_H, BTN_GAP = 300, 56, 24
+function StoryResultsState:_btnRects()
+    local x = math.floor((WINDOW_W - 2 * BTN_W - BTN_GAP) / 2)
+    local y = WINDOW_H - BTN_H - 48
+    return { { x = x, y = y, w = BTN_W, h = BTN_H }, { x = x + BTN_W + BTN_GAP, y = y, w = BTN_W, h = BTN_H } }
+end
+
+function StoryResultsState:_continue(retry)
     if self.t < self.tEnd then self.t = self.tEnd; return end         -- (primero: saltar la animación)
     Sound.play('select')
-    gStateMachine:change('story_map', self.args.map)
+    local map = {}
+    for k, v in pairs(self.args.map or {}) do map[k] = v end
+    if retry then map.replay, map.opened = true, nil end
+    gStateMachine:change('story_map', map)
 end
 
 function StoryResultsState:update(dt)
@@ -171,10 +183,21 @@ function StoryResultsState:update(dt)
     -- música: más baja mientras cuenta (para oír los tics), luego normal
     local duck = 0.6 + 0.4 * clamp01((t - self.tStamp) / 0.8)
     Sound.setMusicVolume(self.musicVol * duck)
-    if Input.pressed('confirm') or Input.pressed('flap') or Input.pressed('back') then self:_continue() end
+    if t >= self.tEnd and (Input.pressed('nav_left') or Input.pressed('nav_right')) then
+        self.btn = 3 - (self.btn or 1); Sound.play('select')
+    end
+    if Input.pressed('back') then self:_continue() return end
+    if Input.pressed('confirm') or Input.pressed('flap') then self:_continue(self.t >= self.tEnd and self.btn == 2) end
 end
 
-function StoryResultsState:touchpressed() self:_continue() end
+function StoryResultsState:touchpressed(id, x, y)
+    if self.t >= self.tEnd and x then
+        for i, r in ipairs(self:_btnRects()) do
+            if x >= r.x and x <= r.x + r.w and y >= r.y and y <= r.y + r.h then return self:_continue(i == 2) end
+        end
+    end
+    self:_continue()
+end
 
 -- El MONSTRUO y su reacción. Se ve sobre el fondo oscuro gracias a un foco de luz detrás y a un
 -- borde claro (su silueta dibujada alrededor). Cae al pedestal; mientras se cuenta, NERVIOSO (da
@@ -359,9 +382,18 @@ function StoryResultsState:render()
 
     self.fx:drawFront()
     if t >= self.tEnd then
+        local MenuButton, MenuKit = require 'src/ui/menu/MenuButton', require 'src/ui/menu/MenuKit'
+        for i, r in ipairs(self:_btnRects()) do
+            local on = i == (self.btn or 1)
+            local lbl = L(i == 1 and 'story.results.continue' or 'common.retry'):upper()
+            local bob = (on and math.floor(t * 3) % 2 == 0) and -4 or 0
+            MenuButton.draw(lbl, r.x, r.y + bob, r.w, r.h, i == 1 and 'green' or 'yellow', on, { scale = 3 })
+            if on then MenuKit.marker(r.x, r.y + bob, r.w, r.h, t, 1) end
+        end
         love.graphics.setFont(FONT_SMALL)
         love.graphics.setColor(1, 1, 1, 0.55 + 0.25 * math.sin(t * 4))
-        love.graphics.printf(L(Input.lastDevice == 'touch' and 'story.results.tap' or 'story.results.hint'), 0, WINDOW_H - 28, WINDOW_W, 'center')
+        love.graphics.printf(L('story.results.choose', { lr = Input.label('nav_left') .. Input.label('nav_right'), ok = Input.label('confirm') }),
+                             0, WINDOW_H - 28, WINDOW_W, 'center')
     end
     love.graphics.setFont(FONT_MED)
     love.graphics.setColor(1, 1, 1, 1)

@@ -221,10 +221,21 @@ function love.update(dt)
         shot('pause')                                   -- (la pausa: la ventana de opciones de los menús)
         step, T = 'pback', t
     elseif step == 'pback' and t - T > 0.2 then
-        top().selected = 2
+        -- (REINTENTAR: está, y vuelve a empezar el mismo nivel; luego, a la pausa otra vez para salir)
+        local p = top()
+        local stack = gStateMachine.stack
+        local adv = stack[#stack - 1]                     -- (el nivel, debajo de la pausa)
+        local hasRetry = p.options and p.options[2] == 'common.retry'
+        local lv0 = adv.levelPath
+        p:_choose(2)
+        local st2 = top()
+        RETRY = hasRetry and st2 ~= adv and st2.levelPath == lv0 and st2.levelTime == 0
+        gStateMachine:push('pause')
+        top().selected = #top().options
         pressNext('confirm'); step, T = 'back', t
     elseif step == 'back' and t - T > 0.4 then
         local ok = st == top() and st.files ~= nil
+        check('reintentar', RETRY == true, 'pausa → REINTENTAR: el mismo nivel desde el principio = ' .. tostring(RETRY))
         check('volver', ok and st.sel == SEL, ('pausa → salir: %s, selección %s (antes %d)'):format(
             st.files and 'Juego libre' or tostring(st), tostring(st.sel), SEL))
         fp = st
@@ -244,7 +255,7 @@ function love.update(dt)
         step, T = 'vl3', t
     elseif step == 'vl3' and t - T > 0.3 then
         gStateMachine:push('pause')
-        top().selected = 2
+        top().selected = #top().options
         pressNext('confirm'); step, T = 'vl4', t
     elseif step == 'vl4' and t - T > 0.5 then
         check('vista', MENU_W == 1600 and LEVEL_W == 1280 and WINDOW_W == 1600,

@@ -105,6 +105,7 @@ return {
         shards = "Mirror Shards",
         skip_hint = "HOLD TO SKIP",
         results = {
+            continue = "Continue", choose = "{lr} choose    {ok} confirm",
             time = "Time", lives = "Lives lost", hits = "Hits taken", kills = "Enemies", stars = "Stars",
             duel = "You - Bot", items = "Items", falls = "Falls", zone = "Time in the zone",
             points = "Points", grade = "GRADE", record = "NEW BEST GRADE!",
@@ -125,7 +126,11 @@ return {
         slot_levels = "{done}/{total}",
         slot_lives = "x{n} lives",
         slot_desc = "World {world}  ·  {shards}/{total} mirror shards",
-        slot_hint = "{arrows} choose    {ok} play    {del} delete    {back} back",
+        slot_hint = "{arrows} choose    {ok} play    {down} copy / delete    {back} back",
+        copy = "COPY",
+        copy_none = "There is no empty slot: delete a game first",
+        copy_pick = "Copy game {n}: choose an empty slot",
+        copy_hint = "{arrows} choose    {ok} copy here    {back} cancel",
         delete = "DELETE",
         delete_sure = "SURE?",
         world_n = "WORLD {n}",
@@ -154,10 +159,12 @@ return {
         -- THE COLLECTION (src/states/story/StoryCollectionState.lua; catalog assets/story/collectibles.json: each
         -- collectible has name, desc, how and hint here)
         collect = {
+            tab_items = "COLLECTION", tab_shards = "SHARDS", tab_films = "THEATER",
+            shard = "Shard {n}", shard_have = "You got it back by beating this island's boss.", shard_missing = "Beat this island's boss to get it back.", film_watch = "{ok} watch again",
             title = "COLLECTION",
             count = "{n} / {total}",
             map = "Collection {n}/{total}",
-            hint = "{arrows} choose    {back} back",
+            hint = "{arrows} choose    {up} tabs    {ok} watch film    {back} back",
             unknown = "???",
             state = { stolen = "STOLEN" },
             kind = { splinter = "Mirror splinter", trophy = "Trophy" },

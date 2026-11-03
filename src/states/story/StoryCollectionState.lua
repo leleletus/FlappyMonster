@@ -23,10 +23,20 @@ local PixelFont     = require 'src/ui/PixelFont'
 local CornerButtons = require 'src/ui/CornerButtons'
 local Clip          = require 'src/ui/Clip'
 local TextUtil      = require 'src/ui/TextUtil'
+local MenuButton    = require 'src/ui/menu/MenuButton'
+local Shards        = require 'src/story/Shards'
+local Worlds        = require 'src/story/Worlds'
+
+-- PESTAÑAS (el usuario, 2026-11-02): COLECCIÓN (los coleccionables), FRAGMENTOS (la galería: los fragmentos del espejo
+-- mundo a mundo, los que tiene con el dibujo de su jefe y los que faltan como "???") y CINE (las películas de la
+-- historia: las ya vistas se vuelven a ver con confirmar; las demás, cerradas con cuándo se ven). ARRIBA desde la
+-- primera fila da el foco a las pestañas (◀ ▶ cambian, ABAJO vuelve); tocar una pestaña la abre.
+local TABS = { 'items', 'shards', 'films' }
+local FILMS = { 'intro', 'chase', 'lair', 'ending', 'credits' }
 
 local StoryCollectionState = BaseState:new()
 
-local TOP = 176              -- y donde empiezan las fichas (bajo el rótulo y la cuenta)
+local TOP = 196              -- y donde empiezan las fichas (bajo el rótulo y las pestañas)
 local BOTTOM = 60            -- hueco de abajo (la ayuda)
 local GAP = 20               -- entre fichas
 local CARD_MIN_W = 520       -- ancho mínimo de una ficha (cuántas columnas caben)
@@ -61,9 +71,45 @@ local function layout(n)
     return { view = view, cols = cols, cards = cards, maxScroll = math.max(0, contentH - view.h) }
 end
 
+-- ¿Película ya vista en esta partida? (la intro, al crearla; la emboscada y la guarida, al entrar en sus niveles; el
+-- final y los créditos, al vencer al Espejo)
+local function filmSeen(id)
+    if not Run.active() then return false end
+    local d = Run.data
+    if id == 'intro' then return true end
+    if id == 'ending' or id == 'credits' then return Run.isDone('ruta_del_espejo') end
+    return d.films ~= nil and d.films[id] == true
+end
+StoryCollectionState.filmSeen = filmSeen
+
+-- La lista de cada pestaña: coleccionables, fragmentos ({ shard = n, def }), películas ({ film = id })
+function StoryCollectionState:_buildList()
+    if self.tab == 'shards' then
+        local list, byId = {}, {}
+        for _, d in ipairs(Shards.LIST) do byId[d.id] = d end
+        for _, n in ipairs(Shards.ORDER) do list[#list + 1] = { shard = n, def = byId[n] } end
+        return list
+    elseif self.tab == 'films' then
+        local list = {}
+        for _, id in ipairs(FILMS) do list[#list + 1] = { film = id } end
+        return list
+    end
+    return Collect.LIST
+end
+
+function StoryCollectionState:_setTab(tab)
+    if tab == self.tab then return end
+    self.tab = tab
+    self.list = self:_buildList()
+    self.sel, self.scroll, self.scrollTarget = 1, 0, 0
+    Sound.play('select')
+end
+
 function StoryCollectionState:enter(args)
     args = args or {}
-    self.list = Collect.LIST
+    self.tab = args.tab or 'items'
+    self.tabFocus = false
+    self.list = self:_buildList()
     self.sel = math.max(1, math.min(#self.list, args.sel or 1))
     self.scroll, self.scrollTarget = 0, 0
     self.anim = MenuAnim.new({ n = 4 })
@@ -75,6 +121,7 @@ end
 -- story.collect.state.<estado> y el texto <keys>.<estado> (si existen)
 function StoryCollectionState:state(i)
     local c = self.list[i]
+    if c and (c.shard or c.film) then return nil end
     return c and Run.active() and Collect.state(Run.data, c.id) or nil
 end
 function StoryCollectionState:iconPath(i)
@@ -91,7 +138,38 @@ end
 
 function StoryCollectionState:owned(i)
     local c = self.list[i]
-    return c ~= nil and Run.active() and Collect.has(Run.data, c.id)
+    if not c or not Run.active() then return false end
+    if c.film then return filmSeen(c.film) end
+    if c.shard then
+        for _, id in ipairs(Shards.ids(c.shard, Shards.isXtra(Run.data.difficulty))) do
+            if Run.data.shards and Run.data.shards[id] then return true end
+        end
+        return false
+    end
+    return Collect.has(Run.data, c.id)
+end
+
+-- Volver a ver una película (CINE): de vuelta, al mapa con esta pestaña abierta
+function StoryCollectionState:_playFilm(i)
+    local c = self.list[i]
+    if not (c and c.film) then return end
+    if not self:owned(i) then Sound.play('headBump'); return end
+    Sound.play('select', 1.2)
+    local xtra = Shards.isXtra(Run.data.difficulty)
+    local sel = i
+    gStateMachine:change('story_film', { film = c.film, xtra = xtra, onDone = function()
+        gStateMachine:change('story_map')
+        gStateMachine:push('story_collection', { tab = 'films', sel = sel })
+    end })
+end
+
+-- Las pestañas: arriba, centradas
+function StoryCollectionState:_tabRects()
+    local w, h, gap = 240, 44, 16
+    local x0 = math.floor((WINDOW_W - 3 * w - 2 * gap) / 2)
+    local out = {}
+    for k, id in ipairs(TABS) do out[id] = { x = x0 + (k - 1) * (w + gap), y = 136, w = w, h = h } end
+    return out
 end
 
 -- (el desplazamiento que deja ver la elegida)
@@ -131,10 +209,21 @@ function StoryCollectionState:update(dt)
     if math.abs(self.scroll - self.scrollTarget) < 0.5 then self.scroll = self.scrollTarget end
     if self.anim:busy() then return end
     local cols = layout(#self.list).cols
-    if Input.pressed('nav_left') then self:_move(-1) end
-    if Input.pressed('nav_right') then self:_move(1) end
-    if Input.pressed('nav_up') then self:_move(-cols) end
-    if Input.pressed('nav_down') then self:_move(cols) end
+    if self.tabFocus then
+        local k = 1
+        for j, id in ipairs(TABS) do if id == self.tab then k = j end end
+        if Input.pressed('nav_left') then self:_setTab(TABS[(k - 2) % #TABS + 1]) end
+        if Input.pressed('nav_right') then self:_setTab(TABS[k % #TABS + 1]) end
+        if Input.pressed('nav_down') or Input.pressed('confirm') then self.tabFocus = false; Sound.play('select') end
+    else
+        if Input.pressed('nav_left') then self:_move(-1) end
+        if Input.pressed('nav_right') then self:_move(1) end
+        if Input.pressed('nav_up') then
+            if self.sel <= cols then self.tabFocus = true; Sound.play('select') else self:_move(-cols) end
+        end
+        if Input.pressed('nav_down') then self:_move(cols) end
+        if (Input.pressed('confirm') or Input.pressed('flap')) and self.tab == 'films' then self:_playFilm(self.sel) end
+    end
     if Input.pressed('back') or Input.pressed('light') then self:_back() end
 end
 
@@ -155,6 +244,9 @@ end
 
 function StoryCollectionState:touchpressed(id, x, y)
     if CornerButtons.hitBack(x, y) then self:_back(); return end
+    for tab, r in pairs(self:_tabRects()) do
+        if x >= r.x and x <= r.x + r.w and y >= r.y and y <= r.y + r.h then self:_setTab(tab); return end
+    end
     self.drag = { id = id, y = y, y0 = y, moved = false }
 end
 
@@ -175,7 +267,8 @@ function StoryCollectionState:touchreleased(id, x, y)
     self.drag = nil
     if not d or d.moved then return end
     local i = self:_cardAt(x, y)
-    if i and i ~= self.sel then self.sel = i; Sound.play('select') end
+    if i and i ~= self.sel then self.sel = i; Sound.play('select')
+    elseif i and self.tab == 'films' then self:_playFilm(i) end           -- (la ya elegida, en el CINE: se ve)
 end
 
 function StoryCollectionState:wheelmoved(dx, dy)
@@ -207,8 +300,87 @@ local function wrapped(font, text, x, y, w, lines, color, a)
     return y + #ls * lh
 end
 
+-- Ficha de un FRAGMENTO o de una PELÍCULA
+local shardImgs = {}
+function StoryCollectionState:_drawExtra(i, r, oy, a)
+    local c = self.list[i]
+    local owned = self:owned(i)
+    local sel = i == self.sel and not self.tabFocus
+    local x, y = r.x, r.y + oy + ((sel and math.floor(self.t * 3) % 2 == 0) and -4 or 0)
+    MenuKit.box(sel and 'card_sel' or 'card', x, y, r.w, r.h, a * (owned and 1 or 0.85))
+    local ix, iy = x + 20, y + math.floor((r.h - ICON_BOX) / 2)
+    MenuKit.box('well', ix, iy, ICON_BOX, ICON_BOX, a)
+    local tx, tw = ix + ICON_BOX + 20, r.w - ICON_BOX - 60
+    local ty = y + 20
+    if c.shard then
+        local def = c.def or {}
+        local w = Worlds.worldOf(def.level or '')
+        if owned then
+            local path = def.normal and def.normal.img
+            if path and shardImgs[path] == nil then
+                local ok, im = pcall(love.graphics.newImage, path)
+                shardImgs[path] = ok and im or false
+                if ok then im:setFilter('nearest', 'nearest') end
+            end
+            local hex = def.tint or '#ffffff'
+            local col = { tonumber(hex:sub(2, 3), 16) / 255, tonumber(hex:sub(4, 5), 16) / 255, tonumber(hex:sub(6, 7), 16) / 255 }
+            love.graphics.setColor(col[1], col[2], col[3], (0.12 + 0.06 * math.sin(self.t * 3 + i)) * a)
+            love.graphics.rectangle('fill', ix + 8, iy + 8, ICON_BOX - 16, ICON_BOX - 16)
+            local im = shardImgs[path] or nil
+            local iw, ih = 0, 0
+            if im then iw, ih = im:getDimensions() end
+            local fw = def.normal and def.normal.fw or ((im and iw > ih * 1.5) and ih or nil)
+            if im and fw then
+                -- (una hoja de cuadros — `fw` de shards.json —: solo el primero)
+                local q = love.graphics.newQuad(0, 0, fw, ih, iw, ih)
+                local sc = math.max(1, math.floor(math.min((ICON_BOX - 16) / fw, (ICON_BOX - 16) / ih)))
+                love.graphics.setColor(1, 1, 1, a)
+                love.graphics.draw(im, q, math.floor(ix + (ICON_BOX - fw * sc) / 2), math.floor(iy + (ICON_BOX - ih * sc) / 2), 0, sc, sc)
+                love.graphics.setColor(1, 1, 1, 1)
+            elseif im then
+                drawIcon(im, ix, iy, ICON_BOX, ICON_BOX, a)
+            else
+                drawIcon(lockedImage(), ix, iy, ICON_BOX, ICON_BOX, a, col)        -- (sin dibujo de jefe: el fragmento, de su color)
+            end
+        else
+            drawIcon(lockedImage(), ix, iy, ICON_BOX, ICON_BOX, a * 0.9)
+        end
+        MenuKit.text(FONT_MED, L('story.collect.shard', { n = c.shard }), tx, ty, tw, 'left', owned and { 1, 0.9, 0.45 } or { 0.7, 0.72, 0.85 }, a)
+        ty = ty + FONT_MED:getHeight() + 10
+        if w then MenuKit.text(FONT_SMALL, L('story.world.' .. w), tx, ty, tw, 'left', { 0.6, 0.8, 1 }, a) end
+        ty = ty + FONT_SMALL:getHeight() + 12
+        wrapped(FONT_SMALL, L(owned and 'story.collect.shard_have' or 'story.collect.shard_missing'), tx, ty, tw, 3,
+                owned and { 0.65, 1, 0.65 } or { 0.78, 0.8, 0.95 }, a)
+    else
+        -- una película: un trozo de cinta (los agujeros arriba y abajo) con ▶ si ya se vio
+        love.graphics.setColor(0.12, 0.1, 0.14, a)
+        love.graphics.rectangle('fill', ix + 12, iy + 28, ICON_BOX - 24, ICON_BOX - 56)
+        love.graphics.setColor(0.85, 0.85, 0.8, a)
+        for k = 0, 4 do
+            love.graphics.rectangle('fill', ix + 18 + k * 20, iy + 32, 8, 8)
+            love.graphics.rectangle('fill', ix + 18 + k * 20, iy + ICON_BOX - 40, 8, 8)
+        end
+        if owned then
+            love.graphics.setColor(1, 0.86, 0.36, a)
+            local cx, cy = ix + ICON_BOX / 2, iy + ICON_BOX / 2
+            love.graphics.polygon('fill', cx - 12, cy - 16, cx - 12, cy + 16, cx + 16, cy)
+        else
+            local q = L('story.collect.unknown')
+            PixelFont.shadow(q, math.floor(ix + (ICON_BOX - PixelFont.width(q, 3)) / 2), math.floor(iy + (ICON_BOX - PixelFont.height(3)) / 2), 3, a, { 0.75, 0.8, 1 })
+        end
+        love.graphics.setColor(1, 1, 1, 1)
+        MenuKit.text(FONT_MED, TextUtil.fit(FONT_MED, owned and L('ft.film_' .. c.film) or L('story.collect.unknown'), tw), tx, ty, tw, 'left',
+                     owned and { 1, 0.9, 0.45 } or { 0.7, 0.72, 0.85 }, a)
+        ty = ty + FONT_MED:getHeight() + 14
+        wrapped(FONT_SMALL, owned and L('story.collect.film_watch', { ok = Input.label('confirm') }) or L('ft.desc_' .. c.film), tx, ty, tw, 3,
+                owned and { 0.65, 1, 0.65 } or { 0.78, 0.8, 0.95 }, a)
+    end
+    if sel then MenuKit.marker(x, y, r.w, r.h, self.t, a) end
+end
+
 function StoryCollectionState:_drawCard(i, r, oy, a)
     local c = self.list[i]
+    if c and (c.shard or c.film) then return self:_drawExtra(i, r, oy, a) end
     local owned = self:owned(i)
     local sel = i == self.sel
     local x, y = r.x, r.y + oy
@@ -270,11 +442,27 @@ function StoryCollectionState:render()
     MenuKit.dim(1)
     MenuScene.bricks('story')
     MenuList.header(L('story.collect.title'), 'purple', A, 1)
-    local have, total = Collect.count(Run.active() and Run.data or nil)
-    local cnt = L('story.collect.count', { n = have, total = total })
+    -- las pestañas, cada una con su cuenta (lo que tiene / el total)
     local _, cy, ca = A:slide(2, 0, -120, 0, -120)
-    PixelFont.shadow(cnt, math.floor((WINDOW_W - PixelFont.width(cnt, 4)) / 2), 136 + cy, 4, ca,
-                     (have >= total and total > 0) and { 1, 0.9, 0.25 } or { 0.75, 0.9, 1 })
+    local function count(tab)
+        if tab == 'items' then return Collect.count(Run.active() and Run.data or nil) end
+        local saved = { self.tab, self.list }
+        self.tab = tab; self.list = self:_buildList()
+        local n = 0
+        for k = 1, #self.list do if self:owned(k) then n = n + 1 end end
+        local total = #self.list
+        self.tab, self.list = saved[1], saved[2]
+        return n, total
+    end
+    local colors = { items = 'purple', shards = 'teal', films = 'orange' }
+    for _, tab in ipairs(TABS) do
+        local r = self:_tabRects()[tab]
+        local on = self.tab == tab
+        local n, total = count(tab)
+        local lbl = L('story.collect.tab_' .. tab) .. ' ' .. n .. '/' .. total
+        MenuButton.draw(lbl, r.x, r.y + cy, r.w, r.h, on and colors[tab] or 'grey', on and self.tabFocus, { alpha = ca, scale = 2 })
+        if on and self.tabFocus then MenuKit.marker(r.x, r.y + cy, r.w, r.h, self.t, ca) end
+    end
     -- las fichas (recortadas a la vista: Clip, nunca stencil)
     local Ly = layout(#self.list)
     local v = Ly.view

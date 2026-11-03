@@ -30,6 +30,10 @@ Xtra Extreme. **Harness:** `story_flow` (the real game end to end; many named ca
 
 ## Worlds and saves
 
+**Copy a game (2026-11-03):** under the selected used cartridge, COPY and DELETE (DOWN reaches them, ◀ ▶ choose; key C
+copies). COPY then asks for an EMPTY slot (the cursor only visits empty ones; back cancels); with none, a notice.
+Harness `story_flow` `copiar`.
+
 - Menu: Aventura → HISTORIA (`story_slots`) / ONLINE / JUEGO LIBRE (PRUEBAS) (`free_play` stays as the debug hub).
 
 - `src/story/Worlds.lua` = the story as DATA: ordered worlds `{ id, levels = {...}, boss }` (stage 7 order; every
@@ -170,6 +174,11 @@ line in `Worlds.lua`, its branch in the map generator and, if it gives something
 
 ## Results, grades, rewards
 
+**Retry (2026-11-03):** once the results animation ends, two buttons: CONTINUE (to the map) and RETRY (the same level again:
+the map opens with `replay` and enters the node by itself). Also RETRY in the single-player pause menu (any level:
+`AdventureState:retryNow` restarts with the same arguments; lives that come from the adventure are NOT refilled). Harnesses
+`story_flow` `reintentar_res`, `free_play` `reintentar`.
+
 - **Stage 4 ✔ — results, grades, rewards.** `AdventureState` keeps level stats (`self.stats`: kills of non-boss
   enemies, killable total from `Modes.entityInfo`, stars / total, deaths, hits = HP lost) and passes them in the
   `onFinish` result. `src/story/Score.lua` = the scoring as DATA: weights (time 30 vs a par of 0.75 s per tile of level
@@ -219,6 +228,13 @@ again. No dialogue or text: animation + music.
   restart also clears the shards.
 
 ## The collection
+
+**Tabs (2026-11-03, agreed with the user):** COLLECTION (the collectibles, below), SHARDS (the gallery: one card per mirror
+shard in world order — owned: its boss's drawing, first frame of a sheet via `fw`, or the shard shape in its `tint`;
+missing: "???" and how to get it) and THEATER (the five films: intro, ambush, lair, ending, credits; a seen one plays again
+with confirm and comes back to the map with this tab open; the rest are "???" with when they are seen — intro: always;
+ambush / lair: `Run.data.films`; ending / credits: `ruta_del_espejo` done). Each tab shows its own count. UP from the first
+row focuses the tabs. Harness `collection` `pestanas`.
 
 The secrets' collectibles (catalog `assets/story/collectibles.json`, logic `src/story/Collect.lua`, saved in
 `data.collect[id]` only when the level is finished) have their own screen and art. The user's design (2026-10-29): each

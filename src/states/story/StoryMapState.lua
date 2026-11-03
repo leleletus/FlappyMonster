@@ -492,6 +492,8 @@ function StoryMapState:enter(args)
         if on and on.secret then self.openAt = SECRET_OPEN_AT end
     end
     self.notice, self.noticeT = args.notice, 0    -- (aviso un momento: tras un Game Over, tras un bonus)
+    -- (REINTENTAR desde los resultados: el mismo nivel otra vez, en cuanto el mapa está listo — update: playOnArrive —)
+    if args.replay then self.playOnArrive = true end
     self.noticeGood = args.good
     self.musicIsland = nil
     self:_music()

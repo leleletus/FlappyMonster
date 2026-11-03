@@ -168,6 +168,38 @@ function love.update(dt)
                 N, #Collect.LIST, tostring(owned[1]), tostring(not owned[2]), tostring(not owned[3]), have, total,
                 Ly.cols, WINDOW_W))
         shot('1280')
+        go('tabs1')
+    elseif step == 'tabs1' and t - T > 0.3 then
+        -- las PESTAÑAS: FRAGMENTOS (uno por jefe, los que tiene la partida: aquí dos, prestados) y CINE (la intro vista;
+        -- una cerrada no se abre)
+        local Shards = require 'src/story/Shards'
+        TB = { keep = Run.data.shards }
+        local lend = {}
+        for k, v in pairs(Run.data.shards or {}) do lend[k] = v end
+        for _, id in ipairs(Shards.ids(Shards.ORDER[1], Shards.isXtra(Run.data.difficulty))) do lend[id] = true end
+        for _, id in ipairs(Shards.ids(Shards.ORDER[3], Shards.isXtra(Run.data.difficulty))) do lend[id] = true end
+        Run.data.shards = lend
+        st:_setTab('shards')
+        local ownedN = 0
+        for i = 1, #st.list do if st:owned(i) then ownedN = ownedN + 1 end end
+        TB.sh = #st.list == #Shards.ORDER and ownedN >= 2 and st:owned(1) and not st:owned(2)
+        TB.n = ownedN
+        shot('fragmentos'); go('tabs2')
+    elseif step == 'tabs2' and t - T > 0.4 then
+        st:_setTab('films')
+        TB.intro = st:owned(1)
+        local lockedIdx
+        for i = 1, #st.list do if not st:owned(i) then lockedIdx = lockedIdx or i end end
+        local before = gStateMachine:_top()
+        if lockedIdx then st:_playFilm(lockedIdx) end
+        TB.closed = gStateMachine:_top() == before
+        shot('cine'); go('tabs3')
+    elseif step == 'tabs3' and t - T > 0.4 then
+        check('pestanas', TB.sh and #st.list == 5 and TB.intro and TB.closed, ('fragmentos: %d fichas, %d de la partida, el 1 sí y el 2 no=%s · cine: 5 películas=%s, intro vista=%s, una cerrada no se abre=%s'):format(
+            #require('src/story/Shards').ORDER, TB.n, tostring(TB.sh), tostring(#st.list == 5), tostring(TB.intro), tostring(TB.closed)))
+        Run.data.shards = TB.keep
+        st:_setTab('items')
+        local Ly = st.layout(#st.list)
         NAV = { cols = Ly.cols, seq = {} }
         go('nav')
     elseif step == 'nav' and t - T > 0.4 then

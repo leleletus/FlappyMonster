@@ -77,6 +77,7 @@ end
 
 function AdventureState:enter(args)
     args = args or {}
+    self.enterArgs = args                         -- (REINTENTAR desde la pausa: el mismo nivel con lo mismo — retryNow —)
     -- DEMO (el fondo de los menús, src/ui/menu/MenuScene.lua): el nivel de verdad, jugado por un bot
     -- (args.demo.step(dt, level) mueve al jugador en vez del mando; demo.camera(st) → camX, camY: cámara propia;
     -- demo.noSky: sin cielo, transparente; demo.noBossCtl: sin el control de las zonas de jefe — entradas, música —), sin HUD, sin pausa, sin música, vidas sin fin y
@@ -431,6 +432,18 @@ function AdventureState:retryArgs()
     return { level = self.levelPath, returnTo = self.returnTo, onFinish = self.onFinish, difficulty = self.level.difficulty,
              shards = self.shardArgs, outro = self.outroArgs, taken = self.takenArg,
              eventCheckpoint = self.level.eventCheckpointNow }      -- (Mega Mashup: se reintenta en el cangrejo en que estabas)
+end
+
+-- REINTENTAR desde la pausa (el usuario, 2026-11-02): el nivel otra vez desde el principio, con los mismos argumentos.
+-- Las vidas NO se reponen: las que traía la aventura (historia, Boss Rush) siguen siendo las de ahora. Lo conseguido en
+-- este intento no se guarda (no ha terminado: regla 7); las vidas perdidas ya se guardaron al perderlas.
+function AdventureState:canRetry() return not self.demo and not self.won and not self.endingT end
+function AdventureState:retryNow()
+    local a = {}
+    for k, v in pairs(self.enterArgs or {}) do a[k] = v end
+    if a.lives then a.lives = math.max(1, self.player.lives) end
+    if self.level.eventCheckpointNow then a.eventCheckpoint = self.level.eventCheckpointNow end   -- (Mega Mashup)
+    gStateMachine:change('adventure', a)
 end
 
 -- Lo que se lleva del nivel (para la nota del modo historia: src/story/Score.lua)

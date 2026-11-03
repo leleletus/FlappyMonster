@@ -105,6 +105,7 @@ return {
         shards = "Fragmentos del espejo",
         skip_hint = "MANTÉN PARA SALTAR",
         results = {
+            continue = "Continuar", choose = "{lr} elegir    {ok} aceptar",
             time = "Tiempo", lives = "Vidas perdidas", hits = "Golpes recibidos", kills = "Enemigos", stars = "Estrellas",
             duel = "Tú - Bot", items = "Objetos", falls = "Caídas", zone = "Tiempo en la zona",
             points = "Puntos", grade = "NOTA", record = "¡NUEVA MEJOR NOTA!",
@@ -125,7 +126,11 @@ return {
         slot_levels = "{done}/{total}",
         slot_lives = "x{n} vidas",
         slot_desc = "Mundo {world}  ·  {shards}/{total} fragmentos del espejo",
-        slot_hint = "{arrows} elegir    {ok} jugar    {del} borrar    {back} volver",
+        slot_hint = "{arrows} elegir    {ok} jugar    {down} copiar / borrar    {back} volver",
+        copy = "COPIAR",
+        copy_none = "No hay ningún hueco vacío: borra una partida primero",
+        copy_pick = "Copiar la partida {n}: elige un hueco vacío",
+        copy_hint = "{arrows} elegir    {ok} copiar aquí    {back} cancelar",
         delete = "BORRAR",
         delete_sure = "¿SEGURO?",
         world_n = "MUNDO {n}",
@@ -154,10 +159,12 @@ return {
         -- LA COLECCIÓN (src/states/story/StoryCollectionState.lua; catálogo assets/story/collectibles.json: cada
         -- coleccionable tiene aquí name, desc, how y hint)
         collect = {
+            tab_items = "COLECCIÓN", tab_shards = "FRAGMENTOS", tab_films = "CINE",
+            shard = "Fragmento {n}", shard_have = "Lo recuperaste al vencer al jefe de esta isla.", shard_missing = "Vence al jefe de esta isla para recuperarlo.", film_watch = "{ok} volver a verla",
             title = "COLECCIÓN",
             count = "{n} / {total}",
             map = "Colección {n}/{total}",
-            hint = "{arrows} elegir    {back} volver",
+            hint = "{arrows} elegir    {up} pestañas    {ok} ver película    {back} volver",
             unknown = "???",
             state = { stolen = "ROBADA" },
             kind = { splinter = "Astilla del espejo", trophy = "Trofeo" },
