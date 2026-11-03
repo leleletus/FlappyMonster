@@ -12,43 +12,20 @@ local trackVol = {}          -- id -> volumen de la pista (assets/music/index.js
 local origin  = {}   -- name -> ruta del archivo de cada sonido
 Sound._origin = origin
 
--- ── Mezcla ────────────────────────────────────────────────────────────────────
--- Ganancia por sonido para que todos se oigan parecido (medido: volumen del
--- tramo más fuerte de 100 ms ≈ -12 dBFS, como el salto o el punto). Se aplica
--- al cargar (se escalan las muestras), así se puede subir por encima de 1.
--- Los sonidos cortos de interfaz y pasos se dejan como están a propósito.
--- (Los efectos que antes se sintetizaban por código ya llevan su ganancia
--- dentro del archivo: no se ponen aquí o se aplicaría dos veces.)
-local GAIN = {
-    -- (el usuario: los pasos sonaban demasiado → 0.55 fue pasarse, "un poquito" más: 0.65; y el salto, algo menos)
-    step         = 0.65, jump = 0.75,
-    roundOver    = 2.8,  spikeHit   = 2.2,  dies2      = 0.65, glugluglu  = 0.8,
-    airGasp      = 0.85, waterWarning = 1.4,
-    -- Mega Crabby (archivos ya comprimidos: subir poco por encima de 1 satura)
-    megaStep     = 0.7,  megaClack  = 1.0,  megaHurt   = 1.1,  megaSlam   = 1.1,
-    megaWindup   = 0.78, megaShrink = 0.8,  megaFlee   = 0.9,  megaRoar = 0.67, megaFall = 0.8,
-    crowdCheer = 0.38, crowdBoo = 0.5,                -- (el público del Groove: de fondo, tools/sounds/groove.py)
-    -- Espejo (tools/sounds/mirror.py)
-    bombIgnite = 0.72, bombFizz = 0.48, bombBlast = 0.87, iceBreak = 0.85,
-    cryoWindup = 0.58, cryoBlast = 0.6, cryoFreeze = 0.51, cryoFree = 0.72, cryoDrop = 0.6,
-    -- Gran Bola de Nieve (tools/sounds/snowboss.py)
-    snowLaugh = 0.53, snowRoar = 0.55, snowSpit = 0.62, snowSplat = 0.51, snowRoll = 0.63,
-    snowLand = 0.49, snowSlam = 0.59, snowCrash = 0.60, snowDizzy = 0.56, snowCrack = 0.92,
-    snowBurst = 0.60, snowFlee = 0.46, snowIntroRoll = 0.59, snowBreath = 0.46,
-    -- Rey Gummy (tools/sounds/megagummy.py)
-    kingHop = 0.46, kingCharge = 0.34, kingJump = 0.37, kingFlop = 0.55, kingWave = 0.6, kingFanfare = 0.43,
-    kingLaugh = 0.67, kingHurt = 0.55, kingSplit = 0.47, kingPop = 0.55, kingCrown = 0.66, kingLand = 0.55,
-    mirrorAppear = 0.62, mirrorPortal = 0.37, glassWarn = 0.85, glassRise = 0.72, glassHit = 0.72,
-    -- tools/sounds/mechanics.py (medidos: → ≈ -12 dBFS)
-    switchOn     = 0.77, switchOff  = 0.76, helmetBounce = 1.15, helmetBreak = 0.72,
-    pufferWarn   = 1.0,  pufferInflate = 0.81, pufferDeflate = 0.77, pufferPrick = 0.67, undertowAlert = 0.62,
-    -- Linterna y Crabby lúgubre (tools/sounds/gloomy.py ya los deja a -12 dBFS; el tic, más flojo)
-    lightOn = 1.0, lightOff = 1.0, lightOut = 1.0, lightDead = 1.0,
-    mgloomyPing = 1.0, mgloomyListen = 1.0, mgloomyDrop = 1.0, mgloomySlam = 1.25, mgloomyDazzled = 1.0,
-    mgloomyShriek = 1.0, mgloomyHurt = 1.0, mgloomyStep = 0.5, mgloomyRoar = 1.1,
-    gloomyWind = 0.8, gloomyLeap = 0.8,
-}
-Sound.GAIN = GAIN
+-- ── El catálogo: assets/sounds/index.json ─────────────────────────────────────
+-- Cada sonido: su id (el de Sound.play), su archivo y, si los lleva, `gain` (ganancia horneada en las muestras al
+-- cargar, para que todos se oigan parecido: ≈ -12 dBFS; puede pasar de 1), `range` (× el alcance) y `echo` (su peso en
+-- el eco). Un sonido nuevo = su archivo + una línea en el índice.
+local INDEX = 'assets/sounds/index.json'
+local CATALOG, GAIN, RANGE, ECHO_W = {}, {}, {}, {}
+do
+    local ok, idx = pcall(function() return require('libs/json').decode(love.filesystem.read(INDEX)) end)
+    if ok and type(idx) == 'table' then CATALOG = idx.sounds or {} else print('[Sound] no se pudo leer ' .. INDEX) end
+    for _, e in ipairs(CATALOG) do
+        GAIN[e.id], RANGE[e.id], ECHO_W[e.id] = e.gain, e.range, e.echo
+    end
+end
+Sound.GAIN, Sound.CATALOG = GAIN, CATALOG
 
 local function scaled(sd, g)
     if not g or g == 1 then return sd end
@@ -94,212 +71,8 @@ local function load(name, path, stype)
 end
 
 function Sound.load()
-    -- Efectos chiptune (antes sintetizados por código; ahora archivos
-    -- normales, organizados por tipo en assets/sounds/)
-    load('gpStart',     'assets/sounds/player/ground_pound_start.wav',  'static')
-    load('gpImpact',    'assets/sounds/player/ground_pound_impact.wav', 'static')
-    load('headBump',    'assets/sounds/player/head_bump.wav',           'static')
-    load('stunned',     'assets/sounds/player/stunned.wav',             'static')
-    load('collect',     'assets/sounds/items/collect.wav',              'static')
-    load('oneUp',       'assets/sounds/items/one_up.wav',               'static')
-    load('appleHeal',   'assets/sounds/items/apple.wav',                'static')      -- (tools/sounds/items.py)
-    load('checkpoint',  'assets/sounds/items/checkpoint.wav',           'static')
-    load('blockBreak',  'assets/sounds/traps/block_break.wav',          'static')
-    load('switchOn',    'assets/sounds/mechanics/switch_on.wav',        'static')   -- bloque ON/OFF → ON
-    load('switchOff',   'assets/sounds/mechanics/switch_off.wav',       'static')   -- bloque ON/OFF → OFF
-    load('helmetBreak', 'assets/sounds/enemies/gummy/helmet_break.wav',       'static')   -- ground pound: se rompe el casco de un Gummy
-    load('helmetBounce','assets/sounds/enemies/gummy/helmet_bounce.wav',      'static')   -- rebote en el casco de un Gummy
-    load('pufferWarn',  'assets/sounds/enemies/pufferfish/warn.wav',        'static')   -- pez globo: medio hinchado (aviso)
-    load('pufferInflate','assets/sounds/enemies/pufferfish/inflate.wav',    'static')   -- pez globo: hinchado del todo
-    load('pufferDeflate','assets/sounds/enemies/pufferfish/deflate.wav',    'static')   -- pez globo: se deshincha
-    load('pufferPrick', 'assets/sounds/enemies/pufferfish/prick.wav',       'static')   -- pez globo: pincha al jugador
-    load('spikeShake',  'assets/sounds/traps/spike_shake.wav',          'static')
-    load('fireFizzle',  'assets/sounds/traps/fire_fizzle.wav',          'static')   -- bola del mortero que se apaga
-    load('respawnFx',   'assets/sounds/enemies/common/respawn.wav',            'static')   -- una entidad reaparece
-    load('crabPop',     'assets/sounds/enemies/crabby/pop.wav',           'static')   -- el Crabby arranca su pincho
-    load('bombIgnite',  'assets/sounds/enemies/bomb/ignite.wav',        'static')   -- bomba: se enciende la mecha
-    load('bombFizz',    'assets/sounds/enemies/bomb/fizz.wav',          'static')   -- bomba: la mecha chisporrotea
-    load('bombBlast',   'assets/sounds/enemies/bomb/blast.wav',         'static')   -- bomba: explota
-    load('bombKick',    'assets/sounds/enemies/bomb/kick.wav',          'static')   -- bomba: pisada / pateada
-    load('iceCrack',    'assets/sounds/mechanics/ice_crack.wav',        'static')   -- hielo fino: se agrieta
-    -- Ambiente (tools/sounds/ambience.py): gotas de las estalactitas y la cueva de fondo (src/fx/Ambience.lua)
-    load('dripFall',    'assets/sounds/ambience/drip_fall.wav',         'static')   -- la gota se suelta
-    load('dripSplash',  'assets/sounds/ambience/drip_splash.wav',       'static')   -- la gota llega al suelo
-    load('caveDrip',    'assets/sounds/ambience/cave_drip.wav',         'static')   -- gota lejana (ambiente)
-    load('caveRumble',  'assets/sounds/ambience/cave_rumble.wav',       'static')   -- rumor de la roca (ambiente)
-    load('cavePebble',  'assets/sounds/ambience/cave_pebble.wav',       'static')   -- piedrecita que rueda (ambiente)
-    -- La jungla (tools/sounds/jungle.py; src/fx/Ambience.lua): sus voces de fondo y el fuego de los braseros
-    load('jungleCicada',  'assets/sounds/ambience/jungle_cicada.wav',   'static')   -- enjambre de cigarras
-    load('jungleToucan',  'assets/sounds/ambience/jungle_toucan.wav',   'static')   -- graznido de tucán
-    load('jungleWhistle', 'assets/sounds/ambience/jungle_whistle.wav',  'static')   -- silbido de pájaro
-    load('jungleTrill',   'assets/sounds/ambience/jungle_trill.wav',    'static')   -- trino
-    load('jungleFrog',    'assets/sounds/ambience/jungle_frog.wav',     'static')   -- rana
-    load('jungleHowler',  'assets/sounds/ambience/jungle_howler.wav',   'static')   -- mono aullador lejano
-    load('jungleRustle',  'assets/sounds/ambience/jungle_rustle.wav',   'static')   -- hojas que se agitan
-    load('fireCrackle',   'assets/sounds/ambience/fire_crackle.wav',    'static')   -- chisporroteo del brasero
-    load('iceBreak',    'assets/sounds/mechanics/ice_break.wav',        'static')   -- hielo fino: se rompe
-    load('cryoWindup',  'assets/sounds/traps/cryo_windup.wav',         'static')   -- congelador: carga
-    load('cryoBlast',   'assets/sounds/traps/cryo_blast.wav',          'static')   -- congelador: chorro
-    load('cryoFreeze',  'assets/sounds/traps/cryo_freeze.wav',         'static')   -- algo queda congelado
-    load('cryoFree',    'assets/sounds/traps/cryo_free.wav',           'static')   -- se rompe el bloque de hielo
-    load('cryoDrop',    'assets/sounds/traps/cryo_drop.wav',           'static')   -- congelador: baja del techo (fase del jefe)
-    load('slamStart',   'assets/sounds/bosses/miniboss1/slam_start.wav',       'static')   -- la Nave Malvada se lanza en picado
-    load('spikesOut',   'assets/sounds/bosses/miniboss1/spikes_out.wav',       'static')   -- le salen los pinchos
-    load('fanfare',     'assets/sounds/jingles/fanfare.wav',            'static')
-    load('finish',      'assets/sounds/jingles/finish.wav',             'static')
-    load('sadtrombone', 'assets/sounds/jingles/sad_trombone.wav',       'static')
-    load('tick',        'assets/sounds/jingles/tick.wav',               'static')
-    load('startup',     'assets/sounds/jingles/startup.wav',            'static')   -- melodía del logo (StartupState)
-    load('dies',          'assets/sounds/player/hurt.ogg',          'static')
-    load('point',         'assets/sounds/flappy/point.ogg',         'static')
-    load('decimal',       'assets/sounds/flappy/decimal.ogg',       'static')
-    load('select',        'assets/sounds/ui/select.ogg',        'static')
-    -- tools/sounds/ui.py: entrar a un nivel desde el mapa (el iris) y la cuenta atrás del principio de cada nivel
-    load('levelEnter',    'assets/sounds/ui/level_enter.wav',   'static')
-    load('countTick',     'assets/sounds/ui/count_tick.wav',    'static')
-    load('countGo',       'assets/sounds/ui/count_go.wav',      'static')
-    load('jump',          'assets/sounds/player/jump.ogg',          'static')
-    load('step',          'assets/sounds/player/step.ogg',          'static')
-    load('dies2',         'assets/sounds/player/death.ogg',         'static')
-    load('enemyExplode',  'assets/sounds/enemies/common/explode.ogg',  'static')
-    load('waterWarning',   'assets/sounds/water/warning.ogg',          'static')
-    load('airGasp',        'assets/sounds/water/air_gasp.ogg',        'static')
-    load('waterSplash',    'assets/sounds/water/splash_in.ogg',     'static')
-    load('waterSplashOut', 'assets/sounds/water/splash_out.ogg',     'static')
-    load('drowning',      'assets/sounds/water/drowning.ogg',      'stream')
-    load('glugluglu',     'assets/sounds/water/glugluglu.ogg',     'static')
-    load('pointGain',     'assets/sounds/mechanics/point_gain.wav',    'static')   -- zona de puntos
-    load('floodRise',     'assets/sounds/water/flood_rise.wav',    'static')   -- inundación: sube
-    load('floodFall',     'assets/sounds/water/flood_fall.wav',    'static')   -- inundación: baja
-    load('undertowAlert', 'assets/sounds/water/undertow.wav',      'static')   -- aviso: empieza la resaca
-    -- Lo nuevo de 0.5.68 (tools/sounds/props.py; NO escuchados aún por el usuario)
-    load('gustInhale', 'assets/sounds/props/gust_inhale.wav', 'static')   -- el Soplón coge aire
-    load('gustBlow', 'assets/sounds/props/gust_blow.wav', 'static')   -- … y sopla
-    load('gustPop', 'assets/sounds/props/gust_pop.wav', 'static')   -- … y revienta
-    load('scaleCreak', 'assets/sounds/props/scale_creak.wav', 'static')   -- la Balanza se mueve
-    load('scaleLaunch', 'assets/sounds/props/scale_launch.wav', 'static')   -- la Balanza catapulta
-    load('boxPush', 'assets/sounds/props/box_push.wav', 'static')   -- arrastrar la Caja
-    load('boxLand', 'assets/sounds/props/box_land.wav', 'static')   -- la Caja cae
-    load('boxBreak', 'assets/sounds/props/box_break.wav', 'static')   -- la Caja se rompe
-    load('seedPickup', 'assets/sounds/props/seed_pickup.wav', 'static')   -- coger la Semilla
-    load('seedPlant', 'assets/sounds/props/seed_plant.wav', 'static')   -- plantarla
-    load('seedGrow', 'assets/sounds/props/seed_grow.wav', 'static')   -- crece
-    load('seedWilt', 'assets/sounds/props/seed_wilt.wav', 'static')   -- se marchita
-    load('icebergCreak', 'assets/sounds/props/iceberg_creak.wav', 'static')   -- el Iceberg cruje (sobrepeso: va a hundirse)
-    load('icebergSink', 'assets/sounds/props/iceberg_sink.wav', 'static')   -- … y se hunde
-    load('windWarn', 'assets/sounds/props/wind_warn.wav', 'static')   -- aviso de la Ventisca
-    load('windGust', 'assets/sounds/props/wind_gust.wav', 'static')   -- la racha
-    load('geyserRumble', 'assets/sounds/props/geyser_rumble.wav', 'static')   -- aviso del Géiser
-    load('geyserBurst', 'assets/sounds/props/geyser_burst.wav', 'static')   -- erupción de agua
-    load('steamHiss', 'assets/sounds/props/steam_hiss.wav', 'static')   -- vapor / humo
-    load('iceFreeze', 'assets/sounds/props/ice_freeze.wav', 'static')   -- el chorro se congela
-    -- (el Alud y el Teleférico: tools/sounds/avalanche_cablecar.py, ya a ≈ −12 dBFS)
-    load('avalancheRumble', 'assets/sounds/traps/avalanche_rumble.wav', 'static')   -- aviso del Alud
-    load('avalanchePour', 'assets/sounds/traps/avalanche_pour.wav', 'static')       -- el torrente de nieve
-    load('cablecarMove', 'assets/sounds/mechanics/cablecar_move.wav', 'static')     -- el Teleférico se mueve
-    load('cablecarStop', 'assets/sounds/mechanics/cablecar_stop.wav', 'static')     -- llega / arranca
-    -- (la Puerta activable: tools/sounds/door.py, ya a ≈ −12 dBFS)
-    load('doorClick', 'assets/sounds/mechanics/door_click.wav', 'static')   -- su Activador la suelta (en la puerta y en él)
-    load('doorOpen', 'assets/sounds/mechanics/door_open.wav', 'static')     -- se abre
-    load('doorThud', 'assets/sounds/mechanics/door_thud.wav', 'static')     -- se cierra
+    for _, e in ipairs(CATALOG) do load(e.id, e.file, e.stream and 'stream' or 'static') end
     if sources['drowning'] then sources['drowning']:setLooping(false) end
-    load('fwLaunch',      'assets/sounds/fireworks/launch.ogg',      'static')
-    load('fwBlast1',      'assets/sounds/fireworks/blast1.ogg',       'static')
-    load('fwBlast2',      'assets/sounds/fireworks/blast2.ogg',      'static')
-    load('fwBlastLarge',  'assets/sounds/fireworks/blast_large.ogg', 'static')
-    load('roundOver',     'assets/sounds/flappy/round_over.ogg',    'static')
-    load('spikeHit',      'assets/sounds/traps/spike_hit.wav',     'static')
-
-    -- Jefes
-    load('mortarShoot',   'assets/sounds/enemies/mortar/shoot.wav',        'static')
-    load('trampoline',    'assets/sounds/mechanics/trampoline.wav',         'static')
-    load('miniAppear',    'assets/sounds/bosses/miniboss1/appear.wav', 'static')
-    load('bossHurt',      'assets/sounds/bosses/boss_hurt.wav',    'static')
-    load('bossExplode',   'assets/sounds/bosses/boss_explode.wav', 'static')
-    load('mirrorLaugh',   'assets/sounds/bosses/mirror/laugh.wav', 'static')
-    load('mirrorWarp',    'assets/sounds/bosses/mirror/warp.wav',   'static')   -- se rompe y desaparece
-    load('mirrorAppear',  'assets/sounds/bosses/mirror/appear.wav', 'static')   -- reaparece en un espejo
-    load('mirrorPortal',  'assets/sounds/bosses/mirror/portal.wav', 'static')   -- apunta desde el espejo
-    load('glassWarn',     'assets/sounds/bosses/mirror/glass_warn.wav', 'static')  -- cristal roto: aviso
-    load('glassRise',     'assets/sounds/bosses/mirror/glass_rise.wav', 'static')  -- cristal roto: salen
-    load('glassHit',      'assets/sounds/bosses/mirror/glass_hit.wav',  'static')  -- cristal roto: tocarlos
-    load('crowdCheer',    'assets/sounds/bosses/groove/cheer.wav', 'static')   -- el público del Cangrejo Groove: le vitorea
-    load('crowdBoo',      'assets/sounds/bosses/groove/boo.wav',   'static')   -- … y le abuchea (tools/sounds/groove.py)
-    -- Mega Crabby (generados con tools/sounds/megacrabby.py)
-    load('megaStep',      'assets/sounds/bosses/megacrabby/step.wav',   'static')   -- pisada pesada
-    load('megaClack',     'assets/sounds/bosses/megacrabby/clack.wav',  'static')   -- chasquido de pinzas
-    load('megaHurt',      'assets/sounds/bosses/megacrabby/hurt.wav',   'static')   -- recibe un golpe
-    load('megaSlam',      'assets/sounds/bosses/megacrabby/slam.wav',   'static')   -- se clava al caer del techo
-    load('megaWindup',    'assets/sounds/bosses/megacrabby/windup.wav', 'static')   -- aviso de embestida
-    load('megaShrink',    'assets/sounds/bosses/megacrabby/shrink.wav', 'static')   -- muerte: se desinfla
-    load('megaFlee',      'assets/sounds/bosses/megacrabby/flee.wav',   'static')   -- huye asustado
-    load('megaRoar',      'assets/sounds/bosses/megacrabby/roar.wav',   'static')   -- rugido (entrada y descansos)
-    load('megaFall',      'assets/sounds/bosses/megacrabby/fall.wav',   'static')   -- cae del cielo (entrada)
-    -- Gran Bola de Nieve (tools/sounds/snowboss.py)
-    for _, n in ipairs({ 'laugh', 'roar', 'spit', 'splat', 'roll', 'land', 'slam', 'crash', 'dizzy', 'crack',
-                         'burst', 'flee', 'intro_roll', 'breath' }) do
-        local id = 'snow' .. n:gsub('^%l', string.upper):gsub('_(%l)', string.upper)
-        load(id, 'assets/sounds/bosses/snowboss/' .. n .. '.wav', 'static')
-    end
-    -- Rey Gummy (tools/sounds/megagummy.py): kingHop, kingFlop...
-    for _, n in ipairs({ 'hop', 'charge', 'jump', 'flop', 'wave', 'fanfare', 'laugh', 'hurt', 'split', 'pop',
-                         'crown', 'land' }) do
-        load('king' .. n:gsub('^%l', string.upper), 'assets/sounds/bosses/megagummy/' .. n .. '.wav', 'static')
-    end
-    -- Saltarín (tools/sounds/hopper.py)
-    for _, n in ipairs({ 'wind', 'jump', 'land' }) do
-        load('hop' .. n:gsub('^%l', string.upper), 'assets/sounds/enemies/hopper/' .. n .. '.wav', 'static')
-    end
-    -- Topo, piraña y planta carnívora (tools/sounds/jungle_enemies.py)
-    load('moleDig',     'assets/sounds/enemies/mole/dig.wav',               'static')   -- topo: el montículo avanza
-    load('molePop',     'assets/sounds/enemies/mole/pop.wav',               'static')   -- topo: asoma del suelo
-    load('moleBite',    'assets/sounds/enemies/mole/bite.wav',              'static')   -- topo: muerde
-    load('piranhaBite', 'assets/sounds/enemies/piranha/bite.wav',           'static')   -- piraña: muerde en el salto
-    load('plantRustle', 'assets/sounds/enemies/carnivoreplant/rustle.wav',  'static')   -- planta: el aviso
-    load('plantSnap',   'assets/sounds/enemies/carnivoreplant/snap.wav',    'static')   -- planta: se cierra de golpe
-    load('plantCrunch', 'assets/sounds/enemies/carnivoreplant/crunch.wav',  'static')   -- planta: se come algo
-    load('plantBite',   'assets/sounds/enemies/carnivoreplant/bite.wav',    'static')   -- el mordisco: la planta chiquita y las Lanzas
-    load('queenBite',   'assets/sounds/bosses/carnqueen/bite.wav',          'static')   -- el mordisco de la Reina Carnívora
-    -- Pingüino (tools/sounds/penguin.py)
-    load('penguinSquawk', 'assets/sounds/enemies/penguin/squawk.wav', 'static')   -- te ve y se tira de barriga
-    load('penguinSlide',  'assets/sounds/enemies/penguin/slide.wav',  'static')   -- se desliza / echa a correr de trineo
-    -- Escorpión y Escorpión Triple Aguijón (tools/sounds/scorpion.py): la matraca, 3 clics en un solo archivo por gesto
-    load('scorpionRattleJoin',  'assets/sounds/bosses/giantscorpion/rattle_join.wav',  'static')  -- las colas se enrollan
-    load('scorpionRattleSplit', 'assets/sounds/bosses/giantscorpion/rattle_split.wav', 'static')  -- se desenrollan
-    load('scorpionClick',   'assets/sounds/enemies/scorpion/click.wav',     'static')   -- un clic (el pequeño)
-    load('scorpionSting',   'assets/sounds/enemies/scorpion/sting.wav',     'static')   -- un aguijón golpea
-    load('scorpionSnap',    'assets/sounds/enemies/scorpion/snap.wav',      'static')   -- la pinza se cierra
-    load('scorpionSkitter', 'assets/sounds/enemies/scorpion/skitter.wav',   'static')   -- patitas sobre la roca
-    load('scorpionStrike',  'assets/sounds/bosses/giantscorpion/strike.wav', 'static')  -- las 3 colas se clavan
-    load('scorpionPull',    'assets/sounds/bosses/giantscorpion/pull.wav',  'static')   -- arranca la cola del suelo
-    load('scorpionHiss',    'assets/sounds/bosses/giantscorpion/hiss.wav',  'static')   -- su rugido
-    -- Bola de Nieve (tools/sounds/snowball.py): snowballWindup, snowballLaunch, snowballShove, snowballBonk
-    for _, n in ipairs({ 'windup', 'launch', 'shove', 'bonk' }) do
-        load('snowball' .. n:gsub('^%l', string.upper), 'assets/sounds/enemies/snowball/' .. n .. '.wav', 'static')
-    end
-    -- Linterna y Crabby lúgubre (tools/sounds/gloomy.py)
-    for _, n in ipairs({ 'on', 'off', 'out', 'dead' }) do
-        load('light' .. n:gsub('^%l', string.upper), 'assets/sounds/player/light_' .. n .. '.wav', 'static')
-    end
-    for _, n in ipairs({ 'wind', 'leap' }) do
-        load('gloomy' .. n:gsub('^%l', string.upper), 'assets/sounds/enemies/gloomy/' .. n .. '.wav', 'static')
-    end
-    for _, n in ipairs({ 'ping', 'listen', 'drop', 'slam', 'dazzled', 'shriek', 'hurt', 'step', 'roar' }) do
-        load('mgloomy' .. n:gsub('^%l', string.upper), 'assets/sounds/bosses/megagloomy/' .. n .. '.wav', 'static')
-    end
-    -- La historia (tools/sounds/story.py): cinemáticas y fragmentos del espejo
-    for _, n in ipairs({ 'glint', 'crash', 'orb', 'blast', 'shard', 'grow', 'clink', 'restore', 'bell', 'shrink', 'wave' }) do
-        load('story' .. n:gsub('^%l', string.upper), 'assets/sounds/story/' .. n .. '.wav', 'static')
-    end
-    load('shardDrop', 'assets/sounds/story/shard_drop.wav', 'static')      -- un jefe suelta su fragmento
-    load('shardGet',  'assets/sounds/story/shard_get.wav',  'static')      -- el jugador lo recoge
-    load('storyRumble',   'assets/sounds/story/rumble.wav',    'static')   -- el volcán ruge, lejos
-    load('storyLaughFar', 'assets/sounds/story/laugh_far.wav', 'static')   -- la risa del Reflejo, con eco
-    load('storyPant',     'assets/sounds/story/pant.wav',      'static')   -- el monstruo, sin aliento
-    -- el CAÑÓN del mapa entre islas (tools/sounds/map_cannon.py; src/states/story/StoryMapCannons.lua)
-    for _, n in ipairs({ 'load', 'fuse', 'boom', 'whoosh', 'land' }) do
-        load('cannon' .. n:gsub('^%l', string.upper), 'assets/sounds/story/cannon_' .. n .. '.wav', 'static')
-    end
     -- Música: todas las pistas del índice (assets/music/index.json)
     for _, tr in ipairs(Music.list) do Sound.loadTrack(tr) end
 end
@@ -341,23 +114,9 @@ end
 -- Online cada cliente calcula SU volumen: los eventos de sonido traen x, y.
 Sound.NEAR = 480
 Sound.FAR  = 1400
--- Alcance por sonido (multiplica NEAR y FAR): lo que hace algo enorme se oye
--- en toda la arena (un jefe que la cruza no debe quedarse mudo)
-Sound.RANGE = {
-    bombBlast = 4,
-    scorpionRattleJoin = 3, scorpionRattleSplit = 3, scorpionStrike = 3, scorpionPull = 2.5, scorpionHiss = 3,
-    scorpionSting = 2.5, scorpionSnap = 2.5,
-    queenBite = 3,
-    mirrorWarp = 2.5, mirrorAppear = 2.5, mirrorPortal = 2.5, glassWarn = 3, glassRise = 3,
-    mgloomyPing = 3, mgloomyListen = 3, mgloomyDrop = 3, mgloomySlam = 3, mgloomyDazzled = 3, mgloomyShriek = 3,
-    mgloomyHurt = 3, mgloomyStep = 2, mgloomyRoar = 3,
-    megaStep = 1.8, megaClack = 2.2, megaRoar = 3, megaFall = 3, megaHurt = 3, megaSlam = 3, megaWindup = 2.5,
-    megaShrink = 3, megaFlee = 2.2, bossHurt = 3, bossExplode = 3,
-    snowLaugh = 3, snowRoar = 3, snowSlam = 3, snowCrash = 3, snowBurst = 3, snowIntroRoll = 3, snowRoll = 2.5,
-    snowLand = 2.5, snowSpit = 2.2, snowDizzy = 2.5, snowCrack = 2.5, snowBreath = 2.5,
-    kingFlop = 3, kingLand = 3, kingFanfare = 3, kingLaugh = 3, kingSplit = 3, kingWave = 2.5, kingCharge = 2.5,
-    kingJump = 2.5, kingHurt = 2.5, kingPop = 2.5, kingCrown = 2.5, kingHop = 2,
-}
+-- Alcance por sonido (`range` en el índice: multiplica NEAR y FAR): lo que hace algo enorme se oye en toda la arena
+-- (un jefe que la cruza no debe quedarse mudo)
+Sound.RANGE = RANGE
 local listenerX, listenerY = nil, nil
 local emitterX, emitterY   = nil, nil
 
@@ -403,24 +162,15 @@ function Sound.source(name) return sources[name], origin[name] end
 
 -- ECO (cuevas profundas: nivel con `echo`, Sound.setEcho): cada sonido se repite más flojo y
 -- un poco más grave, y cuanto MÁS FUERTE llega, más eco deja (más repeticiones y más altas).
--- "Fuerte" = su volumen ya atenuado por la distancia × su peso (ECHO_W: un golpe en la roca
+-- "Fuerte" = su volumen ya atenuado por la distancia × su peso (`echo` en el índice: un golpe en la roca
 -- retumba; un paso, casi nada). Repeticiones a mano (clones con retraso): funciona igual en PC,
 -- Switch y Android (los efectos de OpenAL no están en todas partes). La música no tiene eco.
 local ECHO_DELAY, ECHO_DECAY, ECHO_MIN, ECHO_MAX = 0.21, 0.5, 0.07, 3
-local ECHO_W = {
-    step = 0.3, jump = 0.4, lightOn = 0.35, lightOff = 0.35, lightDead = 0.35, lightOut = 0.6, headBump = 0.6,
-    gpImpact = 1.0, gpStart = 0.5, enemyExplode = 0.9, blockBreak = 1.0, spikeHit = 0.9, dies = 0.8, dies2 = 0.9,
-    bossHurt = 1.0, bossExplode = 1.0, mgloomySlam = 1.0, mgloomyShriek = 1.0, mgloomyRoar = 1.0, mgloomyPing = 0.9,
-    mgloomyDazzled = 0.9, mgloomyHurt = 0.9, mgloomyListen = 0.7, mgloomyStep = 0.5, gloomyWind = 0.5, gloomyLeap = 0.6,
-    megaSlam = 1.0, megaRoar = 1.0, megaStep = 0.7, bombBlast = 1.0, stunned = 0.6, collect = 0.5,
-    dripFall = 0.5, dripSplash = 0.9, caveDrip = 0.3, cavePebble = 0.3, caveRumble = 0,   -- (los de ambiente ya traen su cola)
-}
 local echoK, echoes = 0, {}
 function Sound.setEcho(k)
     echoK = k or 0
     if echoK <= 0 then echoes = {} end
 end
-function Sound.getEcho() return echoK end
 
 -- VOCES: cada sonido tiene un grupo fijo de copias (como mucho VOICES) que se REUTILIZAN: se usa una que ya calló
 -- y, si suenan todas, la que lleva más rato. Antes cada Sound.play hacía un clon nuevo que solo se liberaba al pasar
@@ -515,7 +265,6 @@ function Sound.getLevelMusic() return levelMusic end
 
 -- Música del nivel en juego (id del índice; nil o desconocido = la de siempre)
 function Sound.setBaseLevelMusic(id) baseLevelMusic = id and Music.levelTrack(id) or nil end
-function Sound.getBaseLevelMusic() return baseLevelMusic or Music.DEFAULT end
 
 -- 'level' = lo que deba sonar en el nivel: la del jefe (si manda), la del
 -- nivel o la de siempre

@@ -8,7 +8,11 @@ own player and reconciles against the last input the server acknowledges. Everyt
 
 | File | Role |
 |---|---|
-| `server/main.lua` | the server: constants and anti-abuse, stubs (`Sound`, `Input`, headless images), level catalog, lag compensation, room simulation (`initRoomSim`, `stepRoom`, `stepPlayer`), broadcasts (snapshots, events, `game_init`), rooms and message handlers, console UI, main loop |
+| `server/main.lua` | the server's entry: constants and anti-abuse limits, stubs (`Sound`, `Input`, headless images), the shared state table `S`, the console, the main loop (`guarded` per room) |
+| `server/srv/util.lua` · `catalog.lua` | log, ids, client lookup, text validation · the level catalog |
+| `server/srv/sim.lua` | a room's simulation: create it, lag compensation (`checkPlayerEnemyCollisions`), `stepPlayer`, `stepRoom` |
+| `server/srv/broadcast.lua` | room updates, `game_init`, events, snapshots, end of a game |
+| `server/srv/lobby.lua` | connections and every client message (rooms, admin, inputs) |
 | `server/updates.lua` | publishes and serves game updates (see [updates-and-release](updates-and-release.md)) |
 | `src/network/Protocol.lua` | `VERSION`, tick constants, input bits, own-state pack / apply / validate, player flags, `SHARED_SOUNDS` / `PRIVATE_SOUNDS`, the `Input` stub |
 | `src/network/NetworkClient.lua` | the `NC` singleton: `NC:connect`, `NC:on / off`, `NC:send`, `NC.myId` |
@@ -38,9 +42,10 @@ own player and reconciles against the last input the server acknowledges. Everyt
 **Harnesses:** `online_smoke` (a bot + a real client; `LEVEL=`, `MODE=`, `WATCH=`, `WANT=`, `DIFF=`),
 `online_boss`, `online_helmet`. `tools/tests/run.sh` starts a fresh local server for each.
 
-**Known debt:** `server/main.lua` (1687 lines) keeps its room, player and sound-stub state in file-level locals that
-almost every section reassigns, so it could not be split mechanically like the other large files; see
-[known-debt](known-debt.md).
+**Parts (2026-11-02):** `server/main.lua` loads `server/srv/*.lua` with `require('srv.' .. part)(S)`. They share one table `S`:
+the room / player tables, the sound-stub state (`S.soundEvents`, `S.soundOwner`, `S.emitX / emitY`, `S.currentSim`), the game modules
+loaded in `love.load` (`S.Level`, `S.Entities`…) and each part's functions (`S.log`, `S.pushEvent`…). A part reads constants
+once at load (`local MAX_BUDGET = S.MAX_BUDGET`), and mutable state and functions from other parts always through `S`.
 
 ## Connection
 

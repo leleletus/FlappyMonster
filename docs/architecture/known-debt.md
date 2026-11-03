@@ -5,29 +5,22 @@ would help future work.
 
 ## Architecture
 
-1. **`server/main.lua` (~1800 lines) could not be split.** Its sections share 15 file-level locals that are
-   reassigned from several places (`players`, the lazily loaded modules `Level / Entities / BossZones / …` set in
-   `love.load`, the sound-stub state `_soundEvents / _currentSoundPlayerId / _emitX / _emitY`, `_currentSim`,
-   `MSG_BURST`), and its banners do not match real seams (the "level catalog" section also holds `initRoomSim` and
-   `pushEvent`). Way forward: first move that state into one table `S` (pure renaming, verifiable with the online
-   harnesses), then split into server modules (catalog, lagcomp, sim, broadcast, lobby, console) with the same
-   part pattern as the other files.
-2. **The single-player loop and the server loop are two hand-kept copies of the same sequence**
-   (`AdventureState:update` and `stepRoom` / `stepPlayer` / `checkPlayerEnemyCollisions`): player step → death /
-   respawn (auto-scroll point, boss-zone point) → `Interactions.run` callbacks (pickup, checkpoint, score) →
-   `level:update` → floods → entities (through `Difficulty.dt`, with the sound emitter set) → point zones → boss
-   controller → queued tile changes. The RULES are shared (they live in `Interactions`, `PointAreas`, `BossZones`…)
-   but the ORDER and the glue are duplicated, which is where "works offline, differs online" bugs come from. Way
-   forward: one shared `Sim.step(sim, dt, hooks)` module under src/world used by both, the hooks being what differs
-   (emit event vs play locally, lives bookkeeping).
-3. **Large single-system files** that are long because the system is big, not tangled — left as they are:
+1. **The single-player loop and the server loop still run the step in a different ORDER.** 2026-11-02: the server
+   was split into parts (`server/srv/`, see [netcode](netcode.md)) and the glue both did by hand moved to
+   `src/world/systems/Sim.lua` (solid bodies + air, respawn point, entity step, ground pound on other players, the
+   10-minute limit). The entity update order was unified on single player's (last to first; the server went first to
+   last). What still differs, and could make "works offline, differs online" bugs:
+   - single player: level update → floods → point zones → bodies → player → carry → entities → interactions → boss
+     controller → auto-scroll;
+   - server: floods → bodies → each player (step, its interactions with lag compensation, ground pound push) → carry →
+     level update → entities → point zones → boss controller → auto-scroll → tile events → interactions again (a
+     second pass, so enemies that moved reach a still player).
+   Unifying it means choosing one order and re-checking every gameplay harness: a design decision, not a rename.
+2. **Large single-system files** that are long because the system is big, not tangled — left as they are:
    `snowboss.lua` (1841), `megacrabby.lua` (1613), `StoryMapState.lua` (~1300), `mirror.lua` (1095), `megagummy.lua`
    (1078), `OnlineHubState.lua` (~750), `Particles.lua` (993, one long `elseif` chain per particle kind — a table of
    kinds would let a kind be added without touching the function).
-4. **`Sound.load()` is one long list** of `load(...)` lines and a `GAIN` table: adding a sound means editing two
-   places far apart. A data file (a sounds index next to the music one: name → file, gain, range) would make sounds a catalog
-   like music.
-5. **Two unrelated "difficulty" tables**: `DIFFICULTIES` in `settings.lua` (Flappy mode pacing) and
+3. **Two unrelated "difficulty" tables**: `DIFFICULTIES` in `settings.lua` (Flappy mode pacing) and
    `src/core/Difficulty.lua` (Adventure modifiers). Only the name is confusing.
 
 ## Naming that cannot change (ids are data) — see the glossary in docs/README.md
@@ -35,12 +28,6 @@ would help future work.
 `miniboss1` = the Evil Ship; tile `danger` = lava; tile `solid` = stone; level key `foliage` = decorations; `snowboss`
 (entity) vs `snowball_boss` (music); `EnemyTest.json` (the only CamelCase level file); levels `nivel01` and
 `carrera01` (the two oldest levels, now story levels of the Caves and the Volcano).
-
-## Small dead code left in place (public API nobody calls today)
-
-`Sound.getEcho`, `Sound.getBaseLevelMusic`, `PlayerAdventure:blindLight` (documented as a hook for boss hits),
-`Darkness.invalidate`, `NC:isBusy`, `View.isLocked`, `Level:isInWater`, `BombCore.isLit / isExploding`,
-`Boss:inIntro`. Harmless; remove when touching those files.
 
 ## Generator intermediates that ship for no reason
 

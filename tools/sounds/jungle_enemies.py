@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # tools/sounds/jungle_enemies.py — sonidos del TOPO, la PIRAÑA y la PLANTA CARNÍVORA (0.5.96), con el tramo más fuerte
-# de 100 ms a -12 dBFS (sin GAIN en Sound.lua; el código baja los que van flojos con el volumen de Sound.play):
+# de 100 ms a -12 dBFS (sin gain en assets/sounds/index.json; el código baja los que van flojos con el volumen de Sound.play):
 #   enemies/mole/dig.wav            el montículo avanza: tierra que se remueve (ruido grave a golpecitos)
 #   enemies/mole/pop.wav            asoma del suelo: un "plop" de tierra que salta
 #   enemies/mole/bite.wav           muerde: dos chasquidos de dientes pequeños, rápidos

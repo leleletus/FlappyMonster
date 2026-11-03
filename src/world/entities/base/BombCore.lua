@@ -48,9 +48,6 @@ function Core.radii(self)
              push = p.pushRadius or Explosions.DEFAULT.push }
 end
 
-function Core.isLit(self) return self.state == 'lit' end
-function Core.isExploding(self) return self.state == 'exploding' end
-
 -- Enciende la mecha (una vez)
 function Core.light(self, fuse)
     if self.state == 'lit' or self.state == 'exploding' or self.state == 'dead' or not self.alive then return end

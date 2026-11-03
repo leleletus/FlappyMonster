@@ -16,7 +16,6 @@ local Level           = require 'src/world/level/Level'
 local PlayerAdventure = require 'src/player/PlayerAdventure'
 local PlayRecorder    = require 'src/core/PlayRecorder'
 local Entities        = require 'src/world/entities/Entities'
-local Push            = require 'src/world/systems/Push'
 local Carry           = require 'src/world/systems/Carry'
 local Entity          = require 'src/world/entities/base/Entity'
 local Particles       = require 'src/fx/Particles'
@@ -27,6 +26,7 @@ local AutoScroll      = require 'src/world/systems/AutoScroll'
 local Floods          = require 'src/world/systems/Floods'
 local PointAreas      = require 'src/world/systems/PointAreas'
 local StartCountdown  = require 'src/world/systems/StartCountdown'
+local Sim             = require 'src/world/systems/Sim'
 
 local AdventureState = BaseState:new()
 
@@ -513,9 +513,7 @@ function AdventureState:update(dt)
         self.respawnTimer = self.respawnTimer + dt
         if self.respawnTimer >= RESPAWN_DELAY then
             -- Cámara automática: se reaparece en el centro de lo que se ve
-            local rx, ry = AutoScroll.respawnPoint(self.level)
-            if not rx then rx, ry = BossZones.respawnPoint(self.level, self.player) end   -- suelo roto en la zona
-            if rx then self.player.spawnX, self.player.spawnY = rx, ry end
+            Sim.respawnPoint(self.level, self.player)
             self.player:respawn()
             self.camFrozen    = false
             self.respawning   = false
@@ -573,11 +571,11 @@ function AdventureState:update(dt)
     -- ── Lógica normal ─────────────────────────────────────────────────────────
     -- Cap del tiempo: congelar en 600 al morir por tiempo
     if not self.player.dying and not self.won then
-        self.levelTime = math.min(self.levelTime + dt, 600)
+        self.levelTime = math.min(self.levelTime + dt, Sim.TIME_LIMIT)
     end
 
     -- Límite de 10 minutos: muerte instantánea con todas las vidas
-    if self.levelTime >= 600 and not self.player.dying then
+    if self.levelTime >= Sim.TIME_LIMIT and not self.player.dying then
         self.player.lives = 1   -- die() restará 1, quedando en 0 → game over
         self.player:die(nil, true)
     end
@@ -607,8 +605,7 @@ function AdventureState:update(dt)
         self:spawnPopup('+' .. pts, pa.x, pa.y - 60)
         Sound.play('pointGain'); Particles.emit('points', pa.x, pa.y)
     end)
-    self.level.solidBodies = Entities.solidBodies(self.enemies)   -- jefes sólidos
-    self.level.pushers = Push.collect(self.enemies)                -- lo que sopla (systems/Push)
+    Sim.bodies(self.level, self.enemies)                           -- cuerpos sólidos y lo que sopla
     -- (la escena final de una carrera en la historia: al acabar, el nivel termina sin meta y enlaza con el siguiente)
     if self.runOut and self.runOut:update(dt) then
         local r = self:result()
@@ -640,17 +637,7 @@ function AdventureState:update(dt)
     -- Actualizar enemigos y limpiar los que ya murieron. Sus sonidos se
     -- atenúan según lo lejos que estén del jugador (Sound.setEmitter).
     Sound.setListener(self.player.x, self.player.y)
-    self.level.liveEntities = self.enemies     -- obstáculos entre entidades
-    for i = #self.enemies, 1, -1 do
-        local g = self.enemies[i]
-        Sound.setEmitter(g.x, g.y)
-        g:update(Difficulty.dt(g, dt), self.level)          -- (su ritmo: la dificultad)
-        Sound.clearEmitter()
-        -- (los súbditos de reserva de un jefe se quedan: el jefe los reutiliza)
-        if not g.alive and not g.summonOf then
-            table.remove(self.enemies, i)
-        end
-    end
+    Sim.stepEntities(self.level, self.enemies, dt, Sound.setEmitter, true)
 
     -- Colisiones jugador ↔ entidades
     self:checkEnemyCollisions()

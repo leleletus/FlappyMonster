@@ -89,7 +89,6 @@ local function lightTiles(level)
     level._lightTiles = out
     return out
 end
-function Darkness.invalidate(level) if level then level._lightTiles = nil end end
 
 -- Luz EN REDONDO cortada por los bloques (la de una entidad con `cast`: el farol del Saltarín Gigante): los mismos
 -- rayos que la simulación (Lights.ray), en dos escalones

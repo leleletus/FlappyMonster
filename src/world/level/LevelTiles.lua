@@ -284,10 +284,6 @@ function Level:previousDef(col, row)
     return raw and TileTypes.get(tileBaseId(raw)) or nil
 end
 
-function Level:isInWater(bx, by, bw, bh)
-    return self:liquidInBox(bx, by, bw, bh) ~= nil
-end
-
 -- Devuelve lista de {dir, x, y, w, h} de pinchos que intersectan la hitbox.
 -- Hitbox = BASE del pincho (la misma que dibuja Level:renderDebug).
 function Level:getSpikesInBox(bx, by, bw, bh)

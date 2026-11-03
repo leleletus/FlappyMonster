@@ -46,6 +46,14 @@ move this page to the archive.
 - [x] (0.5.148) **C6. Tests:** `perf` scenes for credits and the online client, full Evil Ship rules harness, forced push-only probe
   for the Mirror.
 
-## Later (the user: "el 7 lo hacemos luego")
+## D. Second round (the user, 2026-11-02, in this order)
 
-Code cleanup: shared `Sim.step`, splitting `server/main.lua`, sound catalog as data, removing dead code.
+- [x] (0.5.149) **D1. Code cleanup:** dead code removed · sound catalog as data (`assets/sounds/index.json`) · server split
+  into `server/srv/` · shared glue in `src/world/systems/Sim.lua` and one entity update order. The two loops still run
+  the step in a different ORDER (known-debt item 1): unifying it is a design decision left open.
+- [ ] **D2. Online:** profanity filter for names · report / block · rejoin a running match / spectate · leaderboards · daily
+  challenge.
+- [ ] **D3. Game modes:** boss rush (the user: it finally separates the race levels from the boss levels) · ghost time trials.
+- [ ] **D4. Story extras** (agreed with the user): copy a save slot · RETRY on the story results screen (replay the same
+  level straight away) · RETRY in the single-player pause menu · a Theater in the Collection (rewatch unlocked films:
+  intro, ending, chase, lair, credits) · a shard gallery (the shards collected per world).

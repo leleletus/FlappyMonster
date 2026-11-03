@@ -90,8 +90,6 @@ function NC:connect(host, port, name)
     end
 end
 
-function NC:isBusy() return self.client ~= nil or self._resolving ~= nil end
-
 function NC:_open(host, port, name)
     self.client = sock.newClient(host, port, Protocol.CHANNELS)
     self.client:setSerialization(bitser.dumps, bitser.loads)

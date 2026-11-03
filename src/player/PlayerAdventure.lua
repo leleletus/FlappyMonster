@@ -423,13 +423,6 @@ function PlayerAdventure:updateLight(dt, level, pressed)
     end
 end
 
--- Un golpe fuerte (jefe) le apaga la linterna `t` s (sin gastar batería)
-function PlayerAdventure:blindLight(t)
-    if self.lightOn then Sound.play('lightOut') end
-    self.lightOn = false
-    self.lightCd = math.max(self.lightCd or 0, t)
-end
-
 function PlayerAdventure:_update(dt, level)
     self.hitNow = nil
     if self.dying then

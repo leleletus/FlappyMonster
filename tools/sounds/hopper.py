@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # tools/sounds/hopper.py — sonidos del SALTARÍN (assets/sounds/enemies/hopper/*.wav), con el tramo más fuerte de
-# 100 ms a -12 dBFS (GAIN 1 en Sound.lua):
+# 100 ms a -12 dBFS (sin gain en assets/sounds/index.json):
 #   wind   se agacha: el muelle se aprieta (un chirrido corto que sube)
 #   jump   salta: "boing" de muelle (tono que sube con vibrato rápido que se apaga)
 #   land   cae: golpe sordo y el muelle que tiembla un instante

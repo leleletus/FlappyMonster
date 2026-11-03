@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # tools/sounds/snowball.py — sonidos de la BOLA DE NIEVE (`snowball`, enemigo de datos), con el tramo más fuerte de
-# 100 ms a -12 dBFS (como tools/sounds/jungle_enemies.py; el volumen fino va en Sound.lua):
+# 100 ms a -12 dBFS (como tools/sounds/jungle_enemies.py; el volumen fino va en assets/sounds/index.json):
 #   enemies/snowball/windup.wav   se aplasta para lanzarse: nieve que se aprieta (crujidos cortos que aceleran)
 #   enemies/snowball/launch.wav   sale disparada: un "fffump" de nieve + el siseo de rodar que se aleja
 #   enemies/snowball/shove.wav    empuja a alguien: golpe blando y grave de nieve ("pomf") y una risita aguda

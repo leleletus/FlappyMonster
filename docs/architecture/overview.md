@@ -11,7 +11,7 @@ Everything that affects gameplay must behave identically in three places:
 | Where | Entry | What runs there |
 |---|---|---|
 | Single player | `src/states/adventure/AdventureState.lua` | the whole simulation + drawing |
-| Server | `server/main.lua` (`love server`) | the whole simulation for every room, no drawing; `Sound` and `Input` are stubs |
+| Server | `server/main.lua` + its parts in `server/srv/` (`love server`) | the whole simulation for every room, no drawing; `Sound` and `Input` are stubs |
 | Online client | `src/states/online/OnlineAdventureState.lua` | only PREDICTS the local player; draws everything else from server snapshots |
 
 So the shared simulation code (`src/player/`, `src/world/`) must never touch `love.graphics`, the real `Input` or the

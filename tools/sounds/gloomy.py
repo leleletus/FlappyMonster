@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # tools/sounds/gloomy.py
 # Sonidos de la LINTERNA y del CRABBY LÚGUBRE (assets/sounds/player/light_*.wav, assets/sounds/enemies/gloomy/*.wav), todos con el tramo
-# más fuerte de 100 ms a -12 dBFS (GAIN 1 en Sound.lua):
+# más fuerte de 100 ms a -12 dBFS (sin gain en assets/sounds/index.json):
 #   light_on     clic de interruptor que sube       light_off   clic que baja
 #   light_out    se agota: zumbido que cae y chasquido   light_dead  no enciende: doble clic sordo
 #   wind         va a saltar: castañeteo seco y grave que se acelera (como un insecto de cueva; el

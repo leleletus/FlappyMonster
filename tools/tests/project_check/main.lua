@@ -103,7 +103,15 @@ function love.load()
     end
     local uniq, m2 = {}, {}
     for _, p in ipairs(missing) do if not uniq[p] then uniq[p] = true; m2[#m2 + 1] = p end end
-    check('cargas', #m2 == 0, ('%d pistas de música; faltan en disco: %s'):format(#Music.list, #m2 > 0 and list(m2, 8) or 'nada'))
+    -- (y los sonidos del catálogo assets/sounds/index.json: ids únicos y su archivo en disco)
+    local snd = require('libs/json').decode(love.filesystem.read('assets/sounds/index.json')).sounds
+    local seenId = {}
+    for _, e in ipairs(snd) do
+        if seenId[e.id] then m2[#m2 + 1] = 'id repetido: ' .. e.id end
+        seenId[e.id] = true
+        if not love.filesystem.getInfo(e.file) then m2[#m2 + 1] = e.file end
+    end
+    check('cargas', #m2 == 0, ('%d pistas de música, %d sonidos; faltan en disco: %s'):format(#Music.list, #snd, #m2 > 0 and list(m2, 8) or 'nada'))
 
     -- idiomas
     local function flat(t, pre, out)

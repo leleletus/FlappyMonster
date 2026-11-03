@@ -5,8 +5,10 @@ with per-sound gain and distance attenuation, runs the cave echo, and plays musi
 override, online sync). `src/audio/Music.lua` reads the catalog `assets/music/index.json`.
 
 **All sounds are files** (no procedural audio). To add one: a WAV in `assets/sounds/<group>/` (usually written by a
-generator in `tools/sounds/`), one `load('name', path, 'static')` line in `Sound.load()`, a gain in the `GAIN` table
-so its loudest 100 ms sit at about −12 dBFS, then `Sound.play('name')`. The `sounds` harness checks that every name
+generator in `tools/sounds/`), one line in the catalog `assets/sounds/index.json` (`id`, `file`, and if needed `gain`
+so its loudest 100 ms sit at about −12 dBFS, `range` × the hearing distance, `echo` its weight in cave echo, `stream`,
+`note`), then `Sound.play('id')`. (Before 2026-11-02 these were `load(...)` lines and `GAIN` / `RANGE` / `ECHO_W`
+tables in `Sound.lua`; "no GAIN entry" below means no `gain` field.) The `sounds` harness checks that every name
 played in code is loaded and that levels are in range.
 
 On the server `Sound` is a stub that turns plays into events; see [netcode](../architecture/netcode.md) for who hears
@@ -15,7 +17,7 @@ what (`SHARED_SOUNDS`, `PRIVATE_SOUNDS`). Sounds can also be NOISE that enemies 
 
 ## The Sound module
 
-- `src/audio/Sound.lua` — Sound.play(name,pitch,vol), playMusic(name), stopMusic, tracked sounds, per-sound GAIN baked at load. ALL sounds are files (no procedural audio): add one with load('name', 'assets/sounds/<group>/x.wav', 'static') in Sound.load(), then Sound.play('name'). Folders: player/, enemies/<enemy>/ (shared ones in enemies/common/), bosses/<boss>/, items/, mechanics/, traps/, water/, jingles/, ui/, flappy/, fireworks/. Images: assets/images/<thing>/ (bosses/<boss>/), all lowercase; music: assets/music/snake_case.wav
+- `src/audio/Sound.lua` — Sound.play(name,pitch,vol), playMusic(name), stopMusic, tracked sounds, per-sound `gain` from `assets/sounds/index.json` baked at load. ALL sounds are files (no procedural audio): add one with load('name', 'assets/sounds/<group>/x.wav', 'static') in Sound.load(), then Sound.play('name'). Folders: player/, enemies/<enemy>/ (shared ones in enemies/common/), bosses/<boss>/, items/, mechanics/, traps/, water/, jingles/, ui/, flappy/, fireworks/. Images: assets/images/<thing>/ (bosses/<boss>/), all lowercase; music: assets/music/snake_case.wav
 
 - `src/audio/Music.lua` — MUSIC CATALOG from assets/music/index.json (id, name, file | intro+loop, volume, loop, level, boss). Sound loads every track from it (`Sound.loadTrack`); `level=false` tracks (boss, menus, youWin) are not offered as level music. Adding a song = file + one index entry. Level JSON `"music": id` (editor: Nivel tab → Música, ▶ preview). Music ALWAYS starts from 0 when (re)started: `stopMusic`/`playMusic` stop and rewind even a PAUSED source (it used to resume where it was after leaving a level from the pause menu); `AdventureState:exit` calls `Sound.leaveMatch()` so retrying (game over) or re-entering starts like the first time (harness `sp_boss RETRY=level`). `Sound.playMusic('level')` resolves: `setLevelMusic` override (boss) → `setBaseLevelMusic(level.music)` → 'classic'. Online the client re-seeks the level track every 1 s to the server clock (`Sound.syncMusic('level', t)`; tick 0 = round start), so all players hear the same point of the song (tested: ≤0.1 s).
 

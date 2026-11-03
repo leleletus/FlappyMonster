@@ -38,6 +38,4 @@ function View.unlock()
     if ok and M.clearPreviews then M.clearPreviews() end
 end
 
-function View.isLocked() return locked end
-
 return View

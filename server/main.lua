@@ -77,39 +77,38 @@ local PLAYER_COLORS = {
 --  Stubs de sistema (deben definirse ANTES de hacer require de entidades)
 -- ─────────────────────────────────────────────────────────────────────────────
 
--- Buffer de eventos de sonido recopilados durante la simulación de cada sala.
-local _soundEvents           = {}
-local _currentSoundPlayerId  = nil   -- nil = sonido global (enemigos, etc.)
-local _emitX, _emitY         = nil, nil   -- de dónde sale el sonido (atenuación en cada cliente)
+-- El SONIDO del servidor: cada Sound.play se apunta como evento (S.soundEvents) con quién lo causó (S.soundOwner) y de
+-- dónde sale (S.emitX / S.emitY); los clientes lo reproducen.
+local S = {}                 -- (el estado que comparten las partes de server/srv/: ver abajo)
 
 Sound = {
     play        = function(name, pitch)
         -- (los privados de un jugador no se mandan: su cliente ya los predijo)
-        if name and not (_currentSoundPlayerId and Protocol.PRIVATE_SOUNDS[name]) then
+        if name and not (S.soundOwner and Protocol.PRIVATE_SOUNDS[name]) then
             -- El tono viaja con 2 decimales (p. ej. los sonidos graves del jefe espejo)
             pitch = (pitch and pitch ~= 1) and math.floor(pitch * 100 + 0.5) / 100 or nil
-            local owner = (not Protocol.SHARED_SOUNDS[name]) and _currentSoundPlayerId or nil
-            table.insert(_soundEvents, { sound = name, playerId = owner, pitch = pitch,
-                                         x = _emitX and math.floor(_emitX + 0.5), y = _emitY and math.floor(_emitY + 0.5) })
+            local owner = (not Protocol.SHARED_SOUNDS[name]) and S.soundOwner or nil
+            table.insert(S.soundEvents, { sound = name, playerId = owner, pitch = pitch,
+                                         x = S.emitX and math.floor(S.emitX + 0.5), y = S.emitY and math.floor(S.emitY + 0.5) })
         end
     end,
     -- Emisor del sonido: cada cliente atenúa según SU distancia (ver src/audio/Sound.lua)
-    setEmitter   = function(x, y) _emitX, _emitY = x, y end,
-    clearEmitter = function() _emitX, _emitY = nil, nil end,
-    getEmitter   = function() return _emitX, _emitY end,
+    setEmitter   = function(x, y) S.emitX, S.emitY = x, y end,
+    clearEmitter = function() S.emitX, S.emitY = nil, nil end,
+    getEmitter   = function() return S.emitX, S.emitY end,
     withEmitter  = function(x, y, fn, ...)
-        local ox, oy = _emitX, _emitY
-        _emitX, _emitY = x, y
+        local ox, oy = S.emitX, S.emitY
+        S.emitX, S.emitY = x, y
         local ok, err = pcall(fn, ...)
-        _emitX, _emitY = ox, oy
+        S.emitX, S.emitY = ox, oy
         if not ok then error(err, 0) end
     end,
     -- (un sonido en un punto del mundo: como play con ese emisor — la ayuda del jefe, src/…/directors/bossdrops.lua)
     playAt       = function(name, x, y, pitch)
-        local ox, oy = _emitX, _emitY
-        _emitX, _emitY = x, y
+        local ox, oy = S.emitX, S.emitY
+        S.emitX, S.emitY = x, y
         Sound.play(name, pitch)
-        _emitX, _emitY = ox, oy
+        S.emitX, S.emitY = ox, oy
     end,
     setListener  = function() end,
     isPlaying    = function() return false end,
@@ -123,11 +122,6 @@ Sound = {
 Input = Protocol.newInputStub()
 local _inp = Input.state
 
--- Clases de entidades (cargadas en love.load).
-local Difficulty
-local Level, PlayerAdventure, Entities, BossZones, AutoScroll, Floods, PointAreas, StartCountdown, Push, Carry
-local buildResults   -- definida más abajo
-
 -- Constantes que deben coincidir con PlayerAdventure.lua
 local DROWN_TOTAL     = 20
 local LEVELS_DIR      = 'assets/levels'
@@ -135,7 +129,6 @@ local DEFAULT_LEVEL   = 'assets/levels/nivel01.json'
 local PLAYER_LIVES    = tonumber(os.getenv('FM_TEST_LIVES')) or 3      -- (FM_TEST_*: solo los arneses, tools/tests/run.sh)
 local TEST_BOSSDMG    = tonumber(os.getenv('FM_TEST_BOSSDMG'))         -- (cada tantos s, 1 de daño a los jefes que se dejen)
 local SPAWN_STAGGER   = 48   -- px de separación horizontal entre jugadores al spawn
-local LEVEL_TIME_MAX  = 600
 
 -- ─────────────────────────────────────────────────────────────────────────────
 --  Estructuras de datos de red
@@ -152,1416 +145,26 @@ local players    = {}
 --                      playerIds, adminId, state, bannedNames, bannedIPs,
 --                      sim (o nil si no está en partida) }
 local rooms      = {}
-local nextRoomId = 1
-local nextPlayerSerial = 1
 
 local serverLog  = {}
 local pingTimer  = 0
 local simAccum   = 0
 
--- ─────────────────────────────────────────────────────────────────────────────
---  Utilidades
--- ─────────────────────────────────────────────────────────────────────────────
-
-local function log(msg)
-    print(msg)
-    table.insert(serverLog, msg)
-    if #serverLog > LOG_MAX then table.remove(serverLog, 1) end
-end
-
-local function newRoomId()
-    local id = tostring(nextRoomId); nextRoomId = nextRoomId + 1; return id
-end
-
--- ID único (contador) + sufijo aleatorio para que no sea adivinable.
-local function newPlayerId()
-    local id = string.format("%x%06x", nextPlayerSerial, math.random(0, 0xffffff))
-    nextPlayerSerial = nextPlayerSerial + 1
-    return id
-end
-
-local function findClientById(playerId)
-    for c, p in pairs(players) do
-        if p.id == playerId then return c end
-    end
-end
-
-local function findPlayerNameById(playerId)
-    local c = findClientById(playerId)
-    return (c and players[c]) and players[c].name or "?"
-end
-
-local function countPlayers()
-    local n=0; for _, p in pairs(players) do if p.verified then n=n+1 end end; return n
-end
-local function countRooms()   local n=0; for _ in pairs(rooms)   do n=n+1 end; return n end
-
-local function peerIP(client)
-    local s = client and client.connection and tostring(client.connection) or ""
-    return s:match("^(.*):%d+$") or s
-end
-
-local function isInt(v, lo, hi)
-    return type(v) == "number" and v == math.floor(v) and v >= lo and v <= hi
-end
-
--- Texto libre (contraseñas): sin caracteres de control, longitud acotada.
-local function cleanText(s, maxLen)
-    if type(s) ~= "string" then return "" end
-    return (s:gsub("%c", "")):sub(1, maxLen)
-end
-
-local function sendState(c, event, data)
-    c:setSendChannel(Protocol.CH_STATE)
-    c:setSendMode("unreliable")
-    c:send(event, data)
-end
 
 -- ─────────────────────────────────────────────────────────────────────────────
---  Simulación de juego
+--  Las PARTES (server/srv/): comparten el estado y las funciones a través de S
 -- ─────────────────────────────────────────────────────────────────────────────
-
--- ── Catálogo de niveles del servidor ────────────────────────────────────────
--- Se escanea assets/levels (caché de 10 s: un nivel nuevo aparece sin
--- reiniciar). Para cada nivel se calcula qué modos admite. Los clientes no
--- necesitan tener el archivo: el nivel se les envía al empezar la partida.
-local levelCache, levelCacheT = nil, -1e9
-
-local function listLevelFiles()
-    local dir = parentDir .. '/' .. LEVELS_DIR
-    local cmd = (love.system.getOS() == 'Windows') and ('dir /b "' .. dir:gsub('/', '\\') .. '"')
-                or ('ls -1 "' .. dir .. '"')
-    local out = {}
-    local p = io.popen(cmd)
-    if p then
-        for line in p:lines() do
-            line = line:gsub('%s+$', '')
-            if line:match('^[%w%-_%.]+%.json$') and not line:match('^_') then out[#out+1] = line end
-        end
-        p:close()
-    end
-    table.sort(out)
-    return out
-end
-
--- Ficha de cada nivel (modos, monstruos, miniatura...): src/world/level/LevelCatalog.lua
--- (la misma que usa el Juego libre del cliente)
--- (cada ficha se guarda con la fecha de su archivo: al re-escanear solo se cargan los niveles nuevos o cambiados —
--- antes, cada 10 s, Level.new + miniatura de TODOS, en el hilo de las partidas: tirones en todas las salas)
-local infoByFile = {}
-local levelCatalogMsg                 -- (la lista para `level_catalog`, hecha una vez por escaneo)
-local function scanLevels(force)
-    local now = love.timer.getTime()
-    if levelCache and not force and now - levelCacheT < 10 then return levelCache end
-    -- (se carga aquí: necesita Level y los stubs del servidor ya puestos)
-    local LevelCatalog = require 'src/world/level/LevelCatalog'
-    local list = {}
-    for _, f in ipairs(listLevelFiles()) do
-        if LevelCatalog.isListed(f) then
-            local path = LEVELS_DIR .. '/' .. f
-            local fi = love.filesystem.getInfo(path)
-            local mod = fi and fi.modtime or 0
-            local c = infoByFile[f]
-            if not (c and c.mod == mod) then
-                local info, err = LevelCatalog.load(path, f)
-                if not info then log('Nivel invalido ' .. path .. ': ' .. tostring(err)) end
-                c = { mod = mod, info = info }
-                infoByFile[f] = c
-                levelCatalogMsg = nil
-            end
-            if c.info then list[#list+1] = c.info end
-        end
-    end
-    if levelCache and #list ~= #levelCache then levelCatalogMsg = nil end
-    levelCache, levelCacheT = list, now
-    return list
-end
-
-local function levelsForMode(modeId)
-    local out = {}
-    for _, info in ipairs(scanLevels()) do if info.modes[modeId] then out[#out+1] = info end end
-    return out
-end
-
-local function levelInfo(path)
-    for _, info in ipairs(scanLevels()) do if info.path == path then return info end end
-end
-
--- Asegura que la sala tenga un nivel válido para su modo (o nil si no hay).
-local function ensureRoomLevel(room)
-    local info = room.level and levelInfo(room.level)
-    if info and info.modes[room.mode] then return end
-    local cands = levelsForMode(room.mode)
-    room.level = nil
-    for _, c in ipairs(cands) do if c.path == DEFAULT_LEVEL then room.level = c.path end end
-    room.level = room.level or (cands[1] and cands[1].path)
-end
-
-local function initRoomSim(room)
-    local level = Level.new(room.level, room.difficulty)
-    level.difficulty = room.difficulty               -- (src/core/Difficulty.lua; nil = el juego de siempre)
-    Difficulty.bind(level)
-    local sx, sy = level:getSpawnPx()
-    local N = #room.playerIds
-
-    local sim = { level=level, tick=0, playerSims={}, enemies={}, events={}, enemyHist={},
-                  ended=nil, levelTime=0, timeLimitKilled=false,
-                  nextBubbleId=0,
-                  levelRaw = love.filesystem.read(room.level),   -- se envía a los clientes
-                  mode = Modes.get(room.mode),
-                  startPlayers = #room.playerIds,
-                  -- cuenta atrás del principio (src/world/systems/StartCountdown.lua): estos ticks, todo congelado
-                  startTicks = StartCountdown.ticks(TICK_DT) }
-
-    -- Crear instancias de las entidades del nivel (enemigos, NPCs)
-    for _, placement in ipairs(level.entities) do
-        local e = Entities.create(placement)
-        if e then table.insert(sim.enemies, e) end
-    end
-
-    -- Crear simulaciones de jugadores con spawn escalonado
-    for i, pid in ipairs(room.playerIds) do
-        local c = findClientById(pid)
-        if c then
-            local spawnX = sx + (i - 1 - (N - 1) / 2) * SPAWN_STAGGER
-            local pa = PlayerAdventure:new(spawnX, sy)
-            pa:settle(level)        -- (de pie sobre el suelo ya en la cuenta atrás; el cliente lo recibe en game_init)
-            pa:applyDifficulty()
-            pa.lives = PLAYER_LIVES
-            pa.netId = pid          -- a quién atribuir sus sonidos (golpes de jefe)
-            sim.playerSims[pid] = {
-                id          = pid,
-                idx         = i,
-                pa          = pa,
-                queue       = {},     -- { {seq, bits}, ... } pendientes
-                lastRecvSeq = 0,
-                lastProcSeq = 0,      -- confirmado al cliente en cada snapshot
-                lastBits    = 0,
-                budget      = 0,
-                starve      = 0,
-                highQueue   = 0,
-                bounceSeq   = 0,
-                isSpectator = false,
-                score       = 0,
-            }
-        end
-    end
-
-    -- Zonas de jefe (world/BossZones.lua): el servidor decide cuándo empieza
-    -- y termina cada pelea; los clientes reciben el estado en cada snapshot
-    sim.bossCtl = BossZones.newController(level, sim.enemies)
-
-    -- Estado de la ronda para el modo de juego (ver src/world/modes/)
-    sim.match = { players = sim.playerSims, enemies = sim.enemies, time = 0, data = {}, level = level,
-                  event = function(ev) ev.t = sim.tick; table.insert(sim.events, ev) end }
-    sim.mode.start(sim.match)
-
-    log("Simulacion iniciada para sala '" .. room.name .. "' — " .. sim.mode.label .. " en "
-        .. room.level .. " — " .. #sim.enemies .. " enemigos, " .. N .. " jugadores.")
-    return sim
-end
-
-local function pushEvent(sim, ev)
-    ev.t = sim.tick
-    table.insert(sim.events, ev)
-end
-
--- Colisiones de UN jugador contra los enemigos (lógica portada de AdventureState).
--- Se llama tras cada paso del jugador y tras mover a los enemigos, así una
--- ráfaga de inputs procesada en un solo tick no atraviesa enemigos.
--- ── Compensación de latencia ────────────────────────────────────────────────
--- El cliente ve a los enemigos interpolados en el PASADO (su tick de render),
--- mientras su propio jugador va predicho en el presente. Para que pisotones,
--- pinchos y golpes coincidan con lo que el jugador VIO, el servidor guarda el
--- estado de los enemigos de los últimos ticks y evalúa las interacciones de
--- cada jugador contra el estado del tick que ese jugador tenía en pantalla
--- (limitado a REWIND_MAX para que un cliente no pueda abusar).
-local REWIND_MAX = 20       -- ticks (~333 ms)
-local HIST_SIZE  = 32
-
--- Copia los campos simples (números, booleanos, textos, imágenes) de una entidad
--- Copia los campos simples (no tablas ni funciones) de e en `into` (vaciándola antes) o en una tabla nueva
-local function scalarState(e, into)
-    local st = into or {}
-    if into then for k in pairs(st) do st[k] = nil end end
-    for k, v in pairs(e) do
-        local tv = type(v)
-        if tv ~= 'table' and tv ~= 'function' then st[k] = v end
-    end
-    return st
-end
-local function applyState(e, st)
-    for k, v in pairs(st) do e[k] = v end
-end
-
--- (el anillo de la historia REUTILIZA sus tablas: antes, cada tick, una tabla nueva por entidad con todos sus campos
--- = la mayor parte de la basura del servidor)
-local function recordEnemyHistory(sim)
-    local idx = sim.tick % HIST_SIZE
-    local slot = sim.enemyHist[idx]
-    if not slot then slot = { states = {} }; sim.enemyHist[idx] = slot end
-    slot.tick = sim.tick
-    local states = slot.states
-    local n = #sim.enemies
-    for i = 1, n do states[i] = scalarState(sim.enemies[i], states[i] or {}) end
-    for i = #states, n + 1, -1 do states[i] = nil end
-end
-
--- Estado histórico de los enemigos que vio el jugador (o nil = el actual)
-local function viewedHistory(sim, ps)
-    local vt = ps.viewTick
-    if not vt then return nil end
-    vt = math.max(sim.tick - REWIND_MAX, math.min(sim.tick - 1, vt))
-    local h = sim.enemyHist[vt % HIST_SIZE]
-    if h and h.tick == vt then return h end
-end
-
--- Compensación del retardo: a más de REWIND_FAR px del jugador (ahora y en lo que veía) no se rebobina
-local REWIND_FAR = 640
-local REWIND_NOW = {}         -- (el estado actual de la entidad mientras se rebobina: una tabla para todas)
-local function checkPlayerEnemyCollisions(sim, pid, ps, seq)
-    local pa = ps.pa
-    if ps.isSpectator or pa.dying or not pa.alive then return end
-
-    -- Evaluar contra el estado de cada enemigo que el jugador veía
-    local hist = viewedHistory(sim, ps)
-    local rewind = hist and function(i, g, check)
-        local old = hist.states[i]
-        if not (old and g.alive and g.state ~= 'dead') then return check(pa, g) end
-        -- (lejos del jugador ahora y en lo que veía: nada que compensar; se comprueba tal cual, sin copiar nada)
-        local ox, oy = old.x or g.x, old.y or g.y
-        if math.abs(g.x - pa.x) > REWIND_FAR and math.abs(ox - pa.x) > REWIND_FAR
-           or math.abs(g.y - pa.y) > REWIND_FAR and math.abs(oy - pa.y) > REWIND_FAR then
-            return check(pa, g)
-        end
-        local now = scalarState(g, REWIND_NOW)
-        applyState(g, old)
-        local r, a, b, c = check(pa, g)
-        applyState(g, now)
-        -- (lo que ahora es nil, p. ej. turnT al acabar un giro, vuelve a nil)
-        for k in pairs(old) do if now[k] == nil then g[k] = nil end end
-        return r, a, b, c                       -- (4º valor: los saltos que deja un 'launch', el lado de un pisotón)
-    end
-
-    -- Reglas compartidas con el modo un jugador (entities/Interactions.lua).
-    -- Los sonidos se etiquetan con quien los causa: su cliente ya los predijo.
-    _currentSoundPlayerId = pid
-    _emitX, _emitY = pa.x, pa.y
-    Entities.interactions.run(pa, sim.enemies, {
-        stomp = function(g, pts)
-            pts = pts or 0
-            ps.score = ps.score + pts
-            ps.scoreT = sim.levelTime          -- para desempatar: quién llegó antes
-            ps.bounceSeq = seq
-            sim.mode.onStomp(sim.match, ps, g)
-            pushEvent(sim, { type='score', playerId=pid, delta=pts, x=round(g.x), y=round(g.y) })
-        end,
-        pickup = function(e, pk)
-            pk = Entities.interactions.pickupEffect(pa, pk)
-            if pk.heal then pa.hp = pa.hp + pk.heal end                 -- (manzana: la vida va en el estado propio)
-            if pk.score then
-                ps.score = ps.score + pk.score
-                ps.scoreT = sim.levelTime
-            end
-            if pk.lives then pa.lives = math.min(99, pa.lives + pk.lives) end
-            pushEvent(sim, { type='pickup', playerId=pid, kind = (pk.heal and 'heal') or (pk.lives and 'life') or 'star',
-                             delta = pk.score, x=round(e.x), y=round(e.y) })
-        end,
-        checkpoint = function(e, i)
-            if ps.checkpointIdx == i then return end
-            ps.checkpointIdx = i
-            pa.spawnX, pa.spawnY = e:respawnPoint()
-            pushEvent(sim, { type='checkpoint', playerId=pid, idx=i, x=round(e.x), y=round(e.y) })
-        end,
-    }, rewind)
-    _currentSoundPlayerId = nil
-
-    -- Ground pound: empuja y aturde a los jugadores cercanos
-    if pa.gpLanded and ps.gpPushTick ~= sim.tick then
-        ps.gpPushTick = sim.tick                -- una vez por impacto (hay 2 pasadas por tick)
-        for opid, ops in pairs(sim.playerSims) do
-            local o = ops.pa
-            if opid ~= pid and not ops.isSpectator and not o.dying then
-                if Entities.interactions.poundReaches(pa, o) then
-                    _currentSoundPlayerId = nil
-                    _emitX, _emitY = o.x, o.y
-                    o:knockback(o.x >= pa.x and 1 or -1)
-                end
-            end
-        end
-    end
-end
-
--- Un paso fijo (TICK_DT) de un jugador con el input `bits`.
-local function stepPlayer(sim, pid, ps, bits, seq)
-    local pa = ps.pa
-    Protocol.decodeInput(bits, _inp)
-    _currentSoundPlayerId = pid
-    _emitX, _emitY = pa.x, pa.y
-    pa:update(TICK_DT, sim.level)
-    _currentSoundPlayerId = nil
-    -- Bloques que rompió ESTE jugador: con su id, para que su cliente los aplique ya (los de los demás esperan al
-    -- tick que se dibuja); su predicción ya no choca con un bloque que en el servidor no existe
-    local bq = sim.level.brokenQueue
-    if bq and #bq > 0 then
-        for _, b in ipairs(bq) do pushEvent(sim, { type='tile', c=b[1], r=b[2], v=b[3], k=b[4], from=b[5], playerId=pid }) end
-        sim.level.brokenQueue = {}
-    end
-
-    -- Fin de animación de muerte → restar vida y respawn/espectador
-    if pa.dying and not pa.alive then
-        pa.lives = pa.lives - 1
-        if pa.lives <= 0 then
-            ps.isSpectator = true
-            pushEvent(sim, { type='spectate', playerId=pid })
-        else
-            -- Cámara automática: se reaparece en el centro de lo que se ve
-            local rx, ry = AutoScroll.respawnPoint(sim.level)
-            if not rx then rx, ry = BossZones.respawnPoint(sim.level, pa) end   -- suelo roto en la zona
-            if rx then pa.spawnX, pa.spawnY = rx, ry end
-            _currentSoundPlayerId = pid
-            pa:respawn()
-            _currentSoundPlayerId = nil
-        end
-        return
-    end
-
-    -- Colisión con burbuja de oxígeno (reinicia ahogamiento)
-    if not pa.dying then
-        local ob  = pa:getOuterBounds()
-        local hit = sim.level:checkVentOxyCollision(ob.x, ob.y, ob.w, ob.h)
-        if hit and (pa.drownPhase == 'warning' or pa.drownPhase == 'drowning') then
-            pa.drownTimer=0; pa.drownChime=0
-            pa.drownAudT=0;  pa.drownDead=false
-            pa.drownPhase='none'
-            pa.airBarAlpha=0; pa.airBarBobOn=false
-            table.insert(_soundEvents, { sound='airGasp', playerId=pid, x=round(pa.x), y=round(pa.y) })
-            -- Evento autoritativo: el cliente resetea sonido/música del ahogamiento
-            pushEvent(sim, { type='air_collected', playerId=pid })
-        end
-    end
-
-    checkPlayerEnemyCollisions(sim, pid, ps, seq)
-
-    -- Triggers de tiles que le interesan al modo (p. ej. la meta)
-    if not ps.isSpectator and not pa.dying then
-        local ob = pa:getOuterBounds()
-        for _, tr in ipairs(sim.mode.triggers) do
-            if sim.level:triggerInBox(ob.x, ob.y, ob.w, ob.h, tr) then
-                sim.match.time = sim.levelTime
-                sim.mode.onTrigger(sim.match, ps, tr)
-            end
-        end
-    end
-end
-
--- Consume los inputs en cola de un jugador para este tick.
-local function processPlayerInputs(sim, pid, ps)
-    ps.budget = math.min(ps.budget + 1, MAX_BUDGET)
-
-    -- Recortar la cola si crece: evita latencia de input acumulada tras un
-    -- pico de lag. Los flags de "recién presionado" se conservan.
-    local q = ps.queue
-    if #q > TARGET_QUEUE then ps.highQueue = ps.highQueue + 1 else ps.highQueue = 0 end
-    local keep = (#q > MAX_QUEUE or ps.highQueue > TRIM_AFTER) and TARGET_QUEUE or #q
-    while #q > keep do
-        local old = table.remove(q, 1)
-        local pressed = old.bits - band(old.bits, Protocol.IN_HELD_MASK)
-        if pressed > 0 then q[1].bits = Protocol.bor(q[1].bits, pressed) end
-        ps.lastProcSeq = old.seq
-        ps.highQueue   = 0
-    end
-
-    local steps = 0
-    while steps < MAX_STEPS_TICK and ps.budget >= 1 and #q > 0 and not ps.isSpectator do
-        local cmd = table.remove(q, 1)
-        ps.lastProcSeq = cmd.seq
-        ps.lastBits    = cmd.bits
-        if cmd.v then ps.viewTick = cmd.v end
-        stepPlayer(sim, pid, ps, cmd.bits, cmd.seq)
-        ps.budget = ps.budget - 1
-        steps = steps + 1
-    end
-
-    if steps > 0 then
-        ps.starve = 0
-    else
-        -- Sin input (lag o cliente que dejó de enviar): tras un margen, el
-        -- jugador sigue con su último input mantenido para que el mundo no
-        -- lo "congele" (evita usar el lag como escudo contra la física).
-        -- (No antes del primer input: al empezar, el game_init aún viaja hacia
-        -- el cliente y extrapolar crearía un desfase inicial.)
-        ps.starve = ps.starve + 1
-        if ps.starve >= STARVE_TICKS and ps.budget >= 1 and ps.lastRecvSeq > 0 then
-            stepPlayer(sim, pid, ps, band(ps.lastBits, Protocol.IN_HELD_MASK), ps.lastProcSeq)
-            ps.budget = ps.budget - 1
-        end
-    end
-end
-
--- Clasificación final de la ronda: la ordena el modo y marca ganadores.
-buildResults = function(room, reason)
-    local sim = room.sim
-    local entries = {}
-    for _, pid in ipairs(room.playerIds) do
-        local ps = sim.playerSims[pid]
-        local c  = findClientById(pid)
-        if ps and c then
-            entries[#entries+1] = {
-                id = pid, name = players[c].name, color = players[c].color or {1,1,1},
-                score = ps.score, finished = ps.finished or false, place = ps.place,
-                time = ps.finishTime and round(ps.finishTime * 100) / 100 or nil,
-                out = ps.isSpectator and not ps.finished, order = ps.idx, winner = false,
-                lives = ps.isSpectator and 0 or ps.pa.lives, scoreT = ps.scoreT or 0,
-            }
-        end
-    end
-    local note, tie = sim.mode.rank(sim.match, entries, reason)
-    -- Último superviviente: gana él, sea cual sea el modo
-    if reason == 'last_standing' then
-        note, tie = nil, false
-        for i, e in ipairs(entries) do
-            e.winner = (e.id == sim.survivor)
-            if e.winner and i > 1 then table.remove(entries, i); table.insert(entries, 1, e) end
-        end
-    end
-    log("Ronda terminada (" .. sim.mode.id .. ", " .. reason .. ") en '" .. room.name .. "'")
-    return { type = 'round_end', mode = sim.mode.id, reason = reason,
-             -- textos en español (clientes antiguos); los nuevos traducen reason/noteKey
-             reasonText = Modes.reasonText(sim.mode, reason),
-             note = note and Lang(note), noteKey = note, tie = tie or false, entries = entries }
-end
-
--- Cuenta atrás del principio: los inputs se consumen y se confirman (el cliente los predice quietos, ver
--- Predictor:tick) pero nadie se mueve
-local function drainFrozenInputs(ps)
-    local q = ps.queue
-    while #q > 0 do
-        local cmd = table.remove(q, 1)
-        ps.lastProcSeq = cmd.seq
-        ps.lastBits    = cmd.bits
-        if cmd.v then ps.viewTick = cmd.v end
-    end
-    ps.budget, ps.starve, ps.highQueue = 0, 0, 0
-end
-
--- Avanzar la simulación de una sala un tick fijo
-local _currentSim = nil     -- sala que se está simulando (para los efectos visuales)
-
-local function stepRoom(room)
-    local sim = room.sim
-    if not sim then return end
-    _currentSim = sim
-    require('src/world/systems/Noise').bind(sim.level)        -- (los ruidos de este paso, a este nivel)
-    Difficulty.bind(sim.level)                        -- (… y su dificultad)
-
-    sim.tick = sim.tick + 1
-    _soundEvents = {}
-    _emitX, _emitY = nil, nil
-
-    -- ── Cuenta atrás del principio (StartCountdown): el mundo entero congelado ─
-    if sim.tick <= sim.startTicks then
-        for _, pid in ipairs(room.playerIds) do
-            local ps = sim.playerSims[pid]
-            if ps then drainFrozenInputs(ps) end
-        end
-        recordEnemyHistory(sim)               -- (la compensación de latencia mira ticks pasados)
-        return
-    end
-
-    -- ── Reloj de nivel (autoritativo) ────────────────────────────────────────
-    sim.levelTime = math.min(sim.levelTime + TICK_DT, LEVEL_TIME_MAX)
-    -- Inundaciones: el nivel del agua es función del tick (el cliente lo estima
-    -- igual; empieza al acabar la cuenta atrás); las controladas (jefe / ON-OFF)
-    -- cambian aquí y van en el snapshot
-    local floodT = (sim.tick - sim.startTicks) * TICK_DT
-    Floods.control(sim.level, floodT)
-    Floods.setTime(sim.level, floodT)
-
-    -- Límite de 10 minutos: matar a todos los jugadores activos (igual que modo solo)
-    if sim.levelTime >= LEVEL_TIME_MAX and not sim.timeLimitKilled then
-        sim.timeLimitKilled = true
-        for pid, ps in pairs(sim.playerSims) do
-            if not ps.isSpectator and not ps.pa.dying then
-                ps.pa.lives = 1   -- die() restará 1 → 0 vidas → espectador → game over
-                _currentSoundPlayerId = pid
-                ps.pa:die(nil, true)
-                _currentSoundPlayerId = nil
-            end
-        end
-    end
-
-    -- ── Jugadores (orden estable: el de la sala) ──────────────────────────────
-    sim.level.solidBodies = Entities.solidBodies(sim.enemies)    -- jefes sólidos
-    sim.level.pushers = Push.collect(sim.enemies)                -- lo que sopla (systems/Push)
-    for _, pid in ipairs(room.playerIds) do
-        local ps = sim.playerSims[pid]
-        if ps and not ps.isSpectator then
-            processPlayerInputs(sim, pid, ps)
-        end
-    end
-
-    -- Restaurar input neutral
-    Protocol.decodeInput(0, _inp)
-    _currentSoundPlayerId = nil
-    _emitX, _emitY = nil, nil
-
-    -- ── Nivel (burbujas de oxígeno en vents) y enemigos ──────────────────────
-    -- Las trampas y entidades de techo "ven" a los jugadores activos
-    local active = {}
-    for _, pid in ipairs(room.playerIds) do
-        local ps = sim.playerSims[pid]
-        if ps and not ps.isSpectator then active[#active+1] = ps.pa; ps.pa.ownerIdx = ps.idx end   -- (ownerIdx: el ranking del Mega Mashup)
-    end
-    sim.level.players = active
-    Carry.step(sim.level, active, sim.enemies)                    -- coger / lanzar (systems/Carry)
-    sim.level:update(TICK_DT)
-    sim.level.liveEntities = sim.enemies        -- obstáculos entre entidades
-    for _, e in ipairs(sim.enemies) do
-        _emitX, _emitY = e.x, e.y
-        e:update(Difficulty.dt(e, TICK_DT), sim.level)       -- (su ritmo: la dificultad)
-    end
-    _emitX, _emitY = nil, nil
-    if TEST_BOSSDMG then
-        sim.testDmgT = (sim.testDmgT or 0) + TICK_DT
-        if sim.testDmgT >= TEST_BOSSDMG then
-            sim.testDmgT = 0
-            for _, e in ipairs(sim.enemies) do
-                local ev = e.eventRef
-                if ev then                                 -- (evento: acaba el turno del que pelea, sea cual sea su ventana)
-                    if not e.eventFrozen and e:isActive() and ev:isTurnOf(e) then ev:crabDown(e) end
-                elseif e.def and e.def.boss and e.state ~= 'parts' then e:damage(1, 'stomp') end   -- (los trozos: que peguen de verdad)
-            end
-        end
-    end
-    recordEnemyHistory(sim)
-
-    -- Zonas de puntos: quien está dentro suma cada cierto tiempo
-    if #(sim.level.pointAreas or {}) > 0 then
-        local owner = {}
-        for _, pid in ipairs(room.playerIds) do
-            local ps = sim.playerSims[pid]
-            if ps and not ps.isSpectator then owner[ps.pa] = pid end
-        end
-        PointAreas.update(sim.level, TICK_DT, active, function(pa, pts)
-            local pid = owner[pa]
-            local ps = pid and sim.playerSims[pid]
-            if not ps then return end
-            ps.score = ps.score + pts
-            ps.scoreT = sim.levelTime
-            pushEvent(sim, { type='score', playerId=pid, delta=pts, x=round(pa.x), y=round(pa.y - 40), kind='zone' })
-            pushEvent(sim, { type='fx', kind='points', x=round(pa.x), y=round(pa.y) })
-            _emitX, _emitY = pa.x, pa.y
-            Sound.play('pointGain')
-            _emitX, _emitY = nil, nil
-        end)
-    end
-
-    -- Zonas de jefe: llegada de los jugadores, inicio y fin de la pelea
-    for _, ev in ipairs(sim.bossCtl:update(TICK_DT)) do pushEvent(sim, ev) end
-
-    -- Cámara automática: espera a todos, avanza y mata a quien se queda atrás.
-    -- Se para en cuanto alguien llega a la meta.
-    if sim.level.autoScroll then
-        for _, ps in pairs(sim.playerSims) do if ps.finished then sim.level.finishReached = true end end
-        local evs = AutoScroll.update(sim.level, TICK_DT, function(pa)
-            PlayerAdventure.asOwner(pa, function() pa:die(nil, true) end)
-        end)
-        for _, ev in ipairs(evs) do pushEvent(sim, ev) end
-    end
-
-    -- Bloques rotos este tick → a todos los clientes
-    local bq = sim.level.brokenQueue
-    if bq and #bq > 0 then
-        for _, b in ipairs(bq) do pushEvent(sim, { type='tile', c=b[1], r=b[2], v=b[3], k=b[4], from=b[5] }) end
-        sim.level.brokenQueue = {}
-    end
-
-    -- ── Colisiones tras mover enemigos (un enemigo puede alcanzar a un jugador quieto)
-    for _, pid in ipairs(room.playerIds) do
-        local ps = sim.playerSims[pid]
-        if ps then checkPlayerEnemyCollisions(sim, pid, ps, ps.lastProcSeq) end
-    end
-
-    -- ── Fusionar eventos de sonido ────────────────────────────────────────────
-    for _, se in ipairs(_soundEvents) do
-        pushEvent(sim, { type='sound', sound=se.sound, playerId=se.playerId, pitch=se.pitch, x=se.x, y=se.y })
-    end
-    _soundEvents = {}
-
-    -- ── ¿Termina la ronda? (reglas del modo + fin genérico) ─────────────────
-    if not sim.ended then
-        sim.match.time = sim.levelTime
-        local reason = sim.mode.tick(sim.match, TICK_DT)
-        if not reason then
-            local anyActive, anyPlayer = false, false
-            for _, ps in pairs(sim.playerSims) do
-                anyPlayer = true
-                if not ps.isSpectator then anyActive = true; break end
-            end
-            if anyPlayer and not anyActive then
-                reason = sim.timeLimitKilled and 'time_limit' or 'all_out'
-            end
-        end
-        -- Se quedó uno solo (los demás eliminados o se fueron) y nadie ha
-        -- cumplido aún el objetivo → gana el superviviente
-        if not reason and sim.startPlayers >= 2 then
-            local active, finished = {}, 0
-            for pid, ps in pairs(sim.playerSims) do
-                if ps.finished then finished = finished + 1
-                elseif not ps.isSpectator then active[#active+1] = pid end
-            end
-            if #active == 1 and finished == 0 then
-                local ps = sim.playerSims[active[1]]
-                -- Si está muriendo con su última vida, aún no es superviviente
-                if not (ps.pa.dying and ps.pa.lives <= 1) then
-                    sim.survivor = active[1]
-                    reason = 'last_standing'
-                end
-            end
-        end
-        if reason then
-            sim.ended = reason
-            local ev = buildResults(room, reason)
-            ev.t = sim.tick
-            table.insert(sim.events, ev)
-        end
-    end
-end
-
--- ─────────────────────────────────────────────────────────────────────────────
---  Broadcasts
--- ─────────────────────────────────────────────────────────────────────────────
-
-local function broadcastRoomUpdate(room)
-    local playerList = {}
-    for _, pid in ipairs(room.playerIds) do
-        local c = findClientById(pid)
-        if c then
-            local ping = 0
-            if c.connection then
-                local ok, rtt = pcall(function() return c.connection:round_trip_time() end)
-                if ok and type(rtt) == "number" then ping = rtt end
-            end
-            table.insert(playerList, {
-                id      = pid,
-                name    = players[c].name,
-                isAdmin = (pid == room.adminId),
-                isReady = players[c].isReady,
-                ping    = ping,
-                color   = players[c].color,
-            })
-        end
-    end
-    ensureRoomLevel(room)
-    local levels = {}
-    for _, info in ipairs(levelsForMode(room.mode)) do levels[#levels+1] = { path = info.path, name = info.name, name_en = info.name_en } end
-    local cur = room.level and levelInfo(room.level)
-    local payload = {
-        id=room.id, name=room.name, isPublic=room.isPublic,
-        hasPassword=(room.password~=""), maxPlayers=room.maxPlayers,
-        state=room.state, adminId=room.adminId, players=playerList,
-        mode=room.mode, level=room.level, levelName=cur and cur.name or nil, levelName_en=cur and cur.name_en or nil, levels=levels,
-        difficulty=room.difficulty,                      -- (id de src/core/Difficulty.lua; nil = sin dificultad)
-    }
-    for _, pid in ipairs(room.playerIds) do
-        local c = findClientById(pid)
-        if c then c:send("room_update", payload) end
-    end
-end
-
--- kind: 'join' | 'leave' | 'kick' | 'ban' | 'admin' | 'game' (el cliente lo colorea)
--- key/args: mensaje en assets/lang (cada cliente lo muestra en su idioma)
-local function announceToRoom(room, key, args, kind)
-    for _, pid in ipairs(room.playerIds) do
-        local c = findClientById(pid)
-        if c then c:send("room_announce", Lang.message(key, args, { kind = kind or 'info' })) end
-    end
-end
-
-local function buildPublicRoomList()
-    local list = {}
-    for _, room in pairs(rooms) do
-        table.insert(list, {
-            id=room.id, name=room.name,
-            isPublic=room.isPublic,
-            hasPassword=(room.password~=""),
-            currentPlayers=#room.playerIds,
-            maxPlayers=room.maxPlayers,
-            state=room.state,
-        })
-    end
-    return list
-end
-
--- Datos estáticos de la partida: se envían UNA vez (fiable) al empezar, así
--- los snapshots no repiten nombres, colores ni IDs largos.
-local function sendGameInit(room)
-    local sim = room.sim
-    local roster = {}
-    for _, pid in ipairs(room.playerIds) do
-        local c  = findClientById(pid)
-        local ps = sim.playerSims[pid]
-        if c and ps then
-            table.insert(roster, { idx=ps.idx, id=pid, name=players[c].name,
-                                   color=players[c].color or {1,1,1} })
-        end
-    end
-    for _, pid in ipairs(room.playerIds) do
-        local c  = findClientById(pid)
-        local ps = sim.playerSims[pid]
-        if c and ps then
-            c:send("game_init", {
-                tick     = sim.tick,
-                idx      = ps.idx,
-                roster   = roster,
-                own      = Protocol.packOwnState(ps.pa),
-                tickRate = Protocol.TICK_RATE,
-                snapEvery= SNAPSHOT_EVERY,
-                mode     = room.mode,
-                difficulty = room.difficulty,   -- (nil = sin dificultad)
-                level    = sim.levelRaw,        -- el nivel viaja al cliente
-                cd       = sim.startTicks,      -- cuenta atrás del principio (ticks), StartCountdown
-            })
-        end
-    end
-end
-
--- Eventos de juego (puntos, sonidos, game over...): canal fiable, marcados con
--- el tick en que ocurrieron para que el cliente los sincronice con lo que ve.
-local function flushEvents(room)
-    local sim = room.sim
-    if not sim or #sim.events == 0 then return end
-    local payload = { list = sim.events }
-    for _, pid in ipairs(room.playerIds) do
-        local c = findClientById(pid)
-        if c then c:send("ev", payload) end
-    end
-    sim.events = {}
-end
-
--- Snapshot compacto (no fiable, canal de estado). La parte común se arma una
--- vez; cada cliente recibe además su estado completo y el último input
--- procesado (`a`) para reconciliar su predicción.
-local function broadcastSnapshot(room)
-    local sim = room.sim
-    if not sim then return end
-
-    local plist = {}
-    for _, pid in ipairs(room.playerIds) do
-        local ps = sim.playerSims[pid]
-        if ps then
-            local pa = ps.pa
-            local flags = 0
-            if pa.dying       then flags = flags + Protocol.PF_DYING     end
-            if ps.isSpectator then flags = flags + Protocol.PF_SPECTATOR end
-            if ps.finished    then flags = flags + Protocol.PF_FINISHED  end
-            if (pa.stunT or 0) > 0 then flags = flags + Protocol.PF_STUNNED end
-            if (pa.hurtT or 0) > 0 and not pa.dying then flags = flags + Protocol.PF_HURT end
-            if (pa.invT or 0) > 0 and not pa.dying then flags = flags + Protocol.PF_INVULN end
-            if (pa.squashT or 0) > 0 and not pa.dying then flags = flags + Protocol.PF_SQUASH end
-            if (pa.iceT or 0) > 0 and not pa.dying then flags = flags + Protocol.PF_ICE end
-            if pa.lightOn and not pa.dying then flags = flags + Protocol.PF_LIGHT end
-            if pa.gulped and (pa.gulpKind or 0) == 0 and not pa.dying then flags = flags + Protocol.PF_GULP end   -- (atrapado por una pinza: se ve)
-            table.insert(plist, {
-                ps.idx, round(pa.x), round(pa.y), pa.facing, pa.frame, flags,
-                pa.lives, pa.hp, ps.score, Protocol.drownCode(pa.drownPhase),
-                round(math.max(0, 1 - pa.drownTimer / DROWN_TOTAL) * 100),
-                ps.place or 0,
-            })
-        end
-    end
-
-    local elist, ebig, ebox = {}, {}, {}
-    for i, e in ipairs(sim.enemies) do
-      -- En reposo (p. ej. pinchos colgando): no se envía, el cliente lo sabe
-      if not e:netAtRest() then
-        local entry = {
-            round(e.x), round(e.y), e.facing, e.state, e.frame, e.alive,
-            round((e.deadTimer or 0) * 100), round((e.breatheT or 0) * 100),
-            e.flipped and 1 or 0,
-        }
-        -- (lo que se puede cargar: quién lo lleva — índice del jugador, 0 = nadie —, en el 10: systems/Carry)
-        local base = 9
-        if e.carryable then base = 10; entry[10] = e.carrierIdx or 0 end
-        -- Datos propios del tipo (p. ej. pincho y sprite del Crabby)
-        local extra = e:netPack()
-        if extra then for k, v in ipairs(extra) do entry[base + k] = v end end
-        elist[i] = entry
-        if (e.def and e.def.boss) or e.netAlways then ebig[i] = true end     -- (`netAlways`: un director, lejos de todos)
-        if e.netBounds then ebox[i] = { e:netBounds() } end
-      end
-    end
-
-    -- Burbujas de oxígeno con ID estable para interpolarlas en el cliente
-    local vb = {}
-    for vi, vent in ipairs(sim.level.vents) do
-        local flat = {}
-        for _, b in ipairs(vent.oxyBubbles) do
-            if b.alive then
-                if not b.nid then sim.nextBubbleId = sim.nextBubbleId + 1; b.nid = sim.nextBubbleId end
-                flat[#flat+1] = b.nid; flat[#flat+1] = round(b.x); flat[#flat+1] = round(b.y)
-            end
-        end
-        vb[vi] = flat
-    end
-
-    local lt = round(sim.levelTime * 100)
-    local md = sim.mode.hud(sim.match)
-    local bz = BossZones.netPack(sim.level)
-    local sc = AutoScroll.netPack(sim.level)
-    local fc = Floods.netPack(sim.level, TICK_DT)     -- inundaciones controladas (jefe / ON-OFF)
-    local zc = PointAreas.netPack(sim.level)          -- reloj de la zona de puntos que se mueve (nil con una sola)
-    for _, pid in ipairs(room.playerIds) do
-        local c  = findClientById(pid)
-        local ps = sim.playerSims[pid]
-        if c then
-            -- Entidades: a cada jugador solo las que tiene CERCA (los jefes, siempre). Un nivel con más de 100 en
-            -- movimiento (laberinto_submarino) daba fotos de 2,2 KB: pasada la MTU, ENet las manda en trozos FIABLES
-            -- y una pérdida frena todo el canal. Las que no vienen, el cliente las deja quietas (netRest), fuera de
-            -- la vista. Los espectadores ven a otros: todas.
-            local el = elist
-            if ps and not ps.isSpectator and ps.pa then
-                el = ps.elist or {}
-                ps.elist = el
-                for k in pairs(el) do el[k] = nil end
-                -- (desde donde MIRA: muriendo, el cuerpo salta y cae fuera de la pantalla —hasta 500 px por debajo del
-                -- nivel— mientras su cámara se queda quieta; medido desde el cuerpo, lo de arriba —los bloques de jefe—
-                -- dejaba de venir, el cliente lo daba por "en reposo" y los muros PARPADEABAN: el usuario, 0.5.62)
-                if not ps.pa.dying then ps.viewX, ps.viewY = ps.pa.x, ps.pa.y end
-                local px, py = ps.viewX or ps.pa.x, ps.viewY or ps.pa.y
-                for i, entry in pairs(elist) do
-                    -- (lo que ocupa mucho — el cable de un Teleférico —: `netBounds()` = su caja; cerca de ella, se manda)
-                    local nb = ebox[i]
-                    if ebig[i] or (nb and px > nb[1] - NEAR_X and px < nb[3] + NEAR_X and py > nb[2] - NEAR_Y and py < nb[4] + NEAR_Y)
-                       or (not nb and math.abs(entry[1] - px) < NEAR_X and math.abs(entry[2] - py) < NEAR_Y) then el[i] = entry end
-                end
-            end
-            local snap = { t=sim.tick, lt=lt, p=plist, e=el, vb=vb, md=md, bz=bz, sc=sc, fc=fc, zc=zc }
-            if ps and not ps.isSpectator then
-                snap.a  = ps.lastProcSeq
-                snap.o  = Protocol.packOwnState(ps.pa)
-                snap.bs = ps.bounceSeq
-            end
-            -- (FM_PERF: el tamaño de la foto; pasada la MTU (~1200 B) ENet la manda en trozos FIABLES)
-            if PERF_SNAP then
-                local n = #bitser.dumps({ "s", snap })
-                if n > PERF_SNAP.max then PERF_SNAP.max = n end
-                PERF_SNAP.sum, PERF_SNAP.n = PERF_SNAP.sum + n, PERF_SNAP.n + 1
-                if n > 1200 then PERF_SNAP.big = PERF_SNAP.big + 1 end
-            end
-            sendState(c, "s", snap)
-        end
-    end
-end
-
-local function endGame(room, reason)
-    room.state = "WAITING"
-    room.sim   = nil
-    for _, pid in ipairs(room.playerIds) do
-        local c = findClientById(pid)
-        if c then players[c].isReady = false end
-    end
-    broadcastRoomUpdate(room)
-    log("Partida terminada en sala '" .. room.name .. "' — " .. reason .. ".")
-end
-
--- ─────────────────────────────────────────────────────────────────────────────
---  Gestión de salas
--- ─────────────────────────────────────────────────────────────────────────────
-
-local function removePlayerFromRoom(player, room, silent)
-    for i, pid in ipairs(room.playerIds) do
-        if pid == player.id then table.remove(room.playerIds, i); break end
-    end
-    player.isReady = false
-    player.roomId  = nil
-    player.color   = nil
-
-    -- Eliminar simulación del jugador si hay partida en curso
-    if room.sim then room.sim.playerSims[player.id] = nil end
-
-    if not silent then
-        announceToRoom(room, 'srv.left', { name = player.name }, 'leave')
-    end
-
-    if #room.playerIds == 0 then
-        rooms[room.id] = nil
-        log("Sala '" .. room.name .. "' eliminada (vacia).")
-        return true
-    end
-
-    if room.adminId == player.id then
-        room.adminId = room.playerIds[1]
-        local newName = findPlayerNameById(room.adminId)
-        announceToRoom(room, 'srv.new_host', { name = newName }, 'admin')
-        log("Nuevo admin de '" .. room.name .. "': " .. newName)
-    end
-
-    broadcastRoomUpdate(room)
-    return false
-end
-
--- Expulsa una conexión (abuso, versión, timeout). La desconexión es "graceful":
--- ENet dispara luego el evento disconnect y ahí se limpia `players`.
-local function dropClient(client, reason)
-    local p = players[client]
-    if not p or p.kicked then return end
-    p.kicked = true
-    log("Expulsando " .. (p.name or peerIP(client)) .. ": " .. reason)
-    if p.roomId and rooms[p.roomId] then
-        removePlayerFromRoom(p, rooms[p.roomId], false)
-    end
-    pcall(function() client.connection:disconnect(0) end)
-end
-
--- ─────────────────────────────────────────────────────────────────────────────
---  Eventos de red (todos pasan por `on`, que aplica rate limit y exige login)
--- ─────────────────────────────────────────────────────────────────────────────
-
-local function rateOk(p, client)
-    local now = love.timer.getTime()
-    p.tokens = math.min(MSG_BURST, p.tokens + (now - p.lastT) * MSG_RATE)
-    p.lastT  = now
-    if now - p.dropWindow > 10 then p.dropWindow = now; p.dropped = 0 end
-    if p.tokens < 1 then
-        p.dropped = p.dropped + 1
-        if p.dropped > FLOOD_LIMIT then dropClient(client, "flood de mensajes") end
-        return false
-    end
-    p.tokens = p.tokens - 1
-    return true
-end
-
-local function on(event, handler, allowAnonymous)
-    server:on(event, function(data, client)
-        local p = players[client]
-        if not p or p.kicked then return end
-        if not rateOk(p, client) then return end
-        if not p.verified and not allowAnonymous then return end
-        handler(data, client, p)
-    end)
-end
-
--- Actualizaciones automáticas de los clientes (sin login; ver updates.lua)
-Updates.register(function(event, handler)
-    on(event, function(data, client, p)
-        p.updT = love.timer.getTime()
-        handler(data, client, p)
-    end, true)
-end)
-
--- El resultado del duelo de ritmo de un jugador: cada cliente lo juega contra su música (src/ui/RhythmDuel.lua)
-on("rhythm_result", function(data, client, player)
-    if type(data) ~= "table" or not player.roomId then return end
-    local room = rooms[player.roomId]
-    if not room or room.state ~= "IN_GAME" or not room.sim then return end
-    local ps = room.sim.playerSims[player.id]
-    if not ps or ps.isSpectator or type(data.acc) ~= "number" or type(data.bar) ~= "number" then return end
-    for _, e in ipairs(room.sim.enemies or {}) do
-        if e.duelReport then e:duelReport(ps.pa, data.bar, data.acc, data.failed == true) end
-    end
-end)
-
--- La POSE de un jugador en el duelo de ritmo (acierto / fallo de una flecha): solo dibujo; se reenvía a los demás de
--- su sala, que lo ven bailar en el minijuego (src/ui/RhythmDuel.lua: R.remotePose)
-on("rhythm_pose", function(data, client, player)
-    if type(data) ~= "table" or not player.roomId or type(data.lane) ~= "number" then return end
-    local room = rooms[player.roomId]
-    if not room or room.state ~= "IN_GAME" then return end
-    local msg = { id = player.id, lane = math.max(1, math.min(4, math.floor(data.lane))), ok = data.ok == true }
-    for _, pid in ipairs(room.playerIds) do
-        if pid ~= player.id then
-            local c = findClientById(pid)
-            if c then c:send("rhythm_pose", msg) end
-        end
-    end
-end)
-
-server.onInvalidPacket = function(client, size)
-    local p = client and players[client]
-    if not p or p.kicked then return end
-    p.invalid = p.invalid + 1
-    if p.invalid >= INVALID_LIMIT then dropClient(client, "paquetes malformados") end
-end
-
-server.onHandlerError = function(client, eventName, err)
-    log("ERROR en handler '" .. tostring(eventName) .. "': " .. tostring(err))
-end
-
-log("FlappyMonster Online Server (autoritativo) — Puerto " .. PORT
-    .. " — protocolo v" .. Protocol.VERSION)
-
-server:on("connect", function(data, client)
-    local ip  = peerIP(client)
-    local now = love.timer.getTime()
-    players[client] = {
-        id=nil, name=nil, verified=false, roomId=nil, isReady=false, color=nil,
-        ip=ip, tokens=MSG_BURST, lastT=now, dropped=0, dropWindow=now, invalid=0,
-        kicked=false, connectedAt=now,
-    }
-    -- Detectar desconexiones en 3-10 s en vez de ~30 s
-    pcall(function() client.connection:timeout(32, 3000, 10000) end)
-
-    local n = 0
-    for _, p in pairs(players) do if p.ip == ip and not p.kicked then n = n + 1 end end
-    if n > MAX_CONN_PER_IP then
-        dropClient(client, "demasiadas conexiones desde " .. ip)
-        return
-    end
-    log("Cliente conectando desde " .. ip)
-end)
-
--- Handshake: versión de protocolo + nickname.
-on("hello", function(data, client, p)
-    if p.verified then return end
-    if type(data) ~= "table" or data.v ~= Protocol.VERSION then
-        client:send("login_error", Lang.message('srv.version'))
-        return
-    end
-    -- El nombre se valida AQUÍ también (longitud, caracteres, palabras vetadas: src/network/NameFilter.lua): el
-    -- cliente ya lo comprueba antes de enviar, pero uno modificado podría saltárselo
-    local name = type(data.name) == 'string' and data.name:match('^%s*(.-)%s*$') or nil
-    local okName, why = NameFilter.check(name)
-    if not okName then
-        client:send("login_error", Lang.message(why == 'blocked' and 'srv.name_blocked' or 'srv.bad_name')); return
-    end
-    local lname = name:lower()
-    for _, other in pairs(players) do
-        if other.verified and not other.kicked and other.name:lower() == lname then
-            client:send("login_error", Lang.message('srv.name_taken')); return
-        end
-    end
-    p.id, p.name, p.verified = newPlayerId(), name, true
-    log("Registrado: '" .. name .. "' (" .. p.ip .. ")")
-    client:send("login_success", { name=name, id=p.id })
-end, true)
-
--- Clientes antiguos (protocolo v1): avisar en su pantalla de login.
-on("set_nickname", function(data, client, p)
-    client:send("room_error", Lang.message('srv.outdated'))
-end, true)
-
-on("get_rooms", function(data, client, p)
-    client:send("room_list", buildPublicRoomList())
-end)
-
-on("create_room", function(data, client, player)
-    if type(data) ~= "table" then return end
-    if player.roomId then client:send("room_error",Lang.message('srv.already_in_room')); return end
-    local name = Protocol.sanitizeName(data.name, ROOM_NAME_MAX)
-    if name and NameFilter.isBlocked(name) then name = nil end        -- (nombres de sala: el mismo filtro de palabras)
-    name = name or ("Sala de " .. player.name)
-    local isPublic   = (data.isPublic ~= false)
-    local password   = cleanText(data.password, PASSWORD_MAX)
-    -- PRIVADA = con contraseña (sin ella estaba en la lista y abierta a cualquiera)
-    if not isPublic and password == "" then client:send("room_error", Lang.message('srv.password_required')); return end
-    local maxPlayers = tonumber(data.maxPlayers) or 4
-    if not isInt(maxPlayers, 1, 8) then client:send("room_error",Lang.message('srv.max_players')); return end
-    local roomId = newRoomId()
-    rooms[roomId] = { id=roomId, name=name, isPublic=isPublic, password=password,
-                      maxPlayers=maxPlayers, playerIds={player.id},
-                      adminId=player.id, state="WAITING", bannedNames={}, bannedIPs={}, sim=nil,
-                      mode=Modes.DEFAULT, level=nil }
-    player.roomId  = roomId
-    player.isReady = false
-    player.color   = PLAYER_COLORS[1]
-    log("Sala '" .. name .. "' creada por " .. player.name)
-    broadcastRoomUpdate(rooms[roomId])
-end)
-
--- Contraseñas falladas, por IP (por conexión, volver a conectar las ponía a cero): [ip] = { fails, lockUntil, t }
-local joinLocks = {}
-on("join_room", function(data, client, player)
-    if type(data) ~= "table" then return end
-    if player.roomId then client:send("room_error",Lang.message('srv.already_in_room')); return end
-    local now = love.timer.getTime()
-    for ip, j in pairs(joinLocks) do if now - j.t > 600 and now >= j.lockUntil then joinLocks[ip] = nil end end
-    local jl = joinLocks[player.ip]
-    if jl and now < jl.lockUntil then
-        client:send("room_error",Lang.message('srv.too_many_tries')); return
-    end
-    local room = rooms[tostring(data.id or ""):sub(1, 12)]
-    if not room then client:send("room_error",Lang.message('srv.room_not_found')); return end
-    if room.state ~= "WAITING" then client:send("room_error",Lang.message('srv.room_in_game')); return end
-    if #room.playerIds >= room.maxPlayers then client:send("room_error",Lang.message('srv.room_full')); return end
-    if room.bannedNames[player.name:lower()] or room.bannedIPs[player.ip] then
-        client:send("room_error",Lang.message('srv.banned_here', nil,
-                                   { kind = "banned", room = room.name })); return
-    end
-    if room.password ~= "" and room.password ~= cleanText(data.password, PASSWORD_MAX) then
-        jl = jl or { fails = 0, lockUntil = 0 }
-        joinLocks[player.ip] = jl
-        jl.fails, jl.t = jl.fails + 1, now
-        if jl.fails >= JOIN_FAIL_MAX then
-            jl.fails = 0
-            jl.lockUntil = now + JOIN_FAIL_LOCK
-            log(player.name .. " bloqueado " .. JOIN_FAIL_LOCK .. "s por contrasenas erroneas")
-        end
-        client:send("room_error",Lang.message('srv.wrong_password')); return
-    end
-    if jl then jl.fails = 0 end
-    table.insert(room.playerIds, player.id)
-    player.roomId  = room.id
-    player.isReady = false
-    player.color   = PLAYER_COLORS[#room.playerIds] or {1,1,1}
-    log(player.name .. " se unio a '" .. room.name .. "'")
-    broadcastRoomUpdate(room)
-    announceToRoom(room, 'srv.joined', { name = player.name }, 'join')
-end)
-
-on("leave_room", function(data, client, player)
-    if not player.roomId then return end
-    local room = rooms[player.roomId]
-    if not room then player.roomId=nil; return end
-    removePlayerFromRoom(player, room, false)
-    client:send("room_left", {})
-end)
-
-on("set_ready", function(data, client, player)
-    if type(data) ~= "table" or not player.roomId then return end
-    local room = rooms[player.roomId]
-    if not room or room.state ~= "WAITING" then return end
-    player.isReady = (data.ready == true)
-    log(player.name .. (player.isReady and " → LISTO" or " → no listo"))
-    broadcastRoomUpdate(room)
-end)
-
-on("start_game", function(data, client, player)
-    if not player.roomId then return end
-    local room = rooms[player.roomId]
-    if not room then return end
-    if room.adminId ~= player.id then client:send("room_error",Lang.message('srv.only_host_start')); return end
-    if room.state == "IN_GAME"   then client:send("room_error",Lang.message('srv.already_playing')); return end
-    if #room.playerIds < 2       then client:send("room_error",Lang.message('srv.need_two')); return end
-
-    for _, pid in ipairs(room.playerIds) do
-        local c = findClientById(pid)
-        if c and not players[c].isReady then
-            client:send("room_error",Lang.message('srv.not_all_ready')); return
-        end
-    end
-
-    -- Asignar colores
-    for i, pid in ipairs(room.playerIds) do
-        local c = findClientById(pid)
-        if c then players[c].color = PLAYER_COLORS[i] or {1,1,1} end
-    end
-
-    scanLevels(true)
-    ensureRoomLevel(room)
-    if not room.level then
-        client:send("room_error",Lang.message('srv.no_map')); return
-    end
-
-    room.state = "IN_GAME"
-    room.sim   = initRoomSim(room)
-
-    log("Partida iniciada en '" .. room.name .. "'!")
-    announceToRoom(room, 'srv.started', nil, 'game')
-    broadcastRoomUpdate(room)   -- el cliente cambia a OnlineAdventureState...
-    sendGameInit(room)          -- ...y recibe los datos iniciales (mismo canal, en orden)
-end)
-
-on("stop_game", function(data, client, player)
-    if not player.roomId then return end
-    local room = rooms[player.roomId]
-    if not room then return end
-    if room.adminId ~= player.id then client:send("room_error",Lang.message('srv.only_host_stop')); return end
-    if room.state ~= "IN_GAME" then return end
-    announceToRoom(room, 'srv.stopped', nil, 'game')
-    endGame(room, "detenida por el admin")
-end)
-
--- El host elige modo de juego y nivel (solo en la sala de espera)
-local function adminRoom(client, player)
-    local room = player.roomId and rooms[player.roomId]
-    if not room then return nil end
-    if room.adminId ~= player.id then client:send("room_error",Lang.message('srv.only_host')); return nil end
-    if room.state ~= "WAITING" then return nil end
-    return room
-end
-
-on("set_mode", function(data, client, player)
-    if type(data) ~= "table" or type(data.mode) ~= "string" then return end
-    local room = adminRoom(client, player)
-    if not room or not Modes.get(data.mode) then return end
-    room.mode = data.mode
-    -- Nivel elegido junto al modo (menú del lobby); si no sirve, uno compatible
-    local info = type(data.level) == "string" and levelInfo(data.level)
-    if info and info.modes[room.mode] then room.level = info.path end
-    -- Dificultad de la sala (opcional): un id de src/core/Difficulty.lua o 'none'
-    if data.difficulty == 'none' then room.difficulty = nil
-    elseif Difficulty.valid(data.difficulty) then room.difficulty = data.difficulty end
-    ensureRoomLevel(room)
-    log(player.name .. " cambio el modo a " .. Modes.get(room.mode).label)
-    broadcastRoomUpdate(room)
-end)
-
--- DIFICULTAD de la sala (la elige el host en la sala de espera; todos la ven en el room_update y llega a la
--- partida en game_init): un id de src/core/Difficulty.lua o 'none' (el juego de siempre)
-on("set_difficulty", function(data, client, player)
-    if type(data) ~= "table" then return end
-    local room = adminRoom(client, player)
-    if not room then return end
-    if data.difficulty == 'none' then room.difficulty = nil
-    elseif Difficulty.valid(data.difficulty) then room.difficulty = data.difficulty
-    else return end
-    log(player.name .. " cambio la dificultad a " .. tostring(room.difficulty or 'ninguna'))
-    broadcastRoomUpdate(room)
-end)
-
--- Catálogo de niveles con miniaturas (lo pide el menú de modos del lobby)
--- (la lista con miniaturas pesa ~100 KB: como mucho una cada 2 s por cliente — repetida a 120/s eran ~13 MB/s)
-local GET_LEVELS_EVERY = 2
-on("get_levels", function(data, client, player)
-    local room = player.roomId and rooms[player.roomId]
-    if not room then return end
-    local now = love.timer.getTime()
-    if player.getLevelsT and now - player.getLevelsT < GET_LEVELS_EVERY then return end
-    player.getLevelsT = now
-    local levels = scanLevels()
-    if not levelCatalogMsg then
-        local list = {}
-        for _, info in ipairs(levels) do
-            local modes = {}
-            for id in pairs(info.modes) do modes[#modes+1] = id end
-            list[#list+1] = { path = info.path, name = info.name, name_en = info.name_en, w = info.w, h = info.h,
-                              enemies = info.enemies, finish = info.finish, modes = modes,
-                              preview = info.preview }
-        end
-        levelCatalogMsg = { levels = list }
-    end
-    client:send("level_catalog", levelCatalogMsg)
-end)
-
-on("set_level", function(data, client, player)
-    if type(data) ~= "table" or type(data.level) ~= "string" then return end
-    local room = adminRoom(client, player)
-    if not room then return end
-    local info = levelInfo(data.level)
-    if not info or not info.modes[room.mode] then
-        client:send("room_error",Lang.message('srv.map_not_valid')); return
-    end
-    room.level = info.path
-    broadcastRoomUpdate(room)
-end)
-
-local function adminTarget(data, client, admin, selfKey)
-    if type(data) ~= "table" or not admin.roomId then return end
-    local room = rooms[admin.roomId]
-    if not room or room.adminId ~= admin.id then client:send("room_error",Lang.message('srv.not_host')); return end
-    local targetId = tostring(data.playerId or ""):sub(1, 32)
-    if targetId == admin.id then client:send("room_error",Lang.message(selfKey)); return end
-    local tc = findClientById(targetId)
-    if not tc or players[tc].roomId ~= room.id then client:send("room_error",Lang.message('srv.player_gone')); return end
-    return room, tc
-end
-
-on("kick_player", function(data, client, admin)
-    local room, tc = adminTarget(data, client, admin, 'srv.cant_kick_self')
-    if not room then return end
-    local tname = players[tc].name
-    tc:send("kicked", Lang.message('srv.kicked', { by = admin.name }, { room = room.name, by = admin.name }))
-    removePlayerFromRoom(players[tc], room, true)
-    announceToRoom(room, 'srv.was_kicked', { name = tname }, 'kick')
-    log(admin.name .. " kickeo a " .. tname)
-end)
-
--- CEDER EL ADMIN a otro jugador de la sala: él pasa a ser el admin y quien lo cede deja de serlo en el acto (solo hay
--- un admin, `room.adminId`); todos lo ven en el siguiente room_update. Vale en la sala de espera y con la partida en marcha.
-on("give_admin", function(data, client, admin)
-    local room, tc = adminTarget(data, client, admin, 'srv.cant_admin_self')
-    if not room then return end
-    local target = players[tc]
-    room.adminId = target.id
-    announceToRoom(room, 'srv.new_host', { name = target.name }, 'admin')
-    broadcastRoomUpdate(room)
-    log(admin.name .. " cedio el admin de '" .. room.name .. "' a " .. target.name)
-end)
-
-on("ban_player", function(data, client, admin)
-    local room, tc = adminTarget(data, client, admin, 'srv.cant_ban_self')
-    if not room then return end
-    local target = players[tc]
-    local tname  = target.name
-    -- Por nombre Y por IP: cambiarse el nick ya no evita el baneo.
-    room.bannedNames[tname:lower()] = true
-    room.bannedIPs[target.ip] = true
-    tc:send("banned", Lang.message('srv.banned', { by = admin.name },
-                        { room = room.name, by = admin.name }))
-    removePlayerFromRoom(target, room, true)
-    announceToRoom(room, 'srv.was_banned', { name = tname }, 'ban')
-    log(admin.name .. " baneo a " .. tname)
-end)
-
--- Inputs numerados: { s = seq del primero, b = {bits, bits, ...} }.
--- Cada paquete repite los últimos inputs no confirmados, así una pérdida de
--- paquetes no pierde inputs. Los ya recibidos se ignoran.
-on("in", function(data, client, player)
-    if type(data) ~= "table" or not player.roomId then return end
-    local room = rooms[player.roomId]
-    if not room or room.state ~= "IN_GAME" or not room.sim then return end
-    local ps = room.sim.playerSims[player.id]
-    if not ps or ps.isSpectator then return end
-
-    local first, list = data.s, data.b
-    if not isInt(first, 1, 2^31) or type(list) ~= "table" then return end
-    -- Tick del mundo que el cliente tenía en pantalla al generar el último input
-    local view = data.v
-    if view ~= nil and not isInt(view, 0, 2^31) then return end
-    local n = #list
-    if n < 1 or n > Protocol.INPUT_REDUNDANCY * 2 then return end
-
-    for i = 1, n do
-        local bits = list[i]
-        if not isInt(bits, 0, Protocol.IN_MAX) then return end
-    end
-    -- Muy por delante de lo procesado: el cliente siguió contando durante un corte de red (sus paquetes se
-    -- perdieron) → se salta hasta él, lo perdido ya no vuelve. (Antes se tiraba el paquete y, tras un corte de 3-6 s,
-    -- TODOS los siguientes: el jugador no volvía a moverse. Un seq inventado solo se perjudica a sí mismo.)
-    if first + n - 1 > ps.lastProcSeq + MAX_SEQ_AHEAD then
-        for i = #ps.queue, 1, -1 do ps.queue[i] = nil end
-        ps.lastProcSeq, ps.lastRecvSeq, ps.highQueue = first - 1, first - 1, 0
-    end
-    for i = 1, n do
-        local seq = first + i - 1
-        if seq > ps.lastRecvSeq then
-            -- inputs anteriores del paquete se vieron ~1 tick antes cada uno
-            table.insert(ps.queue, { seq=seq, bits=list[i], v = view and (view - (n - i)) or nil })
-            ps.lastRecvSeq = seq
-        end
-    end
-end)
-
-on("close_room", function(data, client, admin)
-    if not admin.roomId then return end
-    local room = rooms[admin.roomId]
-    if not room or room.adminId ~= admin.id then
-        client:send("room_error",Lang.message('srv.not_host')); return
-    end
-    log("Sala '" .. room.name .. "' cerrada por " .. admin.name)
-    for _, pid in ipairs(room.playerIds) do
-        local c = findClientById(pid)
-        if c then
-            c:send("room_closed", Lang.message('srv.room_closed', { by = admin.name }, { room = room.name, by = admin.name }))
-            players[c].roomId=nil; players[c].isReady=false; players[c].color=nil
-        end
-    end
-    rooms[room.id] = nil
-end)
-
-server:on("disconnect", function(data, client)
-    local player = players[client]
-    if not player then return end
-    log("Desconectado: '" .. (player.name or player.ip) .. "'")
-    if player.roomId then
-        local room = rooms[player.roomId]
-        if room then removePlayerFromRoom(player, room, false) end
-    end
-    players[client] = nil
-end)
-
+S.soundEvents, S.soundOwner, S.emitX, S.emitY, S.currentSim = {}, nil, nil, nil, nil
+S.bitser, S.HEADLESS, S.parentDir, S.Protocol, S.NameFilter, S.Modes = bitser, HEADLESS, parentDir, Protocol, NameFilter, Modes
+S.Lang, S.json, S.Updates, S.TICK_DT, S.SNAPSHOT_EVERY, S.band = Lang, json, Updates, TICK_DT, SNAPSHOT_EVERY, band
+S.round, S.PORT, S.MAX_PEERS, S.PING_TICK, S.LOG_MAX, S.MSG_RATE = round, PORT, MAX_PEERS, PING_TICK, LOG_MAX, MSG_RATE
+S.MSG_BURST, S.FLOOD_LIMIT, S.INVALID_LIMIT, S.MAX_CONN_PER_IP, S.HELLO_TIMEOUT, S.UPDATE_IDLE = MSG_BURST, FLOOD_LIMIT, INVALID_LIMIT, MAX_CONN_PER_IP, HELLO_TIMEOUT, UPDATE_IDLE
+S.JOIN_FAIL_MAX, S.JOIN_FAIL_LOCK, S.PASSWORD_MAX, S.ROOM_NAME_MAX, S.MAX_BUDGET, S.MAX_STEPS_TICK = JOIN_FAIL_MAX, JOIN_FAIL_LOCK, PASSWORD_MAX, ROOM_NAME_MAX, MAX_BUDGET, MAX_STEPS_TICK
+S.TARGET_QUEUE, S.TRIM_AFTER, S.MAX_QUEUE, S.STARVE_TICKS, S.NEAR_X, S.NEAR_Y = TARGET_QUEUE, TRIM_AFTER, MAX_QUEUE, STARVE_TICKS, NEAR_X, NEAR_Y
+S.MAX_SEQ_AHEAD, S.MAX_FRAME_TICKS, S.PLAYER_COLORS, S._inp, S.DROWN_TOTAL, S.LEVELS_DIR = MAX_SEQ_AHEAD, MAX_FRAME_TICKS, PLAYER_COLORS, _inp, DROWN_TOTAL, LEVELS_DIR
+S.DEFAULT_LEVEL, S.PLAYER_LIVES, S.TEST_BOSSDMG, S.SPAWN_STAGGER, S.server = DEFAULT_LEVEL, PLAYER_LIVES, TEST_BOSSDMG, SPAWN_STAGGER, server
+S.players, S.rooms, S.serverLog = players, rooms, serverLog
+for _, part in ipairs({ 'util', 'catalog', 'sim', 'broadcast', 'lobby' }) do require('srv.' .. part)(S) end
 
 -- ─────────────────────────────────────────────────────────────────────────────
 --  UI del servidor (consola visual)
@@ -1575,8 +178,8 @@ function love.load()
 
     -- Acceder a los assets del juego via io.open (love.filesystem no puede montar rutas OS arbitrarias)
     -- (package.path ya se extendió con parentDir al inicio del archivo)
-    log("Directorio del juego: " .. parentDir)
-    Updates.init(parentDir, log)                  -- actualizaciones automáticas (updates.lua)
+    S.log("Directorio del juego: " .. parentDir)
+    Updates.init(parentDir, S.log)                  -- actualizaciones automáticas (updates.lua)
 
     -- Override love.filesystem.read para leer assets (JSON de niveles, etc.)
     local _lfsRead = love.filesystem.read
@@ -1701,52 +304,53 @@ function love.load()
     require 'settings'
 
     -- Cargar entidades (en modo ventana usa graphics real; en headless usa stubs)
-    Level           = require 'src/world/level/Level'
-    PlayerAdventure = require 'src/player/PlayerAdventure'
+    S.Level           = require 'src/world/level/Level'
+    S.PlayerAdventure = require 'src/player/PlayerAdventure'
     -- Efectos visuales del jugador (ground pound, bloques rotos): el servidor
     -- no dibuja; los reenvía a los clientes para que pongan las partículas
-    PlayerAdventure.fx = function(kind, x, y)
-        if _currentSim then
-            pushEvent(_currentSim, { type='fx', kind=kind, x=round(x), y=round(y), playerId=_currentSoundPlayerId })
+    S.PlayerAdventure.fx = function(kind, x, y)
+        if S.currentSim then
+            S.pushEvent(S.currentSim, { type='fx', kind=kind, x=round(x), y=round(y), playerId=S.soundOwner })
         end
     end
-    Entities        = require 'src/world/entities/Entities'
-    BossZones       = require 'src/world/systems/BossZones'
-    AutoScroll      = require 'src/world/systems/AutoScroll'
-    StartCountdown  = require 'src/world/systems/StartCountdown'
-    Floods          = require 'src/world/systems/Floods'
-    PointAreas      = require 'src/world/systems/PointAreas'
-    Push            = require 'src/world/systems/Push'
-    Carry           = require 'src/world/systems/Carry'
-    Difficulty      = require 'src/core/Difficulty'
+    S.Entities        = require 'src/world/entities/Entities'
+    S.BossZones       = require 'src/world/systems/BossZones'
+    S.AutoScroll      = require 'src/world/systems/AutoScroll'
+    S.StartCountdown  = require 'src/world/systems/StartCountdown'
+    S.Floods          = require 'src/world/systems/Floods'
+    S.PointAreas      = require 'src/world/systems/PointAreas'
+    S.Push            = require 'src/world/systems/Push'
+    S.Carry           = require 'src/world/systems/Carry'
+    S.Difficulty      = require 'src/core/Difficulty'
+    S.Sim             = require 'src/world/systems/Sim'
     -- Lo que un jefe le hace a un jugador (daño, muerte) suena como suyo:
     -- su cliente lo reproduce al ver bajar su vida en la reconciliación
-    PlayerAdventure.soundOwner = function(pa, fn)
-        local prev, px, py = _currentSoundPlayerId, _emitX, _emitY
-        _currentSoundPlayerId = pa.netId
-        _emitX, _emitY = pa.x, pa.y
+    S.PlayerAdventure.soundOwner = function(pa, fn)
+        local prev, px, py = S.soundOwner, S.emitX, S.emitY
+        S.soundOwner = pa.netId
+        S.emitX, S.emitY = pa.x, pa.y
         local ok, err = pcall(fn)
-        _currentSoundPlayerId, _emitX, _emitY = prev, px, py
+        S.soundOwner, S.emitX, S.emitY = prev, px, py
         if not ok then error(err, 0) end
     end
     -- Lo que hace un jefe al recibir un golpe: para todos, también para quien se lo dio (Interactions.hit)
-    Entities.interactions.asWorld = function(fn, ...)
-        local prev = _currentSoundPlayerId
-        _currentSoundPlayerId = nil
+    S.Entities.interactions.asWorld = function(fn, ...)
+        local prev = S.soundOwner
+        S.soundOwner = nil
         local ok, err = pcall(fn, ...)
-        _currentSoundPlayerId = prev
+        S.soundOwner = prev
         if not ok then error(err, 0) end
     end
     -- Efectos de las entidades (pinchos que se clavan...): para todos
     require('src/world/entities/base/Entity').fx = function(kind, x, y, opts)
-        if _currentSim then
-            pushEvent(_currentSim, { type='fx', kind=kind, x=round(x), y=round(y), tile=opts and opts.tile or nil })
+        if S.currentSim then
+            S.pushEvent(S.currentSim, { type='fx', kind=kind, x=round(x), y=round(y), tile=opts and opts.tile or nil })
         end
     end
 
-    log("Entidades de simulacion cargadas.")
+    S.log("Entidades de simulacion cargadas.")
     if HEADLESS then
-        log("Modo HEADLESS activo — sin ventana grafica.")
+        S.log("Modo HEADLESS activo — sin ventana grafica.")
     end
 end
 
@@ -1761,13 +365,13 @@ function love.draw()
     love.graphics.setColor(0.95, 0.80, 0.15)
     love.graphics.print(
         "  FLAPPYMONSTER SERVER (AUTORITATIVO)   Puerto:" .. PORT ..
-        "   Jugadores:" .. countPlayers() ..
-        "   Salas:" .. countRooms(), 8, 6)
+        "   Jugadores:" .. S.countPlayers() ..
+        "   Salas:" .. S.countRooms(), 8, 6)
     love.graphics.setColor(0.25, 0.30, 0.35)
     love.graphics.line(0, 28, W, 28)
 
     local y = 36
-    if countRooms() == 0 then
+    if S.countRooms() == 0 then
         love.graphics.setColor(0.40, 0.42, 0.45)
         love.graphics.print("  (sin salas activas)", 10, y); y = y + 20
     else
@@ -1782,7 +386,7 @@ function love.draw()
                     room.sim and "  SIM" or ""), 10, y)
             y = y + 18
             for _, pid in ipairs(room.playerIds) do
-                local c = findClientById(pid)
+                local c = S.findClientById(pid)
                 if c then
                     local p    = players[c]
                     local atag = (pid == room.adminId) and "[A]" or "   "
@@ -1828,7 +432,7 @@ local function checkHelloTimeouts()
         -- (quien se está actualizando no se identifica: basta con que siga pidiendo)
         local since = p.updT and (now - p.updT > UPDATE_IDLE) or (not p.updT and now - p.connectedAt > HELLO_TIMEOUT)
         if not p.verified and not p.kicked and since then
-            dropClient(c, p.updT and "actualización inactiva" or "sin handshake")
+            S.dropClient(c, p.updT and "actualización inactiva" or "sin handshake")
         end
     end
 end
@@ -1849,7 +453,7 @@ end
 local function stepAndSend(room)
     if GPROF then collectgarbage('stop') end
     local t0, k0 = PERF and love.timer.getTime(), PERF and collectgarbage('count')
-    stepRoom(room)
+    S.stepRoom(room)
     if PERF then
         PERF.steps, PERF.stepT = PERF.steps + 1, PERF.stepT + love.timer.getTime() - t0
         perfAlloc(k0)
@@ -1857,24 +461,24 @@ local function stepAndSend(room)
     local sim = room.sim
     if sim.ended or sim.tick % SNAPSHOT_EVERY == 0 then
         local t1, k1 = PERF and love.timer.getTime(), PERF and collectgarbage('count')
-        broadcastSnapshot(room)
-        flushEvents(room)
+        S.broadcastSnapshot(room)
+        S.flushEvents(room)
         if PERF then
             PERF.snaps, PERF.snapT = PERF.snaps + 1, PERF.snapT + love.timer.getTime() - t1
             perfAlloc(k1)
         end
     end
-    if sim.ended then endGame(room, "ronda terminada (" .. sim.ended .. ")") end
+    if sim.ended then S.endGame(room, "ronda terminada (" .. sim.ended .. ")") end
 end
 
 -- Un error de Lua en UNA sala (un enemigo, un jefe, un modo...) no tira el servidor entero: se apunta con su traza,
 -- esa partida se termina y las demás salas siguen
 local function guarded(room, what, fn, ...)
     local ok, err = xpcall(fn, debug.traceback, ...)
-    _currentSim = nil                    -- (los efectos de fuera de un paso no van a la última sala simulada)
+    S.currentSim = nil                    -- (los efectos de fuera de un paso no van a la última sala simulada)
     if ok then return end
-    log("ERROR en la sala '" .. tostring(room.name) .. "' (" .. what .. "): " .. tostring(err))
-    if room.sim then pcall(endGame, room, "error del servidor") end
+    S.log("ERROR en la sala '" .. tostring(room.name) .. "' (" .. what .. "): " .. tostring(err))
+    if room.sim then pcall(S.endGame, room, "error del servidor") end
 end
 
 function love.update(dt)
@@ -1903,16 +507,16 @@ function love.update(dt)
     if PERF then
         PERF.t = PERF.t + dt
         if PERF.t >= 10 then
-            log(string.format("perf: %d pasos de sala %.3f ms · %d fotos %.3f ms · %.1f KB creados por paso · Lua %.0f KB",
+            S.log(string.format("perf: %d pasos de sala %.3f ms · %d fotos %.3f ms · %.1f KB creados por paso · Lua %.0f KB",
                 PERF.steps, PERF.steps > 0 and PERF.stepT / PERF.steps * 1000 or 0, PERF.snaps,
                 PERF.snaps > 0 and PERF.snapT / PERF.snaps * 1000 or 0, PERF.steps > 0 and PERF.alloc / PERF.steps or 0,
                 collectgarbage('count')))
             if GPROF and PERF.steps > 0 then
-                for _, e in ipairs(GPROF.top(15, PERF.steps)) do log(string.format("perf:   %7.2f KB/paso  %s", e[2], e[1])) end
+                for _, e in ipairs(GPROF.top(15, PERF.steps)) do S.log(string.format("perf:   %7.2f KB/paso  %s", e[2], e[1])) end
                 GPROF.reset()
             end
             if PERF_SNAP.n > 0 then
-                log(string.format("perf: fotos por jugador: media %d B, máxima %d B, %d de más de 1200 B (van en trozos fiables)",
+                S.log(string.format("perf: fotos por jugador: media %d B, máxima %d B, %d de más de 1200 B (van en trozos fiables)",
                     math.floor(PERF_SNAP.sum / PERF_SNAP.n), PERF_SNAP.max, PERF_SNAP.big))
             end
             PERF_SNAP.max, PERF_SNAP.sum, PERF_SNAP.n, PERF_SNAP.big = 0, 0, 0, 0
@@ -1924,7 +528,7 @@ function love.update(dt)
     if pingTimer >= PING_TICK then
         pingTimer = 0
         for _, room in pairs(rooms) do
-            if #room.playerIds > 0 then guarded(room, 'estado de la sala', broadcastRoomUpdate, room) end
+            if #room.playerIds > 0 then guarded(room, 'estado de la sala', S.broadcastRoomUpdate, room) end
         end
     end
 end

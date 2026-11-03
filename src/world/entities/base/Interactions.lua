@@ -213,13 +213,13 @@ end
 
 -- A quién empuja el impacto de un ground pound (el usuario, 2026-11-02: "es enorme"): SOLO a lo que está EN EL SUELO y a
 -- 1,5 casillas como mucho del epicentro (los pies de quien cae). Enemigos y jugadores: una regla para todos.
-Interactions.POUND_RADIUS = 1.5 * TILE_PX
+Interactions.POUND_TILES = 1.5          -- (en casillas: TILE_PX aún no existe al cargar este archivo en el servidor)
 function Interactions.poundReaches(pa, o)
     if not (o.onGround or (o.cattached and o.cny == -1)) then return false end        -- (trepador: solo sobre el suelo)
     local a = pa:getOuterBounds()
     local feet = a.y + a.h
     local b = o:getOuterBounds()
-    local R = Interactions.POUND_RADIUS
+    local R = Interactions.POUND_TILES * TILE_PX
     return math.abs(o.x - pa.x) <= R and math.abs(b.y + b.h - feet) <= R
 end
 
