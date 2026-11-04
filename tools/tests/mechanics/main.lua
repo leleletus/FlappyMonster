@@ -87,6 +87,7 @@
 --   persecucion_toque  el Perseguidor, forzado: tocarlo solo empuja; la onda de su picado, 1,5 casillas y en el suelo
 --   paredes_falsas el aspecto de las paredes falsas: como lo que las rodea, el elegido manda, sin colisión
 --   secreto_reina  la salida secreta de templo_de_los_pesos: solo la catapulta de la balanza grande llega a ella
+--   secreto_tifon  la salida secreta de taller_trampas: saltando dentro de la chimenea falsa, su corriente sube hasta ella; andando contra su base, nada
 --   jefe_puntos    un golpe a un jefe da puntos una vez aunque el servidor lo compruebe dos veces (compensación del retardo)
 --   gp_radio       el impacto del ground pound: solo a lo que está en el suelo, a 1,5 casillas como mucho
 --   dejar_encima   agachado + ARRIBA delante de una caja: queda encima de ella (también de una pila); sin nada, al suelo
@@ -2363,6 +2364,44 @@ function cases.secreto_reina()
         tostring(hit), tostring(not reach)))
 end
 
+-- LA SALIDA SECRETA DE TIFÓN (taller_trampas): una chimenea de piedra contra la pared izquierda, junto al inicio. La base
+-- es de verdad y el fuste FALSO; dentro, una Ventisca solo hacia arriba (rachas de 3-4 s) sube al jugador hasta la salida
+-- secreta de arriba. Andar contra la base no hace nada (no se encuentra sin querer al pulsar izquierda al empezar)
+function cases.secreto_tifon()
+    local level = Level.new('assets/levels/taller_trampas.json')
+    local es = {}
+    for _, pl in ipairs(level.entities) do local e = Entities.create(pl); if e then es[#es + 1] = e end end
+    level.liveEntities = es
+    local function touching(pa)
+        local ob = pa:getOuterBounds()
+        return level:triggerInBox(ob.x, ob.y, ob.w, ob.h, 'secret_exit')
+    end
+    local sx, sy = level:getSpawnPx()
+    -- andando a la izquierda desde el inicio: la base le para
+    local pa = PlayerAdventure:new(sx, sy)
+    settle(level, es, pa)
+    local walked = false
+    clear(); stub.state.left = true
+    sim(level, { pa }, es, 6, function() if touching(pa) then walked = true end end)
+    clear()
+    local stopped = pa.x > 1.4 * T
+    -- saltando hacia la izquierda, dentro del fuste: la corriente le sube
+    local pb = PlayerAdventure:new(sx, sy)
+    settle(level, es, pb)
+    local hit = false
+    for _ = 1, 4 do
+        clear(); stub.state.left = true; stub.state.jump = true; stub.state.jump_pressed = true
+        sim(level, { pb }, es, 1 / 60); stub.state.jump_pressed = false
+        sim(level, { pb }, es, 0.5, function() if touching(pb) then hit = true end end)
+        clear()
+        sim(level, { pb }, es, 3, function() if touching(pb) then hit = true end end)
+        if hit then break end
+    end
+    clear()
+    check('secreto_tifon', hit and not walked and stopped, ('saltando dentro de la chimenea la corriente sube a la salida=%s · andando contra la base no=%s (se para en x %.2f)'):format(
+        tostring(hit), tostring(not walked and stopped), pa.x / T))
+end
+
 -- PAREDES FALSAS con su ASPECTO (src/world/level/FakeLooks.lua; el usuario, 2026-11-03): un grupo de paredes falsas se ve
 -- como el bloque que más lo rodea (Auto); el elegido en el nivel (fakeLooks) manda; sin vecinos, piedra; la colisión no
 -- cambia; y un ladrillo de verdad junto a uno falso no dibuja borde entre ellos
@@ -3964,7 +4003,7 @@ function love.load()
                          'bomba_activa', 'bomba_pisada', 'bomba_radios', 'bomba_mundo', 'bomba_objeto',
                          'hielo_solido', 'hielo_desgaste', 'hielo_gp', 'hielo_bomba', 'encerrado', 'trepador_canto', 'hielo_resbala', 'filo_propio', 'saltarin', 'saltarin_cueva', 'persecucion', 'persecucion_cuerpo', 'inofensivos', 'tapa_base', 'manzana',
                          'cryo_jugador', 'cryo_enemigo', 'cryo_activador', 'cryo_corte', 'lava', 'pocos_fps', 'ahogo_ganado', 'techo_pinchos',
-                         'caja_empuje', 'caja_rota', 'caja_borde', 'cargar', 'bomba_reaparece', 'islas', 'islas_arte', 'viento', 'cuerpo_mueve', 'cajas_golpes', 'balanza', 'soplon', 'semilla', 'ventisca', 'geiser', 'balanza_tope', 'caja_choques', 'cargar_gp', 'gp_radio', 'dejar_encima', 'jump_buffer', 'jefe_puntos', 'persecucion_toque', 'secreto_reina', 'paredes_falsas', 'aire_caja', 'geiser_peso', 'bomba_cajas', 'cajas_fila', 'balanza_impacto', 'balanza_salto', 'balanza_techo', 'escarabajo', 'escarabajo_lanzado', 'escarabajo_ruta', 'escarabajo_manos', 'escarabajo_arrolla',
+                         'caja_empuje', 'caja_rota', 'caja_borde', 'cargar', 'bomba_reaparece', 'islas', 'islas_arte', 'viento', 'cuerpo_mueve', 'cajas_golpes', 'balanza', 'soplon', 'semilla', 'ventisca', 'geiser', 'balanza_tope', 'caja_choques', 'cargar_gp', 'gp_radio', 'dejar_encima', 'jump_buffer', 'jefe_puntos', 'persecucion_toque', 'secreto_reina', 'secreto_tifon', 'paredes_falsas', 'aire_caja', 'geiser_peso', 'bomba_cajas', 'cajas_fila', 'balanza_impacto', 'balanza_salto', 'balanza_techo', 'escarabajo', 'escarabajo_lanzado', 'escarabajo_ruta', 'escarabajo_manos', 'escarabajo_arrolla',
                          'topo', 'topo_culetazo', 'topo_suelo', 'topo_borde', 'pirana', 'pirana_pisar', 'pirana_rebota', 'pirana_nada', 'planta', 'planta_pisar', 'planta_traga', 'planta_colgada', 'planta_come', 'planta_bomba' }) do
         if not os.getenv('ONLY') or (',' .. os.getenv('ONLY') .. ','):find(',' .. n .. ',', 1, true) then cases[n]() end
     end

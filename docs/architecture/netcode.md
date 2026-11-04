@@ -210,6 +210,7 @@ piece took damage, immortal online), and a rewound "stomp" may hit a boss that i
 
 ## Protocol version history
 
+v111 Tifón (`tifon`, new type: the fortress secret boss; wind side, swap, zone bounds, marks, arcs and hail in its netPack; its `pushAt` runs on the client too) and the level `tejados_del_tifon`.
 v110 records and the daily challenge (`get_records` → `records`, `join_daily`, `daily` in room updates and the room list).
 v109 report_player, joining a running match to watch, rejoining after a cut (`hello.rejoin`, `game_init.rejoin / late`).
 v108 `rhythm_pose` (client → server → the rest of the room): each player's hit / miss pose in the rhythm duel.

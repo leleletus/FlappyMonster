@@ -17,6 +17,10 @@
       "source": { "boss": "giantscorpion", "level": "nido_del_escorpion", "from": "caldera_roja" },
       "keys": "story.collect.astilla_escorpion", "kind": "splinter",
       "states": { "stolen": { "icon": "assets/images/story/collectibles/astilla_escorpion_empty.png" } } },
+    { "id": "astilla_tifon", "icon": "assets/images/story/collectibles/astilla_tifon.png",
+      "source": { "boss": "tifon", "level": "tejados_del_tifon", "from": "taller_trampas" },
+      "keys": "story.collect.astilla_tifon", "kind": "splinter",
+      "states": { "stolen": { "icon": "assets/images/story/collectibles/astilla_tifon_empty.png" } } },
     { "id": "bola_disco", "icon": "assets/images/story/collectibles/bola_disco.png",
       "source": { "level": "mashup_cangrejos" },
       "keys": "story.collect.bola_disco", "kind": "trophy" }

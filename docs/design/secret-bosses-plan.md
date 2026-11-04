@@ -12,7 +12,7 @@ how a secret is wired: [story-mode](../story/story-mode.md#the-secrets-secret-ex
 | Carnivorous Queen (`carnqueen`) | jungle | done | `jardin_de_la_reina` (0.5.157) | `templo_de_los_pesos` | `astilla_reina` | `reina` (boss), `jungla_1` |
 | Triple Strike Scorpion (`giantscorpion`) | volcano | done | `nido_del_escorpion` (0.5.157) | `caldera_roja` | `astilla_escorpion` | `obsidiana` (boss), `volcan_1` |
 | Mother Mole | meadow | — | — | — | — | — |
-| Supreme Gust «Tifón» (`tifon`) | fortress | — | — | — | art `astilla_tifon` (no entry yet) | `tifon` (boss) |
+| Supreme Gust «Tifón» (`tifon`) | fortress | done | `tejados_del_tifon` (0.5.159) | `taller_trampas` | `astilla_tifon` | `tifon` (boss), `fortaleza_2` |
 
 The Groove's disco ball has six splinters: Mega Crabby's crown, Mega Gloomy's amulet and four more. **A splinter entry
 must never be added to `assets/story/collectibles.json` before its boss is playable in the story** (the Groove's gate
@@ -56,7 +56,7 @@ A giant version of the Mole (`mole`) that already digs through soft ground and s
   patches matter more; she digs faster and bursts twice in a row.
 - **Piece:** miner's helmet, the splinter as its lamp.
 
-## 4. Supreme Gust «Tifón» — fortress (new)
+## 4. Supreme Gust «Tifón» — fortress — DONE (0.5.159; what was built and what changed: [tifon](../bosses/tifon.md))
 
 A giant storm cloud: the Gust (`gust`) grown huge, built on Push (wind), boxes, bombs and the lightning of the dark levels.
 

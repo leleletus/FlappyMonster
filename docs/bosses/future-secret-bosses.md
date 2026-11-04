@@ -34,6 +34,7 @@ Common to all:
 - **Piece:** a **dewdrop flower**, the splinter as a drop of dew on a petal.
 
 ## 3. The Supreme Gust / Tifón — Fortress
+**In the story (0.5.159, 2026-11-04): [tifon](tifon.md), lair `tejados_del_tifon`, behind a hidden chimney of `taller_trampas`.**
 - **Unlock:** in `taller_trampas`, a hidden chimney. A Gust's wind lifts you to the roof, where a secret exit sits among the chimneys.
 - **Lair:** the fortress roofs, open sky, boxes and loose bombs.
 - **Fight:**

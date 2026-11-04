@@ -95,6 +95,24 @@ function love.load()
                 end
             end
         end
+        -- Tifón: una bomba encendida a su boca cuando aspira; aturdido, un pisotón al rato (fase 2 y, al final, la muerte)
+        if boss.def.name == 'tifon' then
+            level.pushers = require('src/world/systems/Push').collect(ents)
+            if boss.state ~= 'inhale' then hitDone.tfIn = nil end
+            if boss.state == 'inhale' and boss.deadTimer > 0.5 and not hitDone.tfIn then
+                for _, e in ipairs(ents) do
+                    if e.def.name == 'bombobject' and e.alive and e.state ~= 'exploding' and e.state ~= 'eaten' then
+                        hitDone.tfIn = true
+                        local mx, my = boss:mouthPos()
+                        e.x, e.y, e.onGround = mx + (boss.facing or -1) * 1.5 * TILE_PX, my + TILE_PX, false
+                        e:throw(-(boss.facing or -1) * 150, -250, true)
+                        e.thrown, e.thrownBy = true, pa
+                        break
+                    end
+                end
+            end
+            if boss.state == 'stun' and boss.deadTimer > 1.2 and boss.inv <= 0 then boss:damage(2, 'pound') end
+        end
         -- golpea al jefe clavado (para ver el daño y, al final, la muerte)
         if boss.state == 'stuck' and boss.deadTimer > 1.0 and not hitDone[boss] and not os.getenv('CLAW') and not os.getenv('SMALL') then
             boss.hp = math.min(boss.hp, 1)

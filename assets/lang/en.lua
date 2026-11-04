@@ -196,6 +196,13 @@ return {
                 hint = "A level of the Volcano hides a secret exit...",
                 stolen = "The Groove stole its splinter for its disco ball: only the empty clasp is left.",
             },
+            astilla_tifon = {
+                name = "Brass Weather Vane",
+                desc = "A brass weather vane with a mirror splinter for an arrowhead. Typhoon, the Supreme Gust, wore it.",
+                how = "You beat Typhoon on the rooftops, through the secret exit of the Trap Workshop.",
+                hint = "A level of the Fortress hides a secret exit...",
+                stolen = "The Groove stole its splinter for its disco ball: only the vane without its tip is left.",
+            },
             bola_disco = {
                 name = "Disco Ball",
                 desc = "The Groove's ball, made of mirror splinters. Whole at last.",
@@ -541,6 +548,7 @@ return {
         giantbeetle = "GIANT RHINO BEETLE",
         giantscorpion = "TRIPLE STRIKE SCORPION",
         carnqueen = "CARNIVOROUS QUEEN",
+        tifon = "TYPHOON",
         groovecrab = "GROOVE CRAB",
         megagloomy = "MEGA GLOOMY CRABBY",
         snowboss = "BIG SNOWBALL",

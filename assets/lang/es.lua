@@ -196,6 +196,13 @@ return {
                 hint = "Un nivel del Volcán esconde una salida secreta...",
                 stolen = "El Groove te robó la astilla para su bola de discoteca: solo te queda el broche vacío.",
             },
+            astilla_tifon = {
+                name = "Veleta de latón",
+                desc = "Una veleta de latón con una astilla del espejo por punta de flecha. La llevaba Tifón, el Soplón Supremo.",
+                how = "Venciste a Tifón en los tejados, por la salida secreta del Taller de Trampas.",
+                hint = "Un nivel de la Fortaleza esconde una salida secreta...",
+                stolen = "El Groove te robó la astilla para su bola de discoteca: solo te queda la veleta sin punta.",
+            },
             bola_disco = {
                 name = "Bola de discoteca",
                 desc = "La bola del Groove, hecha con astillas del espejo. Por fin, completa.",
@@ -541,6 +548,7 @@ return {
         giantbeetle = "ESCARABAJO RINOCERONTE GIGANTE",
         giantscorpion = "ESCORPIÓN TRIPLE AGUIJÓN",
         carnqueen = "REINA CARNÍVORA",
+        tifon = "TIFÓN",
         groovecrab = "CANGREJO GROOVE",
         megagloomy = "MEGA CRABBY LÚGUBRE",
         snowboss = "GRAN BOLA DE NIEVE",

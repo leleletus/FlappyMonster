@@ -64,6 +64,7 @@ and the network use; **Label** is the (Spanish) name in the editor. Own props = 
 | `mirror` | Jefe Espejo | `types/bosses/mirror.lua` | boss | `zone`: int = 0 · `hp`: int = 8 · `hpPerPlayer`: int = 4 · `title`: text =  · `title_en`: text =  · `event`: bool = false · `mashupRole`: enum = none · `fixedHp`: bool = false · `rageMode`: enum = auto · `delay`: number = 1.5 · `flipMin`: number = 1 · `flipMax`: number = 3 · `evade`: bool = true · `randomMove`: bool = true · `arenaAttacks`: bool = true · `attackEvery`: number = 7 · `portalAim`: number = 1 · `glassJump`: number = 950 · `recoverTime`: number = 0.3 |
 | `mirrorchase` | Espejo perseguidor | `types/bosses/mirrorchase.lua` | diesWithBlock, renderFront | `rest`: number = 1.1 |
 | `snowboss` | Gran Bola de Nieve | `types/bosses/snowboss.lua` | boss | `zone`: int = 0 · `hp`: int = 14 · `hpPerPlayer`: int = 4 · `title`: text =  · `title_en`: text =  · `event`: bool = false · `mashupRole`: enum = none · `fixedHp`: bool = false · `rageMode`: enum = auto · `phase2`: number = 0.66 · `phase3`: number = 0.33 · `icicles`: points = … · `icicleRegrow`: number = 6 · `soakTime`: number = 2.8 · `lakeRegrow`: number = 4 · `frostProof`: number = 7 |
+| `tifon` | Tifón (Soplón Supremo) | `types/bosses/tifon.lua` | boss | `zone`: int = 0 · `hp`: int = 6 · `hpPerPlayer`: int = 2 · `title`: text =  · `title_en`: text =  · `event`: bool = false · `mashupRole`: enum = none · `fixedHp`: bool = false · `rageMode`: enum = auto · `wear`: bool = true · `angerAt`: number = 0.5 |
 
 ## Trampas
 

@@ -1086,20 +1086,23 @@ function love.update(dt)
             tostring(RT.btn == 2), W1[1].id, tostring(RT.inLevel)))
         go('nsec1')
     elseif step == 'nsec1' and t - T > 0.2 then
-        -- LOS SECRETOS NUEVOS (2026-11-03): la Reina (desde templo_de_los_pesos) y el Escorpión (desde caldera_roja) se
-        -- abren con su salida secreta y salen en el mapa con su camino
+        -- LOS SECRETOS NUEVOS (2026-11-03): la Reina (desde templo_de_los_pesos), el Escorpión (desde caldera_roja) y
+        -- Tifón (desde taller_trampas, 2026-11-04) se abren con su salida secreta y salen en el mapa con su camino
         NS = { keepFound = Run.data.found }
         NS.lockedBefore = Run.secretState('jardin_de_la_reina') == 'locked' and Run.secretState('nido_del_escorpion') == 'locked'
-        Run.data.found = { jardin_de_la_reina = true, nido_del_escorpion = true }
-        Run.data.done.templo_de_los_pesos, Run.data.done.caldera_roja = true, true
+            and Run.secretState('tejados_del_tifon') == 'locked'
+        Run.data.found = { jardin_de_la_reina = true, nido_del_escorpion = true, tejados_del_tifon = true }
+        Run.data.done.templo_de_los_pesos, Run.data.done.caldera_roja, Run.data.done.taller_trampas = true, true, true
         NS.open = Run.secretState('jardin_de_la_reina') == 'open' and Run.secretState('nido_del_escorpion') == 'open'
+            and Run.secretState('tejados_del_tifon') == 'open'
         local wj
         for i = 1, Worlds.count() do if Worlds.get(i).id == 'jungla' then wj = i end end
         gStateMachine:change('story_map', { world = wj, node = 3 }); go('nsec2')
     elseif step == 'nsec2' and t - T > 3.5 then
         shot('map_secret_reina')
         -- y se juegan: cada jefe SUELTA su pieza (la Reina, la flor; el Escorpión, el broche), se recoge y se guarda al acabar
-        NS.queue = { { id = 'jardin_de_la_reina', piece = 'astilla_reina', world = 'jungla' }, { id = 'nido_del_escorpion', piece = 'astilla_escorpion', world = 'final' } }
+        NS.queue = { { id = 'jardin_de_la_reina', piece = 'astilla_reina', world = 'jungla' }, { id = 'nido_del_escorpion', piece = 'astilla_escorpion', world = 'final' },
+                     { id = 'tejados_del_tifon', piece = 'astilla_tifon', world = 'fortaleza' } }
         NS.res = {}
         go('nsp1')
     elseif step == 'nsp1' and t - T > 0.3 then
@@ -1143,7 +1146,7 @@ function love.update(dt)
         check('secretos_nuevos', NS.lockedBefore and NS.open and NS.ok == true, ('sin su salida secreta, cerrados=%s · con ella, abiertos=%s · %s'):format(
             tostring(NS.lockedBefore), tostring(NS.open), table.concat(NS.res, ' · ')))
         Run.data.found = NS.keepFound
-        Run.data.collect.astilla_reina, Run.data.collect.astilla_escorpion = nil, nil
+        Run.data.collect.astilla_reina, Run.data.collect.astilla_escorpion, Run.data.collect.astilla_tifon = nil, nil, nil
         Run.save()
         gStateMachine:change('story_map', { world = 1, node = 1 }); go('del')
     elseif step == 'del' and t - T > 0.3 then

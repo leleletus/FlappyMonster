@@ -98,6 +98,10 @@ function love.load()
     local cq = boss.def.name == 'carnqueen'
     if cq then VULN = { stun = true } end
     local cqT = 0
+    -- Tifón: solo aturdido; el bloque de abajo le lanza una bomba encendida cuando aspira
+    local tf = boss.def.name == 'tifon'
+    if tf then VULN = { stun = true } end
+    local tfLast
     local kg = { phases = {}, maxGuards = 0, flopOff = {}, waveHits = 0, partHits = 0, lastPartT = -9 }
     local sn = { phases = {}, scales = {}, frozenHits = {}, crashDizzy = 0, bonks = 0, toggles = 0, refrozen = 0,
                  deathOrder = {}, early = {}, shown = {} }
@@ -128,6 +132,7 @@ function love.load()
         t = t + dt
         pa:update(dt, level)
         level.solidBodies = Entities.solidBodies(ents)
+        level.pushers = require('src/world/systems/Push').collect(ents)      -- (lo que sopla, como en el juego: Sim.lua)
         ctrl:update(dt)
         Floods.advance(level, dt)                -- (las inundaciones de la pelea: la marea del Pez Globo Gigante)
         for _, e in ipairs(ents) do if e.alive then e:update(D.dt(e, dt), level) end end
@@ -418,6 +423,19 @@ function love.load()
                 end
             end
         end
+        if tf and z.state == 'fight' and boss.state == 'inhale' and boss.deadTimer > 0.5 and tfLast ~= boss then
+            for _, e in ipairs(ents) do
+                if e.def.name == 'bombobject' and e.alive and e.state ~= 'exploding' and e.state ~= 'eaten' and e.state ~= 'carried' then
+                    local mx, my = boss:mouthPos()
+                    e.x, e.y, e.onGround = mx + (boss.facing or -1) * 1.5 * TILE_PX, my + TILE_PX, false
+                    e:throw(-(boss.facing or -1) * 150, -250, true)
+                    e.thrown, e.thrownBy = true, pa
+                    tfLast = boss
+                    break
+                end
+            end
+        end
+        if tf and boss.state ~= 'inhale' then tfLast = nil end
         if gb and z.state == 'fight' then
             if boss.rage then gbs.rage = true end
             local Scale = require('src/world/entities/types/mechanisms/scale').class
@@ -611,6 +629,18 @@ function love.load()
         local miss = {}
         for _, n in ipairs(need) do if not seen[n] then miss[#miss + 1] = n end end
         check('estados', #miss == 0, #miss == 0 and 'todos vistos' or ('faltan: ' .. table.concat(miss, ',')))
+        check('muerte', not boss.alive and z.state == 'cleared', ('vivo=%s, zona %s'):format(tostring(boss.alive), z.state))
+    end
+    if tf then
+        local function check(name, ok, msg)
+            print(('%-10s %s  %s'):format(name, ok and 'OK   ' or 'FALLA', msg))
+            if not ok then fails = fails + 1 end
+        end
+        local need = { 'idle', 'warn', 'blow', 'inhale', 'bomb', 'boom', 'fall', 'stun', 'rise', 'charge', 'strike', 'roar',
+                       'dying_out', 'dying_flee' }
+        local miss = {}
+        for _, n in ipairs(need) do if not seen[n] then miss[#miss + 1] = n end end
+        check('estados', #miss == 0, #miss == 0 and ('todos vistos (granizo: %s)'):format(tostring(seen.hail ~= nil)) or ('faltan: ' .. table.concat(miss, ',')))
         check('muerte', not boss.alive and z.state == 'cleared', ('vivo=%s, zona %s'):format(tostring(boss.alive), z.state))
     end
     if gs then

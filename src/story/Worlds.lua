@@ -43,7 +43,8 @@ Worlds.LIST = {
     { id = 'jungla',    levels = { 'senda_del_dosel', 'rio_revuelto', 'templo_de_los_pesos', 'la_estampida' },        boss = 'templo_escarabajo', bonus = 'claro_de_la_balanza',
       secrets = { { level = 'jardin_de_la_reina', from = 'templo_de_los_pesos', exit = true } } },   -- (la Reina Carnívora: la catapulta del vestíbulo, tras el techo falso)
     -- 4 La Fortaleza: morteros y bombas primero; luego el taller denso y el tren (cámara automática)
-    { id = 'fortaleza', levels = { 'fabrica_morteros', 'cantera_dinamita', 'taller_trampas', 'tren_fugaz' },               boss = 'fortaleza_malvada', bonus = 'ciudadela_alterna' },
+    { id = 'fortaleza', levels = { 'fabrica_morteros', 'cantera_dinamita', 'taller_trampas', 'tren_fugaz' },               boss = 'fortaleza_malvada', bonus = 'ciudadela_alterna',
+      secrets = { { level = 'tejados_del_tifon', from = 'taller_trampas', exit = true } } },   -- (Tifón: la chimenea falsa del inicio del taller y su corriente hacia arriba)
     -- 5 Las Montañas Heladas: las cumbres, el teleférico, la torre (subir) y la ladera del alud (bajar) hasta el lago de
     -- la Gran Bola de Nieve (0.5.100: la isla helada partida en dos; 0.5.102: sus niveles nuevos y el bonus)
     { id = 'nieve',     levels = { 'cumbres_escarcha', 'el_teleferico', 'torre_viento', 'ladera_del_alud' },          boss = 'lago_helado', bonus = 'la_cima' },

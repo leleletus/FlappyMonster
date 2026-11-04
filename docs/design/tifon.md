@@ -17,8 +17,7 @@ or written to `assets/` yet.
 ## Chosen (2026-11-04): ×6, music B — the package in `assets/`
 
 The user: **scale ×6** (the player's pixel) and **music B «vendaval»**. Written with `make_tifon.py --apply`,
-`tools/sounds/tifon.py --apply` and `INSTALL=1 TIFON=B tools/music/tifon.py`. Nothing uses it yet: the fight, the lair
-and the secret exit are the next step. **Do NOT add `astilla_tifon` to `assets/story/collectibles.json` before the
+`tools/sounds/tifon.py --apply` and `INSTALL=1 TIFON=B tools/music/tifon.py`. Used by the boss since 0.5.159: [tifon](../bosses/tifon.md). **Do NOT add `astilla_tifon` to `assets/story/collectibles.json` before the
 boss is playable** (the Groove's gate counts every splinter).
 
 - `assets/anim/bosses/tifon.json` (×6, origin [0.5, 0.5] = art (23, 22), facing LEFT): `idle` (2 frames), `warn`,

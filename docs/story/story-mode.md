@@ -115,7 +115,7 @@ line in `Worlds.lua`, its branch in the map generator and, if it gives something
   `films[scene]`; the scene plays by itself when the rest holds). They are OPTIONAL: not progress, not needed for the
   next world, replayable. `Run.secretState(e[, noScene])`, `Worlds.secrets(w)`, `secretExitOf(level)`,
   `secretOf(level)`, `allSecrets()`. Today: Coast `guarida_cangrejo_rey` (from `arrecife_globo`, exit), Jungle `jardin_de_la_reina` (from
-  `templo_de_los_pesos`, exit; 2026-11-03), Caves `gruta_lugubre` (from `templo_del_eco`, exit), Final `nido_del_escorpion`
+  `templo_de_los_pesos`, exit; 2026-11-03), Fortress `tejados_del_tifon` (from `taller_trampas`, exit; 2026-11-04), Caves `gruta_lugubre` (from `templo_del_eco`, exit), Final `nido_del_escorpion`
   (from `caldera_roja`, exit; 2026-11-03, listed after the Groove and the Mashup so their map stops keep their numbers), Final `isla_del_groove` (from the bonus; after `ruta_del_espejo`,
   every `splinter`, scene `groove`) and `mashup_cangrejos` (from the Groove; after it, scene `regrow`), plus the Final's
   `epilogue = { after = 'mashup_cangrejos', scene = 'disco' }`. The old single `secret` field is gone.
@@ -145,8 +145,11 @@ line in `Worlds.lua`, its branch in the map generator and, if it gives something
     big rock pillar near the end; behind it, a chamber carved in the pillar. Reached with a jump from the floating
     platforms beside it. (The planned version — a real lavafall stopped by an ON/OFF block — needs switchable lava,
     which does not exist.) `run.sh level_solve GOAL=secret_exit -- assets/levels/caldera_roja.json`.
+  - `taller_trampas` (2, 3-4), 2026-11-04: a stone chimney against the left wall beside the start — a real base, a FAKE
+    shaft, the exit on top under fake stone. An upward Ventisca inside lifts whoever jumps into the shaft; walking into
+    the base does nothing. Harness `mechanics secreto_tifon` ([tifon](../bosses/tifon.md#the-secret-exit-in-taller_trampas)).
 - **Collectibles** — `assets/story/collectibles.json` (ids `astilla_crabby` = the Shell Crown, `astilla_gloomy` = the
-  Gloomy Amulet, `astilla_reina` = the Dewdrop Flower, `astilla_escorpion` = the Obsidian Clasp, kind `splinter` — the
+  Gloomy Amulet, `astilla_reina` = the Dewdrop Flower, `astilla_escorpion` = the Obsidian Clasp, `astilla_tifon` = the Brass Weather Vane, kind `splinter` — the
   Groove's gate asks for ALL of them; `bola_disco` = the Disco Ball, kind `trophy`). Save `data.collect[id]`: nil = not
   yet, `true` = owned, any other value is a state (`'stolen'` today); every state counts as EARNED (`Collect.has`,
   `hasAll` — the Groove gate counts owned-or-stolen). A collectible with `source.boss` is DROPPED by that boss like
