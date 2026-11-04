@@ -58,6 +58,11 @@ dBFS to avoid saturating away the wood, the rest ≈ −12; no GAIN entry. `--ap
 rewrites the rest, which comes out slightly different each time its random stream changes. Not used by any entity yet.
 Not listened to by anyone yet. Woods to compare: `FlappyMonster_pruebas/escorpion/sonidos/`.
 
+`tools/sounds/tifon.py --apply` → `assets/sounds/bosses/tifon/`, Tifón (the Supreme Gust): `tifonRoar`, `tifonWarn`,
+`tifonBlow` (2.6 s), `tifonInhale` (2 s), `tifonGulp`, `tifonBoom`, `tifonCough`, `tifonCharge` (1 s), `tifonThunder`,
+`tifonChain`, `tifonHail`, `tifonVane`, `tifonSpin`, `tifonDizzy`. Noise and sines only; ≈ −12 dBFS (hail −15, chain −14),
+no GAIN entry. The user approved them from the previews (2026-11-04) without asking for changes. Not used by any entity yet.
+
 ## The 0.5.96 enemies' sounds
 
 `tools/sounds/jungle_enemies.py` → `assets/sounds/enemies/{mole,piranha,carnivoreplant}/`: `moleDig` (the mound moving:

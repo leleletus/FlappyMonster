@@ -12,7 +12,7 @@ how a secret is wired: [story-mode](../story/story-mode.md#the-secrets-secret-ex
 | Carnivorous Queen (`carnqueen`) | jungle | done | `jardin_de_la_reina` (0.5.157) | `templo_de_los_pesos` | `astilla_reina` | `reina` (boss), `jungla_1` |
 | Triple Strike Scorpion (`giantscorpion`) | volcano | done | `nido_del_escorpion` (0.5.157) | `caldera_roja` | `astilla_escorpion` | `obsidiana` (boss), `volcan_1` |
 | Mother Mole | meadow | — | — | — | — | — |
-| Supreme Gust «Tifón» | fortress | — | — | — | — | — |
+| Supreme Gust «Tifón» (`tifon`) | fortress | — | — | — | art `astilla_tifon` (no entry yet) | `tifon` (boss) |
 
 The Groove's disco ball has six splinters: Mega Crabby's crown, Mega Gloomy's amulet and four more. **A splinter entry
 must never be added to `assets/story/collectibles.json` before its boss is playable in the story** (the Groove's gate

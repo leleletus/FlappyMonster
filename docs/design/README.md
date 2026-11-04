@@ -14,7 +14,7 @@ and describe the real thing in the system's page.
 |---|---|
 | **The working plan of 2026-11-02:** online bugs, carrying, ground pound, editor, options, tests | [backlog-2026-11](backlog-2026-11.md) |
 | **Finishing the secret bosses (2026-11-03):** what is missing for the Queen and the Scorpion, new designs for the Mother Mole and Tifón | [secret-bosses-plan](secret-bosses-plan.md) |
-| **Tifón's looks and sounds (2026-11-04):** look chosen (Remolino shape, Nubarrón colours), sounds approved; round 2 at half resolution, scale pending | [tifon](tifon.md) |
+| **Tifón's looks and sounds (2026-11-04):** look (Remolino shape, Nubarrón colours, ×6), sounds and music B chosen and in `assets/`; the fight is next | [tifon](tifon.md) |
 | 4 future secret bosses: Mother Mole, Carnivorous Queen, Supreme Gust, Triple Strike Scorpion (at least 3 needed) | [bosses/future-secret-bosses](../bosses/future-secret-bosses.md) |
 | The Carnivorous Queen's looks (A chosen, built) | [carnivorous-queen](carnivorous-queen.md) |
 | Groove Crab's rhythm duel, Friday Night Funkin' style: charts, balance, risks (built) | [groove-rhythm-duel](groove-rhythm-duel.md) |

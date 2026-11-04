@@ -1,0 +1,205 @@
+{
+  "id": "bosses/tifon_fx",
+  "scale": 4,
+  "origin": [
+    0.5,
+    0.5
+  ],
+  "fallback": "streak",
+  "frames": [
+    {
+      "h": 8,
+      "image": "assets/images/bosses/tifon/streak-Sheet.png",
+      "w": 24,
+      "x": 0,
+      "y": 0
+    },
+    {
+      "h": 8,
+      "image": "assets/images/bosses/tifon/streak-Sheet.png",
+      "w": 24,
+      "x": 24,
+      "y": 0
+    },
+    {
+      "h": 8,
+      "image": "assets/images/bosses/tifon/streak-Sheet.png",
+      "w": 24,
+      "x": 48,
+      "y": 0
+    },
+    {
+      "h": 8,
+      "image": "assets/images/bosses/tifon/streak-Sheet.png",
+      "w": 24,
+      "x": 72,
+      "y": 0
+    },
+    {
+      "h": 8,
+      "image": "assets/images/bosses/tifon/streak-Sheet.png",
+      "w": 24,
+      "x": 96,
+      "y": 0
+    },
+    {
+      "h": 8,
+      "image": "assets/images/bosses/tifon/streak-Sheet.png",
+      "w": 24,
+      "x": 120,
+      "y": 0
+    },
+    {
+      "h": 6,
+      "image": "assets/images/bosses/tifon/mark-Sheet.png",
+      "w": 16,
+      "x": 0,
+      "y": 0
+    },
+    {
+      "h": 6,
+      "image": "assets/images/bosses/tifon/mark-Sheet.png",
+      "w": 16,
+      "x": 16,
+      "y": 0
+    },
+    {
+      "h": 6,
+      "image": "assets/images/bosses/tifon/mark-Sheet.png",
+      "w": 16,
+      "x": 32,
+      "y": 0
+    },
+    {
+      "h": 40,
+      "image": "assets/images/bosses/tifon/bolt-Sheet.png",
+      "w": 16,
+      "x": 0,
+      "y": 0
+    },
+    {
+      "h": 40,
+      "image": "assets/images/bosses/tifon/bolt-Sheet.png",
+      "w": 16,
+      "x": 16,
+      "y": 0
+    },
+    {
+      "h": 12,
+      "image": "assets/images/bosses/tifon/arc-Sheet.png",
+      "w": 32,
+      "x": 0,
+      "y": 0
+    },
+    {
+      "h": 12,
+      "image": "assets/images/bosses/tifon/arc-Sheet.png",
+      "w": 32,
+      "x": 32,
+      "y": 0
+    },
+    {
+      "h": 8,
+      "image": "assets/images/bosses/tifon/hail-Sheet.png",
+      "w": 8,
+      "x": 0,
+      "y": 0
+    },
+    {
+      "h": 8,
+      "image": "assets/images/bosses/tifon/hail-Sheet.png",
+      "w": 8,
+      "x": 8,
+      "y": 0
+    },
+    {
+      "h": 8,
+      "image": "assets/images/bosses/tifon/hail-Sheet.png",
+      "w": 8,
+      "x": 16,
+      "y": 0
+    },
+    {
+      "h": 8,
+      "image": "assets/images/bosses/tifon/hail-Sheet.png",
+      "w": 8,
+      "x": 24,
+      "y": 0
+    },
+    {
+      "h": 4,
+      "image": "assets/images/bosses/tifon/scorch.png",
+      "w": 16,
+      "x": 0,
+      "y": 0
+    }
+  ],
+  "anims": {
+    "streak": {
+      "fps": 12,
+      "frames": [
+        1,
+        2,
+        3
+      ],
+      "loop": true
+    },
+    "streak_warn": {
+      "fps": 8,
+      "frames": [
+        4,
+        5,
+        6
+      ],
+      "loop": true
+    },
+    "mark": {
+      "fps": 6,
+      "frames": [
+        7,
+        8,
+        9
+      ],
+      "loop": false
+    },
+    "bolt": {
+      "fps": 20,
+      "frames": [
+        10,
+        11
+      ],
+      "loop": true
+    },
+    "arc": {
+      "fps": 20,
+      "frames": [
+        12,
+        13
+      ],
+      "loop": true
+    },
+    "hail": {
+      "fps": 8,
+      "frames": [
+        14,
+        15
+      ],
+      "loop": true
+    },
+    "hail_break": {
+      "fps": 12,
+      "frames": [
+        16,
+        17
+      ],
+      "loop": false
+    },
+    "scorch": {
+      "fps": 1,
+      "frames": [
+        18
+      ],
+      "loop": true
+    }
+  }
+}

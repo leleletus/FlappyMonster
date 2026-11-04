@@ -1,0 +1,97 @@
+{
+  "id": "bosses/tifon_vane",
+  "scale": 6,
+  "origin": [
+    0.5,
+    1
+  ],
+  "fallback": "left",
+  "frames": [
+    {
+      "h": 17,
+      "image": "assets/images/bosses/tifon/vane-Sheet.png",
+      "w": 17,
+      "x": 0,
+      "y": 0
+    },
+    {
+      "h": 17,
+      "image": "assets/images/bosses/tifon/vane-Sheet.png",
+      "w": 17,
+      "x": 17,
+      "y": 0
+    },
+    {
+      "h": 17,
+      "image": "assets/images/bosses/tifon/vane-Sheet.png",
+      "w": 17,
+      "x": 34,
+      "y": 0
+    },
+    {
+      "h": 17,
+      "image": "assets/images/bosses/tifon/vane-Sheet.png",
+      "w": 17,
+      "x": 51,
+      "y": 0
+    },
+    {
+      "h": 17,
+      "image": "assets/images/bosses/tifon/vane-Sheet.png",
+      "w": 17,
+      "x": 68,
+      "y": 0
+    },
+    {
+      "h": 17,
+      "image": "assets/images/bosses/tifon/vane-Sheet.png",
+      "w": 17,
+      "x": 85,
+      "y": 0
+    }
+  ],
+  "anims": {
+    "left": {
+      "fps": 1,
+      "frames": [
+        1
+      ],
+      "loop": true
+    },
+    "right": {
+      "fps": 1,
+      "frames": [
+        2
+      ],
+      "loop": true
+    },
+    "edge": {
+      "fps": 1,
+      "frames": [
+        3
+      ],
+      "loop": true
+    },
+    "left_empty": {
+      "fps": 1,
+      "frames": [
+        4
+      ],
+      "loop": true
+    },
+    "right_empty": {
+      "fps": 1,
+      "frames": [
+        5
+      ],
+      "loop": true
+    },
+    "edge_empty": {
+      "fps": 1,
+      "frames": [
+        6
+      ],
+      "loop": true
+    }
+  }
+}

@@ -12,6 +12,7 @@
 #
 #   python3 tools/art/bosses/make_tifon.py             → vista_previa.png, piezas.png, comunes.png, pelea_x<k>.gif + .mp4
 #   python3 tools/art/bosses/make_tifon.py --still     → sin los GIF
+#   python3 tools/art/bosses/make_tifon.py --apply     → assets/ (elegido x6, 2026-11-04) y las anclas por cuadro
 #
 # Estilo (docs/art/style-rules.md): contorno = el tono más oscuro de su propio color, luz arriba a la izquierda, sombra
 # abajo a la derecha, 3-4 tonos planos, sin ruido. El cuerpo es un montón de BOLLITOS (como el Soplón pequeño); cada
@@ -65,7 +66,7 @@ L = dict(name='Tifón', pal=('16161e', '34343f', '545462', '84849a'), eye='f0e6c
 FRAMES = ['idle1', 'idle2', 'warn', 'blow1', 'blow2', 'inhale1', 'inhale2', 'gulp', 'boom', 'cough', 'charge',
           'spin1', 'spin2', 'spin3', 'spin4', 'stun1', 'stun2']
 FW, FH = 46, 44                                  # cuadro (arte); el centro del cuerpo en (CX, CY)
-CX, CY = 23, 21
+CX, CY = 23, 22                                  # (el centro del cuadro: origen [0.5, 0.5] en el juego)
 
 
 # ══ EL CUERPO: bollitos (en las unidades de la ronda 1; se multiplican por Q) ═══════════════════════════════════════
@@ -700,7 +701,64 @@ def video(gif, ev, total, path):
     os.remove(wav)
 
 
+def strip(ims):
+    w, h = ims[0].size
+    out = Image.new('RGBA', (w * len(ims), h))
+    for i, im in enumerate(ims): out.paste(im, (i * w, 0))
+    return out
+
+
+ART_K = 6                                         # (la escala elegida por el usuario, 2026-11-04: el píxel del jugador)
+
+
+def apply():
+    """escribe las hojas en assets/images/bosses/tifon/, los iconos de la astilla y las animaciones en assets/anim/bosses/.
+    NO añade la astilla a assets/story/collectibles.json: eso va cuando el jefe se pueda jugar en la historia"""
+    import json
+    B = 'assets/images/bosses/tifon/'
+    I = 'assets/images/story/collectibles/'
+    arts = [body_art(f) for f in FRAMES]
+    vanes = [vane(st, empty=em) for em in (False, True) for st in 'LRF']
+    out = {B + 'body-Sheet.png': strip([a[0] for a in arts]), B + 'vane-Sheet.png': strip(vanes),
+           B + 'streak-Sheet.png': strip([streak(i) for i in range(3)] + [streak(i, warn=True) for i in range(3)]),
+           B + 'mark-Sheet.png': strip([mark(i) for i in range(3)]), B + 'bolt-Sheet.png': strip([bolt(i) for i in range(2)]),
+           B + 'arc-Sheet.png': strip([arc(i) for i in range(2)]), B + 'hail-Sheet.png': strip([hail(i) for i in range(4)]),
+           B + 'scorch.png': scorch(), I + 'astilla_tifon.png': icon(True), I + 'astilla_tifon_empty.png': icon(False)}
+    for rel, im in out.items():
+        os.makedirs(os.path.dirname(os.path.join(ROOT, rel)), exist_ok=True)
+        im.save(os.path.join(ROOT, rel))
+        print('  ' + rel)
+    an = lambda fr, fps=8, loop=True: {"fps": fps, "frames": fr, "loop": loop}
+
+    def aset(aid, k, origin, sheets, anims):
+        frames = []
+        for rel, w, h, n in sheets:
+            frames += [{"h": h, "image": rel, "w": w, "x": i * w, "y": 0} for i in range(n)]
+        data = {"id": aid, "scale": k, "origin": origin, "fallback": next(iter(anims)), "frames": frames, "anims": anims}
+        with open(os.path.join(ROOT, 'assets/anim', aid + '.json'), 'w') as f: f.write(json.dumps(data, indent=2) + '\n')
+        print('  assets/anim/' + aid + '.json')
+    ix = {f: i + 1 for i, f in enumerate(FRAMES)}
+    aset('bosses/tifon', ART_K, [0.5, 0.5], [(B + 'body-Sheet.png', FW, FH, len(FRAMES))],
+         {"idle": an([1, 2], 2.5), "warn": an([ix['warn']]), "blow": an([ix['blow1'], ix['blow2']], 8),
+          "inhale": an([ix['inhale1'], ix['inhale2']], 3, False), "gulp": an([ix['gulp']]), "boom": an([ix['boom']]),
+          "cough": an([ix['cough']]), "charge": an([ix['charge']]),
+          "spin": an([ix['spin1'], ix['spin2'], ix['spin3'], ix['spin4']], 10), "stun": an([ix['stun1'], ix['stun2']], 2.5)})
+    aset('bosses/tifon_vane', ART_K, [0.5, 1], [(B + 'vane-Sheet.png', VW, VH, 6)],
+         {"left": an([1], 1), "right": an([2], 1), "edge": an([3], 1),
+          "left_empty": an([4], 1), "right_empty": an([5], 1), "edge_empty": an([6], 1)})
+    aset('bosses/tifon_fx', SMALL_K, [0.5, 0.5],
+         [(B + 'streak-Sheet.png', 24, 8, 6), (B + 'mark-Sheet.png', 16, 6, 3), (B + 'bolt-Sheet.png', 16, 40, 2),
+          (B + 'arc-Sheet.png', 32, 12, 2), (B + 'hail-Sheet.png', 8, 8, 4), (B + 'scorch.png', 16, 4, 1)],
+         {"streak": an([1, 2, 3], 12), "streak_warn": an([4, 5, 6], 8), "mark": an([7, 8, 9], 6, False),
+          "bolt": an([10, 11], 20), "arc": an([12, 13], 20), "hail": an([14, 15], 8), "hail_break": an([16, 17], 12, False),
+          "scorch": an([18], 1)})
+    print('  anclas por cuadro (arte, desde arriba a la izquierda; mira a la izquierda): veleta (pie) · cara (centro)')
+    for f, (_, fc, va) in zip(FRAMES, arts):
+        print(f'    {f:8s} veleta ({round(va[0])}, {round(va[1]) + 2})  cara ({fc[0]}, {fc[1]})')
+
+
 def main():
+    if '--apply' in sys.argv: apply(); return
     os.makedirs(OUT, exist_ok=True)
     kits = [Kit(k) for k in SCALES]
     overview(kits).save(os.path.join(OUT, 'vista_previa.png'))

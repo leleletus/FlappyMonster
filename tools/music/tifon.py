@@ -41,6 +41,7 @@
 #                 en una larga redoblada; la frase siguiente la contesta (la idea de instrumento: el xilófono redobla).
 #
 #   ~/.venvs/fm-music/bin/python tools/music/tifon.py [A B C] → previas en FlappyMonster_pruebas/musica/tifon/
+#   INSTALL=1 [TIFON=B] → assets/music/bosses/tifon_intro|_loop.ogg (la elegida: B "vendaval", 2026-11-04)
 #   MELODIA=1 → solo los números de las melodías (sin tocar nada) · REPORT=1 → números con la mezcla, sin escribir
 import os, sys
 import numpy as np
@@ -737,6 +738,7 @@ def enc_mp3(y, path):
 
 if __name__ == '__main__':
     which = [a for a in sys.argv[1:] if a in VNAME] or list(VNAME)
+    if os.environ.get('INSTALL'): which = [os.environ.get('TIFON', 'B')]     # (el usuario eligió la B "vendaval", 2026-11-04)
     os.makedirs(PRUEBAS, exist_ok=True)
     nums = []
     for v in which:
@@ -749,6 +751,10 @@ if __name__ == '__main__':
                     f'a contratiempo {100 * mn["off"]:.0f} %; largas fuera del acorde {r["nlb"]}, sueltas {r["nlo"]}, fuera de escala {r["nout"]}, choques {r["ncl"]}')
         nums.append(f'      costura {r["jr"]:.2f}× un tiempo 1 de sección ({r["dbs"]:+.1f} dB); intro → bucle {r["ji"]:.2f}×; secciones (dB frente a A): {r["secs"]}')
         if os.environ.get('REPORT'): continue
+        if os.environ.get('INSTALL'):
+            J.export(y, at, os.path.join(os.path.dirname(__file__), '..', '..', 'assets', 'music', 'bosses', TRACK))
+            print(f'  instalada {v} {VNAME[v]} en assets/music/bosses/{TRACK}_intro|_loop.ogg')
+            continue
         base = os.path.join(PRUEBAS, f'{TRACK}_{v}_{VNAME[v]}')
         J.export(y, at, base)
         pv = np.concatenate([y, y[at:]])

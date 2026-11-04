@@ -1,4 +1,4 @@
-# Tifón: visual designs and sounds (round 2, 2026-11-04)
+# Tifón: visual designs and sounds (chosen 2026-11-04)
 
 Looks to choose from for the fortress's secret boss, the Supreme Gust «Tifón» (moves and lair:
 [secret-bosses-plan § 4](secret-bosses-plan.md#4-supreme-gust-tifón--fortress-new)). The user (2026-11-04): start with
@@ -13,6 +13,28 @@ or written to `assets/` yet.
   effects), `pelea_x10.gif` / `pelea_x6.gif` and their `_con_sonido.mp4`, `sonidos/*.wav`. Round 1 is in `ronda1/`.
 - Test scene (placeholder, not a design): a stormy gradient, the fortress `far` / `mid` sky layers darkened, `stone`
   roof, two stone chimneys, the real player, bomb, explosion and stun stars.
+
+## Chosen (2026-11-04): ×6, music B — the package in `assets/`
+
+The user: **scale ×6** (the player's pixel) and **music B «vendaval»**. Written with `make_tifon.py --apply`,
+`tools/sounds/tifon.py --apply` and `INSTALL=1 TIFON=B tools/music/tifon.py`. Nothing uses it yet: the fight, the lair
+and the secret exit are the next step. **Do NOT add `astilla_tifon` to `assets/story/collectibles.json` before the
+boss is playable** (the Groove's gate counts every splinter).
+
+- `assets/anim/bosses/tifon.json` (×6, origin [0.5, 0.5] = art (23, 22), facing LEFT): `idle` (2 frames), `warn`,
+  `blow` (2), `inhale` (2, does not loop), `gulp`, `boom`, `cough`, `charge`, `spin` (4: front, side, back, side),
+  `stun` (2). Frame 46x44 in `assets/images/bosses/tifon/body-Sheet.png`.
+- `assets/anim/bosses/tifon_vane.json` (×6, origin [0.5, 1] = the foot of the mast, 17x16): `left`, `right`, `edge`
+  (end-on, mid-turn) and the same three `_empty` (no splinter: after the defeat). The mast stays at the centre, so
+  flipping does not move it.
+- `assets/anim/bosses/tifon_fx.json` (×4, origin centre): `streak` (3), `streak_warn` (3), `mark` (3, no loop), `bolt`
+  (16x40, tiles vertically), `arc` (chimney to chimney), `hail`, `hail_break`, `scorch`.
+- `assets/images/story/collectibles/astilla_tifon.png` and `astilla_tifon_empty.png` (17x13).
+- Sounds `tifon*` ([sound](../audio/sound.md)); music `tifon` ([music-history](../audio/music-history.md)).
+- **Anchors** (art pixels from the top left of the body frame, facing left; flip x as `45 - x`): the vane's foot is
+  (24, 12) in every frame except `blow1`, `blow2`, `cough` (24, 13), `gulp`, `boom` (24, 11) and `stun1-2` (24, 22).
+  The face centre is (20, 20) (idle, blow, cough, spin), (20, 19) (warn, inhale, gulp, boom, charge), (20, 27) (stun);
+  the mouth is 1 px left and 5 px below it (stun: 4 below). `make_tifon.py --apply` prints the table.
 
 ## Round 2: the chosen look at the game's pixel density
 
@@ -83,7 +105,7 @@ the level: `roar`, `charge`, `thunder` 1.8-2.6, `hail` 3.5 before its own target
 
 ## Open questions
 
-1. Which scale: ×10, ×8 or ×6.
+1. ~~Which scale~~: ×6 (2026-11-04).
 2. Is the body solid (the player stands on it while stunned, as in the GIF) or only stompable from above?
 3. The vane is 17x16 art pixels (half hidden in the cloud): big enough to show the piece?
 4. Should the lightning come from the cloud (bolts start at its body) or from the sky over the marks (as drawn)?
@@ -100,4 +122,5 @@ the level: `roar`, `charge`, `thunder` 1.8-2.6, `hail` 3.5 before its own target
 
 - 2026-11-04: round 1, four looks + 14 sounds. The user: A's colours on C's shape with a wider head; sounds approved;
   too much pixel density at ×5.
-- 2026-11-04: round 2, half resolution, shown at ×10 / ×8 / ×6. Waiting for the user.
+- 2026-11-04: round 2, half resolution, shown at ×10 / ×8 / ×6. The user chose ×6 and music B «vendaval»; package
+  written to `assets/`.
