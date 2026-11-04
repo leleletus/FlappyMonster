@@ -19,7 +19,7 @@ must never be added to `assets/story/collectibles.json` before its boss is playa
 would become impossible).
 
 Proposed order: 1) finish the Queen and the Scorpion (only levels, exits and entries are missing), 2) Mother Mole,
-3) Tifón. Each new fight reuses existing systems; nothing here needs a new engine feature.
+3) Tifón. **The user (2026-11-04): Tifón goes before the Mother Mole**, visuals and sounds first: [tifon](tifon.md). Each new fight reuses existing systems; nothing here needs a new engine feature.
 
 ## 1. Carnivorous Queen — DONE (0.5.157; see story-mode § secret exits)
 
