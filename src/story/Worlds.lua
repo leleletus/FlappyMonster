@@ -40,7 +40,8 @@ Worlds.LIST = {
       secrets = { { level = 'guarida_cangrejo_rey', from = 'arrecife_globo', exit = true } } },   -- (el Mega Crabby, jefe secreto: por la salida secreta del arrecife)
     -- 3 La Jungla (0.5.99): dos pisos a la vez, el río que se cruza dos veces, el templo de tres alas y la estampida
     -- (cámara automática) hasta el templo del Escarabajo Gigante
-    { id = 'jungla',    levels = { 'senda_del_dosel', 'rio_revuelto', 'templo_de_los_pesos', 'la_estampida' },        boss = 'templo_escarabajo', bonus = 'claro_de_la_balanza' },
+    { id = 'jungla',    levels = { 'senda_del_dosel', 'rio_revuelto', 'templo_de_los_pesos', 'la_estampida' },        boss = 'templo_escarabajo', bonus = 'claro_de_la_balanza',
+      secrets = { { level = 'jardin_de_la_reina', from = 'templo_de_los_pesos', exit = true } } },   -- (la Reina Carnívora: la catapulta del vestíbulo, tras el techo falso)
     -- 4 La Fortaleza: morteros y bombas primero; luego el taller denso y el tren (cámara automática)
     { id = 'fortaleza', levels = { 'fabrica_morteros', 'cantera_dinamita', 'taller_trampas', 'tren_fugaz' },               boss = 'fortaleza_malvada', bonus = 'ciudadela_alterna' },
     -- 5 Las Montañas Heladas: las cumbres, el teleférico, la torre (subir) y la ladera del alud (bajar) hasta el lago de
@@ -58,7 +59,8 @@ Worlds.LIST = {
       -- (los dos se abren con su escena del mapa: el robo de las astillas, los tres cangrejos que crecen; y tras el
       --  Mashup, el final de verdad)
       secrets = { { level = 'isla_del_groove', from = 'bonus', after = { 'ruta_del_espejo' }, collect = 'splinter', scene = 'groove' },
-                  { level = 'mashup_cangrejos', from = 'isla_del_groove', after = { 'isla_del_groove' }, scene = 'regrow' } },
+                  { level = 'mashup_cangrejos', from = 'isla_del_groove', after = { 'isla_del_groove' }, scene = 'regrow' },
+                  { level = 'nido_del_escorpion', from = 'caldera_roja', exit = true } },   -- (el Escorpión Triple Aguijón: tras la cortina de lava falsa)
       epilogue = { after = 'mashup_cangrejos', scene = 'disco' },
       -- (un nivel secreto también puede tener la suya: `mashup_cangrejos = '<película>'` — pendiente de la decisión
       --  del usuario sobre la escena de antes del Mega Mashup —; la ve la primera vez que entra, como cualquier otro)

@@ -798,12 +798,18 @@ function love.update(dt)
     -- una flecha; con las dos cosas aparece (un ramal desde el bonus del Final) y se juega su nivel. El MEGA MASHUP
     -- cuelga del Groove: escondido hasta vencerlo
     elseif step == 'sec1' and t - T > 0.3 then
+        -- (todas las astillas del catálogo: las de tipo 'splinter', sean cuantas sean)
+        ALL_SPLINTERS = function()
+            local c = {}
+            for _, e in ipairs(require('src/story/Collect').ofKind('splinter')) do c[e.id] = true end
+            return c
+        end
         local w = Worlds.count()
         local keep = {}
         for k, v in pairs(Run.data.done) do keep[k] = v end
         SEC = { keepDone = keep }
         Run.data.done[Worlds.get(w).boss] = nil
-        Run.data.collect, Run.data.found = { astilla_crabby = true, astilla_gloomy = true }, {}
+        Run.data.collect, Run.data.found = ALL_SPLINTERS(), {}
         gStateMachine:change('story_map', { world = w, node = #Worlds.nodes(w) + 1 }); go('sec2')
     elseif step == 'sec2' and t - T > 0.3 then
         local w = Worlds.count()
@@ -821,7 +827,7 @@ function love.update(dt)
         SEC.mashHidden = hidden(SEC.mk)
         -- con las dos: EL ROBO (escena del mapa, StoryMapScenes 'groove') se pone sola; hasta que acaba (o se salta), el
         -- Groove sigue cerrado; después las astillas quedan robadas ('stolen') y su isla, abierta
-        Run.data.collect = { astilla_crabby = true, astilla_gloomy = true }
+        Run.data.collect = ALL_SPLINTERS()
         Run.data.films.groove, Run.data.films.regrow, Run.data.films.disco = nil, nil, nil
         gStateMachine:change('story_map', { world = w, node = #Worlds.nodes(w) + 1 }); go('sec2b')
     elseif step == 'sec2b' and ((st._sceneNow and st:_sceneNow() == 'groove' and select(2, st:_sceneNow()) > 3.2) or t - T > 10) then
@@ -1078,6 +1084,67 @@ function love.update(dt)
         RT.inLevel = a.levelPath == Worlds.path(W1[1].id)
         check('reintentar_res', RT.btn == 2 and RT.inLevel, ('◀ ▶ elige REINTENTAR=%s · vuelve a entrar en %s=%s'):format(
             tostring(RT.btn == 2), W1[1].id, tostring(RT.inLevel)))
+        go('nsec1')
+    elseif step == 'nsec1' and t - T > 0.2 then
+        -- LOS SECRETOS NUEVOS (2026-11-03): la Reina (desde templo_de_los_pesos) y el Escorpión (desde caldera_roja) se
+        -- abren con su salida secreta y salen en el mapa con su camino
+        NS = { keepFound = Run.data.found }
+        NS.lockedBefore = Run.secretState('jardin_de_la_reina') == 'locked' and Run.secretState('nido_del_escorpion') == 'locked'
+        Run.data.found = { jardin_de_la_reina = true, nido_del_escorpion = true }
+        Run.data.done.templo_de_los_pesos, Run.data.done.caldera_roja = true, true
+        NS.open = Run.secretState('jardin_de_la_reina') == 'open' and Run.secretState('nido_del_escorpion') == 'open'
+        local wj
+        for i = 1, Worlds.count() do if Worlds.get(i).id == 'jungla' then wj = i end end
+        gStateMachine:change('story_map', { world = wj, node = 3 }); go('nsec2')
+    elseif step == 'nsec2' and t - T > 3.5 then
+        shot('map_secret_reina')
+        -- y se juegan: cada jefe SUELTA su pieza (la Reina, la flor; el Escorpión, el broche), se recoge y se guarda al acabar
+        NS.queue = { { id = 'jardin_de_la_reina', piece = 'astilla_reina', world = 'jungla' }, { id = 'nido_del_escorpion', piece = 'astilla_escorpion', world = 'final' } }
+        NS.res = {}
+        go('nsp1')
+    elseif step == 'nsp1' and t - T > 0.3 then
+        local q = NS.queue[1]
+        if not q then go('nsec_end'); return end
+        local w
+        for i = 1, Worlds.count() do if Worlds.get(i).id == q.world then w = i end end
+        NS.cur = { q = q, w = w }
+        for k = 1, 12 do local n = mapNode(w, k); if n and n.id == q.id then NS.cur.k = k end end
+        gStateMachine:change('story_map', { world = w, node = NS.cur.k }); go('nsp2')
+    elseif step == 'nsp2' and t - T > 1.0 then
+        NS.cur.at = st.node == NS.cur.k
+        st:_play(); go('nsp3')
+    elseif step == 'nsp3' and st.level and t - T > 0.8 then
+        local z = st.level.bossZones[1]
+        st.player.x, st.player.y = require('src/world/systems/BossZones').safeSpawn(st.level, z)
+        st.player.spawnX, st.player.spawnY = st.player.x, st.player.y
+        NS.cur.level = st.levelPath
+        go('nsp4')
+    elseif step == 'nsp4' and (st.level.bossZones[1].state == 'fight' or t - T > 25) then
+        for _, e in ipairs(st.enemies) do if e.def.category == 'Jefes' then e:defeat() end end
+        st.player:grantInvulnerability(60)
+        go('nsp5')
+    elseif step == 'nsp5' and ((st.shards and #st.shards.list > 0 and st.shards.list[1].t > 0.9) or t - T > 25) then
+        local s1 = st.shards and st.shards.list[1]
+        NS.cur.drop = s1 and s1.collect and s1.id
+        if s1 then shot('drop_' .. NS.cur.q.piece); st.player.x, st.player.y, st.player.vx, st.player.vy = s1.x, s1.y, 0, 0 end
+        go('nsp6')
+    elseif step == 'nsp6' and t - T > 0.4 then
+        NS.cur.notYet = Run.data.collect[NS.cur.q.piece] == nil
+        go('nsp7')
+    elseif step == 'nsp7' and ((st.args and st.args.summary ~= nil) or t - T > 12) then
+        local c = NS.cur
+        c.saved = Run.data.collect[c.q.piece] == true and (Save.load(1).collect or {})[c.q.piece] == true
+        NS.res[#NS.res + 1] = ('%s: nodo=%s, entra=%s, suelta %s, sin guardar antes=%s, guardada=%s'):format(c.q.id, tostring(c.at),
+            tostring(c.level == Worlds.path(c.q.id)), tostring(c.drop), tostring(c.notYet), tostring(c.saved))
+        NS.ok = (NS.ok ~= false) and c.at and c.level == Worlds.path(c.q.id) and c.drop == c.q.piece and c.notYet and c.saved
+        table.remove(NS.queue, 1)
+        go('nsp1')
+    elseif step == 'nsec_end' and t - T > 0.3 then
+        check('secretos_nuevos', NS.lockedBefore and NS.open and NS.ok == true, ('sin su salida secreta, cerrados=%s · con ella, abiertos=%s · %s'):format(
+            tostring(NS.lockedBefore), tostring(NS.open), table.concat(NS.res, ' · ')))
+        Run.data.found = NS.keepFound
+        Run.data.collect.astilla_reina, Run.data.collect.astilla_escorpion = nil, nil
+        Run.save()
         gStateMachine:change('story_map', { world = 1, node = 1 }); go('del')
     elseif step == 'del' and t - T > 0.3 then
         resize(1280, 720)

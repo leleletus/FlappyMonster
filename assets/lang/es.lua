@@ -182,6 +182,20 @@ return {
                 hint = "Un nivel de las Cuevas esconde una salida secreta...",
                 stolen = "El Groove te robó la astilla para su bola de discoteca: solo te queda el engarce.",
             },
+            astilla_reina = {
+                name = "Flor de rocío",
+                desc = "Una flor de cristal con una astilla del espejo como gota de rocío. La llevaba la Reina Carnívora.",
+                how = "Venciste a la Reina Carnívora en su jardín, por la salida secreta del Templo de los Pesos.",
+                hint = "Un nivel de la Jungla esconde una salida secreta...",
+                stolen = "El Groove te robó la astilla para su bola de discoteca: solo te queda la flor seca.",
+            },
+            astilla_escorpion = {
+                name = "Broche de obsidiana",
+                desc = "Un broche de obsidiana que sujetaba una astilla del espejo. Lo llevaba el Escorpión Triple Golpe.",
+                how = "Venciste al Escorpión Triple Golpe en su nido, por la salida secreta de la Caldera Roja.",
+                hint = "Un nivel del Volcán esconde una salida secreta...",
+                stolen = "El Groove te robó la astilla para su bola de discoteca: solo te queda el broche vacío.",
+            },
             bola_disco = {
                 name = "Bola de discoteca",
                 desc = "La bola del Groove, hecha con astillas del espejo. Por fin, completa.",

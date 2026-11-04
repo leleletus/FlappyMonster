@@ -11,7 +11,7 @@ Selección / Nivel / Avisos), `EditorDialogs.lua` (dialogs, boss-zone and auto-s
 data, save, `validate()`), `ui.lua` (widgets).
 
 Keys: 1-7 layers, P plane (Delante / Fondo), F1 shortcuts, F5 play-test (through `AdventureState`), Shift+F5 play-test from the tile under the mouse (`playerStart` changes only in the test copy), Ctrl+O open,
-Ctrl+S save, K connect.
+Ctrl+S save, K connect, V the look of the fake wall under the mouse (Auto → each solid block; `fakeLooks`).
 **Harness:** `editor_open` (`LINKS=1`, `PLAY=<level>`, `PLANE=1`), `level_check` (runs the validator on every level).
 
 **Safety (2026-11-02):** every 30 s with changes, a copy in the save folder (`editor_autosave.json` + `.path`), never over the

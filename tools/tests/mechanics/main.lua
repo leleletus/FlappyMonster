@@ -85,6 +85,8 @@
 --   caja_choques   caja que cae en la cabeza del jugador, el aire que la empuja contra él y 60 carreras / saltos
 --                  contra ella: nunca se mete en él ni lo pasa al otro lado
 --   persecucion_toque  el Perseguidor, forzado: tocarlo solo empuja; la onda de su picado, 1,5 casillas y en el suelo
+--   paredes_falsas el aspecto de las paredes falsas: como lo que las rodea, el elegido manda, sin colisión
+--   secreto_reina  la salida secreta de templo_de_los_pesos: solo la catapulta de la balanza grande llega a ella
 --   jefe_puntos    un golpe a un jefe da puntos una vez aunque el servidor lo compruebe dos veces (compensación del retardo)
 --   gp_radio       el impacto del ground pound: solo a lo que está en el suelo, a 1,5 casillas como mucho
 --   dejar_encima   agachado + ARRIBA delante de una caja: queda encima de ella (también de una pila); sin nada, al suelo
@@ -2296,6 +2298,100 @@ function cases.persecucion_toque()
         ('tocarlo empuja=%s, sin daño=%s · onda a 1,2 %s · a 2 %s · en el aire %s'):format(tostring(pushed), tostring(unhurt), tostring(near), tostring(far), tostring(air)))
 end
 
+
+-- LA SALIDA SECRETA DE LA REINA CARNÍVORA (templo_de_los_pesos): encima del platillo derecho de la balanza grande del
+-- vestíbulo, tras un techo FALSO. Solo la catapulta llega: una caja que cae sobre el otro platillo lanza al jugador a
+-- través del techo hasta la salida; un doble salto no llega
+function cases.secreto_reina()
+    local level = Level.new('assets/levels/templo_de_los_pesos.json')
+    local es = {}
+    for _, pl in ipairs(level.entities) do local e = Entities.create(pl); if e then es[#es + 1] = e end end
+    level.liveEntities = es
+    local scale
+    for _, e in ipairs(es) do if e.def.name == 'scale' and math.floor(e.x / T) + 1 == 47 then scale = e end end
+    settle(level, es)
+    local parts = scale:bodyParts()
+    local right, left = parts[2]:getOuterBounds(), parts[1]:getOuterBounds()
+    local pa = PlayerAdventure:new(right.x + 0.55 * T, right.y - 120)      -- (en la punta izquierda: bajo el interruptor)
+    for _ = 1, 30 do pa:update(1 / 60, level) end
+    level.players = { pa }
+    -- (lo de verdad: la caja grande del nivel está sobre el bloque ON/OFF de encima del platillo izquierdo; el
+    -- interruptor de al lado del platillo derecho lo quita y la caja cae — 4 casillas — sobre el platillo)
+    sim(level, { pa }, es, 2)                         -- (su peso baja el platillo: el interruptor queda encima de la cabeza)
+    local blk0 = level:getDef(43, 20).name
+    if os.getenv('DBG') then
+        local pp = scale:bodyParts()
+        print(('  platillos: izq fila %.2f, der fila %.2f · jugador cabeza %.2f pies %.2f x %.2f · casilla 49,26 = %s'):format(pp[1]:getOuterBounds().y / T,
+            pp[2]:getOuterBounds().y / T, pa:getOuterBounds().y / T, (pa:getOuterBounds().y + pa:getOuterBounds().h) / T, pa.x / T, level:getDef(49, 26).name))
+    end
+    -- (de verdad: de pie en el platillo, salta y le da al interruptor con la cabeza; cae en el platillo y la caja también)
+    local how = 'salto'
+    -- de pie SOBRE el interruptor (la punta izquierda del platillo): GROUND POUND en él (suelta la caja) y un paso a la
+    -- derecha, al platillo, antes de que la caja caiga sobre el otro
+    clear(); stub.state.jump_pressed = true; stub.state.jump = true
+    sim(level, { pa }, es, 1 / 60); clear()
+    sim(level, { pa }, es, 0.15)
+    stub.state.crouch_pressed = true
+    local landedAt
+    for _ = 1, 60 do
+        sim(level, { pa }, es, 1 / 60); stub.state.crouch_pressed = false
+        if pa.gpLanded then landedAt = true; break end
+    end
+    clear(); stub.state.right = true
+    sim(level, { pa }, es, 0.3); clear()
+    local hit = false
+    local apex, y0 = pa.y, pa.y
+    sim(level, { pa }, es, 3, function()
+        apex = math.min(apex, pa.y)
+        local ob = pa:getOuterBounds()
+        if level:triggerInBox(ob.x, ob.y, ob.w, ob.h, 'secret_exit') then hit = true end
+    end)
+    if os.getenv('DBG') then print(('  bloque %s → %s (%s) · jugador de fila %.2f a %.2f'):format(blk0, level:getDef(43, 20).name, tostring(how), y0 / T, apex / T)) end
+    -- sin catapulta: doble salto desde el platillo, debajo del hueco
+    local p2 = PlayerAdventure:new(right.x + right.w / 2, right.y - 120)
+    for _ = 1, 30 do p2:update(1 / 60, level) end
+    local reach = false
+    clear(); stub.state.jump_pressed = true; stub.state.jump = true
+    for f = 1, 120 do
+        if f == 18 then stub.state.jump_pressed = true end
+        p2:update(1 / 60, level); stub.state.jump_pressed = false
+        local ob = p2:getOuterBounds()
+        if level:triggerInBox(ob.x, ob.y, ob.w, ob.h, 'secret_exit') then reach = true end
+    end
+    clear()
+    check('secreto_reina', hit and not reach, ('la catapulta (el interruptor suelta la caja sobre el otro platillo) lleva a la salida secreta=%s · un doble salto no llega=%s'):format(
+        tostring(hit), tostring(not reach)))
+end
+
+-- PAREDES FALSAS con su ASPECTO (src/world/level/FakeLooks.lua; el usuario, 2026-11-03): un grupo de paredes falsas se ve
+-- como el bloque que más lo rodea (Auto); el elegido en el nivel (fakeLooks) manda; sin vecinos, piedra; la colisión no
+-- cambia; y un ladrillo de verdad junto a uno falso no dibuja borde entre ellos
+function cases.paredes_falsas()
+    local function lvl(fill, extra, looks)
+        local tiles = {}
+        for r = 1, 10 do tiles[r] = {} for c = 1, 20 do tiles[r][c] = 0 end end
+        for r = 4, 8 do for c = 3, 9 do tiles[r][c] = fill end end
+        for _, p in ipairs(extra or {}) do tiles[p[2]][p[1]] = p[3] end
+        return Level.fromData({ name = 'falsas', width = 20, height = 10, playerStart = { 15, 9 }, tiles = tiles, entities = {}, fakeLooks = looks })
+    end
+    local TileCodec = require 'src/world/tiles/TileCodec'
+    local function enc(id) return TileCodec.encode(id, false, nil) end
+    local FAKE, TEMPLE, SNOW, BASALT = 20, 42, 29, 38
+    local pocket = { { 5, 6, enc(FAKE) }, { 6, 6, enc(FAKE) }, { 7, 6, enc(FAKE) } }
+    local a = lvl(enc(TEMPLE), pocket)
+    local lookA = a.fakeLook and a.fakeLook[6 * 65536 + 6]
+    local noCollide = a:getDef(6, 6).collision == 'none'
+    local b = lvl(enc(TEMPLE), pocket, { { col = 5, row = 6, look = 'basalt' } })
+    local lookB = b.fakeLook and b.fakeLook[6 * 65536 + 7]
+    local c = lvl(enc(SNOW), { { 15, 3, enc(FAKE) } })             -- (suelta, en el aire)
+    local lookC = c.fakeLook and c.fakeLook[3 * 65536 + 15]
+    local TileTypes = require 'src/world/tiles/TileTypes'
+    local joins = TileTypes.joinsCell(a, 6, 6, TileTypes.byName.temple_brick.joinGroup, nil)
+    check('paredes_falsas', lookA and lookA.name == 'temple_brick' and noCollide and lookB and lookB.name == 'basalt' and lookC == nil and joins,
+        ('en ladrillo del templo se ve como %s (sin colisión=%s) · elegida basalto → %s · suelta, piedra=%s · se une al ladrillo de verdad=%s'):format(
+        tostring(lookA and lookA.name), tostring(noCollide), tostring(lookB and lookB.name), tostring(lookC == nil), tostring(joins)))
+end
+
 -- UN GOLPE, UNOS PUNTOS (online, el usuario 2026-11-02: salía dos veces el mensaje): el servidor pasa dos veces por tick
 -- y comprueba contra el jefe que veía el jugador (aún sin invulnerabilidad). El 2º "pisotón" no quita vida: sin puntos.
 function cases.jefe_puntos()
@@ -3868,7 +3964,7 @@ function love.load()
                          'bomba_activa', 'bomba_pisada', 'bomba_radios', 'bomba_mundo', 'bomba_objeto',
                          'hielo_solido', 'hielo_desgaste', 'hielo_gp', 'hielo_bomba', 'encerrado', 'trepador_canto', 'hielo_resbala', 'filo_propio', 'saltarin', 'saltarin_cueva', 'persecucion', 'persecucion_cuerpo', 'inofensivos', 'tapa_base', 'manzana',
                          'cryo_jugador', 'cryo_enemigo', 'cryo_activador', 'cryo_corte', 'lava', 'pocos_fps', 'ahogo_ganado', 'techo_pinchos',
-                         'caja_empuje', 'caja_rota', 'caja_borde', 'cargar', 'bomba_reaparece', 'islas', 'islas_arte', 'viento', 'cuerpo_mueve', 'cajas_golpes', 'balanza', 'soplon', 'semilla', 'ventisca', 'geiser', 'balanza_tope', 'caja_choques', 'cargar_gp', 'gp_radio', 'dejar_encima', 'jump_buffer', 'jefe_puntos', 'persecucion_toque', 'aire_caja', 'geiser_peso', 'bomba_cajas', 'cajas_fila', 'balanza_impacto', 'balanza_salto', 'balanza_techo', 'escarabajo', 'escarabajo_lanzado', 'escarabajo_ruta', 'escarabajo_manos', 'escarabajo_arrolla',
+                         'caja_empuje', 'caja_rota', 'caja_borde', 'cargar', 'bomba_reaparece', 'islas', 'islas_arte', 'viento', 'cuerpo_mueve', 'cajas_golpes', 'balanza', 'soplon', 'semilla', 'ventisca', 'geiser', 'balanza_tope', 'caja_choques', 'cargar_gp', 'gp_radio', 'dejar_encima', 'jump_buffer', 'jefe_puntos', 'persecucion_toque', 'secreto_reina', 'paredes_falsas', 'aire_caja', 'geiser_peso', 'bomba_cajas', 'cajas_fila', 'balanza_impacto', 'balanza_salto', 'balanza_techo', 'escarabajo', 'escarabajo_lanzado', 'escarabajo_ruta', 'escarabajo_manos', 'escarabajo_arrolla',
                          'topo', 'topo_culetazo', 'topo_suelo', 'topo_borde', 'pirana', 'pirana_pisar', 'pirana_rebota', 'pirana_nada', 'planta', 'planta_pisar', 'planta_traga', 'planta_colgada', 'planta_come', 'planta_bomba' }) do
         if not os.getenv('ONLY') or (',' .. os.getenv('ONLY') .. ','):find(',' .. n .. ',', 1, true) then cases[n]() end
     end

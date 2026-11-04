@@ -182,6 +182,20 @@ return {
                 hint = "A level of the Caves hides a secret exit...",
                 stolen = "The Groove stole its splinter for its disco ball: only the empty setting is left.",
             },
+            astilla_reina = {
+                name = "Dewdrop Flower",
+                desc = "A crystal flower with a mirror splinter for a dewdrop. The Carnivorous Queen wore it.",
+                how = "You beat the Carnivorous Queen in her garden, through the secret exit of the Temple of Weights.",
+                hint = "A level of the Jungle hides a secret exit...",
+                stolen = "The Groove stole its splinter for its disco ball: only the withered flower is left.",
+            },
+            astilla_escorpion = {
+                name = "Obsidian Clasp",
+                desc = "An obsidian clasp that held a mirror splinter. The Triple Strike Scorpion wore it.",
+                how = "You beat the Triple Strike Scorpion in its nest, through the secret exit of the Red Caldera.",
+                hint = "A level of the Volcano hides a secret exit...",
+                stolen = "The Groove stole its splinter for its disco ball: only the empty clasp is left.",
+            },
             bola_disco = {
                 name = "Disco Ball",
                 desc = "The Groove's ball, made of mirror splinters. Whole at last.",

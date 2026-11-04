@@ -185,7 +185,8 @@ its place along the path, `u`) and the node pops out at `SECRET_OPEN_AT` 1.5 s w
   step; the game starts the branch at the real node anyway if they drift), a Catmull-Rom branch through its control
   points, sand / rock put under it where it crossed the sea, an islet blob where given, relief flattened next to it and
   the few decorations it touches removed — nothing else moves. Output `worlds[i].secrets = { [level] = points }`.
-  Today: the Mega Crabby's lair on a sand spit north of Arrecife Globo; the Mega Gloomy's grotto west of Templo del Eco
+  Today: the Mega Crabby's lair on a sand spit north of Arrecife Globo; the Carnivorous Queen's garden inland north of
+  Templo de los Pesos; the Scorpion's nest on a rocky islet off the volcano's south-west, from Caldera Roja (2026-11-03); the Mega Gloomy's grotto west of Templo del Eco
   on the flat; the Groove's islet NE of the volcano (its path, which crossed water as a bridge, now runs on a sand spit);
   the Mega Mashup a little east on the same islet (slightly enlarged).
 - **The map is a TREE** (rewritten 2026-10-29 for the secrets, which hang mid-sequence): every stop hangs from another

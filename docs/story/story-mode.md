@@ -114,8 +114,9 @@ line in `Worlds.lua`, its branch in the map generator and, if it gives something
   done), `collect = kind` (every collectible of that kind owned, in any state), `scene` (that map scene seen:
   `films[scene]`; the scene plays by itself when the rest holds). They are OPTIONAL: not progress, not needed for the
   next world, replayable. `Run.secretState(e[, noScene])`, `Worlds.secrets(w)`, `secretExitOf(level)`,
-  `secretOf(level)`, `allSecrets()`. Today: Coast `guarida_cangrejo_rey` (from `arrecife_globo`, exit), Caves
-  `gruta_lugubre` (from `templo_del_eco`, exit), Final `isla_del_groove` (from the bonus; after `ruta_del_espejo`,
+  `secretOf(level)`, `allSecrets()`. Today: Coast `guarida_cangrejo_rey` (from `arrecife_globo`, exit), Jungle `jardin_de_la_reina` (from
+  `templo_de_los_pesos`, exit; 2026-11-03), Caves `gruta_lugubre` (from `templo_del_eco`, exit), Final `nido_del_escorpion`
+  (from `caldera_roja`, exit; 2026-11-03, listed after the Groove and the Mashup so their map stops keep their numbers), Final `isla_del_groove` (from the bonus; after `ruta_del_espejo`,
   every `splinter`, scene `groove`) and `mashup_cangrejos` (from the Groove; after it, scene `regrow`), plus the Final's
   `epilogue = { after = 'mashup_cangrejos', scene = 'disco' }`. The old single `secret` field is gone.
 - **Island of a level** — `Worlds.worldOf(id)` → the world the level BELONGS to and where it comes from: `'story'`
@@ -135,8 +136,18 @@ line in `Worlds.lua`, its branch in the map generator and, if it gives something
     fake wall at col 72 into a 3-cell chamber. The tunnel is entered through breakable blocks (ground pound):
     `run.sh level_solve GOAL=secret_exit BREAK=1 -- assets/levels/templo_del_eco.json`. (Behind the finish was tried
     first: unreachable without touching the finish — it is 3 tiles tall.)
+  - `templo_de_los_pesos` (50-52, 17), 2026-11-03: above the right pan of the hall's big scale, behind a FAKE ceiling
+    (row 18). Only the catapult gets there: stand on the switch at the pan's left end, ground-pound it (the ON/OFF block
+    under the big box opens — block and box were raised 2 tiles so the box falls hard enough), step right onto the pan:
+    the box lands on the other pan and throws you up through the ceiling into the exit. A double jump does not reach.
+    Harness `mechanics secreto_reina`.
+  - `caldera_roja` (140, 12-13), 2026-11-03: a curtain of FAKE lava (col 136, rows 11-13) pours from the overhang of the
+    big rock pillar near the end; behind it, a chamber carved in the pillar. Reached with a jump from the floating
+    platforms beside it. (The planned version — a real lavafall stopped by an ON/OFF block — needs switchable lava,
+    which does not exist.) `run.sh level_solve GOAL=secret_exit -- assets/levels/caldera_roja.json`.
 - **Collectibles** — `assets/story/collectibles.json` (ids `astilla_crabby` = the Shell Crown, `astilla_gloomy` = the
-  Gloomy Amulet, kind `splinter`; `bola_disco` = the Disco Ball, kind `trophy`). Save `data.collect[id]`: nil = not
+  Gloomy Amulet, `astilla_reina` = the Dewdrop Flower, `astilla_escorpion` = the Obsidian Clasp, kind `splinter` — the
+  Groove's gate asks for ALL of them; `bola_disco` = the Disco Ball, kind `trophy`). Save `data.collect[id]`: nil = not
   yet, `true` = owned, any other value is a state (`'stolen'` today); every state counts as EARNED (`Collect.has`,
   `hasAll` — the Groove gate counts owned-or-stolen). A collectible with `source.boss` is DROPPED by that boss like
   a shard (`Shards.drops` `collect` / `onCollect`: the same floating piece, drawn with its icon; only the boss of that

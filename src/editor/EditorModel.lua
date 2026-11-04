@@ -50,7 +50,7 @@ function Model.new(w, h, name)
     end
     m.bgTiles = Model.emptyGrid(w, h)
     m.playerStart = { 3, h - 2 }
-    m.entities, m.foliage, m.vents, m.subtiles, m.links, m.blockLinks = {}, {}, {}, {}, {}, {}
+    m.entities, m.foliage, m.vents, m.subtiles, m.links, m.blockLinks, m.fakeLooks = {}, {}, {}, {}, {}, {}, {}
     m.bossZones = {}
     m.autoScroll = nil
     m.path = nil
@@ -63,7 +63,7 @@ end
 -- el editor tiraba `scenes` — y guardarlo las habría borrado del archivo)
 local KNOWN = {}
 for k in ('name name_en parTime width height playerStart tiles bgTiles entities foliage vents bossZones subtiles links '
-          .. 'blockLinks autoScroll modes matchTime music snow peaceful dark coldWater openTop echo light spikeSkin '
+          .. 'blockLinks fakeLooks autoScroll modes matchTime music snow peaceful dark coldWater openTop echo light spikeSkin '
           .. 'background time clouds depth surfaceRow'):gmatch('%S+') do KNOWN[k] = true end
 Model.KNOWN = KNOWN
 
@@ -115,6 +115,12 @@ function Model.fromData(lvl, path)
         if c and r and type(f) == 'table' and tonumber(f[1]) and tonumber(f[2]) then
             m.blockLinks[#m.blockLinks + 1] = { col = c, row = r, from = { tonumber(f[1]), tonumber(f[2]) } }
         end
+    end
+    -- (el aspecto elegido de las paredes falsas: src/world/level/FakeLooks.lua)
+    m.fakeLooks = {}
+    for _, e in ipairs(lvl.fakeLooks or {}) do
+        local c, r = tonumber(e.col), tonumber(e.row)
+        if c and r and type(e.look) == 'string' then m.fakeLooks[#m.fakeLooks + 1] = { col = c, row = r, look = e.look } end
     end
     m.subtiles = {}
     for _, o in ipairs(lvl.subtiles or {}) do
@@ -177,7 +183,7 @@ function Model:toData()
     local d = {
         name = self.name, name_en = self.name_en, parTime = self.parTime, width = self.width, height = self.height,
         playerStart = self.playerStart, tiles = self.tiles, bgTiles = self:hasBgTiles() and self.bgTiles or nil,
-        entities = ents, foliage = decos, vents = self.vents, bossZones = zones, subtiles = subs, links = self.links or {}, blockLinks = self.blockLinks or {},
+        entities = ents, foliage = decos, vents = self.vents, bossZones = zones, subtiles = subs, links = self.links or {}, blockLinks = self.blockLinks or {}, fakeLooks = self.fakeLooks or {},
         autoScroll = AutoScroll.serialize(self.autoScroll),
         modes = self.modes, matchTime = self.matchTime, music = self.music, snow = self.snow, peaceful = self.peaceful, dark = self.dark, openTop = self.openTop, echo = self.echo, light = self.light, spikeSkin = self.spikeSkin,
         coldWater = self.coldWater,
@@ -236,6 +242,7 @@ function Model:encode()
     if #d.subtiles > 0 then tail[#tail+1] = function(last) list('subtiles', d.subtiles, last) end end
     if #d.links > 0 then tail[#tail+1] = function(last) list('links', d.links, last) end end
     if #d.blockLinks > 0 then tail[#tail+1] = function(last) list('blockLinks', d.blockLinks, last) end end
+    if #d.fakeLooks > 0 then tail[#tail+1] = function(last) list('fakeLooks', d.fakeLooks, last) end end
     if #d.bossZones > 0 then tail[#tail+1] = function(last) list('bossZones', d.bossZones, last) end end
     if d.autoScroll then tail[#tail+1] = function(last) line('"autoScroll": ' .. enc(d.autoScroll), last) end end
     if d.modes then tail[#tail+1] = function(last) line('"modes": ' .. enc(d.modes), last) end end

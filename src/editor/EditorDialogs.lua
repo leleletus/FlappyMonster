@@ -148,7 +148,7 @@ local function drawModal()
         ui.text('Atajos de teclado', x + 20, y + 16, th.text, ui.fontLg)
         local cols = {
             { 'Archivo', { { 'Ctrl+N', 'Nivel nuevo' }, { 'Ctrl+O', 'Abrir' }, { 'Ctrl+S', 'Guardar' },
-                           { 'Ctrl+Mayús+S', 'Guardar como' }, { 'F5', 'Probar el nivel' }, { 'Mayús+F5', 'Probar desde el ratón' }, { 'F10', 'Volver al editor (probando)' } } },
+                           { 'Ctrl+Mayús+S', 'Guardar como' }, { 'V', 'Aspecto de una pared falsa (ratón encima)' }, { 'F5', 'Probar el nivel' }, { 'Mayús+F5', 'Probar desde el ratón' }, { 'F10', 'Volver al editor (probando)' } } },
             { 'Edición', { { 'Ctrl+Z / Ctrl+Y', 'Deshacer / rehacer' }, { 'Ctrl+D', 'Duplicar la entidad' },
                            { 'Supr', 'Eliminar la selección' }, { 'Esc', 'Quitar la selección' },
                            { 'X', 'Girar pincho / cambiar versión' }, { 'Clic derecho', 'Borrar' } } },

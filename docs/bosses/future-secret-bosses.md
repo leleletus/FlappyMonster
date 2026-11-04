@@ -23,7 +23,7 @@ Common to all:
 - **Piece:** a **miner's helmet**, the splinter as its lamp.
 
 ## 2. The Carnivorous Queen — Jungle
-**Built as an entity: [carnqueen](carnqueen.md).** No level or collectible entry yet.
+**In the story (2026-11-03): [carnqueen](carnqueen.md), lair `jardin_de_la_reina`. Final plan: [secret-bosses-plan](../design/secret-bosses-plan.md).**
 - **Unlock:** in `templo_de_los_pesos`, an underground fake wall behind the scale. You reach it by launching yourself with the scale's catapult loaded with two weights.
 - **Lair:** a temple room overgrown with vines.
 - **Fight:**
@@ -43,8 +43,7 @@ Common to all:
 - **Piece:** a **weather vane**, the splinter as the arrow's tip.
 
 ## 4. The Triple Strike Scorpion — Volcano
-The user's idea (2026-10-31), replacing the Emperor Penguin. **Built as entities: [giantscorpion](giantscorpion.md). No level or
-collectible entry yet.** The user chose design C «Obsidiana» (rejected: A «Basalto», B «Ascua», D «Ceniza»), with a
+The user's idea (2026-10-31), replacing the Emperor Penguin. **In the story (2026-11-03): [giantscorpion](giantscorpion.md), lair `nido_del_escorpion`.** The user chose design C «Obsidiana» (rejected: A «Basalto», B «Ascua», D «Ceniza»), with a
 shorter body and the tails drawn OVER the body. Type ids: `scorpion`, `giantscorpion`.
 
 Package (`tools/art/enemies/make_scorpion.py --apply`, `tools/sounds/scorpion.py --apply`; previews in

@@ -78,6 +78,7 @@ function Level:render(camX, camY, noPlane)
             -- la meta en Cacería) no se dibujan: no tienen colisión.
             ctx.x, ctx.y, ctx.col, ctx.row, ctx.raw = px, py, col, row, raw
             local def = TileTypes.get(tileBaseId(raw))
+            if def.fake and self.fakeLook then def = self.fakeLook[row * 65536 + col] or def end   -- (pared falsa: su aspecto, FakeLooks)
             local anim = self.tileAnim and self.tileAnim[row * 65536 + col]
             if anim then
                 -- Golpeado: el mismo saltito, hacia arriba con un cabezazo y

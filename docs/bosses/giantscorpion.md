@@ -1,8 +1,7 @@
 # The Triple Strike Scorpion (`giantscorpion`) and the small Scorpion (`scorpion`)
 
 The user's secret boss for the volcano (2026-10-31): the volcano's one-tailed Scorpion after a mirror splinter split its
-tail in three. **In the game as entities, with its theme and an arena for testing; no story level, no collectible
-entry yet** (plan: [future-secret-bosses](future-secret-bosses.md)).
+tail in three. **In the story since 2026-11-03: its lair `nido_del_escorpion`, behind the secret exit of `caldera_roja`; it drops the Obsidian Clasp (`astilla_escorpion`)** (plan: [future-secret-bosses](future-secret-bosses.md)).
 
 Try them: `love . --editor tools/levelgen/arenas/jefe_escorpion.json`, then play from the editor (a small one stands
 before the boss zone).

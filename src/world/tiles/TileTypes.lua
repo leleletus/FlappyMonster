@@ -166,6 +166,7 @@ end
 function TileTypes.joinsCell(level, c, r, group, also)
     local raw = level:getRaw(c, r)
     local n = TileTypes.get(TileCodec.id(raw))
+    if n.fake and level.fakeLook then n = level.fakeLook[r * 65536 + c] or n end      -- (pared falsa: se une como lo que parece)
     if TileTypes.joinsDef(n, group, also) or n.mat.liquid or TileCodec.isWaterlogged(raw) then return true end
     if group and level.joinOverlay then
         for o in pairs(level.joinOverlay) do

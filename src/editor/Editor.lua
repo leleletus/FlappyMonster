@@ -708,6 +708,7 @@ function Editor.keypressed(k)
     for _, tn in ipairs(layerTools(layerDef(E.layer))) do
         if TOOLS[tn].key == k then E.tool[E.layer] = tn; return end
     end
+    if k == 'v' then Editor.cycleFakeLook(love.mouse.getPosition()); return end     -- (el aspecto de una pared falsa)
     if k == 'g' then E.grid = not E.grid
     elseif k == 'p' then Editor.setPlane(E.plane == 'bg' and 'front' or 'bg')
     elseif k == 'h' then E.showRoutes = not E.showRoutes
@@ -720,6 +721,32 @@ function Editor.keypressed(k)
     elseif k == '=' or k == 'kp+' then E.zoom = math.min(3, E.zoom * 1.25)
     elseif k == '-' or k == 'kp-' then E.zoom = math.max(0.25, E.zoom / 1.25)
     elseif k == '0' then E.zoom = 1 end
+end
+
+-- PAREDES FALSAS: V sobre una cambia el aspecto de todo su grupo: Auto (el bloque que la rodea) → cada bloque sólido
+-- del catálogo → Auto (src/world/level/FakeLooks.lua; se guarda en el nivel: fakeLooks)
+function Editor.cycleFakeLook(mx, my)
+    local FakeLooks = require 'src/world/level/FakeLooks'
+    local c, r = worldToCell(screenToWorld(mx, my))
+    local cells = E.level and FakeLooks.groupAt(E.level, c, r)
+    if not cells then return msg('V: pon el ratón sobre una pared falsa para cambiar su aspecto', 'warn') end
+    local inGroup = {}
+    for _, k in ipairs(cells) do inGroup[k] = true end
+    local m = E.model
+    local cur = 'auto'
+    for _, e in ipairs(m.fakeLooks or {}) do if inGroup[e.row * 65536 + e.col] then cur = e.look end end
+    local opts = { 'auto' }
+    for _, n in ipairs(FakeLooks.choices()) do opts[#opts + 1] = n end
+    local nextLook = opts[1]
+    for i, o in ipairs(opts) do if o == cur then nextLook = opts[i % #opts + 1] end end
+    pushUndo()
+    local keep = {}
+    for _, e in ipairs(m.fakeLooks or {}) do if not inGroup[e.row * 65536 + e.col] then keep[#keep + 1] = e end end
+    if nextLook ~= 'auto' then keep[#keep + 1] = { col = c, row = r, look = nextLook } end
+    m.fakeLooks = keep
+    markDirty()
+    local label = nextLook == 'auto' and 'Auto (como lo que la rodea)' or (TT.byName[nextLook] and TT.byName[nextLook].label or nextLook)
+    msg('Pared falsa: aspecto ' .. label)
 end
 
 -- Estado interno (para pruebas automatizadas y depuración)

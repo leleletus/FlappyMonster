@@ -4,6 +4,7 @@
 --   rutas       toda ruta 'assets/...' escrita en el código (src/, server/, game.lua) existe
 --   cargas      nada de lo que se carga de verdad (imágenes, sonidos, música del catálogo) falta en disco
 --   idiomas     es.lua y en.lua tienen las mismas claves
+--   secretos    cada nivel secreto existe, tiene camino en el mapa y su salida secreta; cada astilla, en su nivel con su jefe
 --   jefes       en los niveles con zona de jefe no hay nada más allá de la última zona (salvo sus bloques de jefe)
 --   docs        toda ruta del repo escrita entre `comillas` en docs/, CLAUDE.md, README.md y tools/README.md existe,
 --               y todo enlace entre páginas de docs/ lleva a una página que existe
@@ -112,6 +113,43 @@ function love.load()
         if not love.filesystem.getInfo(e.file) then m2[#m2 + 1] = e.file end
     end
     check('cargas', #m2 == 0, ('%d pistas de música, %d sonidos; faltan en disco: %s'):format(#Music.list, #snd, #m2 > 0 and list(m2, 8) or 'nada'))
+
+    -- secretos (src/story/Worlds.lua + assets/story/collectibles.json): cada nivel secreto existe; el nivel de donde sale uno
+    -- por salida secreta (`exit`) tiene la casilla `secret_exit`; cada coleccionable de jefe está en su nivel con su jefe
+    -- y su icono existe; el mapa (overworld.json) tiene el camino de cada secreto
+    do
+        local Worlds = require 'src/story/Worlds'
+        local bad, n = {}, 0
+        local json = require 'libs/json'
+        local function lvl(id) local ok, d = pcall(json.decode, love.filesystem.read('assets/levels/' .. id .. '.json') or ''); return ok and d or nil end
+        local function tid(v) return (v % 16) + 16 * math.floor(v / 131072) end
+        local ow = json.decode(love.filesystem.read('assets/story/overworld.json'))
+        local owSecrets = {}
+        for _, w in ipairs(ow.worlds) do for k in pairs(w.secrets or {}) do owSecrets[k] = true end end
+        for _, W in ipairs(Worlds.LIST) do
+            for _, e in ipairs(W.secrets or {}) do
+                n = n + 1
+                if not lvl(e.level) then bad[#bad + 1] = 'falta el nivel ' .. e.level end
+                if not owSecrets[e.level] then bad[#bad + 1] = 'sin camino en el mapa: ' .. e.level end
+                if e.exit then
+                    local d, found = lvl(e.from), false
+                    for _, row in ipairs(d and d.tiles or {}) do for _, v in ipairs(row) do if tid(v) == 44 then found = true end end end
+                    if not found then bad[#bad + 1] = e.from .. ' sin salida secreta' end
+                end
+            end
+        end
+        for _, c in ipairs(require('src/story/Collect').LIST) do
+            if not love.filesystem.getInfo(c.icon) then bad[#bad + 1] = 'falta el icono ' .. c.icon end
+            local src = c.source or {}
+            if src.boss then
+                local d, has = lvl(src.level), false
+                for _, e in ipairs(d and d.entities or {}) do if e.type == src.boss then has = true end end
+                if not has then bad[#bad + 1] = c.id .. ': ' .. tostring(src.boss) .. ' no está en ' .. tostring(src.level) end
+            end
+        end
+        check('secretos', #bad == 0, ('%d niveles secretos, %d coleccionables; problemas: %s'):format(n, #require('src/story/Collect').LIST,
+            #bad == 0 and 'ninguno' or list(bad, 8)))
+    end
 
     -- idiomas
     local function flat(t, pre, out)

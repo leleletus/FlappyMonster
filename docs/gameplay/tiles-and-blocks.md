@@ -125,6 +125,19 @@ if it should exist as a mini block, add it to `SubTiles.KINDS`. Then
   Online modes do not use it (`ModeTypes.hiddenTriggers`: hidden and inert). `level_solve GOAL=secret_exit` checks it
   can be reached without touching the finish.
 
+## Fake blocks and how a fake wall looks
+
+The trap tiles (`Tiles.lua` `FAKES`, ids 20-26) look like another tile (`mimics`) but have no collision: fake wall,
+platform, drop-through platform, lava, border, breakable block and spike base. Until 2026-11-03 a fake WALL always drew as
+plain stone, which clashed in temple, snow, volcano… levels (the user). Now `src/world/level/FakeLooks.lua` gives every
+connected GROUP of fake walls a look, computed when the level loads (drawing only; `level.fakeLook`):
+- **Auto** (default): the real solid block that surrounds the group the most. Levels that already used fake walls match
+  without being edited. A group with no solid neighbour stays stone.
+- **Chosen** in the editor: **V** with the mouse over a fake wall cycles its group through Auto and every plain solid block
+  of the catalog (`FakeLooks.choices()`). Saved in the level as `fakeLooks = [ { col, row, look } ]` (one cell per group).
+`LevelRender` draws the look instead of the fake, and `TileTypes.joinsCell` treats the fake as its look, so a real temple
+brick and a fake one draw no edge between them. The other fakes keep their own look. Harness `mechanics paredes_falsas`.
+
 ## Invisible block
 
 - **Invisible block** (`hidden_block` 15, Plataformas): FULL-cell hitbox but

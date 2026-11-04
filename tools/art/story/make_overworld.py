@@ -565,6 +565,10 @@ SECRETS = [
     ('guarida_cangrejo_rey', 'costa', (4, 5), [(44.5, 32.0)], (45.3, 29.9), (45.5, 29.6, 1.9, 1.5), 's'),
     # la GRUTA del Mega Crabby lúgubre: al oeste del Templo del Eco (nodo 4 de 5 de las Cuevas), por el llano
     ('gruta_lugubre', 'cuevas', (4, 5), [(10.4, 15.1)], (7.3, 15.6), None, 'c'),
+    # el JARDÍN de la Reina Carnívora: al norte del Templo de los Pesos (nodo 3 de 5 de la Jungla), tierra adentro
+    ('jardin_de_la_reina', 'jungla', (3, 5), [(53.2, 56.0)], (53.0, 53.8), None, 'j'),
+    # el NIDO del Escorpión Triple Aguijón: de la Caldera Roja (nodo 2 de 5 del Final) a un islote de roca al suroeste
+    ('nido_del_escorpion', 'final', (2, 5), [(37.6, 25.2)], (35.8, 27.4), (35.7, 27.6, 1.7, 1.3), 'l'),
     # el GROOVE: del bonus del Final a su islote de arena al noreste del volcán (el de siempre)
     ('isla_del_groove', 'final', 'bonus', [(48.3, 11.4)], (48.6, 8.9), (48.8, 8.1, 3.0, 2.4), 's'),
     # el MEGA MASHUP (el final de verdad): del Groove, por su islote, un poco más al este
