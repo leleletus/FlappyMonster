@@ -1,4 +1,4 @@
-# Tifón: visual designs and sounds (round 1, 2026-11-04)
+# Tifón: visual designs and sounds (round 2, 2026-11-04)
 
 Looks to choose from for the fortress's secret boss, the Supreme Gust «Tifón» (moves and lair:
 [secret-bosses-plan § 4](secret-bosses-plan.md#4-supreme-gust-tifón--fortress-new)). The user (2026-11-04): start with
@@ -6,16 +6,39 @@ Tifón (before the Mother Mole), first the visuals and the sounds; its boss them
 clean-context agent (its generator will be tifon.py in the music tools; previews in `FlappyMonster_pruebas/musica/tifon/`). Nothing is built
 or written to `assets/` yet.
 
-- Generator: `tools/art/bosses/make_tifon.py` (previews only; `--still` skips the GIFs, `--look X` makes one GIF).
+- Generator: `tools/art/bosses/make_tifon.py` (previews only; `--still` skips the GIFs).
 - Sounds: `tools/sounds/tifon.py` (previews; `--apply` writes the boss's own folder of boss sounds, not done yet).
-- Previews: `FlappyMonster_pruebas/tifon/`: `vista_previa.png` (the four looks at real scale on the roofs, eight
-  poses each, with the player ×6), `piezas_<A-D>.png` (every body frame ×3), `siluetas.png`, `comunes.png` (vane,
-  Collection icon, effects), `pelea_<A-D>.gif` and `pelea_<A-D>_con_sonido.mp4` (the same 12 s fight with the sounds
-  in place), `sonidos/*.wav`.
+- Previews: `FlappyMonster_pruebas/tifon/`: `vista_previa.png` (the same art at ×10, ×8 and ×6 on the roofs, eight
+  poses each, with the player ×6), `piezas.png` (the 17 body frames ×8), `comunes.png` (vane, Collection icon,
+  effects), `pelea_x10.gif` / `pelea_x6.gif` and their `_con_sonido.mp4`, `sonidos/*.wav`. Round 1 is in `ronda1/`.
 - Test scene (placeholder, not a design): a stormy gradient, the fortress `far` / `mid` sky layers darkened, `stone`
   roof, two stone chimneys, the real player, bomb, explosion and stun stars.
 
-## The looks
+## Round 2: the chosen look at the game's pixel density
+
+**The user's verdict on round 1:** "A with C's tail": C «Remolino»'s shape (a cloud head on a tornado tail) in A
+«Nubarrón»'s soot colours, the head a little wider, like A's. **The sounds are fine.** But the sprite resolution
+"doesn't quite convince": the game's sprites almost always share one pixel size, and round 1's ×5 had too much pixel
+density, so it looked slightly out of place. Asked: keep the size with fewer, bigger pixels, or make it smaller, in
+both cases keeping the design's intent.
+
+Round 2 redraws the art at **half resolution** (one new pixel = 2x2 of round 1): body frame 46x44, the idle body 35x32
+art pixels. The face, the mouths and the vane are drawn pixel by pixel (the geometric shapes did not read that small):
+4x3 eyes with an L-shaped pupil in front and below, a 5-px angry brow, 1-px mouths. The tail is one tone lighter
+than the head and has no highlight, only its spiral stripe. The warn cheeks were dropped (at this size they were
+noise): the warning reads from the swelling, the shut eyes and the pursed mouth.
+
+The same art at three scales (pick one):
+
+| Scale | Idle on screen | |
+|---|---|---|
+| **×10** | 350x320 | option 1: the size of round 1, pixels twice as big (the Megas' ×9-10) |
+| **×8** | 280x256 | in between |
+| **×6** | 210x192 | option 2: smaller, the player's own pixel size |
+
+The effects (wind streaks, marks, bolts, hail) stay ×4, like bombs and small things.
+
+## Round 1: the four looks (history)
 
 All are the fortress Gust grown huge: a heap of round puffs (the small Gust's language), each front puff leaving a
 dark crease on the one behind, cream eyes with a thick angry brow, the mouth low and in front. Facing left (the game
@@ -60,9 +83,9 @@ the level: `roar`, `charge`, `thunder` 1.8-2.6, `hail` 3.5 before its own target
 
 ## Open questions
 
-1. Which look (mixes are possible: for example A's body with B's anvil).
+1. Which scale: ×10, ×8 or ×6.
 2. Is the body solid (the player stands on it while stunned, as in the GIF) or only stompable from above?
-3. The vane is large (about 135 px wide at ×5): good to show the piece, but it adds height. Smaller?
+3. The vane is 17x16 art pixels (half hidden in the cloud): big enough to show the piece?
 4. Should the lightning come from the cloud (bolts start at its body) or from the sky over the marks (as drawn)?
 5. Tifón's own colour against a dark stormy sky: A is grey on grey-blue; the roofs' real sky is not designed yet.
 
@@ -75,4 +98,6 @@ the level: `roar`, `charge`, `thunder` 1.8-2.6, `hail` 3.5 before its own target
 
 ## History
 
-- 2026-11-04: round 1, four looks + 14 sounds. Waiting for the user.
+- 2026-11-04: round 1, four looks + 14 sounds. The user: A's colours on C's shape with a wider head; sounds approved;
+  too much pixel density at ×5.
+- 2026-11-04: round 2, half resolution, shown at ×10 / ×8 / ×6. Waiting for the user.
