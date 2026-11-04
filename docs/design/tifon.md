@@ -3,7 +3,7 @@
 Looks to choose from for the fortress's secret boss, the Supreme Gust «Tifón» (moves and lair:
 [secret-bosses-plan § 4](secret-bosses-plan.md#4-supreme-gust-tifón--fortress-new)). The user (2026-11-04): start with
 Tifón (before the Mother Mole), first the visuals and the sounds; its boss theme is composed meanwhile by a
-clean-context agent (its generator will be tifon.py in the music tools; previews in `FlappyMonster_pruebas/musica/tifon/`). Nothing is built
+clean-context agent (`tools/music/tifon.py`, three variants in `FlappyMonster_pruebas/musica/tifon/`, see [music-history](../audio/music-history.md)). Nothing is built
 or written to `assets/` yet.
 
 - Generator: `tools/art/bosses/make_tifon.py` (previews only; `--still` skips the GIFs).
