@@ -236,7 +236,7 @@ on("set_nickname", function(data, client, p)
 end, true)
 
 on("get_rooms", function(data, client, p)
-    client:send("room_list", S.buildPublicRoomList())
+    client:send("room_list", S.buildPublicRoomList(type(data) == "table" and data.daily == true))   -- (daily: la del club del día)
 end)
 
 on("create_room", function(data, client, player)
@@ -256,6 +256,10 @@ on("create_room", function(data, client, player)
                       maxPlayers=maxPlayers, playerIds={player.id},
                       adminId=player.id, state="WAITING", bannedNames={}, bannedIPs={}, sim=nil,
                       mode=Modes.DEFAULT, level=nil }
+    -- (una sala del CLUB DEL DÍA: Carrera en el nivel de hoy, con su propia lista — server/srv/records.lua —)
+    if data.daily == true and not S.makeDaily(rooms[roomId]) then
+        rooms[roomId] = nil; client:send("room_error", Lang.message('srv.no_map')); return
+    end
     player.roomId  = roomId
     player.isReady = false
     player.color   = PLAYER_COLORS[1]

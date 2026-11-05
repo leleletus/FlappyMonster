@@ -1,5 +1,8 @@
 -- src/states/online/OnlineHubState.lua
 -- Hub de salas: lista de salas, crear sala y unirse.
+-- Con `{ daily = true }` es el CLUB DEL DÍA (el desafío del día con amigos): la misma pantalla con SU lista
+-- (get_rooms { daily = true }: solo salas del desafío de hoy, que no salen en la normal) y sus salas se crean
+-- con el nivel del día (create_room { daily = true }); VOLVER va al menú del desafío (OnlineDailyState).
 -- Toda la navegación con flechas/gamepad — sin atajos de teclado directos.
 
 local BaseState      = require 'src/core/BaseState'
@@ -38,6 +41,8 @@ local LIST_BTNS   = { 'hub.create', 'hub.refresh', 'common.back' }   -- claves d
 
 function OnlineHubState:enter(args)
     Sound.playMusic('menus')      -- (si ya sonaba, sigue sin cortarse)
+    self.daily        = (args and args.daily) == true
+    NC.lobby          = { 'online_hub', { daily = self.daily } }   -- (al salir de una sala se vuelve aquí: NC:toLobby)
     self.sub          = SUB_LIST
     self.anim, self.winAnim, self.t = MenuAnim.new(), MenuAnim.new(), 0
     self.roomList     = {}
@@ -65,7 +70,7 @@ function OnlineHubState:enter(args)
     self.waitTimer    = 0
 
     self:_setupHandlers()
-    NC:send("get_rooms", {})
+    NC:send("get_rooms", { daily = self.daily })
 end
 
 function OnlineHubState:_setupHandlers()
@@ -106,6 +111,7 @@ end
 -- (VOLVER: al menú online — salas, desafío, récords —; la conexión sigue)
 function OnlineHubState:_leave()
     if self.anim:busy() then return end
+    if self.daily then self.anim:leave(function() gStateMachine:change('online_daily', { selected = 2 }) end); return end
     self.anim:leave(function() gStateMachine:change('online_menu') end)
 end
 
@@ -198,7 +204,7 @@ function OnlineHubState:update(dt)
     if self.sub == SUB_LIST then
         self.refreshTimer = self.refreshTimer + dt
         if self.refreshTimer >= 5 then
-            self.refreshTimer = 0; NC:send("get_rooms", {})
+            self.refreshTimer = 0; NC:send("get_rooms", { daily = self.daily })
         end
     else
         self.refreshTimer = 0
@@ -370,6 +376,7 @@ function OnlineHubState:_createNext()
         self.createStep          = STEP_MAX
     elseif step == STEP_MAX then
         self.createData.maxPlayers = self.maxValue
+        self.createData.daily = self.daily or nil       -- (club del día: el servidor le pone el nivel de hoy)
         NC:send("create_room", self.createData)
         self:_resetCreate()
         self:_setSub(SUB_WAITING); self.waitTimer = 0
@@ -479,7 +486,7 @@ end
 function OnlineHubState:_renderList()
     local A = self.anim
     local Ly = self:_layout()
-    MenuKit.title(L('hub.title'), 'purple', A, 1)
+    MenuKit.title(L(self.daily and 'hub.daily_title' or 'hub.title'), self.daily and 'orange' or 'purple', A, 1)
     local focusRooms = self.sub == SUB_LIST and self.listFocus == 'rooms'
 
     -- La lista de salas
@@ -513,7 +520,7 @@ function OnlineHubState:_renderList()
         local count = string.format("%d/%d", room.currentPlayers or 0, room.maxPlayers or 0)
         local cw = PixelFont.width(count, 3)
         PixelFont.shadow(count, sx - 28 - cw, y + math.floor((r.h - PixelFont.height(3)) / 2), 3, a)
-        local name = fitText(FONT_MED, room.daily and L('hub.daily_room', { date = room.daily }) or room.name or '?', sx - 56 - cw - nx)
+        local name = fitText(FONT_MED, room.name or '?', sx - 56 - cw - nx)
         MenuKit.text(FONT_MED, name, nx, cy, sx - nx, 'left', sel and { 1, 1, 1 } or { 0.88, 0.9, 1 }, a)
     end
     -- flechas de que hay más salas arriba / abajo
@@ -692,7 +699,7 @@ function OnlineHubState:_listButton(i)
     if i == BTN_CREATE then
         self:_resetCreate(); self:_setSub(SUB_CREATE)
     elseif i == BTN_REFRESH then
-        NC:send("get_rooms", {})
+        NC:send("get_rooms", { daily = self.daily })
     elseif i == BTN_BACK then
         self:_leave()
     end

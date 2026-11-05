@@ -104,7 +104,7 @@ function OnlineRoomState:_setupHandlers()
     NC:on("room_announce", function(data)
         if type(data) == 'table' then Notify.toast(Lang.fromServer(data), data.kind) end
     end)
-    NC:on("room_left",   function(data) gStateMachine:change('online_hub') end)
+    NC:on("room_left",   function() NC:toLobby() end)
     NC:on("kicked",       function(data) Notify.roomExit('kicked', data) end)
     NC:on("reported",     function(data) Notify.toast(Lang(data and data.again and 'room.report_again' or 'room.reported')) end)
     NC:on("banned",       function(data) Notify.roomExit('banned', data) end)
@@ -162,7 +162,11 @@ function OnlineRoomState:_buildActions()
     table.insert(list, { id='ready',   label = self.isReady and Lang('room.not_ready') or Lang('room.ready'),
                          color = self.isReady and 'green' or 'yellow' })
     if isAdmin then
-        if room.state == "WAITING" then
+        if room.state == "WAITING" and room.daily then
+            -- (el DESAFÍO DEL DÍA no se cambia — modo, nivel y dificultad los pone el servidor —: solo empezar)
+            local why = self:_startBlocker()
+            table.insert(list, { id='start', label=Lang('room.start'), color='green', disabled = why ~= nil, why = why })
+        elseif room.state == "WAITING" then
             -- El host elige el objetivo de la ronda y el nivel en su menú
             table.insert(list, { id='gamemode', label=Lang('room.game_mode'), color = 'blue' })
             -- … y la DIFICULTAD: un selector ◀ ▶ con todas (todos la ven en la tarjeta de la partida)
@@ -185,7 +189,7 @@ end
 function OnlineRoomState:_startBlocker()
     local room    = self.currentRoom or {}
     local players = room.players or {}
-    if #players < 2 then
+    if #players < 2 and not room.daily then          -- (el desafío del día se puede jugar solo)
         return Lang('room.need_players')
     end
     local waiting, meWaiting = {}, false
@@ -613,7 +617,8 @@ function OnlineRoomState:_renderGameCard(r, isAdmin, a, oy)
     else
         MenuKit.text(FONT_MED, fitText(FONT_MED, Lang('room.no_map_short'), x + w - pad - nx), nx, my + 18, w, 'left', { 1, 0.45, 0.4 }, a)
     end
-    MenuKit.text(FONT_SMALL, fitText(FONT_SMALL, isAdmin and Lang('room.change_in_mode') or Lang('room.host_picks'), x + w - pad - nx),
+    local note = room.daily and Lang('room.daily_fixed') or (isAdmin and Lang('room.change_in_mode') or Lang('room.host_picks'))
+    MenuKit.text(FONT_SMALL, fitText(FONT_SMALL, note, x + w - pad - nx),
                  nx, my + 42, w, 'left', { 0.6, 0.66, 0.85 }, a)
 end
 
@@ -632,9 +637,11 @@ function OnlineRoomState:render()
     local L       = self:_layout()
 
     -- ── Cabecera: el nombre de la sala y su estado ───────────────────────────
-    local hy = MenuKit.title(room.name or Lang('room.default_name'), 'purple', A, 1)
+    -- (el desafío en solitario se nombra en el idioma de cada uno; las salas del club del día, con naranja)
+    local title = room.solo and room.daily and Lang('hub.daily_room', { date = room.daily }) or room.name or Lang('room.default_name')
+    local hy = MenuKit.title(title, room.daily and 'orange' or 'purple', A, 1)
     local stateStr = (room.state == "IN_GAME") and Lang('hub.in_game') or Lang('hub.waiting')
-    local privStr  = (room.isPublic == false) and Lang('hub.private') or Lang('hub.public')
+    local privStr  = room.solo and Lang('daily.solo_tag') or (room.isPublic == false) and Lang('hub.private') or Lang('hub.public')
     local countStr = Lang('room.players_count', { n = np, max = room.maxPlayers or '?' })
     local _, ioy, ia = A:slide(1, 0, -200, 0, -200)
     local info = stateStr .. "  -  " .. privStr .. "  -  " .. countStr

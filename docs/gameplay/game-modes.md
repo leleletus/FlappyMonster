@@ -13,8 +13,8 @@ catalog, the editor and `level_check`.
 **Point zones** (`src/world/systems/PointAreas.lua`, entity `pointarea`) are also used offline by the story's bonus
 matches against the bot ([bonus-and-bot](../story/bonus-and-bot.md)).
 
-**To add a mode:** a file in `src/world/modes/` + its id in `Modes.lua` `TYPES`, texts `mode.<id>.*` in both
-language files, an icon PNG in `assets/images/ui/icons/`, its accent `color` and its menu `button` colour (the tab in
+**To add a mode:** a file in `src/world/modes/` + its id in `Modes.lua` `TYPES`, texts `mode.<id>.*` in every
+language column of `assets/lang/translations.csv`, an icon PNG in `assets/images/ui/icons/`, its accent `color` and its menu `button` colour (the tab in
 the game-mode menu; `src/ui/menu/MenuButton.lua` names). **Harnesses:** `online_smoke MODE=…`, `level_check`,
 `bot_nav` (KOTH data rules).
 

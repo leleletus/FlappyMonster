@@ -112,6 +112,7 @@ function love.load()
         story_film         = function() return require('src/states/story/StoryFilmState'):new() end,   -- Historia: cinemáticas (intro y final)
         online_login       = function() return OnlineLoginState:new() end,
         online_menu        = function() return require('src/states/online/OnlineMenuState'):new() end,   -- salas · desafío · récords
+        online_daily       = function() return require('src/states/online/OnlineDailyState'):new() end,  -- desafío del día: solitario · club
         online_hub         = function() return OnlineHubState:new() end,
         online_room        = function() return OnlineRoomState:new() end,
         online_adventure   = function() return OnlineAdventureState:new() end,

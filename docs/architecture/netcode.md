@@ -195,9 +195,11 @@ piece took damage, immortal online), and a rewound "stomp" may hit a boss that i
 - **Records and the daily challenge (2026-11-03)** — `server/srv/records.lua`. `records.json` (server save folder) keeps
   the 10 best Race times per level (best per name) and, per UTC day, the daily board (last 7 days); written at the end of
   every Race round from its finishers (`S.recordRound`, from `sim.lua`). The daily level is one Race level without
-  bosses, picked from the date (`S.dailyLevel`: a hash of `YYYY-MM-DD` over the sorted list). `join_daily` joins today's
-  public room or creates it (race, that level, 8 players, `room.daily = date`): it can start with ONE player and its mode,
-  level and difficulty cannot be changed (`srv.daily_fixed`). `get_records {}` → the index (each level with its best + the
+  bosses, picked from the date (`S.dailyLevel`: a hash of `YYYY-MM-DD` over the sorted list). `join_daily` = the SOLO challenge: a private room of one (`room.solo`, in no list) with that
+  level (race, fixed). `create_room { daily = true }` = a DAILY CLUB room (`S.makeDaily`: race, today's level);
+  `get_rooms { daily = true }` lists only today's club rooms and plain `get_rooms` only rooms without `daily`
+  (`S.roomListed`). Daily rooms can start with ONE player and their mode, level and difficulty cannot be changed
+  (`srv.daily_fixed`); club rooms' finishes count for the daily board too. `get_records {}` → the index (each level with its best + the
   daily); `get_records { level }` → its top 10. Client: the online menu after login (`OnlineMenuState`: rooms · daily challenge · records), `OnlineRecordsState`. Harness:
   `online_menus META=…` `records`, `diario`.
 - **Block and report (2026-11-02)** — in the room, ANY player opens another player's menu (the admin also has give
@@ -212,6 +214,8 @@ piece took damage, immortal online), and a rewound "stomp" may hit a boss that i
 
 v111 Tifón (`tifon`, new type: the fortress secret boss; wind side, swap, zone bounds, marks, arcs and hail in its netPack; its `pushAt` runs on the client too) and the level `tejados_del_tifon`.
 v110 records and the daily challenge (`get_records` → `records`, `join_daily`, `daily` in room updates and the room list).
+v112 the daily challenge solo (`join_daily` = a room of one, `solo` in room updates) and the daily club (`create_room` /
+`get_rooms` with `daily`; separate lists).
 v109 report_player, joining a running match to watch, rejoining after a cut (`hello.rejoin`, `game_init.rejoin / late`).
 v108 `rhythm_pose` (client → server → the rest of the room): each player's hit / miss pose in the rhythm duel.
 v107 Groove Crab: new state `buck`, its trampoline launches to a fixed height with no air jump, `backT` in its netPack.

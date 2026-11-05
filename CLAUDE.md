@@ -28,7 +28,7 @@ when asked. The user writes in Spanish. This does not apply to code, comments, c
 |---|---|
 | Code comments, commit messages | Spanish |
 | Level editor UI, `tools/tests/README.md` | Spanish (with accents) |
-| Player-facing text | translated, never hardcoded: add the key to BOTH `assets/lang/es.lua` and `en.lua` |
+| Player-facing text | translated, never hardcoded: a row in `assets/lang/translations.csv` (the user edits it too) with every language |
 | `docs/`, this file | English |
 
 ## Golden rules

@@ -32,7 +32,7 @@ are never edited by hand.
 | put blocks or decorations behind the level (the background plane) | [art/background-plane](art/background-plane.md), [levels/editor](levels/editor.md) § Background plane |
 | add a sound, or listen to all of them (secret sound test) | [audio/sound](audio/sound.md) |
 | compose or change music | [audio/music-guide](audio/music-guide.md), [audio/music-catalog](audio/music-catalog.md), [audio/music-history](audio/music-history.md) |
-| add a text or a language | [architecture/i18n](architecture/i18n.md) |
+| add a text or a language, edit translations (`assets/lang/translations.csv`) | [architecture/i18n](architecture/i18n.md) |
 | test something | [testing/harnesses](testing/harnesses.md), `tools/tests/README.md` |
 | measure speed, garbage, memory leaks (client and server) | [testing/performance](testing/performance.md) |
 | change the logo intro shown at boot | [architecture/startup-intro](architecture/startup-intro.md) |

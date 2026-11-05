@@ -36,9 +36,8 @@ function love.load()
                 Lang.set(l.id)
                 local ok, e = pcall(Entities.create, { type = name, col = 5, row = 5, props = {} })
                 local key = 'boss.' .. name
-                -- (has() mira también el español: aquí se exige la clave en el archivo de ESE idioma)
-                local file = love.filesystem.read('assets/lang/' .. l.id .. '.lua') or ''
-                local inFile = file:find('%f[%w_]' .. name .. '%s*=') ~= nil
+                -- (has() mira también el español: aquí se exige el texto en la columna de ESE idioma de la hoja)
+                local inFile = Lang.keys(l.id)[key] ~= nil
                 if not ok or not inFile or e:title() ~= Lang.get(key) then missing[#missing + 1] = l.id .. ':' .. name end
             end
         end

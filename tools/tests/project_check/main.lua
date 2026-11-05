@@ -3,7 +3,7 @@
 --   catalogos   cada tipo de entidad, tile, decoración y modo se registra, y cada entidad se crea
 --   rutas       toda ruta 'assets/...' escrita en el código (src/, server/, game.lua) existe
 --   cargas      nada de lo que se carga de verdad (imágenes, sonidos, música del catálogo) falta en disco
---   idiomas     es.lua y en.lua tienen las mismas claves
+--   idiomas     la hoja assets/lang/translations.csv: cada clave con texto en todos los idiomas, sin repetidas
 --   secretos    cada nivel secreto existe, tiene camino en el mapa y su salida secreta; cada astilla, en su nivel con su jefe
 --   jefes       en los niveles con zona de jefe no hay nada más allá de la última zona (salvo sus bloques de jefe)
 --   docs        toda ruta del repo escrita entre `comillas` en docs/, CLAUDE.md, README.md y tools/README.md existe,
@@ -151,19 +151,26 @@ function love.load()
             #bad == 0 and 'ninguno' or list(bad, 8)))
     end
 
-    -- idiomas
-    local function flat(t, pre, out)
-        for k, v in pairs(t) do
-            local key = pre .. tostring(k)
-            if type(v) == 'table' then flat(v, key .. '.', out) else out[key] = true end
+    -- idiomas: la hoja assets/lang/translations.csv (src/core/Lang.lua) — cada clave con texto en TODOS los idiomas
+    -- (salvo las que en español están vacías a propósito) y sin claves repetidas
+    local Lang = require 'src/core/Lang'
+    Lang.reload()
+    local es = Lang.keys(Lang.DEFAULT)
+    local diff, n, seen = {}, 0, {}
+    for k, v in pairs(es) do
+        n = n + 1
+        for _, l in ipairs(Lang.LANGUAGES) do
+            if l.id ~= Lang.DEFAULT and v ~= '' and Lang.keys(l.id)[k] == nil then diff[#diff + 1] = l.id .. ':' .. k end
         end
-        return out
     end
-    local es = flat(love.filesystem.load('assets/lang/es.lua')(), '', {})
-    local en = flat(love.filesystem.load('assets/lang/en.lua')(), '', {})
-    local diff, n = {}, 0
-    for k in pairs(es) do n = n + 1; if not en[k] then diff[#diff + 1] = 'en:' .. k end end
-    for k in pairs(en) do if not es[k] then diff[#diff + 1] = 'es:' .. k end end
+    for _, row in ipairs(Lang.parseCSV(love.filesystem.read(Lang.FILE) or '')) do
+        local k = row[1]
+        if k and k ~= '' and k:sub(1, 1) ~= '#' then
+            if seen[k] then diff[#diff + 1] = 'repetida:' .. k end
+            seen[k] = true
+        end
+    end
+    for _, l in ipairs(Lang.LANGUAGES) do if not next(Lang.keys(l.id)) then diff[#diff + 1] = 'sin columna:' .. l.id end end
     check('idiomas', #diff == 0, ('%d claves; faltan: %s'):format(n, #diff > 0 and list(diff, 10) or 'ninguna'))
 
     -- jefes: en un nivel con zona de jefe no hay nada (objetos, enemigos, mecanismos) más allá de la última zona —

@@ -91,7 +91,7 @@ the grid in order (left / right wrap to the next row, up / down change row). Har
   another menu screen, or `Transition.go(...)` to anything else.
 - A content screen designed over black (Free Play, online): `MenuScene.backdrop()` instead of its background.
 - A new background scene: build its graph, find a seed (`FINDSEED`), add `{ level, seed }`.
-- New player-facing text: keys in both `assets/lang/es.lua` and `en.lua` (`menu.*`, `adv.desc_*`, `story.slot_*`).
+- New player-facing text: a row in `assets/lang/translations.csv` with every language (`menu.*`, `adv.desc_*`, `story.slot_*`).
 - Code that runs inside the demo must not depend on drawing: `menu_flow DETCHECK2=<scene>` finds the first step where
   drawing changes the race.
 
@@ -106,8 +106,25 @@ at 1280 / 960 / 1600 (`<save>/menu_*.png`). `story_flow` waits while a cartridge
 
 **Flow (2026-11-03, the user's design):** login → the ONLINE MENU (`OnlineMenuState`: ROOMS · DAILY CHALLENGE · RECORDS;
 back = disconnect, to the login) → ROOMS = the room list (`OnlineHubState`, its BACK returns to the menu still connected) ·
-DAILY CHALLENGE = `join_daily`, straight into today's room · RECORDS = `OnlineRecordsState` (back to the menu). The room
+DAILY CHALLENGE = its own menu (`OnlineDailyState`, below) · RECORDS = `OnlineRecordsState` (back to the menu). The room
 list keeps its three buttons (create, refresh, back); the user rejected putting daily and records there ("no queda bien").
+
+**Daily challenge (2026-11-04, the user's design):** the DAILY CHALLENGE menu (`OnlineDailyState`, orange banner; back →
+the online menu) has two options:
+- **SOLO** (`daily.solo`) → `join_daily`: a room of ONE, private and in no list, with today's level; the room screen.
+- **DAILY CLUB** (`daily.club`, the name the user asked Claude to pick for "the challenge with friends") → the room
+  list in daily mode (`OnlineHubState` with `{ daily = true }`: orange title, `get_rooms { daily = true }`, rooms created
+  there send `create_room { daily = true }`; back → the daily menu). Its list shows ONLY today's daily rooms, and those
+  rooms never appear in the normal list.
+
+In a daily room (solo or club) mode, level and difficulty are fixed by the server, so the room screen shows only
+**READY · START MATCH · LEAVE ROOM** (the host's GAME MODE and ◀ DIFFICULTY ▶ were useless there: the user, 2026-11-04);
+START needs no second player; the match card says "Today's level (fixed)" instead of "Change it in GAME MODE". The
+solo room's title is localized on the client (`hub.daily_room`) and its status line says SOLO.
+
+**Leaving a room returns where you came from:** whoever sends the player into a room sets `NC.lobby` (the hub: itself,
+with its `daily` flag; the daily menu before `join_daily`), and LEAVE / kicked / banned / room closed / `room_left` after
+a match call `NC:toLobby()` (default: the room list).
 
 **What:** the whole online area (login, online menu, room list, records, create-room wizard, password, room, game-mode menu, pause and
 spectator windows in a match, results board, network error) is built from the same pieces as the other menus: the
@@ -120,7 +137,7 @@ drawn in the normal font (the pixel font lacks most symbols); labels, buttons an
 | `src/ui/menu/MenuKit.lua` | the shared pieces: `box(kind)` — `well` (sunken: text fields, lists), `card`, `card_sel` (white edge), `window` (on top of everything) —, `field` (text field with block cursor; `mask` for passwords), `section` (pixel-font label + rule), `stepper` (◀ value ▶ button; `stepperSide` = which arrow was tapped), `arrow`, `marker` (the cursor, also used by `MenuList`; see `cursor.png`), `title` (`MenuList.header`, or the normal font on the same banner when the pixel font lacks a letter: `PixelFont.has`), `hint`, `dim`, `text` |
 | `assets/images/ui/menus/cursor.png` | the menu CURSOR (a gold arrowhead with a notch, 8×11, pointing right; `make_menu_ui.py`). **Smart placement** (`MenuKit.marker` / `place` / `flush`): every button, box, panel and text drawn in the frame records its rect (`MenuKit.occupy`, called by `MenuButton.draw` / `panel`, `MenuKit.box` / `text`, `PixelFont.draw`); screens only *ask* for the cursor and `game.lua` draws it after the screen. It tries LEFT, RIGHT, ABOVE, BELOW the selected button and takes the first spot that is inside the smallest box containing the button (the screen if none) and touches nothing else; it is rotated to point at the button and nudges toward it. No free spot → no cursor. `MenuKit.dim` clears the list (what is under a window does not count) |
 | `assets/images/ui/menus/box.png` | the four boxes (8×8 cells, cut 2), written by `tools/art/ui/make_menu_ui.py` |
-| `src/states/online/OnlineLoginState.lua`, `OnlineMenuState.lua`, `OnlineHubState.lua`, `OnlineRecordsState.lua`, `OnlineRoomState.lua`, `OnlineErrorState.lua` | each has ONE layout function used by drawing, mouse and touch; enter / leave with `MenuAnim` (windows slide in with their own) |
+| `src/states/online/OnlineLoginState.lua`, `OnlineMenuState.lua`, `OnlineDailyState.lua`, `OnlineHubState.lua`, `OnlineRecordsState.lua`, `OnlineRoomState.lua`, `OnlineErrorState.lua` | each has ONE layout function used by drawing, mouse and touch; enter / leave with `MenuAnim` (windows slide in with their own) |
 | `MenuKit.optionsWindow` / `optionsLayout` / `optionAt` | the OPTIONS WINDOW of every pause and end of match: single-player pause (`src/states/adventure/PauseState.lua`), the level's game over (`AdventureState`, with the story's note), the online pause and spectator windows; one geometry for drawing, mouse and touch; the buttons are centred on THEIR OWN width (the smart cursor finds its own room: 0.5.5, the user saw them shifted to one side) |
 | `src/states/adventure/FreePlayState.lua` | Free Play with the same pieces (teal banner, ◀ difficulty ▶ selector, cards as boxes) |
 | `src/ui/ModeSelectMenu.lua` | the game-mode menu (online room and Free Play): tabs are buttons in the mode's `button` colour (`src/world/modes/<mode>.lua`), level cards are boxes |
@@ -135,7 +152,7 @@ the story's difficulty picker); the bottom line shows `difficulty.desc.<id>`. It
 back the screen shows the requested one (`pendingDiff`). Everyone sees it as a pill on the game card, and it reaches
 the match in `game_init` as before (`docs/gameplay/difficulty.md`).
 
-**Tests:** `online_menus` (every screen at 1280 and 960 against the local server, the selector through every
+**Tests:** `online_menus` (every screen at 1280 and 960 against the local server, the daily menu / solo room / club list and room (`d_solo`, `d_club`), the selector through every
 difficulty and back, the match starting with it). `online_smoke`, `online_boss`, `free_play` cover the rest.
 
 **Decisions / history**

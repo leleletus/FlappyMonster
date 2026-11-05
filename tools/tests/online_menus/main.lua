@@ -6,7 +6,8 @@
 --     el número de jugadores (◀ ▶) y los botones de abajo (ABAJO, ◀ a CANCELAR, confirmar cancela);
 --  4. sala: el bot entra; el host CAMBIA LA DIFICULTAD con el selector (a la derecha y a la izquierda, todas las de
 --     src/core/Difficulty.lua y "sin dificultad") y la sala del servidor la recibe; el menú de modo de juego;
---     récords tras una carrera de dos bots (`records`, con META) y el desafío del día (`diario`);
+--     récords tras una carrera de dos bots (`records`, con META), el desafío del día en solitario (`diario`) y el club
+--     del día (`club`); las pantallas del desafío: su menú, la sala en solitario, la lista y la sala del club (`d_solo`, `d_club`);
 --     entrar a mirar una partida en marcha y volver a ella tras un corte (`mirar`, `volver`);
 --     el menú de un jugador (admin); bloquear (el nombre deja de verse) y denunciar (llega y no se repite);
 --  5. la partida empieza (los dos listos) con la dificultad elegida; el menú de pausa;
@@ -75,6 +76,7 @@ local function newBot(nm)
     b.c:on('login_success', function(d) b.logged, b.id = true, d.id end)
     b.c:on('room_update', function(d) b.room = d; if d.state == 'WAITING' and b.inGame then b.ended = true end end)
     b.c:on('room_error', function(d) b.err = d end)
+    b.c:on('room_list', function(d) b.list = d end)
     b.c:on('game_init', function(d) b.inGame, b.init = true, d end)
     b.c:connect()
     bots[#bots + 1] = b
@@ -304,6 +306,10 @@ local function run()
         local back = name(top()) == 'OnlineAdventureState' and top().myIdx == myIdx and NC.rejoin and NC.rejoin.token == token
         check('volver', offered and back, ('ofrece volver=%s · de vuelta en la partida con su jugador (%s → %s)=%s'):format(
             tostring(offered), tostring(myIdx), tostring(top().myIdx), tostring(back)))
+        -- (sale de la partida: dentro, el arnés manda entradas más rápido que el reloj y el servidor lo echa por flood
+        -- mientras corren los bots de los récords; vuelve a la lista de donde entró — NC:toLobby —)
+        NC:send('leave_room', {})
+        waitFor(function() return name(top()) == 'OnlineHubState' end, 4)
     end
 
     -- ── 5c. RÉCORDS y DESAFÍO DEL DÍA ────────────────────────────────────
@@ -351,19 +357,99 @@ local function run()
             top():_onRecords(index); wait(0.3)
             shots('records')
         end
-        -- el desafío del día: una sala pública con el nivel del día, se puede empezar solo y no se cambia
+        -- el desafío EN SOLITARIO: una sala de uno, privada y fuera de las listas, con el nivel del día; no se cambia
+        -- y se empieza solo
         b6.c:send('join_daily', {})
         waitFor(function() return b6.room ~= nil end, 3)
         local r = b6.room or {}
         b6.c:send('set_mode', { mode = 'koth' })
         wait(0.3)
         local fixed = b6.err and b6.err.key == 'srv.daily_fixed'
+        b5.list = nil; b5.c:send('get_rooms', { daily = true })
+        waitFor(function() return b5.list ~= nil end, 3)
+        local hidden = true
+        for _, x in ipairs(b5.list or {}) do if x.id == r.id then hidden = false end end
         b6.c:send('set_ready', { ready = true }); wait(0.2)
         b6.c:send('start_game', {})
         waitFor(function() return b6.inGame end, 4)
-        check('diario', r.daily ~= nil and r.level ~= nil and r.mode == 'race' and fixed and b6.inGame == true,
-            ('sala del día %s en %s (%s) · no se cambia=%s · empieza solo=%s'):format(tostring(r.daily), tostring(r.level), tostring(r.mode),
-            tostring(fixed), tostring(b6.inGame)))
+        check('diario', r.daily ~= nil and r.solo == true and r.maxPlayers == 1 and r.isPublic == false and r.level ~= nil
+            and r.mode == 'race' and fixed and hidden and b6.inGame == true,
+            ('solitario %s en %s (%s) · de %s, privada=%s · fuera de las listas=%s · no se cambia=%s · empieza solo=%s'):format(
+            tostring(r.daily), tostring(r.level), tostring(r.mode), tostring(r.maxPlayers), tostring(r.isPublic == false),
+            tostring(hidden), tostring(fixed), tostring(b6.inGame)))
+        -- el CLUB DEL DÍA: create_room { daily } → Carrera en el nivel de hoy; sale en SU lista y no en la normal
+        b6.c:send('leave_room', {}); wait(0.4)
+        b6.room = nil
+        b6.c:send('create_room', { name = 'Club de Diario', isPublic = true, password = '', maxPlayers = 4, daily = true })
+        waitFor(function() return b6.room ~= nil end, 3)
+        local c = b6.room or {}
+        local inClub, inNormal = false, false
+        b5.list = nil; b5.c:send('get_rooms', { daily = true }); waitFor(function() return b5.list ~= nil end, 3)
+        for _, x in ipairs(b5.list or {}) do if x.id == c.id then inClub = true elseif not x.daily then inNormal = true end end
+        local clubOnlyDaily = not inNormal
+        b5.list = nil; b5.c:send('get_rooms', {}); waitFor(function() return b5.list ~= nil end, 3)
+        local leaked = false
+        for _, x in ipairs(b5.list or {}) do if x.daily then leaked = true end end
+        check('club', c.daily ~= nil and c.mode == 'race' and c.level == r.level and not c.solo and inClub and clubOnlyDaily and not leaked,
+            ('sala del club %s en %s (%s) · en la lista del club=%s (solo del club=%s) · se cuela en la normal=%s'):format(
+            tostring(c.daily), tostring(c.level), tostring(c.mode), tostring(inClub), tostring(clubOnlyDaily), tostring(leaked)))
+    end
+
+    -- ── 5d. LAS PANTALLAS DEL DESAFÍO: su menú (solitario · club), la lista del club y sus salas (solo LISTO / EMPEZAR /
+    --        SALIR); al salir se vuelve de donde se entró ──
+    do
+        if os.getenv('DBG') then print('  5d: conectado', NC:isConnected()) end
+        gStateMachine:change('online_daily'); wait(0.8)
+        local atDaily = name(top()) == 'OnlineDailyState'
+        shots('daily')
+        local function ids()
+            local out = {}
+            for _, a in ipairs(top():_buildActions()) do out[#out + 1] = a.id end
+            return table.concat(out, ',')
+        end
+        -- en solitario
+        top().list.selected = 1
+        press('confirm', 0.1)
+        waitFor(function() return name(top()) == 'OnlineRoomState' and top().currentRoom.solo end, 4)
+        if os.getenv('DBG') then print('  5d: solitario', name(top())) end
+        local st = top()
+        if name(st) ~= 'OnlineRoomState' then error('d_solo: no llega a la sala en solitario (' .. name(st) .. ')') end
+        wait(0.8)
+        local soloIds = ids()
+        st:_executeAction('ready'); wait(0.4)
+        local blocker = st:_startBlocker()
+        shots('daily_solo')
+        st:_executeAction('leave')
+        waitFor(function() return name(top()) == 'OnlineDailyState' end, 4)
+        local backSolo = name(top()) == 'OnlineDailyState'
+        check('d_solo', atDaily and soloIds == 'ready,start,leave' and blocker == nil and backSolo,
+            ('menú del desafío=%s · botones: %s · se puede empezar solo=%s · SALIR → menú del desafío=%s'):format(
+            tostring(atDaily), soloIds, tostring(blocker == nil), tostring(backSolo)))
+        -- el club: su lista (con la sala del bot), crear una y su sala
+        wait(0.6)
+        top().list.selected = 2
+        press('confirm', 0.1)
+        waitFor(function() return name(top()) == 'OnlineHubState' end, 4)
+        local hub = top()
+        waitFor(function() return #hub.roomList >= 1 end, 4)
+        wait(0.6)
+        local onlyClub = hub.daily == true and #hub.roomList >= 1
+        for _, x in ipairs(hub.roomList) do if not x.daily then onlyClub = false end end
+        shots('daily_hub')
+        NC:send('create_room', { name = 'Mi club', isPublic = true, password = '', maxPlayers = 4, daily = true })
+        waitFor(function() return name(top()) == 'OnlineRoomState' end, 4)
+        st = top(); wait(0.8)
+        local clubIds = ids()
+        shots('daily_room')
+        st:_executeAction('leave')
+        waitFor(function() return name(top()) == 'OnlineHubState' end, 4)
+        local backClub = name(top()) == 'OnlineHubState' and top().daily == true
+        wait(0.6)
+        top():_leave(); wait(0.8)
+        local backMenu = name(top()) == 'OnlineDailyState'
+        check('d_club', onlyClub and clubIds == 'ready,start,leave' and backClub and backMenu,
+            ('lista del club (solo sus salas: %d)=%s · botones: %s · SALIR → lista del club=%s · VOLVER → menú del desafío=%s'):format(
+            #hub.roomList, tostring(onlyClub), clubIds, tostring(backClub), tostring(backMenu)))
     end
 
     -- ── 6. resultados y error ────────────────────────────────────────────

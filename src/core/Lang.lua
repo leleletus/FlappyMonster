@@ -1,17 +1,26 @@
 -- src/core/Lang.lua
--- Idiomas del juego. Los textos viven en assets/lang/<id>.lua (una tabla por
--- idioma, agrupada por pantalla) y el código los pide por su clave:
+-- Idiomas del juego. TODOS los textos viven en UNA hoja de cálculo, assets/lang/translations.csv (se abre con
+-- LibreOffice Calc / Excel / Google Sheets): una fila por texto y una columna por idioma —
+--
+--   key            | es              | en         | notes
+--   menu.settings  | CONFIGURACIÓN   | SETTINGS   | (lo que ayude a traducir; el juego no la lee)
+--
+-- y el código los pide por su clave:
 --
 --   local L = require 'src/core/Lang'
 --   L('menu.settings')                   --> "CONFIGURACIÓN" / "SETTINGS"
 --   L('hud.monsters_left', { n = 5 })    --> "Quedan 5 monstruos"
 --
--- Valores entre llaves ({n}, {name}...) se sustituyen con `args`. Si a un
--- idioma le falta una clave se usa la del español y, si tampoco existe, la
--- propia clave (así un olvido se ve enseguida en pantalla).
+-- Valores entre llaves ({n}, {name}...) se sustituyen con `args`; `\n` en una celda es un salto de línea (también
+-- vale un salto de verdad dentro de la celda). Una celda VACÍA de otro idioma usa la del español y, si tampoco hay,
+-- se ve la propia clave (así un olvido se ve enseguida en pantalla).
 --
--- Añadir un idioma: copia assets/lang/es.lua a assets/lang/<id>.lua, tradúcelo
--- y añade { id, name } a Lang.LANGUAGES.
+-- Formato: CSV UTF-8 separado por COMAS, con comillas "..." cuando la celda tiene comas, comillas o saltos (las
+-- hojas de cálculo lo hacen solas al guardar como CSV). Puede llevar BOM. Filas sin clave o que empiezan por '#' no
+-- cuentan (sirven de separadores).
+--
+-- Añadir un idioma: una columna nueva en la hoja con su id en la cabecera (p. ej. `fr`) y { id, name } en
+-- Lang.LANGUAGES.
 --
 -- Los mensajes del servidor viajan como { key, args, msg }: cada cliente los
 -- muestra en SU idioma con L.fromServer(data) (msg = texto en español por
@@ -25,35 +34,82 @@ Lang.LANGUAGES = {
 }
 Lang.DEFAULT = 'es'
 
-local tables = {}           -- id -> tabla plana { ['menu.play'] = '...' }
+Lang.FILE = 'assets/lang/translations.csv'
+
+local tables = nil          -- id -> tabla plana { ['menu.play'] = '...' } (todas a la vez, de la hoja)
 local current = Lang.DEFAULT
 local listeners = {}
 
--- Aplana { menu = { play = 'X' } } -> { ['menu.play'] = 'X' }
-local function flatten(t, prefix, out)
-    for k, v in pairs(t) do
-        local key = prefix and (prefix .. '.' .. k) or k
-        if type(v) == 'table' then flatten(v, key, out) else out[key] = v end
+-- Las filas de un CSV (RFC 4180: comillas, "" dentro de comillas, saltos dentro de comillas, CRLF o LF). El separador
+-- es la coma; si la primera línea no tiene comas pero sí ';' (Excel en español guarda así), el punto y coma.
+function Lang.parseCSV(src)
+    src = src:gsub('^\239\187\191', '')               -- (el BOM que pone Excel)
+    local first = src:match('^[^\r\n]*')
+    local sep = (not first:find(',', 1, true) and first:find(';', 1, true)) and ';' or ','
+    local stop = '[' .. sep .. '\r\n"]'
+    local rows, row, i, n = {}, {}, 1, #src
+    local field = {}
+    while i <= n do
+        local c = src:sub(i, i)
+        if c == '"' and #field == 0 then
+            local j = i + 1
+            while true do
+                local q = src:find('"', j, true)
+                if not q then field[#field + 1] = src:sub(j); i = n + 1; break end
+                field[#field + 1] = src:sub(j, q - 1)
+                if src:sub(q + 1, q + 1) == '"' then field[#field + 1] = '"'; j = q + 2
+                else i = q + 1; break end
+            end
+        elseif c == sep then
+            row[#row + 1] = table.concat(field); field = {}; i = i + 1
+        elseif c == '\r' or c == '\n' then
+            row[#row + 1] = table.concat(field); field = {}
+            rows[#rows + 1] = row; row = {}
+            i = i + ((c == '\r' and src:sub(i + 1, i + 1) == '\n') and 2 or 1)
+        else
+            local j = src:find(stop, i) or n + 1
+            if j == i then j = i + 1 end                -- (una comilla suelta a mitad de celda: va tal cual)
+            field[#field + 1] = src:sub(i, j - 1); i = j
+        end
     end
-    return out
+    if #field > 0 or #row > 0 then row[#row + 1] = table.concat(field); rows[#rows + 1] = row end
+    return rows
+end
+
+-- La hoja → { es = {...}, en = {...} }. Columnas: `key`, una por idioma (su id), las demás (notes) no cuentan.
+-- (read + parseCSV, no require: el servidor parchea read para leer los assets del juego desde fuera de su carpeta)
+local function loadAll()
+    if tables then return tables end
+    tables = {}
+    local ok, src = pcall(love.filesystem.read, Lang.FILE)
+    if not ok or type(src) ~= 'string' then print('[Lang] No se pudo cargar ' .. Lang.FILE); return tables end
+    local rows = Lang.parseCSV(src)
+    local head = rows[1] or {}
+    local keyCol, cols = nil, {}
+    for c, name in ipairs(head) do
+        name = name:match('^%s*(.-)%s*$')
+        if name == 'key' then keyCol = c else cols[c] = name; tables[name] = {} end
+    end
+    for r = 2, #rows do
+        local key = keyCol and rows[r][keyCol]
+        key = key and key:match('^%s*(.-)%s*$')
+        if key and key ~= '' and key:sub(1, 1) ~= '#' then
+            for c, id in pairs(cols) do
+                local v = rows[r][c]
+                -- (vacía: sin texto en ese idioma — usa el español —; el español vacío sí es un texto vacío)
+                if v and (v ~= '' or id == Lang.DEFAULT) then
+                    tables[id][key] = v:gsub('\\(.)', function(e) return e == 'n' and '\n' or e end)
+                end
+            end
+        end
+    end
+    return tables
 end
 
 local function load(id)
-    if tables[id] then return tables[id] end
-    local path = 'assets/lang/' .. id .. '.lua'
-    -- read + loadstring (no filesystem.load): el servidor parchea read para
-    -- leer los assets del juego desde fuera de su carpeta
-    local ok, src = pcall(love.filesystem.read, path)
-    local chunk = ok and src and loadstring(src, '@' .. path)
-    local data
-    if chunk then
-        setfenv(chunk, {})                     -- solo datos: sin acceso a nada
-        local ok2, res = pcall(chunk)
-        if ok2 and type(res) == 'table' then data = res end
-    end
-    if not data then print('[Lang] No se pudo cargar ' .. path) end
-    tables[id] = flatten(data or {}, nil, {})
-    return tables[id]
+    local t = loadAll()
+    t[id] = t[id] or {}
+    return t[id]
 end
 
 -- `Lang.autoArgs()` (lo pone game.lua: Input.hints) rellena los marcadores que no vienen en `args`: las teclas de
@@ -144,7 +200,10 @@ end
 -- fn(id) al cambiar de idioma (p. ej. para rehacer cachés con textos)
 function Lang.onChange(fn) listeners[#listeners + 1] = fn end
 
--- Todas las claves de un idioma (para comprobar que las traducciones están completas)
+-- Todas las claves de un idioma, solo las de SU columna (para comprobar que las traducciones están completas)
 function Lang.keys(id) return load(id) end
+
+-- Vuelve a leer la hoja (las herramientas, tras cambiarla)
+function Lang.reload() tables = nil end
 
 return Lang

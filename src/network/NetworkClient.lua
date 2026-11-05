@@ -24,6 +24,7 @@ local NC = {
     _resolving     = nil,   -- { job, port, name } mientras se resuelve el nombre del servidor
     pendingGameInit = nil,  -- último game_init recibido (por si llega antes del estado)
     rejoin = nil,           -- { token, name } de la partida en marcha: para volver a entrar si se corta
+    lobby = nil,            -- { estado, args } adonde se vuelve al salir de una sala (lo pone quien entra: NC:toLobby)
 }
 
 -- ── API pública ───────────────────────────────────────────────────────────────
@@ -150,6 +151,13 @@ function NC:_open(host, port, name)
     -- Si el servidor deja de responder (se cae, se va la red), darlo por
     -- perdido en ≤10 s en vez de los 30 s de ENet por defecto
     pcall(function() self.client:setTimeout(32, 3000, 10000) end)
+end
+
+-- Al salir de una sala (salir, expulsado, cerrada): a la lista de donde se entró — las salas, el club del día — o
+-- al menú del desafío (en solitario). Sin nada apuntado, la lista de salas.
+function NC:toLobby()
+    local l = self.lobby or { 'online_hub' }
+    gStateMachine:change(l[1], l[2])
 end
 
 -- Desconecta limpiando el estado (desconexión intencional — no dispara connection_lost).

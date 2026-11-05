@@ -5,11 +5,12 @@
 -- · records.json (carpeta de guardado del servidor): { levels = { [nivel] = { {name, time, date}, … } },
 --   daily = { [fecha] = { level, list = { … } } } }. Por nivel, los TOP mejores tiempos (uno por nombre: su mejor).
 --   Se apunta al acabar cada ronda de Carrera (S.recordRound, desde server/srv/sim.lua) con quien llegó a la meta.
--- · Desafío del día: un nivel de Carrera SIN jefes por día (UTC), elegido con la fecha; una sala pública suya
---   (`join_daily` la crea o entra en ella) que puede empezar con UN jugador y no se puede cambiar (lobby: room.daily).
---   Sus llegadas van también a la tabla del día.
+-- · Desafío del día: un nivel de Carrera SIN jefes por día (UTC), elegido con la fecha. Se juega EN SOLITARIO
+--   (`join_daily`: una sala privada de 1, fuera de las listas) o en el CLUB DEL DÍA (`create_room { daily = true }`:
+--   salas con su propia lista, `get_rooms { daily = true }`; las normales no salen ahí ni ellas en la normal).
+--   Pueden empezar con UN jugador y no se cambian (lobby: room.daily). Sus llegadas van también a la tabla del día.
 -- Mensajes: `get_records { level? }` → `records` (sin nivel: el índice — cada nivel con su mejor marca — y el día;
--- con nivel: su lista) · `join_daily` → entra en la sala del día.
+-- con nivel: su lista) · `join_daily` → el desafío en solitario.
 
 return function(S)
 local Lang, PLAYER_COLORS, players, rooms = S.Lang, S.PLAYER_COLORS, S.players, S.rooms
@@ -101,22 +102,38 @@ S.on("get_records", function(msg, client)
     client:send("records", { index = index, daily = daily })
 end)
 
+-- DESAFÍO EN SOLITARIO: una sala solo tuya (privada, de 1, fuera de todas las listas) con el nivel del día
 S.on("join_daily", function(msg, client, player)
     if player.roomId then client:send("room_error", Lang.message('srv.already_in_room')); return end
     local date = today()
-    for _, room in pairs(rooms) do
-        if room.daily == date and #room.playerIds < room.maxPlayers then return S.joinRoom(client, player, room, '') end
-    end
     local dl = S.dailyLevel(date)
     if not dl then client:send("room_error", Lang.message('srv.no_map')); return end
     local roomId = S.newRoomId()
-    local room = { id = roomId, name = Lang('srv.daily_room', { date = date }), isPublic = true, password = '',
-                   maxPlayers = 8, playerIds = { player.id }, adminId = player.id, state = "WAITING",
-                   bannedNames = {}, bannedIPs = {}, sim = nil, mode = 'race', level = dl.path, daily = date }
+    local room = { id = roomId, name = Lang('srv.daily_room', { date = date }), isPublic = false, password = '',
+                   maxPlayers = 1, playerIds = { player.id }, adminId = player.id, state = "WAITING",
+                   bannedNames = {}, bannedIPs = {}, sim = nil, mode = 'race', level = dl.path, daily = date, solo = true }
     rooms[roomId] = room
     player.roomId, player.isReady, player.color = roomId, false, PLAYER_COLORS[1]
-    S.log("Desafío del día (" .. date .. ", " .. dl.path .. ") abierto por " .. player.name)
+    S.log("Desafío del día en solitario (" .. date .. ", " .. dl.path .. ") de " .. player.name)
     S.broadcastRoomUpdate(room)
 end)
+
+-- Una sala del CLUB DEL DÍA (create_room con daily = true, server/srv/lobby.lua): Carrera en el nivel de hoy.
+-- false si hoy no hay nivel.
+function S.makeDaily(room)
+    local date = today()
+    local dl = S.dailyLevel(date)
+    if not dl then return false end
+    room.mode, room.level, room.daily, room.difficulty = 'race', dl.path, date, nil
+    return true
+end
+
+-- ¿Sale esta sala en la lista pedida? (las del club, solo las de hoy; las normales, sin desafío; las de un jugador, nunca)
+function S.roomListed(room, daily)
+    if room.solo then return false end
+    if daily then return room.daily == today() end
+    return room.daily == nil
+end
+
 
 end

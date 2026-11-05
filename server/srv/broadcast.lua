@@ -41,6 +41,7 @@ local function broadcastRoomUpdate(room)
         mode=room.mode, level=room.level, levelName=cur and cur.name or nil, levelName_en=cur and cur.name_en or nil, levels=levels,
         difficulty=room.difficulty,                      -- (id de src/core/Difficulty.lua; nil = sin dificultad)
         daily=room.daily,                                -- (el desafío del día: fecha; su nivel y modo no se cambian)
+        solo=room.solo,                                  -- (el desafío en solitario: sala de uno, fuera de las listas)
     }
     for _, pid in ipairs(room.playerIds) do
         local c = S.findClientById(pid)
@@ -57,18 +58,19 @@ local function announceToRoom(room, key, args, kind)
     end
 end
 
-local function buildPublicRoomList()
+-- daily: la lista del CLUB DEL DÍA (sus salas, solo de hoy) en vez de la normal (server/srv/records.lua S.roomListed)
+local function buildPublicRoomList(daily)
     local list = {}
     for _, room in pairs(rooms) do
-        table.insert(list, {
+        if S.roomListed(room, daily) then table.insert(list, {
             id=room.id, name=room.name,
             isPublic=room.isPublic,
             hasPassword=(room.password~=""),
             currentPlayers=#room.playerIds,
             maxPlayers=room.maxPlayers,
             state=room.state,
-            daily=room.daily,                               -- (el desafío del día: cada cliente lo nombra en su idioma)
-        })
+            daily=room.daily,                               -- (una sala del club del día: su fecha)
+        }) end
     end
     return list
 end

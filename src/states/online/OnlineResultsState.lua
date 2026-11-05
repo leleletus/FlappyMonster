@@ -159,7 +159,7 @@ function OnlineResultsState:_setupHandlers()
         if type(data) == 'table' then Notify.toast(L.fromServer(data), data.kind) end
     end)
     NC:on("room_error",   function() end)
-    NC:on("room_left",    function() gStateMachine:change('online_hub') end)
+    NC:on("room_left",    function() NC:toLobby() end)
     NC:on("kicked",       function(data) Notify.roomExit('kicked', data) end)
     NC:on("banned",       function(data) Notify.roomExit('banned', data) end)
     NC:on("room_closed",  function(data) Notify.roomExit('room_closed', data) end)

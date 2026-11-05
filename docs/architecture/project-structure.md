@@ -87,4 +87,4 @@ a part loaded after it.
 ## Naming
 
 Code identifiers and file names are English (with a few historic Spanish level and type ids); code comments are
-Spanish; editor labels are Spanish; player text comes from the language files; documentation is English.
+Spanish; editor labels are Spanish; player text comes from the translation sheet (`assets/lang/translations.csv`); documentation is English.

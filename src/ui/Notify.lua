@@ -80,7 +80,7 @@ function Notify.roomExit(event, data)
     local e = EXIT_TEXT[event] or EXIT_TEXT.room_closed
     data = type(data) == 'table' and data or {}
     Sound.stopTracked('drowning')
-    gStateMachine:change('online_hub')
+    require('src/network/NetworkClient'):toLobby()      -- (la lista de donde se entró)
     Notify.modal(Lang(e.title), Lang.fromServer(data, e.msg), {
         kind = e.kind,
         subtitle = type(data.room) == 'string' and Lang('hub.room_label', { name = data.room }) or nil,

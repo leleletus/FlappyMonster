@@ -276,7 +276,7 @@ secret crab WEARS its mirror splinter mounted and decorated, and the collectible
   One card per catalog entry: owned → icon, name, kind, `desc` and `how`; missing → "???" silhouette and `hint` (texts
   `story.collect.<id>.name|desc|how|hint`, `story.collect.kind.<kind>`). Details in
   [menus](../architecture/menus.md). A new collectible = one catalog line, its icon (a block in the generator) and its
-  four texts in both language files; the screen needs no change.
+  four texts in `assets/lang/translations.csv` (every language); the screen needs no change.
 - **Other save states** (`data.collect[id]` other than `true`; `Collect.state`): an entry may override things per
   state in the catalog, `"states": { "<state>": { "icon": "…" } }` (`Collect.stateDef`, `Collect.iconPath(id, state)`,
   `Collect.image(id, state)`). Today `'stolen'` (the Groove pulls the splinters out during the `groove` map scene; the

@@ -3,7 +3,7 @@
 ```
 assets/
   fonts/            PressStart2P.ttf
-  lang/             es.lua, en.lua
+  lang/             translations.csv (every text, one column per language: docs/architecture/i18n.md)
   levels/           one JSON per level (ids are used by saves and the story: never rename)
   anim/             animation sets: one JSON per image folder, with all its animations (editor: love . --anim;
                     generators: tools/anim/)
