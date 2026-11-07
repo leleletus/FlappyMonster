@@ -58,6 +58,9 @@ not repeated here.
 - [x] Respawn overwrites the checkpoint with the auto-scroll / arena point for good. — kept (0.5.11): the arena / auto-scroll point is always further along than the last checkpoint, so respawning there is the better place
 - [x] (0.5.11) Rule 2: "fell out of the level" check copied ~8 times; gravity integration copied in behaviours; knockback
   wall release copied in 3 types.
+- [ ] (2026-11-07, the user) **No pits in Adventure**: a player who falls below the level does not die (entities have
+  `fellOut`, the player does not). Falling out must cost the life (or the HP rule of the difficulty); the shield power-up
+  will not save from it ([powerups](design/powerups.md)). Check the levels that rely on the floor below the map first.
 
 ## 4. Online / server
 

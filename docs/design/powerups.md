@@ -37,14 +37,15 @@ Durations and ranges are *(Claude's call)*, to be tuned by playing.
 
 | Id *(proposed)* | Power-up | Modes | Effect |
 |---|---|---|---|
-| `shield` | Shield | both | Absorbs the next hit of any kind, once, then breaks (with its own sound and a short invulnerability, like a hit). Lasts until hit or the level ends. Pits and instant deaths: see open questions. |
+| `shield` | Shield | both | Absorbs the next hit of any kind, once, then breaks (with its own sound and a short invulnerability, like a hit). Lasts until hit or the level ends. Also saves from spikes, lava and drowning (each would cost HP or the life: the shield takes it instead, and drowning refills the air). **Not** from pits (the user, 2026-11-07). |
 | `strength` | Strength | both | Double damage for 12 s. |
 | `heart` | Extra heart | both | +1 max HP for the rest of the level (3→4, or 4→5 on Easy), and the new heart starts full. Stacks: two give +2. |
 | `magnet_points` | Points magnet | both | Pulls points pickups from a radius of about 4 tiles, for 20 s. |
 | `magnet_items` | Item magnet | both | Pulls lives, food and Flappy charge items, for 20 s. |
 | `magnet_all` | Super magnet | both | Both magnets in one, for 20 s. Rarer and pricier. |
 | `small` | Small monster | Flappy | Half-size hitbox and sprite for 15 s: tight gaps get easier. |
-| `big` | Big monster | Adventure | Double size for 20 s (or until it runs out of extra hits). Takes twice as many hits (see below), and breaks blocks that normally need a ground pound or a bomb just by running or jumping into them: shortcuts, secret exits, bonus rooms. |
+| `ghost` | Ghost | Flappy | Passes through pipes and zone obstacles for a set time (12 s, like Strength), shown see-through. Machines, their shots and bosses still hurt. It replaces slow time (the user, 2026-11-07). If it runs out inside a pipe, the monster is pushed out to the nearest gap with a short invulnerability instead of being hurt *(Claude's call)*. |
+| `big` | Big monster | Adventure | Double size for 20 s (or until it runs out of extra hits). Takes twice as many hits (see below), and breaks blocks that normally need a ground pound or a bomb just by running or jumping into them: shortcuts, secret exits, bonus rooms. Each level decides: a big-only block may hide a bonus room, a shortcut or a secret exit with no other way in (the user, 2026-11-07). |
 
 How "twice as many hits" works for `big` *(Claude's call)*: while big, a hit shrinks the monster back to normal size
 instead of taking HP, with the usual flash and invulnerability. A second hit then takes HP as normal. This is easier to
@@ -52,7 +53,7 @@ read than half-HP hits.
 
 Ideas for later, not decided:
 - Flappy: `full_charge` (fills the special attack charge to the cap at once, designed together with the charge
-  system), `ghost` (pass through pipes, not machines, for a few seconds).
+  system).
 - Adventure: something to replace slow time that makes sense on foot, such as longer air under water or an extra
   mid-air jump for a while.
 
@@ -146,14 +147,16 @@ resumes the game. A greyed-out segment (see above) cannot be picked. Cancelling 
 
 ## Open questions for the user
 
-1. Does the shield also save from **pits, lava and drowning** (instant deaths), or only from hits? *(Claude would say
-   hits, spikes and lava yes, pits no: a bottomless pit would just eat the shield.)*
-2. Adventure: blocks that only `big` can break. Can they hide a secret exit with no other way in, or must every
-   secret also have a normal route? *(Claude would say only bonus rooms and shortcuts, so nobody needs a consumable
-   to reach 100 %.)*
-3. Is the inventory per **slot** or shared by the **whole install** for that mode?
-4. In Flappy, which Flappy-only power-up replaces slow time: `full_charge`, `ghost`, or another?
-5. Durations, prices, and how rare each one is.
+1. Is the inventory per **slot** or shared by the **whole install** for that mode? (Asked again on 2026-11-07 with
+   an example. Waiting for the answer.)
+2. Durations, prices, and how rare each one is.
+
+Answered on 2026-11-07: the shield saves from everything except pits; big-only blocks may hide any of the three
+(level by level); `ghost` replaces slow time in Flappy, with a set duration.
+
+**Related, found while answering:** Adventure has no pits today. A player who falls below the level does not die
+(enemies and objects already have `fellOut`, the player does not). Logged in [pendientes](../pendientes.md) §3, to be
+fixed later, before the shield's "not from pits" rule means anything.
 
 ## Order in the Flappy build
 
