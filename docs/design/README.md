@@ -13,6 +13,7 @@ and describe the real thing in the system's page.
 | What | Page |
 |---|---|
 | **The Flappy prequel campaign (2026-11-04):** 6 zones, the Evil Monster's machines, special attack, caged flappies, Adventure locked behind it, debug menu; online rules | [flappy-prequel](flappy-prequel.md) |
+| **Power-ups and the quick wheel (2026-11-07):** inventory per mode (6 max, 3 per type), shield, strength, extra heart, three magnets, small (Flappy) / big (Adventure), from cages and map shops; wheel for touch, pad and PC | [powerups](powerups.md) |
 | **The working plan of 2026-11-02:** online bugs, carrying, ground pound, editor, options, tests | [backlog-2026-11](backlog-2026-11.md) |
 | **Finishing the secret bosses (2026-11-03):** Queen, Scorpion and Tifón done; the Mother Mole is left | [secret-bosses-plan](secret-bosses-plan.md) |
 | Tifón's looks and sounds (2026-11-04): look (Remolino shape, Nubarrón colours, ×6), sounds and music B; **built and in the story (0.5.159)** | [tifon](tifon.md) |

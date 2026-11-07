@@ -123,6 +123,7 @@ obstacles. Breaking a cage frees one: it flies home. On the campaign map the Val
 **Reward for all of them: PENDING** (the user, 2026-11-04: "not sure yet, leave it pending"). Claude's placeholder
 was an extra stage plus a short extra scene in the ending with the Valley full again; build no reward until the user
 decides. How many per stage is left to the builder.
+Each freed flappy also gives a **power-up** (2026-11-07): see [powerups](powerups.md).
 
 ### Difficulties
 
