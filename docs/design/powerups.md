@@ -16,7 +16,7 @@ Adventure inventories mixing; anything that breaks the shared simulation online 
 ## Rules (the user's)
 
 - **Two inventories, one per mode.** Flappy power-ups and Adventure power-ups never mix. Each lives in its mode's save
-  slot *(per slot, not global: Claude's call)*.
+  **slot**: every slot has its own inventory, and deleting a slot deletes it (the user, 2026-11-07).
 - **Capacity: 6 power-ups in total, at most 3 of one type.** They are meant to be hard to get, so the cap is not
   expected to feel tight.
 - **Where they come from:**
@@ -147,11 +147,9 @@ resumes the game. A greyed-out segment (see above) cannot be picked. Cancelling 
 
 ## Open questions for the user
 
-1. Is the inventory per **slot** or shared by the **whole install** for that mode? (Asked again on 2026-11-07 with
-   an example. Waiting for the answer.)
-2. Durations, prices, and how rare each one is.
+1. Durations, prices, and how rare each one is.
 
-Answered on 2026-11-07: the shield saves from everything except pits; big-only blocks may hide any of the three
+Answered on 2026-11-07: the inventory is per slot; the shield saves from everything except pits; big-only blocks may hide any of the three
 (level by level); `ghost` replaces slow time in Flappy, with a set duration.
 
 **Related, found while answering:** Adventure has no pits today. A player who falls below the level does not die
