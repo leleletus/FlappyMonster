@@ -63,6 +63,14 @@ Not listened to by anyone yet. Woods to compare: `FlappyMonster_pruebas/escorpio
 `tifonChain`, `tifonHail`, `tifonVane`, `tifonSpin`, `tifonDizzy`. Noise and sines only; ≈ −12 dBFS (hail −15, chain −14),
 no GAIN entry. The user approved them from the previews (2026-11-04) without asking for changes. Not used by any entity yet.
 
+`tools/sounds/netcopter.py --apply` → `assets/sounds/bosses/netcopter/`, the Net-Copter (plan 5c): `netFire` (net leaves the
+cannon), `netSnare` (the net wraps the monster), `netSnag` (it catches on a solid and comes apart), `pedalSqueak` and
+`propWhir` (short ticks, rate-limited on the boss: pedal 0.7 s / whir 0.55 s, faster while crossing), `balloonPop` (phase 2
+starts), `clawServo` (claw warning), `bombLob` (the lobbed bomb) and `leakHiss` (phase 2 air leak, every 1.8 s). Noise and sines
+only; ≈ −12 dBFS (squeak and leak −15, whir and snag −14), no GAIN entry. Replaced the placeholders `cannonWhoosh`,
+`bombIgnite`, `gustPop` and `megaWindup` on this boss. Never listened to by a person. Previews:
+`FlappyMonster_pruebas/netcopter/sonidos/`. The hit shake is the fx `shake_tick` (0.15 s).
+
 ## The 0.5.96 enemies' sounds
 
 `tools/sounds/jungle_enemies.py` → `assets/sounds/enemies/{mole,piranha,carnivoreplant}/`: `moleDig` (the mound moving:

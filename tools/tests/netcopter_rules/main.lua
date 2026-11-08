@@ -43,6 +43,8 @@
 --   risa         muere un jugador: se ríe (cabeza en blanco, ojos de risa, dos cuadros) y la pelea sigue
 --   dibujo       la mecha de una bomba devuelta sigue corriendo; empezando la pelea a la izquierda mira a la derecha;
 --                la risa y el disparo (retroceso, humo) viajan en netPackExtra
+--   ruido         5 s de pelea en su sitio: el chirrido del pedal y el tic de la hélice suenan (pero <= 12 veces cada
+--                 uno: nunca cada cuadro), y la red, la bomba y el golpe usan sus sonidos propios
 --
 --   tools/tests/run.sh netcopter_rules   (CASE=nombre: solo ese)
 io.stdout:setvbuf('no')
@@ -951,10 +953,40 @@ function cases.dibujo()
         ('viajan: risa %.2f, disparo %.2f, cuadro %d/%d'):format(cl.laughT, cl.shotT, cl:laughFrame(), boss:laughFrame()))
 end
 
+-- Los ruidos de la máquina viva no son una metralleta (Review Focus 4): se espía Sound.play durante 5 s de pelea
+function cases.ruido()
+    local level, es, boss, pa, ctrl = fight(nil)
+    local zx0 = boss:zb()
+    pa.invT = 99
+    boss.holdT = 99                                  -- (se queda en su lado: sin cruzar)
+    local counts = {}
+    local real = Sound.play
+    Sound.play = function(name) counts[name] = (counts[name] or 0) + 1 end
+    local ok, err = pcall(run, level, es, 5, nil, ctrl, holdAt(pa, zx0 + 3 * T, 5 * T))
+    Sound.play = real
+    if not ok then error(err) end
+    local p, w = counts.pedalSqueak or 0, counts.propWhir or 0
+    check('ruido', p >= 1 and p <= 12 and w >= 1 and w <= 12,
+        ('5 s de pelea: pedalSqueak %d, propWhir %d (1..12 cada uno)'):format(p, w))
+    check('ruido', (counts.netFire or 0) + (counts.bombLob or 0) >= 1 and (counts.cannonWhoosh or 0) == 0,
+        ('sonidos propios: netFire %d, bombLob %d, sin cannonWhoosh'):format(counts.netFire or 0, counts.bombLob or 0))
+    -- el globo revienta con su sonido y, roto, la fuga sisea sin pasarse
+    boss:damage(boss.hp - math.floor(boss.hpMax * 0.4), 'stomp')
+    check('ruido', boss.popped, 'el golpe que pasa de la mitad revienta el globo')
+    counts = {}
+    Sound.play = function(name) counts[name] = (counts[name] or 0) + 1 end
+    boss.inv = 0
+    ok, err = pcall(run, level, es, 5, nil, ctrl, holdAt(pa, zx0 + 3 * T, 5 * T))
+    Sound.play = real
+    if not ok then error(err) end
+    local h = counts.leakHiss or 0
+    check('ruido', boss.popped and h >= 1 and h <= 5, ('fase 2: globo reventado %s, leakHiss %d en 5 s (1..5)'):format(tostring(boss.popped), h))
+end
+
 local ORDER = { 'rebote', 'de_lado', 'falla', 'mecha', 'cargas', 'lastima', 'aire', 'aventura', 'ultima_vida',
                 'vida', 'fase2', 'especial', 'no_pisa', 'red', 'garra', 'huye', 'bomba', 'azar', 'paquete',
                 'etapa_jefe', 'muerte_en_pelea', 'pilar', 'red_repetida', 'derrota_bombas',
-                'lanzada', 'devuelta_arco', 'cruza', 'mira_izq', 'cruce_justo', 'risa', 'dibujo' }
+                'lanzada', 'devuelta_arco', 'cruza', 'mira_izq', 'cruce_justo', 'risa', 'dibujo', 'ruido' }
 function love.load()
     local only = os.getenv('CASE')
     for _, name in ipairs(ORDER) do

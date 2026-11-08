@@ -9,7 +9,7 @@
 --        'helmet_break' (casco de Gummy), 'puffer_pop' (pez globo), 'water_splash' (salta del agua), 'cryo_puff' / 'cryo_mist' /
 --        'cryo_blast' (congelador), 'ice_freeze' / 'ice_shatter' (bloque de hielo de lo congelado),
 --        'snow_burst' (el Alud: polvo de nieve al soltarse y al chocar abajo),
---        'shake_small', 'shake_big', 'shake_roar' (suave y largo) (temblor de pantalla:
+--        'shake_small', 'shake_tick' (0,15 s), 'shake_big', 'shake_roar' (suave y largo) (temblor de pantalla:
 --        Particles.shakeOffset() se suma a la cámara al dibujar)
 -- (otros nombres no hacen nada)
 --
@@ -246,12 +246,12 @@ function Particles.emit(kind, x, y, opts)
             add({ x = x + rnd(-12, 12), y = y + rnd(-12, 12), vx = rnd(-40, 40), vy = -rnd(20, 80), g = -30,
                   life = rnd(0.5, 0.9), size = math.random(3, 5) * 3, col = {0.35, 0.35, 0.4}, drag = 2, dust = true })
         end
-    elseif kind == 'shake_small' or kind == 'shake_big' then
+    elseif kind == 'shake_small' or kind == 'shake_big' or kind == 'shake_tick' then
         -- Temblor de pantalla (se nota menos cuanto más lejos, como el sonido)
         local k = (Sound and Sound.falloff) and Sound.falloff(x, y) or 1
-        local pow = (kind == 'shake_big' and 16 or 7) * k
+        local pow = (kind == 'shake_big' and 16 or kind == 'shake_tick' and 5 or 7) * k
         if pow > shakePow * (shakeT / shakeDur) then
-            shakePow, shakeDur = pow, (kind == 'shake_big') and 0.7 or 0.3
+            shakePow, shakeDur = pow, (kind == 'shake_big') and 0.7 or (kind == 'shake_tick' and 0.15 or 0.3)
             shakeT = shakeDur
         end
     elseif kind == 'exhaust' then

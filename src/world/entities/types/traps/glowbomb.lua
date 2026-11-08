@@ -87,6 +87,7 @@ function GlowBomb:onReflect(pa)
     self.state, self.reflectedBy, self.tx, self.ty = 'returning', pa, nil, nil
     Sound.play('headBump')
     Entity.emitFx('collect', self.x, self.y)
+    Entity.emitFx('sparks', self.x, self.y)               -- (chispas al devolverla)
 end
 
 -- Gastada sin explotar (el jefe cae): vuelve a su reserva sin hacer daño

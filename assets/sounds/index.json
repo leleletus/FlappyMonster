@@ -232,6 +232,15 @@
     {"id": "cannonFuse", "file": "assets/sounds/story/cannon_fuse.wav"},
     {"id": "cannonBoom", "file": "assets/sounds/story/cannon_boom.wav"},
     {"id": "cannonWhoosh", "file": "assets/sounds/story/cannon_whoosh.wav"},
-    {"id": "cannonLand", "file": "assets/sounds/story/cannon_land.wav"}
+    {"id": "cannonLand", "file": "assets/sounds/story/cannon_land.wav"},
+    {"id": "netFire", "file": "assets/sounds/bosses/netcopter/net_fire.wav", "note": "Redcóptero: sale la red del cañón · no escuchado aún"},
+    {"id": "netSnare", "file": "assets/sounds/bosses/netcopter/net_snare.wav", "note": "Redcóptero: la red envuelve al monstruo · no escuchado aún"},
+    {"id": "netSnag", "file": "assets/sounds/bosses/netcopter/net_snag.wav", "note": "Redcóptero: la red se engancha y se deshace · no escuchado aún"},
+    {"id": "pedalSqueak", "file": "assets/sounds/bosses/netcopter/pedal_squeak.wav", "note": "Redcóptero: chirrido de pedal (limitado) · no escuchado aún"},
+    {"id": "propWhir", "file": "assets/sounds/bosses/netcopter/prop_whir.wav", "note": "Redcóptero: tic de hélice (limitado) · no escuchado aún"},
+    {"id": "balloonPop", "file": "assets/sounds/bosses/netcopter/balloon_pop.wav", "note": "Redcóptero: el globo revienta · no escuchado aún"},
+    {"id": "clawServo", "file": "assets/sounds/bosses/netcopter/claw_servo.wav", "note": "Redcóptero: la garra se prepara · no escuchado aún"},
+    {"id": "bombLob", "file": "assets/sounds/bosses/netcopter/bomb_lob.wav", "note": "Redcóptero: la bomba lanzada en arco · no escuchado aún"},
+    {"id": "leakHiss", "file": "assets/sounds/bosses/netcopter/leak_hiss.wav", "note": "Redcóptero: fuga de aire del globo · no escuchado aún"}
   ]
 }

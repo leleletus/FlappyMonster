@@ -85,6 +85,7 @@ end
 -- Se engancha en un sólido: se deshace allí
 function Net:snag()
     self.state, self.deadTimer = 'snag', 0
+    Sound.play('netSnag')
 end
 
 function Net:updateCustom(dt, level)
@@ -125,6 +126,7 @@ function Net:updateCustom(dt, level)
     for _, pa in ipairs(level.players or {}) do
         if not pa.dying and pa.alive ~= false and overlap(b, pa:getOuterBounds()) then
             if Boss.strike(pa, HIT, dir) then
+                Sound.play('netSnare')
                 Entity.emitFx('collect', self.x, self.y)
                 self:wrap(pa)
                 return true

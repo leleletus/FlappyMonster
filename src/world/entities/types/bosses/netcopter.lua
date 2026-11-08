@@ -82,6 +82,9 @@ local T = {
     HIT_BODY = { 1, 420, -200, 0.3, 0 },
     HIT_CROSS = { 1, 160, 380, 0.3, 0 },  -- cruzando: hacia abajo, fuera de su camino (nunca contra una pared)
     INTRO = 3.5, ENTER_T = 2.0, LAUGH_AT = 2.1, LAUGH_T = 0.8, UNFOLD_AT = 2.6, UNFOLD_T = 0.5,
+    PEDAL_EVERY = { 0.7, 0.4 },     -- s entre chirridos de pedal: [hover/ataque], [cruzando] (limite de ruido)
+    WHIR_EVERY = { 0.55, 0.35 },    -- s entre tics de hélice: [hover/ataque], [cruzando]
+    LEAK_EVERY = 1.8,               -- fase 2: s entre siseos de la fuga del globo
     LAUGH_DEATH = 1.2,              -- se ríe cuando cae un jugador
     LAUGH_F = 1 / 6,                -- s por cuadro de la risa (cabeza arriba / abajo, como el Espejo)
     TURN_T = 0.2,                   -- s que tarda en girarse al final del cruce
@@ -158,6 +161,7 @@ function NC:initBoss()
     self.summonKey = 'nc' .. self.col .. ',' .. self.row      -- (sus redes y bombas de reserva: def.summons)
     self.netT, self.bombT, self.attackN = T.NET_FIRST[2], T.BOMB_FIRST[2], 0
     self.yOff, self.laughT, self.shotT = 0, 0, 9
+    self.pedalT, self.whirT, self.leakT = 0.3, 0.1, 0.9           -- relojes de los sonidos de vida (solo sonido)
     self.bandY, self.reach = nil, 0
     self.fleeX0, self.fleeY0 = nil, nil
 end
@@ -258,7 +262,7 @@ function NC:fireNets(level, pa)
         end
     end
     self.shotT = 0
-    Sound.play('cannonWhoosh')
+    Sound.play('netFire')
     Entity.emitFx('sparks', mx, my)
 end
 
@@ -275,7 +279,7 @@ function NC:throwBomb(level, pa)
     local head = pa:getOuterBounds().h / 2
     local apex = math.max(zy0 + TP, pa.y - head - T.BOMB_APEX * TP)
     b:lob(pa.x, pa.y, math.min(apex, y0 - TP / 2), T.BOMB_G)
-    Sound.play('bombIgnite')
+    Sound.play('bombLob')
     return true
 end
 
@@ -309,10 +313,12 @@ end
 function NC:onDamaged(n, kind)
     if self:phase() == 2 and not self.popped then
         self.popped = true                                -- (el globo revienta: fase 2)
-        Sound.play('gustPop')
+        Sound.play('balloonPop')
         Sound.play('bossExplode', 0.6)
         Entity.emitFx('boss_blast', self.x, self.y - 60)
         Entity.emitFx('shake_small', self.x, self.y)
+    else
+        Entity.emitFx('shake_tick', self.x, self.y)              -- (cada golpe: un temblor de 0,15 s)
     end
 end
 
@@ -353,6 +359,18 @@ function NC:hurtPlayers(level)
     end
 end
 
+-- Los ruidos de la máquina viva: pedal, hélice y (fase 2) la fuga del globo. Cada uno con su reloj, para no sonar
+-- cada cuadro (más seguidos cruzando)
+function NC:lifeSounds(dt, k)
+    self.pedalT, self.whirT, self.leakT = self.pedalT - dt, self.whirT - dt, self.leakT - dt
+    if self.pedalT <= 0 then self.pedalT = T.PEDAL_EVERY[k]; Sound.play('pedalSqueak') end
+    if self.whirT <= 0 then self.whirT = T.WHIR_EVERY[k]; Sound.play('propWhir') end
+    if self.leakT <= 0 then
+        self.leakT = T.LEAK_EVERY
+        if self.popped then Sound.play('leakHiss') end
+    end
+end
+
 function NC:updateBoss(dt, level)
     self.levelRef = self.levelRef or level
     local st = self.state
@@ -363,6 +381,7 @@ function NC:updateBoss(dt, level)
     self.shotT = math.min(9, (self.shotT or 9) + dt)
     if st == 'fleeing' then return self:updateFlee(dt, level, t) end
     if not self:isActive() then return end
+    self:lifeSounds(dt, st == 'cross' and 2 or 1)
 
     local ph = self:phase()
     local pa = self:nearestPlayer(level)
@@ -412,7 +431,7 @@ function NC:updateBoss(dt, level)
             local reach = (self.facing or -1) < 0 and ((self.x - FRONT - CLAW_HEAD * S) - (zx0 + TP / 4))
                 or ((zx1 - TP / 4) - (self.x + FRONT + CLAW_HEAD * S))
             self.reach = math.max(0, math.floor(reach))
-            Sound.play('megaWindup')
+            Sound.play('clawServo')
         end
         self.y = self.y + ((self.bandY - CLAW_DY) - self.y) * math.min(1, dt * 6)
         if t >= T.WARN_T then
