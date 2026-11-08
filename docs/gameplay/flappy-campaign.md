@@ -74,7 +74,7 @@ while Adventure is locked, its saves do not count.
   (3.5 s) it glows `T.AIM_T` (0.6 s, `clawServo`) and fires one net straight up at 520 px/s (`netFire`). The net is the
   Net-Copter's `netshot` (`launch(ty, drift, boundPx, dir, up)`: `up` = vertical flight): 1 HP + `ctrlLock` 0.4 s, snags
   on solids / pillars, leaves through the top. Its 2 nets are reserve minions (`def.summons`, `Entity:freeMinion`, as
-  the boss's). It never fires while no player is within `T.RANGE` (20 tiles). The special burst destroys it: the generic
+  the boss's). It never fires while no player is within `T.RANGE` (20 tiles); a player arriving always has at least `T.FIRST` (1.5 s) before the first shot. An upward net only probes solids inside the level, so it leaves through the top cleanly. The special burst destroys it: the generic
   `diesToSpecial` flag in the type definition (`Entity:onSpecialHit` -> `dieBurst`). Art: `netlauncher-Sheet.png`
   (`tools/art/enemies/make_netlauncher.py`). Test: `flappy_flight` case `lanzarredes`.
 
@@ -114,7 +114,7 @@ No extra lives. What it gives is saved only when the stage is finished (rule 7).
 - Turn the Adventure lock on: `Campaign.READY = true` in the same commit that makes the campaign finishable (Plan 6).
 
 **Tests:** `flappy_campaign` (`archivo`, `progreso`, `zonas`, `partida`, `premio`, `jaulas`), `flappy_flight` (`carga`,
-`ataque`, `jaula`, `lanzarredes`, `muro`, `etapa` on every Valley stage), `netcopter_rules` (`etapa_jefe`: the boss stage is passable
+`ataque`, `jaula`, `lanzarredes`, `lanzarredes_techo`, `muro`, `etapa` on every Valley stage), `netcopter_rules` (`etapa_jefe`: the boss stage is passable
 — arena reached, camera stopped, zone fighting, walls down after the win, finish touched; `muerte_en_pelea`: respawn in
 the air inside the zone with full HP), `touch_layout` (`especial`), `menu_flow` (`flappy_slots`, `mapa`,
 `continuar_flappy`, `candado`).

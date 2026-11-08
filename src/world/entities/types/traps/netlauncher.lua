@@ -69,7 +69,8 @@ end
 function NL:updateCustom(dt, level)
     local st = self.state
     if st == 'idle' then
-        if not level or not self:playerNear(level) then self.waitT = math.max(self.waitT, 0.1) return true end
+        -- (sin nadie cerca no cuenta; quien llega tiene al menos FIRST s antes del primer disparo)
+        if not level or not self:playerNear(level) then self.waitT = math.max(self.waitT, T.FIRST) return true end
         self.waitT = self.waitT - dt
         if self.waitT <= 0 then
             self.state, self.deadTimer = 'aim', 0

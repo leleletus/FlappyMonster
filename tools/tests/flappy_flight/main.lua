@@ -471,6 +471,70 @@ function cases.lanzarredes()
            fastK, tostring(slow), #nets2, tostring(slots)))
 end
 
+-- LANZARREDES, la red hacia arriba: se engancha en un pilar por encima (netSnag, se deshace, nunca lo pasa) y, sin nada
+-- encima, se gasta al salir por arriba del nivel; y quien llega a su alcance no recibe un disparo al instante
+function cases.lanzarredes_techo()
+    local NL = require('src/world/entities/types/traps/netlauncher').class
+    local function mk(pillar, px)
+        local lv = stage(80, nil, nil, true, { { type = 'netlauncher', col = 12, row = 9, props = {} } })
+        if pillar then lv.tiles[6][12] = PILLAR end              -- (3 casillas por encima)
+        local l, nets = nil, {}
+        for _, e in ipairs(lv.liveEntities) do
+            if e.def.name == 'netlauncher' then l = e elseif e.def.name == 'netshot' then nets[#nets + 1] = e end
+        end
+        local pa = player(lv, px, 4.5 * T)
+        pa.hp = 99
+        return lv, l, nets, pa
+    end
+    local snagSounds = 0
+    local realPlay = Sound.play
+    Sound.play = function(id, ...) if id == 'netSnag' then snagSounds = snagSounds + 1 end end
+    -- 1. pilar encima
+    local lv, l, nets, pa = mk(true, 8 * T)
+    local minY, snagged, spent = math.huge, false, false
+    local pillarBottom = 6 * T
+    step(lv, 6, function()
+        hover(pa, 4.5 * T)
+        for _, n in ipairs(nets) do
+            if n.alive then
+                minY = math.min(minY, n.y)
+                if n.state == 'snag' then snagged = true end
+            end
+        end
+        if snagged then
+            local live = false
+            for _, n in ipairs(nets) do if n.alive then live = true end end
+            if not live then spent = true; return true end
+        end
+    end)
+    local snagAfter1 = snagSounds
+    local stoppedBelow = minY > pillarBottom - 1 and minY < math.huge
+    -- 2. nada encima: sale por arriba y no queda ninguna red viva
+    local lv2, l2, nets2, pa2 = mk(false, 8 * T)
+    local fired, gone, leaked = false, false, false
+    step(lv2, 8, function()
+        hover(pa2, 4.5 * T)
+        local live = false
+        for _, n in ipairs(nets2) do if n.alive then live = true; fired = true end end
+        if fired and not live then gone = true; return true end
+    end)
+    -- 3. a quien llega a su alcance no le dispara al instante
+    local lv3, l3, nets3, pa3 = mk(false, 60 * T)
+    step(lv3, 8, function() hover(pa3, 4.5 * T) end)                -- (lejos: en reposo, esperando)
+    pa3.x = 8 * T
+    local t, firedAt = 0, nil
+    step(lv3, 3, function()
+        hover(pa3, 4.5 * T)
+        t = t + DT
+        if not firedAt and l3.state ~= 'idle' then firedAt = t; return true end
+    end)
+    Sound.play = realPlay
+    local fair = firedAt and firedAt >= NL.T.FIRST - 0.05
+    check('lanzarredes_techo', stoppedBelow and snagged and spent and snagAfter1 == 1 and snagSounds == 1 and gone and fair,
+          ('con un pilar 3 casillas encima: se engancha (netSnag x%d, y ninguno al salir por arriba), nunca lo pasa (y mínima %.0f, base del pilar %d) y se deshace=%s; sin nada encima sale por arriba y no queda ninguna red viva=%s; al llegar a su alcance tarda %.2f s en apuntar (FIRST %.1f)=%s'):format(
+           snagAfter1, minY, pillarBottom, tostring(spent), tostring(gone), firedAt or -1, NL.T.FIRST, tostring(fair and true or false)))
+end
+
 function cases.muro()
     -- muro de 7 casillas de alto (filas 3..9) en la columna 12, carga mínima 3
     local lv = stage(40, nil, nil, true, { { type = 'crackwall', col = 12, row = 9, props = { minCharge = 3, rows = 7 } } })
@@ -601,7 +665,7 @@ function cases.powerups()
     check('powerups', a1 and a2 and a3 and a4 and a5 and a6 and a7 and a8 and a9 and a10 and a11, table.concat(out, '; '))
 end
 
-local ORDER = { 'aleteo', 'ventana', 'pilar', 'suelo', 'reaparece', 'exclusivo', 'normal', 'carga', 'ataque', 'jaula', 'lanzarredes', 'muro', 'powerups', 'etapa' }
+local ORDER = { 'aleteo', 'ventana', 'pilar', 'suelo', 'reaparece', 'exclusivo', 'normal', 'carga', 'ataque', 'jaula', 'lanzarredes', 'lanzarredes_techo', 'muro', 'powerups', 'etapa' }
 function love.load()
     local only = os.getenv('CASE')
     for _, name in ipairs(ORDER) do

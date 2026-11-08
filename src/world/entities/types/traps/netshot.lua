@@ -119,7 +119,8 @@ function Net:updateCustom(dt, level)
             self:spend()
             return true
         end
-        if level:isEnemySolidAt(self.x, self.y - self.outerH / 2) then
+        -- (por encima del nivel no hay nada que la enganche: sale limpia)
+        if self.y - self.outerH / 2 >= 0 and level:isEnemySolidAt(self.x, self.y - self.outerH / 2) then
             self:snag()
             return true
         end
