@@ -94,7 +94,7 @@ frames to `gradients.png`: 18-20 `valley_day/dusk/night` — after `make_sky.py`
   as the monster: visor face, antennae or horns, dark body; NO wings) perched on the tops and flying with their arms up
   (they flap by magic). Three kinds, 7x7 art px: V antennae (plum), one curled horn (teal), two straight horns (rust).
 - `valley_mid` (0.2): bigger columns with basalt joints and NEST HOLES (dark oval, twig rim), some with a flappy peeking.
-- `valley_near` (0.38): thick broken column bases in the grass (mostly behind the level floor).
+- `valley_near` (0.38): thick broken column bases sinking into a violet dithered mist (no grass: Flappy stages have no meadow floor; `--apply --force` redoes only this file).
 - Everything is light and desaturated so the playfield's near-black `pillar` tiles (tile 59) always read in front.
 - Island for the art that changes by island: not listed in `Isles.BY_BACKGROUND`, so `pradera` (the default).
 - Capture: a copy of a Valley stage with `"background": "valley"` through `run.sh level_shots` (Flappy stages adopt
