@@ -67,7 +67,7 @@
     { "id": "crab_mashup",      "name": "Mega Mashup de los Cangrejos (evento)", "intro": "bosses/crab_mashup_intro.ogg", "loop": "bosses/crab_mashup_loop.ogg", "level": false, "boss": true, "volume": 0.50 },
 
     { "id": "menus",         "name": "Menús",                         "file": "menus/menus.ogg",       "level": false, "volume": 0.93 },
-    { "id": "flappy",        "name": "Aleteo (modo Flappy)",          "intro": "flappy/flappy_intro.ogg", "loop": "flappy/flappy_loop.ogg", "level": false, "volume": 0.70 },
+    { "id": "flappy",        "name": "Aleteo (modo Flappy)",          "intro": "flappy/flappy_intro.ogg", "loop": "flappy/flappy_loop.ogg", "volume": 0.70 },
     { "id": "map_pradera",   "name": "Rumbo a las islas (Pradera)",   "file": "map/map_pradera.ogg",   "level": false, "volume": 0.71 },
     { "id": "map_costa",     "name": "Rumbo a las islas (Costa)",     "file": "map/map_costa.ogg",     "level": false, "volume": 0.71 },
     { "id": "map_fortaleza", "name": "Rumbo a las islas (Fortaleza)", "file": "map/map_fortaleza.ogg", "level": false, "volume": 0.71 },

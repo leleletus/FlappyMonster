@@ -348,6 +348,7 @@ local FROZEN_INPUT = { pressed = function() return false end, down = function() 
 function PlayerAdventure:update(dt, level)
     self.prevY = self.y              -- (dónde estaba al empezar el paso: el pisotón mira si los pies venían de arriba)
     self.peaceful = level ~= nil and level.peaceful == true          -- (nivel de enemigos inofensivos)
+    self.flight = level ~= nil and level.flappy == true              -- (nivel Flappy: vuela — PlayerFlight.lua —)
     self.frozen = level ~= nil and level.frozenAt ~= nil and not self.dying and level:frozenAt(self.x, self.y)
     -- (`forceFrozen`: lo pone quien lleva la partida cuando ya ha terminado — el bonus contra el bot —: sin control
     -- e invulnerable, como en la entrada de un jefe)
@@ -461,6 +462,8 @@ function PlayerAdventure:_update(dt, level)
     self.inMoveX, self.inCrouch = inX, hCrouch
     if pJump   then self.inJumpN   = (self.inJumpN or 0) + 1 end
     if pCrouch then self.inCrouchN = (self.inCrouchN or 0) + 1 end
+    -- Nivel Flappy: vuela (aletear y moverse a los lados dentro de la ventana) — PlayerFlight.lua —
+    if self.flight then return self:updateFlight(dt, level, pJump, inX) end
 
     -- Ground pound: agacharse (pulsar) en el aire o nadando
     if pCrouch and not self.onGround and not stunned
@@ -621,6 +624,7 @@ require('src/player/PlayerAir')(PlayerAdventure, P)
 require('src/player/PlayerGroundPound')(PlayerAdventure, P)
 require('src/player/PlayerRender')(PlayerAdventure, P)
 require('src/player/PlayerGulp')(PlayerAdventure, P)
+require('src/player/PlayerFlight')(PlayerAdventure, P)
 dropPlatformTop, ICE_FREE_INV, ICE_MASH, loadSprites = P.dropPlatformTop, P.ICE_FREE_INV, P.ICE_MASH, P.loadSprites
 
 return PlayerAdventure

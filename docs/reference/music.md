@@ -50,7 +50,7 @@ plays the intro once and then repeats the loop. `level` = offered as level music
 | `groove` | El Groove (jefe secreto) | `bosses/groove_intro.ogg` + `bosses/groove_loop.ogg` | 0.49 | boss |
 | `crab_mashup` | Mega Mashup de los Cangrejos (evento) | `bosses/crab_mashup_intro.ogg` + `bosses/crab_mashup_loop.ogg` | 0.5 | boss |
 | `menus` | Menús | `menus/menus.ogg` | 0.93 |  |
-| `flappy` | Aleteo (modo Flappy) | `flappy/flappy_intro.ogg` + `flappy/flappy_loop.ogg` | 0.7 |  |
+| `flappy` | Aleteo (modo Flappy) | `flappy/flappy_intro.ogg` + `flappy/flappy_loop.ogg` | 0.7 | level |
 | `map_pradera` | Rumbo a las islas (Pradera) | `map/map_pradera.ogg` | 0.71 |  |
 | `map_costa` | Rumbo a las islas (Costa) | `map/map_costa.ogg` | 0.71 |  |
 | `map_fortaleza` | Rumbo a las islas (Fortaleza) | `map/map_fortaleza.ogg` | 0.71 |  |

@@ -76,7 +76,8 @@ local function paletteItems(L)
     local items = {}
     if L == 'tiles' then
         for _, t in ipairs(TT.list) do
-            if not t.editorHide then
+            -- (lo exclusivo de Flappy — flappyOnly —, solo en los niveles Flappy)
+            if not t.editorHide and (not t.flappyOnly or E.model.flappy) then
                 -- (en el plano de fondo, los que no pueden ir allí salen apagados: BackPlane.allows)
                 local off = E.plane == 'bg' and not BackPlane.allows(t)
                 items[#items+1] = { key = t.id, label = t.label, cat = t.category, ord = TT.categoryOrder(t.category), def = t, off = off,

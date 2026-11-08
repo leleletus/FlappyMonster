@@ -130,6 +130,7 @@ function LevelCatalog.info(lv, path, file)
     local allowed
     if lv.modes then allowed = {}; for _, id in ipairs(lv.modes) do allowed[id] = true end end
     if lv.peaceful then allowed = {} end                     -- (nivel de prueba, enemigos inofensivos: en ningún modo)
+    if lv.flappy then allowed = {} end                       -- (nivel Flappy: aún no hay Flappy en línea — proyecto 3 —)
     for _, m in ipairs(Modes.list) do
         if (not allowed or allowed[m.id]) and m.requires(info) then
             info.modes[m.id] = true

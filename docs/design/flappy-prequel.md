@@ -197,6 +197,10 @@ Approved by the user on 2026-11-04. Next step: write the implementation plan fro
    testers keep Adventure; CLÁSICO's placeholder offers the endless mode until then.
 2. **Flight trait + one test stage** on Adventure's engine (auto-scroll window, free left/right, flap, 3 HP, pass
    through on hit, Flappy-only catalog flag enforced) — the user judges the feel here before anything else.
+   **BUILT in 0.5.164, waiting for the user's verdict on the feel** ([player](../gameplay/player.md#flight-flappy-levels)):
+   level key `"flappy": true`, `PlayerFlight.lua`, the `pillar` tile (59, Flappy-only, hurts and lets through), the
+   test stage `assets/levels/_flappy_vuelo.json` (`tools/levelgen/levels_flappy_test.py`, debug menu → FLAPPY
+   FLIGHT (TEST)), harness `flappy_flight`. The track `flappy` became a level track (the Valley keeps it).
 3. **Campaign frame:** Flappy saves (3 slots), zone map, lives / Game Over / results, Flappy HUD, Easy/Normal/Hard.
 4. **Special attack, charge items, special obstacles, cages, food.**
 5. **Zone 1 (Valley of the Pillars)** complete: background, stages, first boss machine, Evil Monster art.

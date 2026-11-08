@@ -165,6 +165,19 @@ function AutoScroll.respawnPoint(level)
     local a = level.autoScroll
     if not a or a.state == 'stop' then return nil end
     local T  = TILE_PX
+    -- Nivel FLAPPY (se vuela: src/player/PlayerFlight.lua): en el aire, a un tercio de la ventana, en la casilla
+    -- libre (ni sólida ni de las que hacen daño, como los pilares) más cercana al medio de la altura
+    if level.flappy then
+        local x = a.x + a.W / 3
+        local c, mid = math.floor(x / T) + 1, math.floor(level.tileH / 2) + 1
+        for d = 0, level.tileH do
+            for _, r in ipairs({ mid - d, mid + d }) do
+                local def = (r >= 1 and r <= level.tileH) and level:getDef(c, r)
+                if def and def.collision == 'none' and not def.mat.contact then return x, (r - 0.5) * T end
+            end
+        end
+        return x, (mid - 0.5) * T
+    end
     local cc = math.floor((a.x + a.W / 2) / T) + 1
     local x, y = level:findGround(cc, math.floor(a.x / T) + 1, math.floor((a.x + a.W) / T), 2, level.tileH - 1)
     if x then return x, y end

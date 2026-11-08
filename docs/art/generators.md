@@ -56,6 +56,8 @@ the diff before committing anything they write.
   — new files beside the bosses' hand-edited sprites, which it never touches). Character maps, outline added in each
   material's dark tone. Without flags = previews in `FlappyMonster_pruebas/coleccion/`; `--apply` writes only its own
   files. Safe to re-run (nothing of it is hand-edited yet). See [story-mode](../story/story-mode.md#the-collection).
+- `tools/art/world/make_flappy_pillars.py` (0.5.164): the Flappy PILLAR tile (`pillar.png` body, `pillar_cap.png` cap
+  facing up), 16x16 ×4 in the old pipe's colours. Safe to re-run (nothing hand-edited yet).
 - `tools/art/world/make_secret_exit.py`: the SECRET EXIT tile (`assets/images/world/tiles/secret_exit.png`, a red plate
   with a gold frame and a keyhole, 16x16 ×4). `tools/art/story/make_overworld.py` also writes the red keyhole map node
   `assets/images/story/node_secret-Sheet.png`. Safe to re-run (nothing hand-edited yet).

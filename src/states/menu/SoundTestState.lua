@@ -240,7 +240,7 @@ function SoundTestState:update(dt)
         if Input.pressed('nav_right') then self.focus = 'opts'; Sound.play('select') end
         if Input.pressed('light') then self:_change(1, 1) end                       -- (atajo: música / efectos)
         if Input.pressed('confirm') or Input.pressed('flap') then self:_toggle() end
-        if Input.pressed('back') then Sound.play('select'); gStateMachine:change('debug_menu', { selected = 4 }) end
+        if Input.pressed('back') then Sound.play('select'); gStateMachine:change('debug_menu', { select = 'sound' }) end
     else
         if Input.pressed('nav_up') then self.opt = (self.opt - 2) % #OPTS + 1; Sound.play('select') end
         if Input.pressed('nav_down') then self.opt = self.opt % #OPTS + 1; Sound.play('select') end
@@ -293,7 +293,7 @@ function SoundTestState:_seek(k)
 end
 
 function SoundTestState:touchpressed(id, x, y)
-    if CornerButtons.hitBack(x, y) then gStateMachine:change('debug_menu', { selected = 4 }); return end
+    if CornerButtons.hitBack(x, y) then gStateMachine:change('debug_menu', { select = 'sound' }); return end
     local Ly = self:_layout()
     for i, r in ipairs(Ly.opts) do
         if inside(r, x, y) then

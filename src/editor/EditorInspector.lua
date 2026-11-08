@@ -557,6 +557,10 @@ local function drawLevelTab(x, y, w)
         y = y + 28
         if pch then pushUndo(); m.peaceful = pv or nil; markDirty() end
         y = y + ui.hint('Nivel de PRUEBA: tocar a los enemigos no hace daño (se les puede pisar igual). No sale en ningún modo online.', x, y, w, th.border) + 8
+        local fv, fch = ui.toggle('Nivel Flappy (se vuela)', m.flappy == true, x, y, w)
+        y = y + 28
+        if fch then pushUndo(); m.flappy = fv or nil; markDirty() end
+        y = y + ui.hint('El monstruo VUELA (aletea y se mueve a los lados) y la paleta ofrece lo exclusivo de Flappy (pilares). Lo exclusivo de Flappy no puede ir en un nivel normal. Pon también la cámara automática.', x, y, w, th.border) + 8
     end
     y = y + 2
     y, open = ui.section('lvl:summary', 'Resumen', x, y, w)

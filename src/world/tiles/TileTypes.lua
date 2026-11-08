@@ -26,6 +26,8 @@
 --   switchBlock { kind='on'|'off', active=bool, other='<tile>' }: Bloque ON/OFF
 --               que depende de un activador (Level:updateSwitchBlocks)
 --   editorHide  no sale en la paleta (p. ej. la variante inactiva de un Bloque ON)
+--   flappyOnly  solo en niveles Flappy (`"flappy": true`; docs/design/flappy-prequel.md): el editor no lo ofrece en los
+--               demás y level_check falla si un nivel normal lo usa
 --   fake        tile trampa: se ve como otro (`mimics`) pero no colisiona ni
 --               hace daño (los pinchos puestos encima tampoco)
 --   trigger     nombre de evento al tocarlo (p. ej. 'finish'); lo consultan
@@ -117,7 +119,7 @@ function TileTypes.register(def)
 end
 
 -- Orden de las categorías en la paleta del editor (las demás, al final)
-TileTypes.CATEGORIES = { 'Básicos', 'Terreno', 'Plataformas', 'Mecanismos', 'Líquidos', 'Peligros', 'Objetivos' }
+TileTypes.CATEGORIES = { 'Básicos', 'Terreno', 'Plataformas', 'Mecanismos', 'Líquidos', 'Peligros', 'Objetivos', 'Flappy' }
 function TileTypes.categoryOrder(c)
     for i, id in ipairs(TileTypes.CATEGORIES) do if id == c then return i end end
     return #TileTypes.CATEGORIES + 1

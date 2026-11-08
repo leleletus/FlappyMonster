@@ -36,7 +36,7 @@ function DifficultySelectionState:_back()
     Sound.play('select', 0.85)
     local from = self.from
     self.anim:leave(function()
-        if from == 'debug_menu' then gStateMachine:change('debug_menu', { selected = 1 })
+        if from == 'debug_menu' then gStateMachine:change('debug_menu', { select = 'classic' })
         elseif from == 'flappy_campaign' then gStateMachine:change('flappy_campaign', { selected = 2 })
         else gStateMachine:change('main_menu', { selected = 2 }) end
     end)

@@ -255,6 +255,7 @@ function Level.fromData(lvl, difficulty)
     self.snow      = lvl.snow == true                  -- (nieve cayendo: src/fx/Snowfall.lua, solo visual)
     self.parTime   = tonumber(lvl.parTime)             -- (tiempo objetivo del nivel, s: la nota del modo historia; nil = según su ancho)
     self.peaceful  = lvl.peaceful == true              -- (enemigos INOFENSIVOS: niveles de prueba; Interactions.check)
+    self.flappy    = lvl.flappy == true                -- (nivel FLAPPY: el jugador vuela — src/player/PlayerFlight.lua —)
     self.dark      = lvl.dark == true                  -- (nivel a OSCURAS: linternas, src/world/level/Lights.lua; afecta al juego)
     -- LUZ AMBIENTE (solo visual, src/fx/Darkness.lua): "light": day | dusk | night | cave | none; sin ella, de su
     -- hora ("time") y, con fondo de cueva, cueva. La profundidad (debajo de la superficie) va en penumbra.

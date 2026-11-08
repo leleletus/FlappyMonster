@@ -87,7 +87,8 @@ the grid in order (left / right wrap to the next row, up / down change row). Har
 opened from the TITLE with ↑ ↑ ↓ ↓ ← → ← → (arrows or d-pad) or 7 quick taps on the version number (bottom right) —
 the combination that used to open the sound test. Buttons: ENDLESS CLASSIC (the old Flappy, `difficulty` with
 `from = 'debug_menu'`), UNLOCKED ADVENTURE (`Campaign.debugOpen = true`, then `adv_mode_select`: Adventure stays open
-for the rest of the SESSION, not saved), FREE PLAY (also opens the session), SOUND TEST, FILM TEST (each its own
+for the rest of the SESSION, not saved), FLAPPY FLIGHT (TEST) (0.5.164: the flight test stage `assets/levels/_flappy_vuelo.json`, back here), FREE PLAY (also
+opens the session), SOUND TEST, FILM TEST (each its own
 entry now; BACK in them returns here). BACK → main menu. Texts `dbg.*`.
 
 ## Adventure lock

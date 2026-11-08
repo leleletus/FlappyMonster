@@ -63,7 +63,7 @@ end
 -- el editor tiraba `scenes` — y guardarlo las habría borrado del archivo)
 local KNOWN = {}
 for k in ('name name_en parTime width height playerStart tiles bgTiles entities foliage vents bossZones subtiles links '
-          .. 'blockLinks fakeLooks autoScroll modes matchTime music snow peaceful dark coldWater openTop echo light spikeSkin '
+          .. 'blockLinks fakeLooks autoScroll modes matchTime music snow peaceful flappy dark coldWater openTop echo light spikeSkin '
           .. 'background time clouds depth surfaceRow'):gmatch('%S+') do KNOWN[k] = true end
 Model.KNOWN = KNOWN
 
@@ -140,6 +140,7 @@ function Model.fromData(lvl, path)
     m.music     = type(lvl.music) == 'string' and lvl.music or nil
     m.snow      = lvl.snow == true or nil                 -- (nieve cayendo: solo visual)
     m.peaceful  = lvl.peaceful == true or nil             -- (enemigos inofensivos: niveles de prueba)
+    m.flappy    = lvl.flappy == true or nil               -- (nivel FLAPPY: se vuela; docs/design/flappy-prequel.md)
     m.dark      = lvl.dark == true or nil                 -- (nivel a oscuras, con linterna)
     m.coldWater = (tonumber(lvl.coldWater) or 0) > 0 and tonumber(lvl.coldWater) or nil   -- (agua helada: s hasta congelarse)
     m.openTop   = lvl.openTop == true or nil              -- (sin techo encima del nivel: escenarios de los créditos)
@@ -185,7 +186,7 @@ function Model:toData()
         playerStart = self.playerStart, tiles = self.tiles, bgTiles = self:hasBgTiles() and self.bgTiles or nil,
         entities = ents, foliage = decos, vents = self.vents, bossZones = zones, subtiles = subs, links = self.links or {}, blockLinks = self.blockLinks or {}, fakeLooks = self.fakeLooks or {},
         autoScroll = AutoScroll.serialize(self.autoScroll),
-        modes = self.modes, matchTime = self.matchTime, music = self.music, snow = self.snow, peaceful = self.peaceful, dark = self.dark, openTop = self.openTop, echo = self.echo, light = self.light, spikeSkin = self.spikeSkin,
+        modes = self.modes, matchTime = self.matchTime, music = self.music, snow = self.snow, peaceful = self.peaceful, flappy = self.flappy, dark = self.dark, openTop = self.openTop, echo = self.echo, light = self.light, spikeSkin = self.spikeSkin,
         coldWater = self.coldWater,
         background = self.background, time = self.time, clouds = self.clouds,
         depth = self.depth, surfaceRow = self.surfaceRow,
@@ -250,6 +251,7 @@ function Model:encode()
     if d.music then tail[#tail+1] = function(last) line('"music": ' .. json.encode(d.music), last) end end
     if d.snow then tail[#tail+1] = function(last) line('"snow": true', last) end end
     if d.peaceful then tail[#tail+1] = function(last) line('"peaceful": true', last) end end
+    if d.flappy then tail[#tail+1] = function(last) line('"flappy": true', last) end end
     if d.dark then tail[#tail+1] = function(last) line('"dark": true', last) end end
     if d.coldWater then tail[#tail+1] = function(last) line('"coldWater": ' .. json.encode(d.coldWater), last) end end
     if d.openTop then tail[#tail+1] = function(last) line('"openTop": true', last) end end
@@ -302,7 +304,7 @@ function Model:snapshot()
     return deepcopy({ name=self.name, name_en=self.name_en, parTime=self.parTime, width=self.width, height=self.height, tiles=self.tiles, bgTiles=self.bgTiles,
                       playerStart=self.playerStart, entities=self.entities,
                       foliage=self.foliage, vents=self.vents, bossZones=self.bossZones, subtiles=self.subtiles, links=self.links, blockLinks=self.blockLinks,
-                      autoScroll=self.autoScroll, modes=self.modes, matchTime=self.matchTime, music=self.music, snow=self.snow, peaceful=self.peaceful, dark=self.dark, openTop=self.openTop, echo=self.echo, light=self.light, spikeSkin=self.spikeSkin,
+                      autoScroll=self.autoScroll, modes=self.modes, matchTime=self.matchTime, music=self.music, snow=self.snow, peaceful=self.peaceful, flappy=self.flappy, dark=self.dark, openTop=self.openTop, echo=self.echo, light=self.light, spikeSkin=self.spikeSkin,
                       coldWater=self.coldWater,
                       background=self.background, time=self.time, clouds=self.clouds,
                       depth=self.depth, surfaceRow=self.surfaceRow })
@@ -313,6 +315,7 @@ function Model:restore(s)
     -- (los campos opcionales pueden faltar en la copia: se vacían a mano)
     self.autoScroll, self.modes, self.matchTime, self.music, self.snow = nil, nil, nil, nil, nil
     self.dark, self.echo, self.light, self.peaceful, self.openTop = nil, nil, nil, nil, nil
+    self.flappy = nil
     self.spikeSkin = nil
     self.coldWater = nil
     self.background, self.time, self.clouds, self.depth, self.surfaceRow = nil, nil, nil, nil, nil
@@ -677,6 +680,19 @@ function Model:validate()
         local p = e.props
         if p.patrol and (e.col < p.patrol.left or e.col > p.patrol.right) then
             w[#w+1] = { 'warn', where .. ': su ruta no la contiene', e }
+        end
+    end
+    -- Lo exclusivo de Flappy (`flappyOnly`: los pilares…) solo en los niveles Flappy (docs/design/flappy-prequel.md)
+    if not self.flappy then
+        local bad, first = 0, nil
+        for r = 1, self.height do
+            for c = 1, self.width do
+                local t = Tiles.get(Codec.id(self.tiles[r][c]))
+                if t.flappyOnly then bad = bad + 1; first = first or { c, r, t.label } end
+            end
+        end
+        if bad > 0 then
+            w[#w+1] = { 'error', ('%s (%d,%d) y %d casillas más son exclusivas de Flappy: este nivel no es Flappy (Nivel → Nivel Flappy)'):format(first[3], first[1], first[2], bad - 1) }
         end
     end
     -- Conexiones ON/OFF → objetos activables

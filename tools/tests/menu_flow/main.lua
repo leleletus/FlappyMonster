@@ -84,7 +84,7 @@ local function run()
     -- elegir un botón del menú de depuración por su id (los que van con el iris tardan más)
     local function pickDbg(id)
         local m = top()
-        for _ = 1, 6 do if selId(m) == id then break end; press('nav_down', 0.1) end
+        for _ = 1, 8 do if selId(m) == id then break end; press('nav_down', 0.1) end
         press('confirm', 1.2)
     end
     if inDbg then pickDbg('sound') end
@@ -184,11 +184,23 @@ local function run()
         local backDbg = name(top()) == 'DebugMenuState' and selId(top()) == 'classic'
         Campaign.debugOpen = false
         pickDbg('adventure')
-        local toAdv = name(top()) == 'AdventureModeSelectState' and Campaign.debugOpen == true
+        local advName = name(top())
+        local toAdv = advName == 'AdventureModeSelectState' and Campaign.debugOpen == true
         Campaign.debugOpen = false
+        -- VUELO FLAPPY (prueba): entra a la etapa de prueba con el jugador volando y la cámara automática; aletear sube
+        gStateMachine:change('debug_menu'); wait(0.6)
+        pickDbg('flight'); wait(4.0)                 -- (tras la cuenta atrás del principio del nivel)
+        local adv = top()
+        local flies = name(adv) == 'AdventureState' and adv.level.flappy == true and adv.player.flight == true
+        local y0 = flies and adv.player.y or 0
+        for _ = 1, 4 do press('jump', 0.12) end
+        local up = flies and adv.player.y < y0
+        if flies then wait(1.0); shot('flight') end
+        toAdv = toAdv and flies and up
+        check('vuelo', flies and up, ('depuración → %s; nivel Flappy y jugador volando=%s; aletear sube=%s'):format(name(adv), tostring(flies), tostring(up)))
         check('depuracion', toDiff and backDbg and toAdv,
             ('clásico infinito → dificultad=%s, atrás → depuración=%s; aventura sin candado → %s (sesión abierta=%s)'):format(
-             tostring(toDiff), tostring(backDbg), name(top()), tostring(toAdv)))
+             tostring(toDiff), tostring(backDbg), advName, tostring(toAdv)))
     end
     gStateMachine:change('title'); st = top(); wait(1.8)
     press('confirm', 0.8)

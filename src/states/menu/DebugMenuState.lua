@@ -3,6 +3,7 @@
 -- o cruceta) o tocando 7 veces seguidas la versión (abajo a la derecha). Lleva a lo que el jugador normal no ve:
 --   · CLÁSICO (infinito): el Flappy de siempre con sus 3 dificultades (sin acceso normal cuando exista la campaña)
 --   · AVENTURA sin candado: abre Aventura durante esta sesión aunque no se haya terminado la campaña Flappy
+--   · VUELO FLAPPY (prueba): la etapa de prueba del vuelo de la campaña (assets/levels/_flappy_vuelo.json)
 --   · JUEGO LIBRE, SOUND TEST y FILM TEST (antes el film test se abría desde el sound test con ◀)
 -- Como todas las pantallas de menú (docs/architecture/menus.md): fondo vivo, rótulo, botones escalonados.
 local CornerButtons = require 'src/ui/CornerButtons'
@@ -15,22 +16,30 @@ local Campaign      = require 'src/flappy/Campaign'
 local L = require 'src/core/Lang'
 local DebugMenuState = BaseState:new()
 
-local N = 7      -- elementos animados: rótulo + 5 botones + pie
+local N = 8      -- elementos animados: rótulo + 6 botones + pie
+local FLIGHT_LEVEL = 'assets/levels/_flappy_vuelo.json'   -- (la etapa de prueba del vuelo: tools/levelgen/levels_flappy_test.py)
 
 function DebugMenuState:enter(args)
     self.anim = MenuAnim.new({ n = N })
     local menu = function(state, a) return function() self:_leave(state, a) end end
     local iris = function(state) return function() self:_iris(state) end end
-    self.list = MenuList.new({ anim = self.anim, first = 2, top = 0.30, selected = (args and args.selected) or 1, items = {
+    -- (args.select = id del botón que queda elegido al volver: 'sound', 'film', 'classic'…)
+    self.list = MenuList.new({ anim = self.anim, first = 2, top = 0.28, selected = 1, items = {
         { id = 'classic',   text = 'dbg.classic',   color = 'orange', desc = 'dbg.desc_classic',
           go = menu('difficulty', { from = 'debug_menu' }) },
         { id = 'adventure', text = 'dbg.adventure', color = 'green',  desc = 'dbg.desc_adventure',
           go = function() Campaign.debugOpen = true; self:_leave('adv_mode_select') end },
+        { id = 'flight',    text = 'dbg.flight',    color = 'yellow', desc = 'dbg.desc_flight',
+          go = function()
+              self.anim:leave(function() end, N)
+              Transition.go('adventure', { level = FLIGHT_LEVEL, returnTo = 'debug_menu' })
+          end },
         { id = 'free',      text = 'dbg.free',      color = 'teal',   desc = 'dbg.desc_free',
           go = function() Campaign.debugOpen = true; self:_iris('free_play') end },
         { id = 'sound',     text = 'dbg.sound',     color = 'blue',   desc = 'dbg.desc_sound',   go = iris('sound_test') },
         { id = 'film',      text = 'dbg.film',      color = 'purple', desc = 'dbg.desc_film',    go = iris('film_test') },
     } })
+    for i, it in ipairs(self.list.items) do if args and it.id == args.select then self.list.selected = i end end
     Sound.playMusic('menus')
 end
 

@@ -212,6 +212,19 @@ B (frost dither) = `make_frozen_tiles.py --apply --seam B`; A/B captures of the 
 
 - Spikes are images too: assets/images/traps/spikes/spike.png (tile spikes, rotated/flipped for the 4 directions; falling spike) — SPIKE SKINS: level JSON `"spikeSkin": "ice"` (editor Nivel → Fondo y clima → Pinchos; `src/world/level/SpikeSkins.lua` LIST = id + PNG, new skin = PNG + one line) → `spike_ice.png` (`tools/art/world/make_ice_spikes.py`) for tile AND falling spikes (spikefall/rainspike `wantsLevel` → `levelRef.spikeSkin`); render only. Set in the snowy levels (lago_helado, torre_viento, icy arenas; retheme 'snow' theme + make_jefe_nieve write it; their Crabbies are Icy Crabbies too: retheme `ICY_CRABS` swaps crabby/crabbytramp), crabby/spike.png and bosses/miniboss1/spike.png (stretched in height while they grow)
 
+## Flappy pillar (tile 59) and Flappy-only tiles
+
+0.5.164 ([flappy-prequel](../design/flappy-prequel.md)). `pillar` (59, category Flappy): the hollow columns of the
+Valley of the Pillars, the old Flappy pipes. `collision = 'none'`, material `hurtful` (`contact = 'hurt'`), hitbox 12/16
+wide: touching it with the inner hitbox costs 1 HP and the invulnerability lets the player through
+([player](player.md#flight-flappy-levels)); enemies treat it as solid (`enemySolid`). It draws a CAP on a face open to
+air (top or bottom; another pillar, a solid block or the map edge closes it). Art: `pillar.png`, `pillar_cap.png` from
+`tools/art/world/make_flappy_pillars.py`.
+
+**Flappy-only** (`flappyOnly = true` in a tile def): the editor's palette offers it only in a Flappy level (Nivel →
+"Nivel Flappy (se vuela)"), and `Model:validate` reports an ERROR when a normal level uses one (so `level_check` fails).
+The user's condition on the design: Flappy content never leaks into Adventure levels.
+
 ## Tile textures (what the art is and where it comes from)
 
 - Tile textures: assets/images/world/tiles/ (breakable, platform, platform_drop via the tile def's `texture`; finish.png = the checkerboard, its wave + gold frame stay in finish.lua). Stone, border (very hard compact rock) and deep stone are 2x2-cell drawings (`texture.span = 2`: each cell draws its part by column/row, so marks continue across blocks) kept VERY simple (flat colour + a few short marks away from the edges; the user rejected busy Voronoi cracks). **Lava** = tile `danger` (id 3, label "Lava"): lava.png / lava_top.png (exposed top), 4 frames of a hand-drawn pattern shifted 4 px = flowing; `src/fx/LavaFx.lua` (render-only bubbles that pop + droplets + glow, like IceDrips). **Deep stone** (`deep_stone` 36, "Roca abisal", also a mini block). Platform (non pass-through) = riveted steel girder. All these + mortar and checkpoint sprites + sand_blend from `tools/art/world/make_world_art.py` (originals outside the repo). Terrain: dirt.png, grass.png (grass cap over dirt, only when the top is in the air; covered grass = dirt.png), grass_blades.png (3 variants of 16x4 above exposed tops) from `tools/art/world/make_terrain.py`; the light edges on faces in the air are still drawn by code (neighbour-dependent). Mini blocks (ctx.quarter) draw THEIR quarter of the texture at the same scale (seamless with big blocks). **Sand** (`sand` 35, material sand, also a mini block): sand.png + `sand_blend.png` (dithered band in the neighbour's colours, frame 1 dirt/grass, 2 stone, 3 deep stone, 4 border), drawn per HALF cell (big sand = 4 halves; sand mini blocks too) towards any neighbour half cell — big block or mini block, `SubTiles.kindAt(level, gx, gy)` — so the change is never abrupt. A mini block inside a block is NOT a validator warning.

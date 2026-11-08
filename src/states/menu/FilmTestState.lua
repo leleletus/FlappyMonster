@@ -212,7 +212,7 @@ function FilmTestState:_watch()
     it.go()
 end
 
-function FilmTestState:_exit() Sound.play('select'); gStateMachine:change('debug_menu', { selected = 5 }) end
+function FilmTestState:_exit() Sound.play('select'); gStateMachine:change('debug_menu', { select = 'film' }) end
 
 function FilmTestState:update(dt)
     MenuScene.update(dt)

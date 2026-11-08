@@ -12,6 +12,7 @@ everything that needs "a body that moves like a player": the KOTH bot, the Mirro
 | `PlayerAir.lua` | drowning, the countdown, splashes, the air bar; FREEZING WATER (`updateFrost`, `frostT`, the frost meter: [water-and-floods](water-and-floods.md#freezing-water-flood-prop-cold-level-key-coldwater)) |
 | `PlayerGroundPound.lua` | the ground pound and being frozen in ice |
 | `PlayerGulp.lua` | being SWALLOWED by a Carnivorous Plant: mashing out, the bites, the mash prompt (0.5.97) |
+| `PlayerFlight.lua` | FLIGHT in Flappy levels ([below](#flight-flappy-levels)) |
 | `PlayerRender.lua` | sprites and drawing |
 | `OnlinePlayer.lua` | draws the OTHER players from snapshot data (tint, name tag) |
 | `DeadEyes.lua` | the X eyes |
@@ -163,6 +164,26 @@ plant: [enemies](../entities/enemies.md#carnivorous-plant-carnivoreplant-planta-
   protocol v91. The server swallows (the plant lives there); the client gets it with the reconciliation and predicts the
   mashing and the bites like the ice (`iceT`). Harnesses: `mechanics planta_traga` / `planta_colgada`, `online_smoke
   LEVEL=tools/tests/online_smoke/planta.json WANTGULP=1`.
+
+## Flight (Flappy levels)
+
+0.5.164, step 2 of [flappy-prequel](../design/flappy-prequel.md). In a level with `"flappy": true` the player FLIES
+(`pa.flight`, set from the level in `update` like `peaceful`; `PlayerFlight.lua`, called from `_update` before the
+ground pound):
+- JUMP flaps: `vy = FLAP_VELOCITY` (-480) with the old Flappy's `GRAVITY` (1800), any number of times; falls at most
+  900 px/s. No crouch, ground pound, carrying or double jump.
+- Left / right at will (`FLY_SPD` 330 px/s relative to the camera window). With the level's auto-scroll running the
+  monster moves WITH the window (like a scrolling shooter): no input = it keeps its place on screen. The right wall is
+  the window's (AutoScroll arena); the left edge carries it along (if a block is in the way, AutoScroll's usual rule —
+  left behind = dies — applies).
+- PILLARS (tile `pillar`) are not solid: touching one costs 1 HP and the hit's invulnerability lets it fly through.
+- The FLOOR (anything solid it lands on) costs 1 HP (not while invulnerable) and bounces it up (`FLOOR_HOP` -560).
+  Ceiling and walls only stop it.
+- Respawn: `AutoScroll.respawnPoint` in a Flappy level = in the air at a third of the window, the free cell closest to
+  mid-height (never inside a pillar).
+- Shared simulation (golden rule 1): nothing new travels online yet (Flappy levels are listed in no online mode).
+
+**Feel: not judged yet** — waiting for the user (debug menu → FLAPPY FLIGHT (TEST)). Harness `flappy_flight`.
 
 ## Network
 

@@ -15,7 +15,7 @@ local TileCodec = require 'src/world/tiles/TileCodec'
 local Materials = require 'src/world/tiles/Materials'
 local TileTypes = require 'src/world/tiles/TileTypes'
 
-local MATERIALS = { 'default', 'stone', 'wood', 'deadly', 'water', 'dirt', 'grass', 'snow', 'ice', 'sand', 'deep_stone', 'basalt', 'ash', 'mud', 'temple_stone', 'frost_stone' }
+local MATERIALS = { 'default', 'stone', 'wood', 'deadly', 'water', 'dirt', 'grass', 'snow', 'ice', 'sand', 'deep_stone', 'basalt', 'ash', 'mud', 'temple_stone', 'frost_stone', 'hurtful' }
 
 local TYPES = {
     'empty',          -- 0
@@ -47,6 +47,7 @@ local TYPES = {
     'jungle_platform', -- 43 (plataforma traspasable de la jungla)
     'secret_exit',    -- 44 (la salida SECRETA: termina el nivel y abre el camino secreto de la historia)
     'frozen_pack',    -- 50-58 (el paquete helado: ladrillo, roca, sillar y hielo glaciar, iglú, columna, ventana, plataformas)
+    'pillar',         -- 59 (pilar de los niveles Flappy: solo en ellos, flappyOnly)
 }
 
 -- Bloques TRAMPA ("mímicos"): se ven idénticos al tile original pero no tienen

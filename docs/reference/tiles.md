@@ -56,7 +56,8 @@ Every tile registered in `src/world/tiles/Tiles.lua`. **Id** is stored in the le
 | 56 | `frost_window` | Ventana helada | Terreno | solid | frost_stone | joins `ground` |
 | 57 | `frost_platform` | Plataforma helada (traspasable) | Plataformas | oneway (drop-through) | wood | partial hitbox |
 | 58 | `ice_ledge` | Repisa de hielo (traspasable) | Plataformas | oneway (drop-through) | ice | partial hitbox |
+| 59 | `pillar` | Pilar (Flappy) | Flappy | none | hurtful | partial hitbox |
 
 ## Materials
 
-`src/world/tiles/materials/<name>.lua`: ash, basalt, deadly, deep_stone, default, dirt, frost_stone, grass, ice, mud, sand, snow, stone, temple_stone, water, wood.
+`src/world/tiles/materials/<name>.lua`: ash, basalt, deadly, deep_stone, default, dirt, frost_stone, grass, hurtful, ice, mud, sand, snow, stone, temple_stone, water, wood.
