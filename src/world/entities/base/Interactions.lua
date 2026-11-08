@@ -293,6 +293,8 @@ function Interactions.run(pa, entities, cb, rewind)
         elseif result == 'pickup' then
             if e:collect() then
                 Noise.emit(e.x, e.y, e.def.noise or (e.def.pickup and e.def.pickup.lives and Noise.R.life) or Noise.R.pickup)
+                -- (la CARGA de aleteo es estado del jugador: se suma aquí, igual en todos los modos — niveles Flappy —)
+                if e.def.pickup and e.def.pickup.charge and pa.addCharge then pa:addCharge(e.def.pickup.charge) end
                 if cb.pickup then cb.pickup(e, e.def.pickup, i) end
             end
         elseif result == 'checkpoint' then

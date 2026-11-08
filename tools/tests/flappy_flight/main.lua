@@ -9,6 +9,7 @@
 --   suelo       tocar el suelo quita 1 y lo devuelve hacia arriba de un bote
 --   reaparece   en un nivel Flappy se reaparece en el aire, en una casilla libre (no dentro de un pilar)
 --   exclusivo   un pilar en un nivel normal es un error del editor (validate); en un nivel Flappy, no
+--   carga       las cargas de aleteo suben el medidor hasta CHARGE_MAX (5); morir y reaparecer la conserva
 --   normal      en un nivel normal el jugador NO vuela (salto de plataformas de siempre)
 --   etapa       la etapa de prueba (assets/levels/_flappy_vuelo.json) se puede pasar: un piloto sencillo (aletea
 --               cuando está por debajo del centro del hueco siguiente) llega a la meta sin morir
@@ -41,7 +42,7 @@ local function check(case, ok, msg)
 end
 
 -- Nivel W x 11 con suelo en la fila 10-11; `pillars` = { {col, filaHuecoArriba, alto}, ... }; `scroll` = velocidad
-local function stage(W, pillars, scroll, flappy)
+local function stage(W, pillars, scroll, flappy, ents)
     local tiles = {}
     for r = 1, 11 do
         local row = {}
@@ -51,11 +52,14 @@ local function stage(W, pillars, scroll, flappy)
     for _, p in ipairs(pillars or {}) do
         for r = 1, 9 do if not (r >= p[2] and r < p[2] + p[3]) then tiles[r][p[1]] = PILLAR end end
     end
-    local data = { name = 't', width = W, height = 11, playerStart = { 4, 5 }, tiles = tiles, entities = {},
+    local data = { name = 't', width = W, height = 11, playerStart = { 4, 5 }, tiles = tiles, entities = ents or {},
                    flappy = flappy ~= false or nil }
     if scroll then data.autoScroll = { startCol = 1, endCol = 0, speed = scroll, width = 20, margin = 0.6, countdown = 0 } end
     local level = Level.fromData(data)
-    level.liveEntities, level.players = {}, {}
+    local es = {}
+    for _, pl in ipairs(level.entities) do es[#es + 1] = Entities.create(pl) end
+    for _, e in ipairs(es) do if e.wantsLevel then e.levelRef = level end end
+    level.liveEntities, level.players = es, {}
     return level
 end
 
@@ -74,6 +78,7 @@ local function step(level, secs, each)
         level.solidBodies = Entities.solidBodies(level.liveEntities)
         for _, pa in ipairs(level.players) do pa:update(DT, level) end
         level:update(DT)
+        for _, e in ipairs(level.liveEntities) do if e.alive then e:update(DT, level) end end
         AutoScroll.update(level, DT)
         for _, pa in ipairs(level.players) do Interactions.run(pa, level.liveEntities, {}) end
         if each and each() then return true end
@@ -271,7 +276,25 @@ function cases.etapa()
            tostring(level.flappy), tostring(level.autoScroll ~= nil), tostring(done), t, hp0, pa.hp, deaths))
 end
 
-local ORDER = { 'aleteo', 'ventana', 'pilar', 'suelo', 'reaparece', 'exclusivo', 'normal', 'etapa' }
+function cases.carga()
+    local ents = {}
+    for i = 0, 5 do ents[#ents + 1] = { type = 'flapcharge', col = 10 + i * 2, row = 5, props = {} } end
+    local level = stage(40, nil, nil, true, ents)
+    local pa = player(level, 8 * T, 4.5 * T)
+    local c0 = pa.charge
+    stub.state.right = true
+    step(level, 3, function() hover(pa, 4.5 * T) end)
+    clearInput()
+    local got = pa.charge
+    pa:die(nil, true)
+    step(level, 2)
+    pa:respawn()
+    check('carga', c0 == 0 and got == PlayerAdventure.CHARGE_MAX and PlayerAdventure.CHARGE_MAX == 5 and pa.charge == got,
+          ('al empezar %s; tras 6 cargas %s (máximo %s); tras morir y reaparecer %s'):format(
+           tostring(c0), tostring(got), tostring(PlayerAdventure.CHARGE_MAX), tostring(pa.charge)))
+end
+
+local ORDER = { 'aleteo', 'ventana', 'pilar', 'suelo', 'reaparece', 'exclusivo', 'normal', 'carga', 'etapa' }
 function love.load()
     local only = os.getenv('CASE')
     for _, name in ipairs(ORDER) do

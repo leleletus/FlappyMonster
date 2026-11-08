@@ -25,6 +25,13 @@ local GLIDE_FPS  = 6
 PlayerAdventure.FLY_SPD, PlayerAdventure.FLOOR_HOP = FLY_SPD, FLOOR_HOP
 PlayerAdventure.FLY_GRAVITY, PlayerAdventure.FLY_FLAP = FLY_GRAVITY, FLY_FLAP
 
+-- CARGA del ataque especial (docs/design/flappy-plan-4-attack-and-cages.md): 0..CHARGE_MAX, +1 por cada carga de
+-- aleteo (types/items/flapcharge.lua); morir no la quita; cada etapa empieza en 0 (jugador nuevo)
+PlayerAdventure.CHARGE_MAX = 5
+function PlayerAdventure:addCharge(n)
+    self.charge = math.min(PlayerAdventure.CHARGE_MAX, (self.charge or 0) + (n or 1))
+end
+
 -- Lo que avanza la ventana de la cámara automática ahora (px/s; 0 si está parada o no hay)
 local function windowSpeed(level)
     local a = level and level.autoScroll

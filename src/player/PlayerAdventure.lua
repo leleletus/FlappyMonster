@@ -108,6 +108,7 @@ function PlayerAdventure:new(x, y)
     o.facing=1; o.jumpsLeft=2
     o.animT=0; o.frame=3; o.puff=1
     o.lives=3; o.spawnX=x; o.spawnY=y
+    o.charge=0               -- (carga del ataque especial: niveles Flappy — PlayerFlight.lua —)
     o.prevInWater = false   -- para detectar entrada/salida del agua
     -- Ahogamiento
     o.drownTimer  = 0      -- segundos con cabeza bajo agua
