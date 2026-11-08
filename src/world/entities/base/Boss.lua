@@ -275,14 +275,7 @@ function Boss:zoneBounds()
     local T = TILE_PX
     return self.x - 12 * T, self.x + 12 * T, self.y - 8 * T, self.y + 2 * T
 end
--- Sus súbditos de reserva (los que el nivel creó para él: `summons` del tipo; self.summonKey)
-function Boss:minions(level)
-    local out = {}
-    for _, e in ipairs(level.liveEntities or {}) do
-        if e.summonOf == self.summonKey then out[#out + 1] = e end
-    end
-    return out
-end
+-- (Sus súbditos de reserva: Entity:minions / Entity:freeMinion, genéricos)
 -- El jugador vivo más cercano (lo vertical cuenta menos) y su distancia
 function Boss:nearestPlayer(level)
     local best, bd

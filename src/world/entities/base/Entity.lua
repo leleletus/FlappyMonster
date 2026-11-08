@@ -620,11 +620,17 @@ function Entity:isBodyDisabled() return false end
 function Entity:getHazardBoxes() return nil end
 -- La RÁFAGA del ataque especial (niveles Flappy: src/player/PlayerFlight.lua) toca a esta entidad con `power` (la carga
 -- gastada), yendo hacia `dir` (±1). true = la absorbe (se para). Por defecto: los enemigos (no jefes) mueren despedidos
--- hacia donde iba; lo demás no la nota. Los tipos que reaccionan de otra manera lo sobrescriben (Boss: daño; la jaula,
+-- hacia donde iba; las máquinas con `diesToSpecial` revientan; lo demás no la nota.
+-- Los tipos que reaccionan de otra manera lo sobrescriben (Boss: daño; la jaula,
 -- el muro agrietado).
 function Entity:onSpecialHit(power, pa, dir)
     if self.def and self.def.category == 'Enemigos' and not self.def.boss and self.state ~= 'dead' and self.dieFling then
         self:dieFling(dir or 1)
+        return true
+    end
+    -- máquinas (`diesToSpecial` en su definición): la ráfaga las revienta en pedazos
+    if self.def and self.def.diesToSpecial and self.state ~= 'dead' and not Entity.SPECIAL_DEATH[self.state] then
+        self:dieBurst()
         return true
     end
     return false
@@ -658,6 +664,22 @@ function Entity:makeReserve(key)
     self.alive, self.state = false, 'reserve'
     self.leftBoundPx, self.rightBoundPx = -math.huge, math.huge
     if self.onMakeReserve then self:onMakeReserve(key) end
+end
+
+-- Sus súbditos de reserva (los que el nivel creó para ella: `summons` del tipo; self.summonKey): jefes y máquinas
+function Entity:minions(level)
+    local out = {}
+    for _, e in ipairs(level.liveEntities or {}) do
+        if e.summonOf and e.summonOf == self.summonKey then out[#out + 1] = e end
+    end
+    return out
+end
+-- El primer súbdito de ese tipo que está libre (en reserva o ya gastado)
+function Entity:freeMinion(level, name)
+    for _, e in ipairs(self:minions(level)) do
+        if e.def.name == name and not e.alive then return e end
+    end
+    return nil
 end
 
 -- ── Hitboxes ──────────────────────────────────────────────────────────────────

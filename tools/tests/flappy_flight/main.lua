@@ -16,6 +16,8 @@
 --               (y el monstruo se dibuja mirando allí), matando a un enemigo de ese lado
 --   jaula       flappy enjaulado: una ráfaga con menos potencia que su mínimo no la abre (y se para); con más, la abre;
 --               una ya liberada en una partida terminada sale vacía
+--   lanzarredes torreta del Valle: lejos no dispara; cerca brilla y lanza una red recta hacia arriba; encima, −1 y ctrlLock;
+--               la ráfaga la revienta; `trapPace` acelera su reloj
 --   muro        muro agrietado: sólido; una ráfaga más floja que su mínimo no lo rompe (y se para); con bastante, se rompe
 --               y se pasa
 --   powerups    escudo (para un golpe; no una muerte forzada), corazón, fuerza (×2 a jefes, no abre jaulas de más), imanes,
@@ -407,6 +409,68 @@ function cases.jaula()
            tostring(weak), tostring(opened), tostring(empty)))
 end
 
+-- LANZARREDES (docs/design/flappy-plan-5b-valley.md, tarea 2): torreta en el suelo (col 12, fila 9) que, tras brillar, dispara
+-- una red recta hacia arriba
+function cases.lanzarredes()
+    local NL = require('src/world/entities/types/traps/netlauncher').class
+    local Difficulty = require 'src/core/Difficulty'
+    local TT = NL.T
+    local function mk(px, py, row)
+        local lv = stage(80, nil, nil, true, { { type = 'netlauncher', col = 12, row = row or 9, props = {} } })
+        local l
+        for _, e in ipairs(lv.liveEntities) do if e.def.name == 'netlauncher' then l = e end end
+        local nets = {}
+        for _, e in ipairs(lv.liveEntities) do if e.def.name == 'netshot' then nets[#nets + 1] = e end end
+        return lv, l, nets, player(lv, px, py)
+    end
+    local function anyNet(nets) for _, n in ipairs(nets) do if n.alive then return n end end end
+    -- 1. a más de una pantalla: no dispara nunca
+    local lv, l, nets, pa = mk(60 * T, 4.5 * T)
+    local firedFar = false
+    step(lv, 9, function() hover(pa, 4.5 * T); if l.state ~= 'idle' or anyNet(nets) then firedFar = true end end)
+    -- 2. cerca (de lado): brilla TT.AIM_T s y dispara recta hacia arriba a NET_SPD
+    local lv2, l2, nets2, pa2 = mk(8 * T, 4.5 * T)
+    pa2.hp = 99
+    local aimAt, fireAt, n, x0, y0, t0
+    local t = 0
+    step(lv2, 6, function()
+        hover(pa2, 4.5 * T)
+        t = t + DT
+        if not aimAt and l2.state == 'aim' then aimAt = t end
+        n = anyNet(nets2)
+        if n and not fireAt then fireAt = t; x0, y0 = n.x, n.y end
+        if n and fireAt and not t0 and t > fireAt + 0.2 then t0 = t; n.mark = { n.x, n.y } end
+        return t0 ~= nil
+    end)
+    local up = n and n.mark and n.up == true and math.abs(n.x - x0) < 1 and (n.mark[2] - y0) < -TT.NET_SPD * 0.1
+    local telegraph = aimAt and fireAt and math.abs((fireAt - aimAt) - TT.AIM_T) < 0.1
+    local slots = #nets2 == TT.NET_POOL
+    -- 3. un jugador justo encima: −1 de vida y ctrlLock; la red le envuelve
+    local lv3, l3, nets3, pa3 = mk(12 * T - 32, 3.5 * T)
+    local hp0 = pa3.hp
+    local locked = false
+    step(lv3, 5, function()
+        hover(pa3, 3.5 * T)
+        if (pa3.ctrlLockT or 0) > 0 then locked = true end
+        return locked
+    end)
+    local hit = pa3.hp == hp0 - 1 and locked
+    -- 4. la ráfaga (potencia 1) la revienta
+    local lv4, l4, nets4, pa4 = mk(7 * T, 4.5 * T, 5)       -- (a la altura de la ráfaga: el jugador aletea en torno a 4,5 casillas)
+    shoot(lv4, pa4, 1, 4.5 * T)
+    local dead = not l4.alive or l4.state == 'dead_burst'
+    -- 5. el ritmo: `trapPace` (dificultad) acelera su reloj
+    Difficulty.bind({ difficulty = 'extreme' })
+    local fastK = Difficulty.dt(l, 1)
+    local fast = fastK > 1.2
+    Difficulty.bind(nil)
+    local slow = Difficulty.dt(l, 1) == 1
+    check('lanzarredes', not firedFar and up and telegraph and slots and hit and dead and fast and slow,
+          ('lejos (>1 pantalla) no hace nada=%s; brilla %.2f s (AIM_T %.1f) y la red sale recta arriba=%s; encima: −1 y ctrlLock=%s; la ráfaga la revienta=%s; trapPace extremo acelera (×%.2f) y sin dificultad no=%s; reserva %d redes=%s'):format(
+           tostring(not firedFar), (fireAt or 0) - (aimAt or 0), TT.AIM_T, tostring(up and true or false), tostring(hit), tostring(dead),
+           fastK, tostring(slow), #nets2, tostring(slots)))
+end
+
 function cases.muro()
     -- muro de 7 casillas de alto (filas 3..9) en la columna 12, carga mínima 3
     local lv = stage(40, nil, nil, true, { { type = 'crackwall', col = 12, row = 9, props = { minCharge = 3, rows = 7 } } })
@@ -537,7 +601,7 @@ function cases.powerups()
     check('powerups', a1 and a2 and a3 and a4 and a5 and a6 and a7 and a8 and a9 and a10 and a11, table.concat(out, '; '))
 end
 
-local ORDER = { 'aleteo', 'ventana', 'pilar', 'suelo', 'reaparece', 'exclusivo', 'normal', 'carga', 'ataque', 'jaula', 'muro', 'powerups', 'etapa' }
+local ORDER = { 'aleteo', 'ventana', 'pilar', 'suelo', 'reaparece', 'exclusivo', 'normal', 'carga', 'ataque', 'jaula', 'lanzarredes', 'muro', 'powerups', 'etapa' }
 function love.load()
     local only = os.getenv('CASE')
     for _, name in ipairs(ORDER) do

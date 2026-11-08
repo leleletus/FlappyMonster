@@ -255,13 +255,6 @@ function NC:moveToward(dt, tx, ty, lag)
 end
 
 -- ── Súbditos de reserva: las redes y las bombas (def.summons) ─────────────────
-function NC:freeMinion(level, name)
-    for _, e in ipairs(self:minions(level)) do
-        if e.def.name == name and not e.alive then return e end
-    end
-    return nil
-end
-
 function NC:fireNets(level, pa)
     local zx0, zx1, zy0 = self:zb()
     local f = self.facing

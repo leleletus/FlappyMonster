@@ -58,12 +58,15 @@ end
 
 -- La lanza el jefe (ya en su sitio con appearAt): hacia `dir` (−1 izquierda, por defecto; 1 derecha), a la altura `ty`,
 -- con deriva `drift`; desaparece al pasar `boundPx` (el borde de la zona por delante)
-function Net:launch(ty, drift, boundPx, dir)
+-- `up` (el lanzarredes, traps/netlauncher.lua): sale recta HACIA ARRIBA (dir vertical −1) en vez de hacia un lado; `ty` no
+-- se usa, `drift` es la deriva en x (px/s) y `boundPx` el límite de y por arriba
+function Net:launch(ty, drift, boundPx, dir, up)
     dir = (dir == 1) and 1 or -1
+    self.up = up == true or nil
     self.state, self.deadTimer, self.settled, self.wrapPa = 'fly', 0, nil, nil
     self.y0, self.ty, self.drift = self.y, ty or self.y, drift or 0
     self.facing = dir
-    self.boundPx = boundPx or (dir < 0 and -math.huge or math.huge)
+    self.boundPx = boundPx or ((self.up or dir < 0) and -math.huge or math.huge)
 end
 
 function Net:canBeStomped() return false end
@@ -107,6 +110,21 @@ function Net:updateCustom(dt, level)
     self.deadTimer = self.deadTimer + dt
     local t = self.deadTimer
     local dir = (self.facing == 1) and 1 or -1
+    if self.up then
+        -- hacia arriba: recta, con su deriva en x; se engancha en un sólido por encima y sale por arriba
+        self.y = self.y - (self.props.speed or 520) * dt
+        self.x = self.x + (self.drift or 0) * dt
+        if not level then return true end
+        if self.y < (self.boundPx or -math.huge) or self.x < 0 or self.x > level.widthPx or self.y < -TILE_PX then
+            self:spend()
+            return true
+        end
+        if level:isEnemySolidAt(self.x, self.y - self.outerH / 2) then
+            self:snag()
+            return true
+        end
+        return self:netHitPlayers(level, dir)
+    end
     self.x = self.x + dir * (self.props.speed or 520) * dt
     if t < NET_SETTLE and self.ty then
         local k = t / NET_SETTLE
@@ -125,6 +143,11 @@ function Net:updateCustom(dt, level)
         self:snag()
         return true
     end
+    return self:netHitPlayers(level, dir)
+end
+
+-- ¿Toca a un jugador? −1 de vida, ctrlLock y le envuelve (siempre devuelve true: el paso ya está hecho)
+function Net:netHitPlayers(level, dir)
     local b = self:getOuterBounds()
     for _, pa in ipairs(level.players or {}) do
         if not pa.dying and pa.alive ~= false and overlap(b, pa:getOuterBounds()) then
