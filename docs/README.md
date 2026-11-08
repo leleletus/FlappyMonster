@@ -62,7 +62,7 @@ are never edited by hand.
   [how-to-add-an-enemy](entities/how-to-add-an-enemy.md)
 - **bosses/** — [system](bosses/system.md) · [megagummy](bosses/megagummy.md) · [giantpuffer](bosses/giantpuffer.md) · [gianthopper](bosses/gianthopper.md) · [giantbeetle](bosses/giantbeetle.md) · [groovecrab](bosses/groovecrab.md) · [crab-mashup](bosses/crab-mashup.md) · [megacrabby](bosses/megacrabby.md) ·
   [miniboss1](bosses/miniboss1.md) · [snowboss](bosses/snowboss.md) · [megacrabby-ice](bosses/megacrabby-ice.md) ·
-  [megagloomy](bosses/megagloomy.md) · [mirror](bosses/mirror.md) · [mirror-chase](bosses/mirror-chase.md) ·
+  [megagloomy](bosses/megagloomy.md) · [mirror](bosses/mirror.md) · [mirror-chase](bosses/mirror-chase.md) · [netcopter](bosses/netcopter.md) ·
   [how-to-add-a-boss](bosses/how-to-add-a-boss.md)
 - **story/** — [story](story/story.md) · [story-mode](story/story-mode.md) · [world-map](story/world-map.md) ·
   [cinematics](story/cinematics.md) · [credits](story/credits.md) · [bonus-and-bot](story/bonus-and-bot.md)

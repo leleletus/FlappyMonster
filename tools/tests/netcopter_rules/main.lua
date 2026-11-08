@@ -10,6 +10,18 @@
 --   lastima  jugador a 0 de carga con el reloj lejos: sale una antes de PITY_T + 1 s (y con carga no sale)
 --   aire     cada ayuda que sale está en una casilla sin sólido ni pilar, a ≥ 4 del jefe y a 2-6 del jugador
 --   aventura un nivel de jefe que no es Flappy nunca da cargas
+-- Y el jefe (types/bosses/netcopter.lua), en una sala Flappy con su zona, tras su entrada:
+--   vida     12 de vida con un jugador (sin dificultad); la dificultad la escala (`bossHp`)
+--   fase2    con la mitad de vida pasa a la fase 2 y se dibuja con el globo reventado (machine_popped)
+--   especial una ráfaga de potencia 3 le quita 3; otra dentro de su INV_TIME, nada
+--   no_pisa  un jugador que vuela y le cae encima nunca le pisa: el jefe sigue igual y el jugador pierde 1
+--   red      la red sale a la altura del jugador y, si le da, −1 y ctrlLock 0,4 s
+--   garra    la garra (fase 2) solo hace daño en la franja marcada: dentro −2, fuera nada
+--   huye     a 0 de vida: explosiones, sin sprite de muerte, se va por la derecha fuera de la zona y la zona queda
+--            superada ('cleared')
+--   bomba    la góndola suelta una bomba suya (owner = el jefe); devuelta subiendo, le quita 2
+--   azar     dos semillas de rollStart → la primera red sale a tiempos distintos
+--   paquete  netPackExtra → otro Redcóptero (cliente): mismo aspecto, la misma franja y la misma garra
 --
 --   tools/tests/run.sh netcopter_rules   (CASE=nombre: solo ese)
 io.stdout:setvbuf('no')
@@ -266,7 +278,220 @@ function cases.ultima_vida()
     check('ultima_vida', t and t <= 2, 'en su última vida, herido y sufriendo: sale comida: ' .. tostring(t))
 end
 
-local ORDER = { 'rebote', 'de_lado', 'falla', 'mecha', 'cargas', 'lastima', 'aire', 'aventura', 'ultima_vida' }
+-- ── El Redcóptero ────────────────────────────────────────────────────────────────────────────────────────────────
+-- Sala Flappy de 36 x 11 (suelo en las filas 10-11), zona de jefe en las columnas 9-28 (toda la altura, música tuffi),
+-- el jefe en (24, 5) y un jugador volando dentro (12, 5). Pasa la entrada con el controlador de zonas de verdad y
+-- vuelve con la pelea empezada. El jugador NO se mueve solo (se le coloca a mano: si no, caería al suelo)
+local Difficulty = require 'src/core/Difficulty'
+local BossZones = require 'src/world/systems/BossZones'
+local NW = 36
+local function fight(diff)
+    local tiles = {}
+    for r = 1, H do
+        tiles[r] = {}
+        for c = 1, NW do tiles[r][c] = (r >= FLOOR) and SOLID or 0 end
+    end
+    local level = Level.fromData({ name = 'redcoptero', width = NW, height = H, playerStart = { 3, 5 }, tiles = tiles,
+        flappy = true, difficulty = diff,
+        bossZones = { { id = 1, col = 9, row = 1, w = 20, h = 11, music = 'tuffi' } },
+        entities = { { type = 'netcopter', col = 24, row = 5 } } })
+    level.difficulty = diff
+    Difficulty.bind(level)
+    local es = {}
+    for _, pl in ipairs(level.entities) do es[#es + 1] = Entities.create(pl) end
+    local boss
+    for _, e in ipairs(es) do if e.def.name == 'netcopter' then boss = e end end
+    level.liveEntities, level.players = es, {}
+    local pa = player(level, 12 * T, 5 * T, 0)
+    pa.invT = 0
+    local ctrl = BossZones.newController(level, es)
+    local z = boss.zone
+    for _ = 1, 8 * 60 do
+        ctrl:update(DT)
+        for _, e in ipairs(es) do if e.alive then e:update(DT, level) end end
+        if z.state == 'fight' then break end
+    end
+    return level, es, boss, pa, ctrl, z
+end
+-- Pasos de la pelea: entidades (con ctrl, la zona); el jugador se queda donde se le pone (hold lo recoloca)
+local function run(level, es, secs, stop, ctrl, hold)
+    for _ = 1, math.floor(secs * 60) do
+        if hold then hold() end
+        if ctrl then ctrl:update(DT) end
+        for _, e in ipairs(es) do if e.alive then e:update(DT, level) end end
+        for _, pa in ipairs(level.players) do Interactions.run(pa, es, {}) end
+        if stop and stop() then return true end
+    end
+    return false
+end
+local function liveOf(es, name)
+    local out = {}
+    for _, e in ipairs(es) do if e.def.name == name and e.alive then out[#out + 1] = e end end
+    return out
+end
+
+function cases.vida()
+    local _, _, boss, _, _, z = fight(nil)
+    check('vida', z.state == 'fight' and boss.props.hp == 12 and boss.hpMax == 12 and boss.hp == 12,
+        ('12 de vida con un jugador: zona %s, vida %d/%d'):format(z.state, boss.hp, boss.hpMax))
+    for _, d in ipairs({ 'normal', 'extreme' }) do
+        local _, _, b2 = fight(d)
+        local want = math.max(1, math.floor(12 * Difficulty.k('bossHp') + 0.5))
+        check('vida', b2.hpMax == want, ('%s: bossHp × %.2f → %d (esperado %d)'):format(d, Difficulty.k('bossHp'), b2.hpMax, want))
+    end
+    Difficulty.bind(nil)
+end
+
+function cases.fase2()
+    local _, _, boss = fight(nil)
+    local p1, l1 = boss:phase(), boss:look()
+    boss.inv = 0
+    boss:damage(6)
+    check('fase2', p1 == 1 and l1 == 'machine', ('al empezar: fase %d, %s'):format(p1, l1))
+    check('fase2', boss.hp == 6 and boss:phase() == 2 and boss:bossPhase() == 2 and boss:look() == 'machine_popped',
+        ('con 6 de 12: fase %d, %s'):format(boss:phase(), boss:look()))
+end
+
+function cases.especial()
+    local _, _, boss, pa = fight(nil)
+    boss.inv = 0
+    local hp0 = boss.hp
+    local ok1 = boss:onSpecialHit(3, pa)
+    local hp1 = boss.hp
+    boss:onSpecialHit(3, pa)
+    check('especial', ok1 and hp1 == hp0 - 3, ('ráfaga de 3: %d → %d'):format(hp0, hp1))
+    check('especial', boss.hp == hp1 and boss.inv > 0, ('otra dentro de INV_TIME: %d → %d'):format(hp1, boss.hp))
+end
+
+function cases.no_pisa()
+    local level, es, boss, pa = fight(nil)
+    boss.inv, boss.bombT, boss.netT = 0, 99, 99
+    local hp0, php = boss.hp, pa.hp
+    local ob = boss:getOuterBounds()
+    local r0
+    run(level, es, 0.5, function() return pa.hp < php end, nil, function()
+        -- cayendo encima, en vuelo, con los pies justo en lo alto de su caja
+        pa.x, pa.vy = boss.x, 500
+        pa.y = ob.y + 20 - pa:getOuterBounds().h / 2
+        pa.prevY = pa.y - 12
+        r0 = r0 or Interactions.check(pa, boss)
+    end)
+    check('no_pisa', r0 == nil, 'nunca se le pisa: ' .. tostring(r0))
+    check('no_pisa', boss.hp == hp0 and pa.hp == php - 1, ('jefe %d → %d, jugador %d → %d'):format(hp0, boss.hp, php, pa.hp))
+end
+
+function cases.red()
+    local level, es, boss, pa = fight(nil)
+    boss.bombT = 99
+    pa.x, pa.y = 13 * T, 6.5 * T
+    boss:enter('aim_net')
+    local net
+    run(level, es, 1.5, function() net = liveOf(es, 'netshot')[1]; return net ~= nil end)
+    check('red', net ~= nil and math.abs(net.ty - pa.y) < 1, ('sale a la altura del jugador: %s vs %.0f'):format(
+        net and ('%.0f'):format(net.ty) or 'sin red', pa.y))
+    if not net then return end
+    local php = pa.hp
+    local hitX = net.x
+    run(level, es, 3, function() return pa.hp < php or not net.alive end)
+    check('red', pa.hp == php - 1 and (pa.ctrlLockT or 0) >= 0.39,
+        ('le da (desde x=%.0f): vida %d → %d, ctrlLock %.2f'):format(hitX, php, pa.hp, pa.ctrlLockT or 0))
+    check('red', not net.alive, 'la red desaparece al dar')
+end
+
+local function sweep(dodge)
+    local level, es, boss, pa = fight(nil)
+    boss.inv = 0
+    boss:damage(6)                                        -- (fase 2)
+    boss.bombT, boss.netT, boss.inv = 99, 99, 0
+    pa.x, pa.y = 13 * T, 6 * T
+    boss:enter('sweep_warn')
+    local php, band = pa.hp, nil
+    local seen = {}
+    run(level, es, 4, function()
+        seen[boss.state] = true
+        band = band or boss.bandY
+        return seen.sweep and boss.state ~= 'sweep' and boss.state ~= 'sweep_warn'
+    end, nil, function()
+        if dodge and boss.state == 'sweep_warn' and boss.deadTimer > 0.4 then pa.y = 6 * T + 2.2 * T end
+        if pa.hp < php then pa.invT = 99 end            -- (un golpe basta)
+    end)
+    return php, pa.hp, band, seen
+end
+function cases.garra()
+    local php, hp, band, seen = sweep(false)
+    check('garra', seen.sweep_warn and seen.sweep and band and math.abs(band - 6 * T) < 1,
+        ('marca la franja a la altura del jugador: %s'):format(tostring(band)))
+    check('garra', hp == php - 2, ('dentro de la franja: %d → %d'):format(php, hp))
+    local php2, hp2 = sweep(true)
+    check('garra', hp2 == php2, ('fuera de la franja: %d → %d'):format(php2, hp2))
+end
+
+function cases.huye()
+    local level, es, boss, pa, ctrl, z = fight(nil)
+    pa.invT = 999
+    boss.inv = 0
+    boss:damage(boss.hp)
+    local seen, looks, order = {}, {}, {}
+    run(level, es, 30, function()
+        if not seen[boss.state] then order[#order + 1] = boss.state end
+        seen[boss.state] = true
+        looks[boss:look()] = true
+        return not boss.alive
+    end, ctrl)
+    check('huye', seen.dying_hold and seen.fleeing and not seen.dying_fall and boss.state == 'dead',
+        'estados: ' .. table.concat(order, ' → '))
+    check('huye', looks.pilot_flee and not looks.dead, 'sin sprite de muerte, huye en su tabla')
+    check('huye', boss.x - boss.sprW / 2 > z.x1, ('fuera de la zona por la derecha: x=%.0f, borde %.0f'):format(boss.x, z.x1))
+    check('huye', z.state == 'cleared', 'zona: ' .. z.state)
+end
+
+function cases.bomba()
+    local level, es, boss, pa = fight(nil)
+    boss.netT, boss.bombT, boss.inv = 99, 0, 0
+    local bomb
+    run(level, es, 0.2, function() bomb = liveOf(es, 'glowbomb')[1]; return bomb ~= nil end)
+    check('bomba', bomb ~= nil and bomb.owner == boss and bomb.state == 'falling',
+        'la góndola suelta una bomba suya: ' .. (bomb and bomb.state or 'ninguna'))
+    if not bomb then return end
+    local hp0 = boss.hp
+    pa.vy = -300
+    run(level, es, 1.5, function() return boss.hp < hp0 or not bomb.alive end, nil, function()
+        if bomb.state == 'falling' then pa.x, pa.y = bomb.x, bomb.y + 10 else pa.x, pa.y = 12 * T, 8 * T end
+        pa.vy = -300
+    end)
+    check('bomba', boss.hp == hp0 - 2, ('devuelta subiendo: el jefe %d → %d'):format(hp0, boss.hp))
+end
+
+function cases.azar()
+    local t = {}
+    for i, seed in ipairs({ 1, 2 }) do
+        math.randomseed(seed)
+        local _, _, boss = fight(nil)
+        t[i] = boss.netT
+    end
+    check('azar', t[1] and t[2] and math.abs(t[1] - t[2]) > 0.01, ('primera red: %.2f s / %.2f s'):format(t[1] or -1, t[2] or -1))
+end
+
+function cases.paquete()
+    local level, es, boss, pa = fight(nil)
+    boss.inv = 0
+    boss:damage(6)
+    boss.bombT, boss.netT, boss.inv = 99, 99, 0
+    pa.x, pa.y = 13 * T, 5 * T
+    boss:enter('sweep_warn')
+    run(level, es, 1.2, function() return boss.state == 'sweep' and boss.deadTimer > 0.3 end)
+    local _, _, cl = fight(nil)
+    cl.x, cl.y, cl.state, cl.deadTimer = boss.x, boss.y, boss.state, boss.deadTimer
+    local pk = boss:netPack()
+    cl:netApply(pk, pk, 1)
+    local a, b = boss:clawBox(), cl:clawBox()
+    check('paquete', cl:look() == boss:look() and cl.bandY == boss.bandY and a and b and a.x == b.x and a.w == b.w,
+        ('aspecto %s/%s, franja %s/%s, garra %s/%s'):format(boss:look(), cl:look(), tostring(boss.bandY), tostring(cl.bandY),
+        a and ('%.0f'):format(a.x) or '-', b and ('%.0f'):format(b.x) or '-'))
+end
+
+local ORDER = { 'rebote', 'de_lado', 'falla', 'mecha', 'cargas', 'lastima', 'aire', 'aventura', 'ultima_vida',
+                'vida', 'fase2', 'especial', 'no_pisa', 'red', 'garra', 'huye', 'bomba', 'azar', 'paquete' }
 function love.load()
     local only = os.getenv('CASE')
     for _, name in ipairs(ORDER) do

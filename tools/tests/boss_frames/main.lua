@@ -6,6 +6,8 @@
 --   (STATES=chase,climb,... elige qué estados capturar; EVERY = s entre capturas;
 --    FX=1: partículas del juego y reloj de dibujo = tiempo simulado (rugidos,
 --    rayos, humo...); RAGE=1: el jefe empieza con poca vida = enfadado)
+--   Redcóptero: LEVEL=tools/levelgen/arenas/NetcopterArena.json FX=1 ZONE=1
+--     STATES=intro,hover,aim_net,sweep_warn,sweep,dying_hold,fleeing
 --   Rey Gummy: LEVEL=tools/levelgen/arenas/jefe_gummy.json FX=1 ZONE=1
 --     STATES=intro,chase,flop_wind,flop_air,flop_land,dazed,phase_up,split,parts,dying_daze
 io.stdout:setvbuf('no')
@@ -161,6 +163,11 @@ function love.load()
             end
             -- (2ª fase: sin doradas; los dos platos a girar a la vez → el bajón)
             if boss:decksLive() and boss.deadTimer > 1.5 then for _, d in ipairs(boss.decks) do d.on = boss.DECK_T end end
+        end
+        -- Redcóptero: una ráfaga de potencia 2 cada 3 s (fase 2 con la garra y, al final, la huida)
+        if boss.def.name == 'netcopter' and boss:isActive() and boss.inv <= 0 and t - (hitDone.nc or 0) > 3 then
+            hitDone.nc = t
+            boss:onSpecialHit(2, pa)
         end
         -- (FROM=s: no captura antes de esos s — p. ej. El Groove, su pista de baile a los 77 s —)
         local shotState = (os.getenv('FOCUS') == 'small' and boss.focusSmall) and boss.focusSmall.state or boss.state

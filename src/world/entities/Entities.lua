@@ -28,7 +28,7 @@ local EntityTypes  = require 'src/world/entities/base/EntityTypes'
 local Interactions = require 'src/world/entities/base/Interactions'
 local Props        = require 'src/world/entities/base/Props'
 
-local TYPES = { 'enemies/gummy', 'enemies/crabby', 'traps/spikefall', 'traps/glowbomb', 'items/star', 'items/flapcharge', 'items/cage', 'mechanisms/crackwall', 'items/extralife', 'items/checkpoint',
+local TYPES = { 'enemies/gummy', 'enemies/crabby', 'traps/spikefall', 'traps/glowbomb', 'traps/netshot', 'items/star', 'items/flapcharge', 'items/cage', 'mechanisms/crackwall', 'items/extralife', 'items/checkpoint',
                 'enemies/mortar', 'traps/rainspike', 'directors/spikerain', 'mechanisms/trampoline', 'enemies/crabbytramp',
                 'mechanisms/flood', 'mechanisms/pointarea', 'mechanisms/bosswall', 'bosses/mirror', 'bosses/miniboss1', 'bosses/megacrabby', 'enemies/pufferfish', 'mechanisms/bossglass', 'enemies/bomb', 'items/bombobject',
                 'traps/cryo', 'bosses/snowboss', 'mechanisms/phaseblock', 'enemies/crabby_ice', 'bosses/megacrabby_ice', 'enemies/gummy_ice', 'bosses/megagummy', 'bosses/giantpuffer', 'bosses/gianthopper', 'bosses/groovecrab', 'enemies/gloomy', 'bosses/megagloomy', 'enemies/hopper',
@@ -38,7 +38,7 @@ local TYPES = { 'enemies/gummy', 'enemies/crabby', 'traps/spikefall', 'traps/glo
                 'enemies/beetle', 'bosses/giantbeetle', 'enemies/gummy_jungle', 'enemies/crabby_jungle',
                 'enemies/mole', 'enemies/piranha', 'enemies/carnivoreplant', 'enemies/penguin',
                 'mechanisms/iceberg', 'traps/avalanche', 'mechanisms/cablecar', 'mechanisms/door',
-                'enemies/scorpion', 'bosses/giantscorpion', 'bosses/carnqueen', 'bosses/tifon' }
+                'enemies/scorpion', 'bosses/giantscorpion', 'bosses/carnqueen', 'bosses/tifon', 'bosses/netcopter' }
 
 -- Un archivo puede definir varios tipos (p. ej. el trampolín en sus 4 direcciones)
 for _, name in ipairs(TYPES) do
