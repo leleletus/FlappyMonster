@@ -3,8 +3,10 @@
 --   rebote   un jugador que vuela SUBIENDO toca una bomba luminosa que cae: sale devuelta (`returning`) al jefe, que
 --            pierde 2 de vida; la explosión de la devuelta no hace daño a nadie
 --   de_lado  sin subir (vy = 0) la bomba explota y el jugador pierde 1 de vida
---   falla    el jefe se aparta del camino: la bomba acaba en un bloque sólido, el jugador sigue igual y ella desaparece
---   mecha    sin que nadie la toque explota a los 2,5 s
+--   falla    el jefe se aparta del camino: la bomba acaba en un bloque sólido, el jugador sigue igual y ella desaparece;
+--            y una bomba lanzada en arco a un jugador que se aparta sigue hasta el suelo y explota allí sin herir a nadie
+--   mecha    la mecha es solo un respaldo: una lanzada que no toca nada explota a su `fuse` (0,6 s aquí, en el aire);
+--            con la de siempre (4 s) una lanzada de punta a punta de la sala llega antes al suelo
 -- Y la ayuda del jefe en salas Flappy (director bossdrops, docs/design/flappy-plan-5-netcopter.md):
 --   cargas   en 30 s a Normal salen cargas y nunca hay dos a la vez
 --   lastima  jugador a 0 de carga con el reloj lejos: sale una antes de PITY_T + 1 s (y con carga no sale)
@@ -19,9 +21,10 @@
 --   garra    la garra (fase 2) solo hace daño en la franja marcada: dentro −2, fuera nada
 --   huye     a 0 de vida: explosiones, sin sprite de muerte, se va por la derecha fuera de la zona y la zona queda
 --            superada ('cleared')
---   bomba    la góndola suelta una bomba suya (owner = el jefe); devuelta subiendo, le quita 2
+--   bomba    la góndola lanza una bomba suya (owner = el jefe); devuelta subiendo, le quita 2
 --   azar     dos semillas de rollStart → la primera red sale a tiempos distintos
---   paquete  netPackExtra → otro Redcóptero (cliente): mismo aspecto, la misma franja y la misma garra
+--   paquete  netPackExtra → otro Redcóptero (cliente): mismo aspecto, la misma franja y la misma garra; y hacia dónde
+--            mira (la garra en espejo mirando a la derecha)
 -- Y su etapa de la campaña (assets/levels/valle_redcoptero.json, el nivel de verdad):
 --   etapa_jefe       un piloto sencillo llega a la arena sin morir: la cámara automática 'stop' y la zona 'fight';
 --                    el jefe vencido a la fuerza → sin paredes, vuela a la derecha y toca la meta (→ onFinish)
@@ -30,6 +33,13 @@
 --   pilar            los pilares (enemySolid) paran la red y la bomba
 --   red_repetida     una red lanzada dos veces llega exacta a su altura la segunda
 --   derrota_bombas   vencido el jefe no queda ninguna bomba cayendo ni hace daño
+-- Y la pelea pulida (docs/design/flappy-plan-5c-netcopter-polish.md):
+--   lanzada       un jugador quieto: la bomba sale en arco (hacia arriba) con la marca donde estaba, cae a menos de
+--                 una casilla de él y le quita 1; la marca viaja en el netPack de la bomba
+--   devuelta_arco un jugador que sube contra el arco la devuelve: el jefe pierde 2 y el jugador nada
+--   cruza        tras su HOLD cruza al otro tercio y se gira (facing al centro), sin atacar cruzando; y vuelve
+--   mira_izq     desde el lado izquierdo la red sale y vuela a la derecha, y la bomba sale hacia la derecha
+--   cruce_justo  un jugador en la franja de arriba cuando cruza pierde exactamente 1 (nunca una cadena)
 --
 --   tools/tests/run.sh netcopter_rules   (CASE=nombre: solo ese)
 io.stdout:setvbuf('no')
@@ -130,17 +140,41 @@ function cases.falla()
     check('falla', not bomb.alive, 'la bomba desaparece')
     check('falla', pa.hp == php and boss.hp == hp0, 'nadie sale herido')
     check('falla', bomb.y >= (FLOOR - 1) * T - 4 or bomb.y < 0 or bomb.x > W * T or bomb.x < 0, ('acaba en un sólido (y=%.0f)'):format(bomb.y))
+    -- lanzada en arco a (8, 5) y el jugador ya no está allí: sigue de largo hasta el suelo
+    local level2, b2 = room(20 * T, 3 * T)
+    local pb = player(level2, 14 * T, 8.5 * T, 0)
+    local php2 = pb.hp
+    b2:lob(8 * T, 5 * T, 2 * T, 900)
+    for _ = 1, 60 * 4 do
+        step(level2, b2, pb)
+        if b2.state ~= 'falling' then break end
+    end
+    check('falla', b2.state == 'exploding' and b2.y >= (FLOOR - 1) * T - b2.outerH / 2 - 12 and b2.x < 8 * T and pb.hp == php2,
+        ('lanzada sin nadie en la marca: explota en el suelo (%.0f, %.0f) y nadie sale herido (%d -> %d)'):format(b2.x, b2.y, php2, pb.hp))
 end
 
 function cases.mecha()
-    local level, bomb = room(5 * T, 2 * T)
-    local pa = player(level, 20 * T, 2 * T, 0)
-    local t
-    for i = 1, 60 * 4 do
+    local level, bomb = room(20 * T, 2 * T)
+    local pa = player(level, 12 * T, 8.5 * T, 0)
+    bomb.props.fuse = 0.6
+    bomb:lob(2.5 * T, 8.5 * T, 0.5 * T, 900)
+    local t, y
+    for i = 1, 60 * 5 do
         step(level, bomb, pa)
-        if bomb.state == 'exploding' then t = i * DT; break end
+        if bomb.state == 'exploding' then t, y = i * DT, bomb.y; break end
     end
-    check('mecha', t and math.abs(t - 2.5) < 0.1, 'explota a los 2,5 s: ' .. tostring(t))
+    check('mecha', t and math.abs(t - 0.6) < 0.05 and y < (FLOOR - 3) * T, ('con mecha de 0,6 s explota en el aire a los %s s (y=%s)'):format(
+        tostring(t), tostring(y)))
+    local level2, b2 = room(20 * T, 2 * T)
+    local pb = player(level2, 12 * T, 8.5 * T, 0)
+    b2:lob(2.5 * T, 8.5 * T, 0.5 * T, 900)
+    local t2
+    for i = 1, 60 * 5 do
+        step(level2, b2, pb)
+        if b2.state == 'exploding' then t2 = i * DT; break end
+    end
+    check('mecha', b2.props.fuse == 4 and t2 and t2 < 4 and b2.y >= (FLOOR - 2) * T,
+        ('mecha de siempre %s s; de punta a punta llega antes al suelo: %s s (y=%.0f)'):format(tostring(b2.props.fuse), tostring(t2), b2.y))
 end
 
 -- ── La ayuda del jefe ────────────────────────────────────────────────────────────────────────────────────────────
@@ -525,7 +559,7 @@ function cases.bomba()
     local bomb
     run(level, es, 0.2, function() bomb = liveOf(es, 'glowbomb')[1]; return bomb ~= nil end)
     check('bomba', bomb ~= nil and bomb.owner == boss and bomb.state == 'falling',
-        'la góndola suelta una bomba suya: ' .. (bomb and bomb.state or 'ninguna'))
+        'la góndola lanza una bomba suya: ' .. (bomb and bomb.state or 'ninguna'))
     if not bomb then return end
     local hp0 = boss.hp
     pa.vy = -300
@@ -562,6 +596,14 @@ function cases.paquete()
     check('paquete', cl:look() == boss:look() and cl.bandY == boss.bandY and a and b and a.x == b.x and a.w == b.w,
         ('aspecto %s/%s, franja %s/%s, garra %s/%s'):format(boss:look(), cl:look(), tostring(boss.bandY), tostring(cl.bandY),
         a and ('%.0f'):format(a.x) or '-', b and ('%.0f'):format(b.x) or '-'))
+    -- mirando a la derecha (lado izquierdo): facing viaja y la garra sale igual, en espejo
+    boss.facing = 1
+    pk = boss:netPack()
+    cl:netApply(pk, pk, 1)
+    a, b = boss:clawBox(), cl:clawBox()
+    check('paquete', cl.facing == 1 and a and b and a.x == b.x and a.w == b.w and a.x > boss.x,
+        ('mirando a la derecha: facing %s, garra %s/%s (jefe %.0f)'):format(tostring(cl.facing),
+        a and ('%.0f'):format(a.x) or '-', b and ('%.0f'):format(b.x) or '-', boss.x))
 end
 
 -- ── La etapa del jefe en la campaña (assets/levels/valle_redcoptero.json) ────────────────────────────────────────
@@ -705,9 +747,152 @@ function cases.muerte_en_pelea()
     Difficulty.bind(nil)
 end
 
+-- ── La bomba lanzada en arco, la patrulla y hacia dónde mira (Plan 5c) ────────────────────────────────────────────
+-- (el jugador quieto en (x, y): se le recoloca en cada paso; su invulnerabilidad corre como en el juego)
+local function holdAt(pa, x, y, vy)
+    return function()
+        pa.x, pa.y, pa.vy = x, y, vy or 0
+        if (pa.invT or 0) > 0 then pa.invT = math.max(0, pa.invT - DT) end
+    end
+end
+
+-- Un jugador quieto: la bomba sale en arco hacia donde estaba al lanzarla, cae a menos de una casilla de él y le quita 1
+function cases.lanzada()
+    local level, es, boss, pa = fight(nil)
+    boss.netT, boss.holdT, boss.inv, boss.bombT = 99, 99, 0, 0
+    local px, py = 13 * T, 6.5 * T
+    pa.invT = 0
+    local php = pa.hp
+    local bomb, bx, by, up, mark, pk = nil, nil, nil, false, nil, nil
+    run(level, es, 4, function()
+        if not bomb then
+            bomb = liveOf(es, 'glowbomb')[1]
+            if bomb then mark, pk = { bomb.tx, bomb.ty }, bomb:netPack() end   -- (al lanzarla: la marca)
+        end
+        if bomb and bomb.state == 'falling' and (bomb.vy or 0) < 0 then up = true end
+        if bomb and bomb.state == 'exploding' and not bx then bx, by = bomb.x, bomb.y end
+        return bx ~= nil
+    end, nil, holdAt(pa, px, py))
+    check('lanzada', mark and mark[1] and math.abs(mark[1] - px) < 1 and math.abs(mark[2] - py) < 1,
+        ('la marca, donde estaba el jugador: %s'):format(mark and mark[1] and ('(%.0f, %.0f)'):format(mark[1], mark[2]) or 'sin marca'))
+    check('lanzada', up, 'sale hacia arriba (en arco), no cae a plomo')
+    local d = bx and math.sqrt((bx - px) ^ 2 + (by - py) ^ 2) / T
+    check('lanzada', d and d <= 1, ('cae a menos de una casilla del jugador: %s'):format(d and ('%.2f'):format(d) or 'no explota'))
+    check('lanzada', pa.hp == php - 1, ('el jugador pierde 1: %d -> %d'):format(php, pa.hp))
+    -- (la marca viaja en el paquete de la bomba: el cliente la dibuja igual)
+    if pk then
+        local c = Entities.create({ type = 'glowbomb', col = 1, row = 1, props = {} })
+        c:netApply(pk, pk, 1)
+        check('lanzada', c.state == 'falling' and c.tx == math.floor(px) and c.ty == math.floor(py),
+            ('netPack lleva la marca: %s'):format(table.concat(pk, ',')))
+    end
+end
+
+-- Un jugador que SUBE contra el arco de la bomba la devuelve: el jefe pierde 2 y el jugador nada
+function cases.devuelta_arco()
+    local level, es, boss, pa = fight(nil)
+    boss.netT, boss.holdT, boss.inv, boss.bombT = 99, 99, 0, 0
+    pa.invT = 0
+    local bomb
+    run(level, es, 0.5, function() bomb = liveOf(es, 'glowbomb')[1]; return bomb ~= nil end, nil, holdAt(pa, 13 * T, 6.5 * T))
+    check('devuelta_arco', bomb ~= nil and bomb.state == 'falling', 'lanza una bomba')
+    if not bomb then return end
+    -- un punto del arco (a medio camino en x): el jugador espera ahí, subiendo
+    local t = (bomb.tx - bomb.x) / 2 / bomb.vx
+    local mx, my = bomb.x + bomb.vx * t, bomb.y + bomb.vy * t + bomb.g * t * t / 2
+    local hp0, php, back = boss.hp, pa.hp, false
+    run(level, es, 3, function()
+        back = back or bomb.state == 'returning'
+        return boss.hp < hp0 or not bomb.alive
+    end, nil, holdAt(pa, mx, my, -250))
+    check('devuelta_arco', back, ('subiendo contra el arco (%.0f, %.0f) la devuelve'):format(mx, my))
+    check('devuelta_arco', boss.hp == hp0 - 2, ('el jefe pierde 2: %d -> %d'):format(hp0, boss.hp))
+    check('devuelta_arco', pa.hp == php, ('el jugador nada: %d -> %d'):format(php, pa.hp))
+end
+
+-- Tras su HOLD cruza al otro tercio por arriba, sin atacar mientras cruza, y se gira (mira al centro); y vuelve
+function cases.cruza()
+    local level, es, boss, pa = fight(nil)
+    local zx0, zx1 = boss:zb()
+    local third = (zx1 - zx0) / 3
+    local hold = holdAt(pa, (zx0 + zx1) / 2, 8.5 * T)
+    pa.invT = 99
+    boss.netT, boss.bombT, boss.holdT = 99, 99, 0.3
+    local x0, f0 = boss.x, boss.facing
+    check('cruza', x0 > zx1 - third and f0 == -1, ('empieza en el tercio derecho mirando a la izquierda: x=%.0f, facing %d'):format(x0, f0))
+    local function crossing(want)
+        local started = run(level, es, 2, function() return boss.state == 'cross' end, nil, hold)
+        if not started then return false, 0, false end
+        boss.netT, boss.bombT = 0, 0                      -- (sus relojes se acaban: aun así no ataca cruzando)
+        local attacked, t = false, 0
+        run(level, es, 4, function()
+            if boss.state ~= 'cross' then return true end
+            t = t + DT
+            if boss:isAttacking() or #liveOf(es, 'netshot') > 0 or #liveOf(es, 'glowbomb') > 0 then attacked = true end
+        end, nil, hold)
+        boss.netT, boss.bombT, boss.holdT = 99, 99, 0.3
+        return true, t, attacked
+    end
+    local ok, t, att = crossing()
+    check('cruza', ok and boss.x < zx0 + third and boss.facing == 1,
+        ('cruza al tercio izquierdo y se gira: x=%.0f (< %.0f), facing %d, %.2f s'):format(boss.x, zx0 + third, boss.facing, t))
+    check('cruza', ok and not att, 'no ataca mientras cruza')
+    ok, t, att = crossing()
+    check('cruza', ok and boss.x > zx1 - third and boss.facing == -1 and not att,
+        ('y vuelve al derecho: x=%.0f (> %.0f), facing %d'):format(boss.x, zx1 - third, boss.facing))
+end
+
+-- Desde el lado izquierdo la red vuela a la DERECHA (y la bomba sale hacia la derecha)
+function cases.mira_izq()
+    local level, es, boss, pa = fight(nil)
+    local zx0, zx1 = boss:zb()
+    pa.invT = 99
+    boss.netT, boss.bombT, boss.holdT = 99, 99, 0
+    local seen = false
+    run(level, es, 5, function()
+        seen = seen or boss.state == 'cross'
+        return seen and boss.state ~= 'cross'
+    end, nil, holdAt(pa, (zx0 + zx1) / 2, 8.5 * T))
+    boss.holdT = 99
+    check('mira_izq', seen and boss.facing == 1 and boss.x < (zx0 + zx1) / 2, ('en el lado izquierdo mirando a la derecha: x=%.0f, facing %d'):format(boss.x, boss.facing))
+    local hold = holdAt(pa, 22 * T, 6.5 * T)
+    boss:enter('aim_net')
+    local net
+    run(level, es, 1.5, function() net = liveOf(es, 'netshot')[1]; return net ~= nil end, nil, hold)
+    check('mira_izq', net ~= nil and net.x > boss.x, ('la red sale por la derecha: %s (jefe %.0f)'):format(net and ('%.0f'):format(net.x) or 'sin red', boss.x))
+    if net then
+        local nx = net.x
+        run(level, es, 0.25, nil, nil, hold)
+        check('mira_izq', net.x > nx + 60, ('y vuela a la derecha: %.0f -> %.0f'):format(nx, net.x))
+    end
+    boss.bombT = 0
+    local bomb
+    run(level, es, 0.5, function() bomb = liveOf(es, 'glowbomb')[1]; return bomb ~= nil end, nil, hold)
+    check('mira_izq', bomb ~= nil and bomb.vx > 0 and bomb.x > boss.x,
+        ('la bomba sale por la derecha: %s'):format(bomb and ('x=%.0f vx=%.0f'):format(bomb.x, bomb.vx) or 'ninguna'))
+end
+
+-- Un jugador en la franja de arriba cuando cruza pierde 1, y solo 1 (la invulnerabilidad: nunca una cadena)
+function cases.cruce_justo()
+    local level, es, boss, pa = fight(nil)
+    local zx0, zx1 = boss:zb()
+    boss.netT, boss.bombT, boss.holdT, boss.inv = 99, 99, 0.2, 0
+    pa.invT = 0
+    local php = pa.hp
+    local hold = holdAt(pa, (zx0 + zx1) / 2, boss:crossY(level))
+    local seen = false
+    run(level, es, 5, function()
+        seen = seen or boss.state == 'cross'
+        return seen and boss.state ~= 'cross'
+    end, nil, hold)
+    run(level, es, 0.5, nil, nil, hold)
+    check('cruce_justo', seen and pa.hp == php - 1, ('cruzando por la franja de arriba: vida %d -> %d'):format(php, pa.hp))
+end
+
 local ORDER = { 'rebote', 'de_lado', 'falla', 'mecha', 'cargas', 'lastima', 'aire', 'aventura', 'ultima_vida',
                 'vida', 'fase2', 'especial', 'no_pisa', 'red', 'garra', 'huye', 'bomba', 'azar', 'paquete',
-                'etapa_jefe', 'muerte_en_pelea', 'pilar', 'red_repetida', 'derrota_bombas' }
+                'etapa_jefe', 'muerte_en_pelea', 'pilar', 'red_repetida', 'derrota_bombas',
+                'lanzada', 'devuelta_arco', 'cruza', 'mira_izq', 'cruce_justo' }
 function love.load()
     local only = os.getenv('CASE')
     for _, name in ipairs(ORDER) do

@@ -1,12 +1,16 @@
--- BOMBA LUMINOSA (solo niveles Flappy: la suelta el Redcóptero, docs/design/flappy-plan-5-netcopter.md): cae despacio
--- con la mecha encendida. Estados:
---   'falling'    cae `fall` px/s; explota si toca un jugador (de lado, por encima, quieto), un tile sólido (los pilares también) o se le acaba la
---                mecha (`fuse` s): la explosión (Explosions.blast, 1 casilla) quita 1 de vida al que esté cerca
+-- BOMBA LUMINOSA (solo niveles Flappy: la LANZA el Redcóptero, docs/design/flappy-plan-5-netcopter.md y
+-- flappy-plan-5c-netcopter-polish.md): sale de la góndola EN ARCO (balística, gravedad `g`) hacia donde estaba el
+-- jugador al lanzarla (`tx`, `ty`: la MARCA que parpadea allí desde el lanzamiento; lob). Sin lanzar, cae a plomo con
+-- esa gravedad. Estados:
+--   'falling'    en el aire (subiendo o bajando); explota si toca un jugador que no sube (de lado, por encima, quieto),
+--                un tile sólido (los pilares también: por delante, por abajo o por arriba) o el suelo; la mecha (`fuse`
+--                s) solo es un respaldo. La explosión (Explosions.blast, 1 casilla) quita 1 de vida al que esté cerca
 --   'returning'  DEVUELTA AL REMITENTE (rasgo `reflectable`: un jugador que vuela SUBIENDO la toca — Interactions): sale
 --                hacia donde estaba el centro de su `owner` al devolverla, en línea recta a 700 px/s. Si le da, el jefe
 --                pierde 2 (`owner:damage(2, 'reflect')`); un tile sólido o salir del nivel la revienta sin dañar a nadie
 --   'exploding'  fogonazo breve y desaparece. Una bomba devuelta NO hace daño a ningún jugador al explotar
--- Arte: assets/images/bosses/netcopter/bomb-Sheet.png (2 cuadros 14x18: la mecha; tools/art/bosses/make_netcopter.py).
+-- Arte: assets/images/bosses/netcopter/bomb-Sheet.png (2 cuadros 14x18: la mecha) y mark-Sheet.png (la marca, 2 cuadros
+-- 12x12: parpadea); tools/art/bosses/make_netcopter.py. Lo que se dibuja sale de x, y, state, deadTimer y la marca.
 local Entity     = require 'src/world/entities/base/Entity'
 local Boss       = require 'src/world/entities/base/Boss'
 local Explosions = require 'src/world/systems/Explosions'
@@ -20,13 +24,20 @@ local FW, FH = 14, 18
 local RETURN_SPD = 700         -- px/s de la bomba devuelta
 local BLAST_T = 0.45           -- s que dura el fogonazo
 local BLAST_R = 1              -- casillas del radio de la explosión
-local img, quads
+local G = 900                  -- px/s² de la gravedad si nadie le da otra (lob)
+local MIN_FLIGHT = 0.35        -- s de vuelo como mínimo (un objetivo casi encima)
+local MW = 12                  -- la marca: 12x12
+local img, quads, markImg, markQuads
 function GlowBomb.loadAssets()
     if img then return end
     img = love.graphics.newImage('assets/images/bosses/netcopter/bomb-Sheet.png')
     img:setFilter('nearest', 'nearest')
     quads = {}
     for i = 1, 2 do quads[i] = love.graphics.newQuad((i - 1) * FW, 0, FW, FH, img:getDimensions()) end
+    markImg = love.graphics.newImage('assets/images/bosses/netcopter/mark-Sheet.png')
+    markImg:setFilter('nearest', 'nearest')
+    markQuads = {}
+    for i = 1, 2 do markQuads[i] = love.graphics.newQuad((i - 1) * MW, 0, MW, MW, markImg:getDimensions()) end
 end
 function GlowBomb.sizePx() return FW * SCALE, FH * SCALE end
 
@@ -35,7 +46,21 @@ function GlowBomb:init()
     self.vx, self.vy = 0, 0
     self.state = 'falling'
     self.fuseT = 0
-    self.owner = nil               -- el jefe que la soltó (lo pone él al crearla)
+    self.g = G
+    self.tx, self.ty = nil, nil    -- la marca: adónde va (nil = sin lanzar)
+    self.owner = nil               -- el jefe que la lanzó (lo pone él al crearla)
+end
+
+-- La lanza (ya en su sitio con appearAt) en arco hasta (tx, ty) pasando por la altura `apexY` (si queda por debajo de
+-- la salida o del objetivo, sale plana): el tiempo de vuelo sale de la geometría, con gravedad `g`
+function GlowBomb:lob(tx, ty, apexY, g)
+    g = g or G
+    local apex = math.min(apexY or self.y, self.y, ty)
+    local tf = math.sqrt(2 * (self.y - apex) / g) + math.sqrt(2 * (ty - apex) / g)
+    tf = math.max(tf, MIN_FLIGHT)
+    self.g, self.tx, self.ty = g, tx, ty
+    self.vx = (tx - self.x) / tf
+    self.vy = (ty - self.y) / tf - g * tf / 2
 end
 
 function GlowBomb:canBeStomped() return false end
@@ -44,7 +69,7 @@ function GlowBomb:isGhost() return self.state == 'exploding' or Entity.isGhost(s
 -- Sin efectos de contacto propios: explotar al tocarla lo hace updateCustom y devolverla, Interactions ('reflect')
 function GlowBomb:interact(pa) return nil end
 
--- Una bomba que cae solo se devuelve estando entera
+-- Una bomba en el aire solo se devuelve estando entera
 function GlowBomb:canReflect() return self.alive and self.state == 'falling' end
 
 -- La devuelve un jugador que vuela subiendo (Interactions.run): apunta al centro actual del dueño y sale en línea recta
@@ -58,7 +83,7 @@ function GlowBomb:onReflect(pa)
     local d = math.sqrt(dx * dx + dy * dy)
     if d < 1 then dx, dy, d = 0, 1, 1 end
     self.vx, self.vy = dx / d * RETURN_SPD, dy / d * RETURN_SPD
-    self.state, self.reflectedBy = 'returning', pa
+    self.state, self.reflectedBy, self.tx, self.ty = 'returning', pa, nil, nil
     Sound.play('headBump')
     Entity.emitFx('collect', self.x, self.y)
 end
@@ -70,7 +95,7 @@ end
 
 function GlowBomb:explode(level, harmless)
     if self.state == 'exploding' then return end
-    self.state, self.deadTimer, self.vx, self.vy = 'exploding', 0, 0, 0
+    self.state, self.deadTimer, self.vx, self.vy, self.tx, self.ty = 'exploding', 0, 0, 0, nil, nil
     Sound.play('bombBlast')
     Entity.emitFx('bomb_blast', self.x, self.y)
     -- (devuelta: no daña a nadie; si no, 1 de vida a quien esté a una casilla — sin matar de golpe; Explosions.blast rompe los bloques rompibles a 1 casilla)
@@ -94,9 +119,13 @@ function GlowBomb:updateCustom(dt, level)
     if not level then return true end
     if st == 'falling' then
         self.fuseT = self.fuseT + dt
-        self.vy = self.props.fall or 90
-        self.y = self.y + self.vy * dt
-        local hit = self.fuseT >= (self.props.fuse or 2.5) or solidAt(level, self.x, self.y + self.outerH / 2)
+        self.deadTimer = self.deadTimer + dt
+        self.vy = self.vy + (self.g or G) * dt
+        self.x, self.y = self.x + self.vx * dt, self.y + self.vy * dt
+        local hw, hh = self.outerW / 2, self.outerH / 2
+        local hit = self.fuseT >= (self.props.fuse or 4) or solidAt(level, self.x, self.y + hh)
+            or (self.vy < 0 and self.y - hh > 0 and solidAt(level, self.x, self.y - hh))   -- (por encima del nivel: cielo)
+            or (self.vx ~= 0 and solidAt(level, self.x + (self.vx > 0 and hw or -hw), self.y))
         if not hit then
             local b = self:getOuterBounds()
             for _, pa in ipairs(level.players or {}) do
@@ -122,10 +151,17 @@ function GlowBomb:updateCustom(dt, level)
     return true
 end
 
--- Red: el estado y el rumbo viajan; el cliente solo dibuja
-function GlowBomb:netPack() return { self.state == 'returning' and 1 or (self.state == 'exploding' and 2 or 0) } end
-function GlowBomb:netApply(a)
-    self.state = (a == 1) and 'returning' or ((a == 2) and 'exploding' or 'falling')
+-- Red: el estado y la marca (adónde va) viajan; el cliente solo dibuja
+function GlowBomb:netPack()
+    return { self.state == 'returning' and 1 or (self.state == 'exploding' and 2 or 0),
+             self.tx and math.floor(self.tx) or 0, self.ty and math.floor(self.ty) or 0 }
+end
+function GlowBomb:netApply(a, b, f)
+    b = b or a
+    if type(b) ~= 'table' or type(b[1]) ~= 'number' then return end
+    self.state = (b[1] == 1) and 'returning' or ((b[1] == 2) and 'exploding' or 'falling')
+    local lobbed = b[1] == 0 and ((b[2] or 0) ~= 0 or (b[3] or 0) ~= 0)
+    self.tx, self.ty = lobbed and b[2] or nil, lobbed and b[3] or nil
 end
 
 function GlowBomb:render(camX, camY)
@@ -139,20 +175,23 @@ function GlowBomb:render(camX, camY)
         love.graphics.setColor(1, 1, 1, 1)
         return
     end
-    local f = (math.floor((self.fuseT or 0) * 8) % 2) + 1
-    love.graphics.draw(img, quads[f], x, y, 0, SCALE, SCALE, FW / 2, FH / 2)
+    -- la marca: donde caerá (parpadea desde el lanzamiento)
+    local blink = math.floor((self.deadTimer or 0) * 8) % 2 + 1
+    if self.state == 'falling' and self.tx then
+        love.graphics.draw(markImg, markQuads[blink], math.floor(self.tx - camX), math.floor(self.ty - camY), 0,
+            SCALE, SCALE, MW / 2, MW / 2)
+    end
+    love.graphics.draw(img, quads[blink], x, y, 0, SCALE, SCALE, FW / 2, FH / 2)
 end
 
 return {
     name = 'glowbomb', label = 'Bomba luminosa', category = 'Flappy', flappyOnly = true,
-    description = 'Solo niveles Flappy: la suelta el Redcóptero. Cae y explota; subiendo contra ella se devuelve al jefe.',
+    description = 'Solo niveles Flappy: la lanza el Redcóptero en arco. Explota al caer; subiendo contra ella se devuelve al jefe.',
     class = GlowBomb,
     defaults = { movement = 'static' }, hide = 'all',
     props = {
-        { key = 'fuse', kind = 'number', label = 'Mecha (s)', group = 'Bomba', default = 2.5, min = 0.5, max = 8, step = 0.5,
-          help = 'Segundos hasta explotar si nadie la toca' },
-        { key = 'fall', kind = 'number', label = 'Caída (px/s)', group = 'Bomba', default = 90, min = 20, max = 400, step = 10,
-          help = 'Velocidad a la que cae' },
+        { key = 'fuse', kind = 'number', label = 'Mecha (s)', group = 'Bomba', default = 4, min = 0.5, max = 8, step = 0.5,
+          help = 'Respaldo: segundos hasta explotar si no ha tocado nada' },
     },
     editor = { draw = function(x, y, s)
         GlowBomb.loadAssets()

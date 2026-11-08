@@ -123,7 +123,7 @@ and the network use; **Label** is the (Spanish) name in the editor. Own props = 
 | `cage` | Flappy enjaulado | `types/items/cage.lua` |  | `minCharge`: int = 1 · `gift`: enum = shield |
 | `crackwall` | Muro agrietado | `types/mechanisms/crackwall.lua` |  | `minCharge`: int = 2 · `rows`: int = 3 |
 | `flapcharge` | Carga de aleteo | `types/items/flapcharge.lua` | pickup |  |
-| `glowbomb` | Bomba luminosa | `types/traps/glowbomb.lua` |  | `fuse`: number = 2.5 · `fall`: number = 90 |
+| `glowbomb` | Bomba luminosa | `types/traps/glowbomb.lua` |  | `fuse`: number = 4 |
 | `netcopter` | Redcóptero | `types/bosses/netcopter.lua` | boss | `zone`: int = 0 · `hp`: int = 12 · `hpPerPlayer`: int = 4 · `title`: text =  · `title_en`: text =  · `event`: bool = false · `mashupRole`: enum = none · `fixedHp`: bool = false · `rageMode`: enum = auto |
 | `netshot` | Red del Redcóptero | `types/traps/netshot.lua` |  | `speed`: number = 520 |
 

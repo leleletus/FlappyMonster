@@ -2,26 +2,30 @@
 -- docs/bosses/netcopter.md). Una máquina de chatarra — globo remendado, góndola de madera y hélice de pedal — que el
 -- Monstruo Malvado pedalea entre los pilares. Solo niveles Flappy (el jugador vuela: src/player/PlayerFlight.lua).
 -- El diseño (10 líneas):
---   1. Se mueve: flota en el tercio derecho de la zona siguiendo la altura del jugador sin prisa (retraso ~0,8 s), sin
---      salir nunca de la zona. Fase 2: más abajo y más rápido.
---   2. RED (fase 1+): el cañón brilla 0,6 s ('aim_net', aviso + sonido) y dispara una red a la izquierda a la altura del
---      jugador en ese momento (traps/netshot.lua). Si da: −1 y ctrlLock 0,4 s (Boss.strike). Fase 2: abanico de 3.
---   3. BOMBA LUMINOSA (cada ~6 s a Normal, con su propio reloj): la suelta la góndola, cae despacio con la mecha
---      encendida (2,5 s; traps/glowbomb.lua). Un jugador que vuela SUBIENDO la toca → vuelve a la máquina: 2 de daño.
---      Tocada cayendo o sin mecha → explota (−1 a una casilla).
+--   1. Se mueve: PATRULLA (Plan 5c). Guarda un LADO (el tercio derecho o el izquierdo de la zona) `HOLD` s atacando,
+--      siguiendo la altura del jugador sin prisa (retraso ~0,8 s); luego CRUZA al otro lado por la franja de arriba
+--      ('cross', `CROSS_T` s, sin atacar; su cuerpo sigue haciendo daño) y se gira: `facing` mira al centro de la zona.
+--      Empieza a la derecha (la entrada). Nunca sale de la zona. Fase 2: más abajo y más rápido.
+--   2. RED (fase 1+): el cañón brilla 0,6 s ('aim_net', aviso + sonido) y dispara una red hacia donde mira, a la
+--      altura del jugador en ese momento (traps/netshot.lua). Si da: −1 y ctrlLock 0,4 s (Boss.strike). Fase 2: abanico.
+--   3. BOMBA LUMINOSA (cada ~6 s a Normal, con su propio reloj; no cruzando): la LANZA la góndola en arco hacia donde
+--      está el jugador al lanzarla, con la cima ~2,5 casillas sobre su cabeza (traps/glowbomb.lua: la marca parpadea
+--      allí). Un jugador que vuela SUBIENDO la toca → vuelve a la máquina: 2 de daño. Si no → explota (−1 a una casilla).
 --   4. GARRA (fase 2): una línea que parpadea marca una franja de filas 0,8 s ('sweep_warn'), luego el brazo de la
---      garra cruza la zona por ella ('sweep', −2). Se esquiva cambiando de altura.
+--      garra cruza la zona por ella hacia donde mira ('sweep', −2). Se esquiva cambiando de altura.
 --   5. Vulnerable SIEMPRE en la pelea (no hay ventanas: aquí no se pisa). Boss.INV_TIME tras cada golpe. Tocar su cuerpo:
---      −1 y empujón a la izquierda; nunca se le pisa (`interact` → nil; el contacto, con Boss.strike).
+--      −1 y empujón hacia donde mira (al centro; cruzando: hacia abajo y lejos de él); nunca se le pisa (`interact` →
+--      nil; el contacto, con Boss.strike).
 --   6. Vida: `hp` 12 con un jugador (la dificultad la escala: `bossHp`). Fase 2 con ≤ 50 %: revienta el globo.
 --   7. Entrada (~3,5 s): llega pedaleando por la derecha, se ríe y despliega el cañón de redes.
 --   8. Muerte: explosiones (la espera genérica, 'dying_hold'), el globo y el cañón se caen a trozos y el Monstruo
 --      Malvado HUYE por la derecha ('fleeing') pedaleando una hélice rota: NO muere (vuelve en cada zona).
---   9. rollStart(r): al azar la primera red, la primera bomba y la altura con la que empieza.
+--   9. rollStart(r): al azar la primera red, la primera bomba, cuánto guarda el primer lado y la altura con la que empieza.
 --  10. Daño a los jugadores: red 1, bomba 1, garra 2, cuerpo 1.
--- Estados: dormant → intro → ready → hover ↔ aim_net (la bomba cae con su reloj) → [fase 2] sweep_warn → sweep → … →
--- dying_hold → fleeing → dead. Todo lo que se dibuja sale de state + deadTimer + x, y + netPackExtra (la fase sale de
--- hp / hpMax, que ya viajan).
+-- Estados: dormant → intro → ready → hover ↔ aim_net (la bomba sale con su reloj) → [fase 2] sweep_warn → sweep → … ↔
+-- cross (cambia de lado) … → dying_hold → fleeing → dead. Todo lo que se dibuja sale de state + deadTimer + x, y +
+-- facing + netPackExtra (la fase sale de hp / hpMax, que ya viajan). El arte mira a la IZQUIERDA; mirando a la derecha
+-- se dibuja la máquina entera en espejo alrededor de x.
 -- Arte: assets/images/bosses/netcopter/ (tools/art/bosses/make_netcopter.py), todo a ×6. Anclas en el cuadro de la
 -- máquina (44x54, centro = la entidad): globo y 0..25; góndola x 12..32, y 43..52; piloto 9x16 (el cuerpo del jugador
 -- con la cabeza del Monstruo Malvado) de pie sobre la góndola con su esquina en (18, 27); cañón a la izquierda de la
@@ -47,7 +51,12 @@ local T = {
     PHASE2_AT = 0.5,                -- fracción de vida: el globo revienta
     LAG = { 0.8, 0.5 },             -- retraso siguiendo la altura del jugador
     LOWER2 = 0.75,                  -- fase 2: tantas casillas más abajo
-    X_FRAC = 1 / 6,                 -- su x: el centro del tercio derecho (fracción del ancho de la zona, desde la derecha)
+    X_FRAC = 1 / 6,                 -- su x: el centro de su tercio (fracción del ancho de la zona, desde su borde)
+    HOLD = { 7, 5 },                -- s que guarda un lado atacando antes de cruzar
+    HOLD_FIRST = { 5, 8 },          -- rollStart: el primer lado
+    CROSS_T = 1.8,                  -- s que tarda en cruzar al otro lado (por la franja de arriba)
+    CROSS_RISE = 0.35,              -- fracción del cruce en que sube a la franja de arriba
+    AFTER_CROSS = 0.6,              -- s como mínimo hasta la red tras cruzar
     SWAY = 0.5, SWAY_W = 0.8,       -- vaivén de lado (casillas, rad/s)
     START_OFF = 1.5,                -- rollStart: altura inicial ± esto (casillas) que se va soltando
     START_FADE = 2.0,
@@ -58,10 +67,13 @@ local T = {
     NET_SPREAD = 150,               -- px/s de deriva de las redes de los lados (fase 2)
     BOMB_FIRST = { 2.5, 5.0 },      -- rollStart: la primera bomba
     BOMB_EVERY = { 6.0, 5.0 }, BOMB_JITTER = 1.0,
+    BOMB_G = 900,                   -- px/s² de la bomba lanzada
+    BOMB_APEX = 2.5,                -- la cima del arco: tantas casillas sobre la cabeza del jugador
     SWEEP_EACH = 2,                 -- fase 2: uno de cada tantos ataques es la garra
     WARN_T = 0.8, SWEEP_OUT = 1.0, SWEEP_BACK = 0.6,
     HIT_CLAW = { 2, 300, -220, 0.4, 0 },
     HIT_BODY = { 1, 420, -200, 0.3, 0 },
+    HIT_CROSS = { 1, 160, 380, 0.3, 0 },  -- cruzando: hacia abajo, fuera de su camino (nunca contra una pared)
     INTRO = 3.5, ENTER_T = 2.0, LAUGH_AT = 2.1, LAUGH_T = 0.8, UNFOLD_AT = 2.6, UNFOLD_T = 0.5,
     LAUGH_DEATH = 1.2,              -- se ríe cuando cae un jugador
     FLEE_SPD = 240,                 -- px/s huyendo
@@ -75,6 +87,8 @@ local S = 6
 local FW, FH = 44, 54
 local CX, CY = 22, 27                                      -- centro del cuadro de la máquina (= x, y)
 local GONDOLA_L, GONDOLA_B = (12 - CX) * S, (53 - CY) * S  -- borde izquierdo y fondo de la góndola
+local FRONT = (CX - 12) * S                                -- de x al borde DELANTERO de la góndola (hacia donde mira)
+local THROW_DY = (43 - CY) * S                             -- la bomba sale del borde de arriba de la góndola
 local CANNON_OUT, CANNON_IN, CANNON_Y = -6, 12, 42         -- esquina del cañón (desplegado / plegado)
 local CANNON_W, CANNON_H = 18, 12
 local MOUTH_DY = (CANNON_Y + CANNON_H / 2 - CY) * S        -- altura de la boca del cañón (y la de la red)
@@ -115,7 +129,8 @@ function NC.sizePx() return FW * S, FH * S end
 
 function NC:initBoss()
     self.vx, self.vy, self.onGround, self.flying = 0, 0, false, true
-    self.facing = -1
+    self.facing, self.side = -1, 1                         -- (empieza a la derecha mirando a la izquierda)
+    self.holdT = T.HOLD[1]
     self.summonKey = 'nc' .. self.col .. ',' .. self.row      -- (sus redes y bombas de reserva: def.summons)
     self.netT, self.bombT, self.attackN = T.NET_FIRST[2], T.BOMB_FIRST[2], 0
     self.yOff, self.laughT = 0, 0
@@ -164,12 +179,25 @@ function NC:floorAt(level, x)
     return zy1
 end
 
--- Dónde quiere estar: x en el tercio derecho (con vaivén), y siguiendo la altura del jugador (la boca del cañón a su
--- altura), dentro de la zona
+-- La x de su lado (el centro del tercio derecho o del izquierdo), sin vaivén
+function NC:sideX(side)
+    local zx0, zx1 = self:zb()
+    local w = zx1 - zx0
+    return (side or self.side or 1) > 0 and (zx1 - w * T.X_FRAC) or (zx0 + w * T.X_FRAC)
+end
+
+-- La altura de la franja de arriba (por donde cruza): la más alta a la que flota
+function NC:crossY(level)
+    local _, _, zy0 = self:zb()
+    return zy0 + self.sprH / 2 + 5 + ((self:phase() == 2) and T.LOWER2 * TP or 0)
+end
+
+-- Dónde quiere estar: x en su tercio (con vaivén), y siguiendo la altura del jugador (la boca del cañón a su altura),
+-- dentro de la zona
 function NC:hoverTarget(level, pa)
     local zx0, zx1, zy0 = self:zb()
     local ph = self:phase()
-    local x = zx1 - (zx1 - zx0) * T.X_FRAC + math.sin((self.fightT or 0) * T.SWAY_W) * T.SWAY * TP
+    local x = self:sideX() + math.sin((self.fightT or 0) * T.SWAY_W) * T.SWAY * TP
     local floor = self.floorY or self:floorAt(level, x)
     local low = (ph == 2) and T.LOWER2 * TP or 0
     local yMin, yMax = zy0 + self.sprH / 2 + 5 + low, floor - GONDOLA_B - 6
@@ -191,9 +219,10 @@ function NC:freeMinion(level, name)
 end
 
 function NC:fireNets(level, pa)
-    local zx0, _, zy0 = self:zb()
+    local zx0, zx1, zy0 = self:zb()
+    local f = self.facing
     local floor = self.floorY or self:floorAt(level, self.x)
-    local mx, my = self.x + (CANNON_OUT - CX) * S, self.y + MOUTH_DY
+    local mx, my = self.x + f * (CX - CANNON_OUT) * S, self.y + MOUTH_DY
     local ty = clamp(pa and pa.y or my, zy0 + TP / 2, floor - TP / 2)
     local drifts = (self:phase() == 2) and { -T.NET_SPREAD, 0, T.NET_SPREAD } or { 0 }
     for _, d in ipairs(drifts) do
@@ -201,31 +230,49 @@ function NC:fireNets(level, pa)
         if n then
             n:appearAt(mx, my)
             n.props.speed = T.NET_SPD
-            n:launch(ty, d, zx0)
+            n:launch(ty, d, f < 0 and zx0 or zx1, f)
         end
     end
     Sound.play('cannonWhoosh')
     Entity.emitFx('sparks', mx, my)
 end
 
-function NC:dropBomb(level)
+-- La lanza en arco desde el borde delantero de la góndola hacia donde está el jugador AHORA (la marca), con la cima a
+-- BOMB_APEX casillas sobre su cabeza (dentro de la zona; como poco, algo por encima de la salida)
+function NC:throwBomb(level, pa)
+    if not pa then return false end
     local b = self:freeMinion(level, 'glowbomb')
     if not b then return false end
-    b:appearAt(self.x, self.y + GONDOLA_B + b.outerH / 2)
+    local _, _, zy0 = self:zb()
+    local x0, y0 = self.x + self.facing * FRONT, self.y + THROW_DY
+    b:appearAt(x0, y0)
     b.owner = self                                       -- (appearAt la reinicia: el dueño, después)
+    local head = pa:getOuterBounds().h / 2
+    local apex = math.max(zy0 + TP, pa.y - head - T.BOMB_APEX * TP)
+    b:lob(pa.x, pa.y, math.min(apex, y0 - TP / 2), T.BOMB_G)
     Sound.play('bombIgnite')
     return true
+end
+
+-- Cambia de lado: por la franja de arriba hasta el centro del otro tercio (mirando hacia allí, que es el centro)
+function NC:startCross()
+    self.crossX0, self.crossY0 = self.x, self.y
+    self.side = -(self.side or 1)
+    self.crossX1 = self:sideX()
+    self:enter('cross')
 end
 
 -- ── Pelea ─────────────────────────────────────────────────────────────────────
 function NC:onFightStart(n)
     self:enter('hover')
     self.netT, self.bombT, self.attackN = T.NET_FIRST[2], T.BOMB_FIRST[2], 0
+    self.side, self.facing, self.holdT = 1, -1, T.HOLD[1]
     if self.levelRef then self.floorY = self:floorAt(self.levelRef, self.x) end
 end
 function NC:rollStart(r)
     self.netT = r(T.NET_FIRST[1], T.NET_FIRST[2])
     self.bombT = r(T.BOMB_FIRST[1], T.BOMB_FIRST[2])
+    self.holdT = r(T.HOLD_FIRST[1], T.HOLD_FIRST[2])
     self.yOff = r(-T.START_OFF, T.START_OFF) * TP
     self.attackN = math.random(0, 1)
 end
@@ -245,15 +292,17 @@ function NC:onPlayerDeath(pa)
     Sound.play('mirrorLaugh')
 end
 
--- Lo que pega: la garra en su franja (sweep) y su cuerpo
-function NC:clawBox()
+-- Lo que pega: la garra en su franja (sweep) y su cuerpo. La garra sale del borde delantero de la góndola hacia donde
+-- mira: `left` = la caja como si mirara a la izquierda (para dibujar en espejo)
+function NC:clawBox(left)
     if self.state ~= 'sweep' or not self.bandY then return nil end
     local t, k = self.deadTimer, 0
     if t < T.SWEEP_OUT then k = t / T.SWEEP_OUT
     else k = math.max(0, 1 - (t - T.SWEEP_OUT) / T.SWEEP_BACK) end
-    local gl = self.x + GONDOLA_L
-    local tip = gl - CLAW_HEAD * S - (self.reach or 0) * k
-    return { x = tip, y = self.bandY - CLAW_H * S / 2, w = gl - tip, h = CLAW_H * S }
+    local w = CLAW_HEAD * S + (self.reach or 0) * k
+    local x = self.x - FRONT - w
+    if not left and (self.facing or -1) > 0 then x = self.x + FRONT end
+    return { x = x, y = self.bandY - CLAW_H * S / 2, w = w, h = CLAW_H * S }
 end
 
 local overlap = Boss.overlap
@@ -263,8 +312,12 @@ function NC:hurtPlayers(level)
     for _, pa in ipairs(level.players or {}) do
         if not pa.dying and pa.alive ~= false and not pa:isInvulnerable() then
             local ob = pa:getOuterBounds()
-            if claw and overlap(ob, claw) then Boss.strike(pa, T.HIT_CLAW, -1)
-            elseif overlap(ob, inner) then Boss.strike(pa, T.HIT_BODY, -1) end
+            local f = self.facing or -1
+            if claw and overlap(ob, claw) then Boss.strike(pa, T.HIT_CLAW, f)
+            elseif overlap(ob, inner) then
+                if self.state == 'cross' then Boss.strike(pa, T.HIT_CROSS, pa.x < self.x and -1 or 1)
+                else Boss.strike(pa, T.HIT_BODY, f) end
+            end
         end
     end
 end
@@ -285,18 +338,23 @@ function NC:updateBoss(dt, level)
         local d = TP * T.START_OFF * dt / T.START_FADE
         self.yOff = (math.abs(self.yOff) <= d) and 0 or (self.yOff - d * (self.yOff > 0 and 1 or -1))
     end
-    -- La bomba, con su propio reloj (también mientras ataca)
-    self.bombT = self.bombT - dt
-    if self.bombT <= 0 then
-        self:dropBomb(level)
-        self.bombT = T.BOMB_EVERY[ph] + rand(-T.BOMB_JITTER, T.BOMB_JITTER)
+    -- La bomba, con su propio reloj (también mientras ataca; cruzando, nunca), y lo que le queda en este lado
+    if st ~= 'cross' then
+        self.bombT = self.bombT - dt
+        if self.bombT <= 0 then
+            self:throwBomb(level, pa)
+            self.bombT = T.BOMB_EVERY[ph] + rand(-T.BOMB_JITTER, T.BOMB_JITTER)
+        end
+        self.holdT = (self.holdT or 0) - dt
     end
 
     if st == 'hover' or st == 'aim_net' then
         local tx, ty = self:hoverTarget(level, pa)
         self:moveToward(dt, tx, ty, T.LAG[ph])
     end
-    if st == 'hover' then
+    if st == 'hover' and self.holdT <= 0 then
+        self:startCross()
+    elseif st == 'hover' then
         self.netT = self.netT - dt
         if self.netT <= 0 and self:mayAttack(level) then
             self.attackN = self.attackN + 1
@@ -315,11 +373,13 @@ function NC:updateBoss(dt, level)
         end
     elseif st == 'sweep_warn' then
         if not self.bandY then
-            -- la franja: a la altura del jugador AHORA; la garra llegará hasta el borde izquierdo de la zona
-            local zx0, _, zy0 = self:zb()
+            -- la franja: a la altura del jugador AHORA; la garra llegará hasta el borde de la zona hacia donde mira
+            local zx0, zx1, zy0 = self:zb()
             local floor = self.floorY or self:floorAt(level, self.x)
             self.bandY = math.floor(clamp(pa and pa.y or self.y, zy0 + 1.5 * TP, floor - 0.75 * TP) + 0.5)
-            self.reach = math.max(0, math.floor((self.x + GONDOLA_L - CLAW_HEAD * S) - (zx0 + TP / 4)))
+            local reach = (self.facing or -1) < 0 and ((self.x - FRONT - CLAW_HEAD * S) - (zx0 + TP / 4))
+                or ((zx1 - TP / 4) - (self.x + FRONT + CLAW_HEAD * S))
+            self.reach = math.max(0, math.floor(reach))
             Sound.play('megaWindup')
         end
         self.y = self.y + ((self.bandY - CLAW_DY) - self.y) * math.min(1, dt * 6)
@@ -334,6 +394,19 @@ function NC:updateBoss(dt, level)
             self.netT = rand(T.NET_EVERY[ph][1], T.NET_EVERY[ph][2])
             self:enter('hover')
         end
+    elseif st == 'cross' then
+        -- sube a la franja de arriba al principio y cruza (suave al salir y al llegar); al llegar, se gira al centro
+        local k = math.min(1, t / T.CROSS_T)
+        local ky = math.min(1, t / (T.CROSS_T * T.CROSS_RISE))
+        self.x = self.crossX0 + (self.crossX1 - self.crossX0) * k * k * (3 - 2 * k)
+        self.y = self.crossY0 + (self:crossY(level) - self.crossY0) * (1 - (1 - ky) * (1 - ky))
+        if t >= T.CROSS_T then
+            self.facing = -self.side
+            self.holdT = T.HOLD[ph]
+            self.netT = math.max(self.netT, T.AFTER_CROSS)
+            self.floorY = self:floorAt(level, self.x)
+            self:enter('hover')
+        end
     end
     self:hurtPlayers(level)
 end
@@ -346,6 +419,7 @@ end
 function NC:onIntroStart(level, players)
     self.levelRef = self.levelRef or level
     self.introStep = 0
+    self.side, self.facing = 1, -1
     local _, zx1 = self:zb()
     self.floorY = self:floorAt(level, zx1 - TP)
     local hx, hy = self:hoverTarget(level, nil)
@@ -405,7 +479,7 @@ end
 -- ── Red ───────────────────────────────────────────────────────────────────────
 function NC:netPackExtra()
     return { self.laughT > 0 and 1 or 0, self.bandY or 0, math.floor(self.reach or 0),
-             self.fleeX0 or 0, self.fleeY0 or 0 }
+             self.fleeX0 or 0, self.fleeY0 or 0, (self.facing or -1) > 0 and 1 or -1 }
 end
 function NC:netApplyExtra(a, b, f)
     if type(b[1]) ~= 'number' then return end
@@ -413,11 +487,13 @@ function NC:netApplyExtra(a, b, f)
     self.bandY = (b[2] ~= 0) and b[2] or nil
     self.reach = b[3] or 0
     self.fleeX0, self.fleeY0 = b[4], b[5]
+    if b[6] == 1 or b[6] == -1 then self.facing = b[6] end
 end
 
 -- ── Dibujo ────────────────────────────────────────────────────────────────────
+-- (la garra y el aviso se dibujan como si mirara a la izquierda: render los pone en espejo si mira a la derecha)
 function NC:drawClaw(camX, camY)
-    local box = self:clawBox()
+    local box = self:clawBox(true)
     if not box then return end
     local im = imgs.claw.image
     local x, y = math.floor(box.x - camX), math.floor(box.y - camY)
@@ -473,6 +549,14 @@ function NC:render(camX, camY)
         y = y + math.floor((math.random() * 2 - 1) * 3)
         ox, oy = x - CX * S, y - CY * S
     end
+    -- mirando a la derecha: toda la máquina (garra, aviso, cañón, piloto) en espejo alrededor de x
+    local flip = (self.facing or -1) > 0
+    if flip then
+        love.graphics.push()
+        love.graphics.translate(x, 0)
+        love.graphics.scale(-1, 1)
+        love.graphics.translate(-x, 0)
+    end
     self:drawWarn(camX, camY)
     local red = self:flashRed()
     local function tint()
@@ -495,6 +579,7 @@ function NC:render(camX, camY)
     love.graphics.setColor(1, 1, 1, self:ghostAlpha())
     love.graphics.draw(imgs.pilot.image, imgs.pilot.quads[fr], ox + PILOT_X * S, oy + PILOT_Y * S, 0, S, S)
     love.graphics.setColor(1, 1, 1, 1)
+    if flip then love.graphics.pop() end
 end
 
 -- Lo que hiere y no son sus cajas: la garra (y la franja avisada)
@@ -503,9 +588,9 @@ function NC:debugBoxes()
     local c = self:clawBox()
     if c then out[#out + 1] = { x = c.x, y = c.y, w = c.w, h = c.h, kind = 'hazard' } end
     if self.state == 'sweep_warn' and self.bandY then
-        local gl = self.x + GONDOLA_L
-        local x0 = gl - CLAW_HEAD * S - (self.reach or 0)
-        out[#out + 1] = { x = x0, y = self.bandY - CLAW_H * S / 2, w = gl - x0, h = CLAW_H * S, kind = 'area' }
+        local w = CLAW_HEAD * S + (self.reach or 0)
+        local x0 = ((self.facing or -1) > 0) and (self.x + FRONT) or (self.x - FRONT - w)
+        out[#out + 1] = { x = x0, y = self.bandY - CLAW_H * S / 2, w = w, h = CLAW_H * S, kind = 'area' }
     end
     return out
 end
@@ -513,7 +598,8 @@ end
 return {
     name = 'netcopter', label = 'Redcóptero', category = 'Flappy', flappyOnly = true, pace = 'bossPace',
     description = 'Jefe del Valle (solo niveles Flappy): el Monstruo Malvado en su máquina de chatarra. Dispara redes, '
-               .. 'suelta bombas luminosas (devuélveselas subiendo) y, sin globo, barre la zona con su garra.',
+               .. 'lanza bombas luminosas en arco (devuélveselas subiendo), cruza la arena de lado a lado y, sin globo, '
+               .. 'barre la zona con su garra.',
     class = NC,
     boss = { title = 'REDCÓPTERO' },
     hide = Boss.HIDE,

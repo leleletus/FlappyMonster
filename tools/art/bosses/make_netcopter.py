@@ -303,6 +303,21 @@ def bomb(frame):
     return im
 
 
+def mark(frame):
+    """La marca de la bomba lanzada (12x12): un aro donde caerá, que parpadea — grande y oscuro / pequeño y claro."""
+    im = new(12, 12)
+    r = 5.6 if frame == 0 else 4.2
+    for y in range(12):
+        for x in range(12):
+            d = ((x - 5.5) ** 2 + (y - 5.5) ** 2) ** 0.5
+            if r - 1 < d <= r:
+                px(im, x, y, RED[0] if frame == 0 else FIRE[0])
+            elif r - 2 < d <= r - 1:
+                px(im, x, y, FIRE[0] if frame == 0 else FIRE[1])
+    rect(im, 5, 5, 6, 6, FIRE[1] if frame == 0 else FIRE[2])                      # el centro
+    return im
+
+
 def parts():
     """Cuatro piezas de 14x14 que salen volando: trapo de globo, tabla, pala de hélice y trozo de cañón."""
     ps = []
@@ -324,6 +339,7 @@ def build():
         'pilot_flee-Sheet.png': sheet([pilot_flee(0), pilot_flee(1)]),
         'net.png': net(),
         'bomb-Sheet.png': sheet([bomb(0), bomb(1)]),
+        'mark-Sheet.png': sheet([mark(0), mark(1)]),
         'parts.png': parts(),
     }
 
@@ -355,6 +371,7 @@ def preview(files):
         put(files[nm], x, 380); x += files[nm].width * K + 30
     put(files['cannon-Sheet.png'], 20, 1100); put(files['claw.png'], 300, 1100)
     put(files['bomb-Sheet.png'], 700, 1100); put(files['net.png'], 900, 1100); put(files['parts.png'], 1000, 1100)
+    put(files['mark-Sheet.png'], 1200, 1100)
     return pv
 
 
