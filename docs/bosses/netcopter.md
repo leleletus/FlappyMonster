@@ -19,9 +19,10 @@ Try it: `love . --editor tools/levelgen/arenas/NetcopterArena.json`, then play f
 | `tools/levelgen/arenas/NetcopterArena.json` | test arena: 40x11 Flappy, zone columns 17-36 (full height), music `tuffi` |
 | `assets/levels/valle_redcoptero.json` | its campaign stage (zone 1's `boss`), by `tools/levelgen/levels_flappy_valle_boss.py` ([flappy-campaign § Boss stages](../gameplay/flappy-campaign.md#boss-stages-plan-5)) |
 
-Anchors in the 44x40 machine frame (its centre = the entity's x, y): gondola x 12..32, y 29..38; pilot (26x21, the
-Evil Monster's `Idle1` grid) top-left at (9, 16); cannon (18x12) top-left at (-6, 28) unfolded, folded behind the
-gondola at (12, 28); the claw (54x14, head on the left) comes out of the gondola at its middle height; the arm is
+Anchors in the 44x54 machine frame (its centre = the entity's x, y): balloon y 0..25; gondola x 12..32, y 43..52, with
+an iron handlebar at y 39; pilot (9x16: the player's body, `player/monstrito1.png`, with the antennae and head of
+`miniboss1/monster/Idle1.png`) top-left at (18, 27), standing on the gondola rim with its hands on the handlebar;
+cannon (18x12) top-left at (-6, 42) unfolded, folded behind the gondola at (12, 42); the claw (54x14, head on the left) comes out of the gondola at its middle height; the arm is
 lengthened by repeating its 9-px slice from x 36.
 
 ## The fight
@@ -68,8 +69,8 @@ are not online: no `Protocol.VERSION` change (ruling R2 of the plan).
 `boss_frames LEVEL=tools/levelgen/arenas/NetcopterArena.json FX=1 ZONE=1
 STATES=intro,hover,aim_net,sweep_warn,sweep,dying_hold,fleeing` (a special hit every 3 s to see it all).
 
-**Not judged yet** (needs the user): the feel, the timings, the looks (the art is provisional: the pilot reads small on
-the wide machine) and the reused sounds.
+**Not judged yet** (needs the user): the feel, the timings, the second art pass (stitched patches, full-body pilot)
+and the reused sounds.
 
 ## SP / server / client
 
@@ -89,8 +90,14 @@ fight in the `T` table of `netcopter.lua`. A new reflectable projectile: the `re
 - 2026-11-08, the user approved the Net-Copter as proposed ([plan](../design/flappy-plan-5-netcopter.md)).
 - 2026-11-08, the user: `tuffi` is really the FINAL battle's theme and may later be reworked with Evil Monster motifs;
   until the Flappy bosses have music of their own, all use it.
-- The art is PROVISIONAL, applied before the user's verdict (preview
-  `/home/mtvemo/FlappyMonster_pruebas/redcoptero/vista_previa.png`).
+- 2026-11-08, the user on the first art: the design is good, but (1) the balloon's patches must look like patches
+  without raising the sprite's resolution → each patch is a different fabric (denim, burlap) with a dark border and
+  alternating light thread stitches, a little crooked; (2) the Evil Monster must have the WHOLE body → he is the
+  player's body (neck, arms, dark torso with its shade, legs) with only his own antennae and head from `Idle1` (`hurt`
+  for the hurt frame), at the player's pixel size; the stick figure on the `Idle1` grid was wrong. To fit him standing
+  between the balloon and the gondola the frame grew from 44x40 to 44x54 (longer ropes); the hitbox is still
+  0.75 x 0.9 of the frame. Preview `/home/mtvemo/FlappyMonster_pruebas/redcoptero/vista_previa.png` (with
+  `monstrito1` beside the pilot frames).
 - Hp prop 12 is the base; the difficulty's `bossHp` scales it (Normal 11, Extreme 14 with the extra-player bonus).
 - The Evil Monster flees instead of dying: he comes back in every zone.
 - Ruling R2: no `Protocol.VERSION` change (Flappy is not online). R4: air respawn in Flappy boss fights.
@@ -98,5 +105,6 @@ fight in the `T` table of `netcopter.lua`. A new reflectable projectile: the `re
 ## History
 
 - 2026-11-08 (Plan 5, task 4): first version (provisional art, reused sounds).
+- 2026-11-08, second art pass after the user's verdict: stitched patches, full-body pilot, 44x54 frame.
 - 2026-11-08 (Plan 5, task 5): the campaign stage `valle_redcoptero`; ruling R4: dying in a Flappy boss fight respawns
   in the air (it respawned standing on the floor, which costs 1 HP in flight).

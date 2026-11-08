@@ -23,8 +23,9 @@
 -- dying_hold → fleeing → dead. Todo lo que se dibuja sale de state + deadTimer + x, y + netPackExtra (la fase sale de
 -- hp / hpMax, que ya viajan).
 -- Arte: assets/images/bosses/netcopter/ (tools/art/bosses/make_netcopter.py), todo a ×6. Anclas en el cuadro de la
--- máquina (44x40, centro = la entidad): góndola x 12..32, y 29..38; piloto 26x21 con su esquina en (9, 16); cañón a la
--- izquierda de la góndola (esquina en (-6, 28), plegado detrás de ella en (12, 28)).
+-- máquina (44x54, centro = la entidad): globo y 0..25; góndola x 12..32, y 43..52; piloto 9x16 (el cuerpo del jugador
+-- con la cabeza del Monstruo Malvado) de pie sobre la góndola con su esquina en (18, 27); cañón a la izquierda de la
+-- góndola (esquina en (-6, 42), plegado detrás de ella en (12, 42)).
 
 local Entity = require 'src/world/entities/base/Entity'
 local Boss   = require 'src/world/entities/base/Boss'
@@ -71,21 +72,21 @@ NC.introLength = T.INTRO
 
 -- Medidas del arte (×6)
 local S = 6
-local FW, FH = 44, 40
-local CX, CY = 22, 20                                      -- centro del cuadro de la máquina (= x, y)
-local GONDOLA_L, GONDOLA_B = (12 - CX) * S, (39 - CY) * S  -- borde izquierdo y fondo de la góndola
-local CANNON_OUT, CANNON_IN, CANNON_Y = -6, 12, 28         -- esquina del cañón (desplegado / plegado)
+local FW, FH = 44, 54
+local CX, CY = 22, 27                                      -- centro del cuadro de la máquina (= x, y)
+local GONDOLA_L, GONDOLA_B = (12 - CX) * S, (53 - CY) * S  -- borde izquierdo y fondo de la góndola
+local CANNON_OUT, CANNON_IN, CANNON_Y = -6, 12, 42         -- esquina del cañón (desplegado / plegado)
 local CANNON_W, CANNON_H = 18, 12
 local MOUTH_DY = (CANNON_Y + CANNON_H / 2 - CY) * S        -- altura de la boca del cañón (y la de la red)
 local CLAW_W, CLAW_H, CLAW_HEAD = 54, 14, 20               -- la garra: cabeza a la izquierda, brazo a la derecha
-local CLAW_DY = (33.5 - CY) * S                            -- la garra sale a la altura del centro de la góndola
+local CLAW_DY = (47.5 - CY) * S                            -- la garra sale a la altura del centro de la góndola
 local ARM_Q0, ARM_QW = 36, 9                               -- trozo del brazo que se repite para alargarlo
-local PILOT_X, PILOT_Y = 9, 16
-local PILOT_W, PILOT_H = 26, 21
+local PILOT_X, PILOT_Y = 18, 27
+local PILOT_W, PILOT_H = 9, 16
 local FLEE_W, FLEE_H = 36, 30
 local PART = 14
 -- Trozos que se caen al huir: { dx, dy (px desde x, y), vx, vy, giro (rad/s) } — globo, tabla, pala, cañón
-local PARTS = { { 0, -70, 60, -260, 2 }, { -40, 96, -90, -120, -3 }, { 96, 66, 160, -300, 6 }, { -150, 84, -140, -180, -4 } }
+local PARTS = { { 0, -112, 60, -260, 2 }, { -40, 138, -90, -120, -3 }, { 96, 108, 160, -300, 6 }, { -150, 126, -140, -180, -4 } }
 local PART_G = 1400
 
 local function rand(a, b) return a + math.random() * (b - a) end
@@ -488,7 +489,7 @@ function NC:render(camX, camY)
     local m = imgs[self:look()]
     local pf = (st == 'dying_hold') and 1 or (math.floor(now * 10) % 2 + 1)
     love.graphics.draw(m.image, m.quads[pf], ox, oy, 0, S, S)
-    -- el Monstruo Malvado, sentado en la góndola: pedalea, se ríe o le duele
+    -- el Monstruo Malvado, de pie en la góndola: pedalea, se ríe o le duele
     local hurt = st == 'dying_hold' or (self.inv > 0 and not self.ghost)
     local fr = hurt and 4 or (self:laughing() and 3 or (math.floor(now * 6) % 2 + 1))
     love.graphics.setColor(1, 1, 1, self:ghostAlpha())

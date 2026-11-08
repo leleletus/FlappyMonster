@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
 # tools/art/bosses/make_netcopter.py — el Redcóptero (jefe del Valle, campaña Flappy; docs/design/flappy-plan-5-netcopter.md).
 # El Monstruo Malvado pedalea una máquina de chatarra: globo remendado, góndola de madera y una hélice de pedal.
-# El piloto va en la MISMA rejilla 26x21 que miniboss1/monster/Idle1.png (blanco y negro, se amplía, no se rediseña).
+# El piloto es el cuerpo del jugador (monstrito1, 9x16) con la cabeza y las antenas de miniboss1/monster/Idle1.png.
 # Sin alas en nada. Arte a x6 (el píxel del jugador): formas planas, 2-3 tonos por pieza, sin detalle fino.
 #
 #   python3 tools/art/bosses/make_netcopter.py           → vista_previa.png (fondo = cielo claro; el Valle aún no existe)
 #   python3 tools/art/bosses/make_netcopter.py --apply   → assets/images/bosses/netcopter/
 #
-# Anclas (arte, en cuadro de máquina 44x40): la góndola abierta va en x 12..32, y 29..38; el piloto (26x21) se dibuja
-# con su esquina arriba-izquierda en (9, 16) del cuadro (el cuerpo queda sentado sobre la góndola, y=29); el cañón se pega en (2, 28); la hélice gira en (38, 32).
+# Anclas (arte, en cuadro de máquina 44x54): el globo en y 0..25; la góndola en x 12..32, y 43..52; el piloto (9x16,
+# el cuerpo del jugador) se dibuja con su esquina en (18, 27): de pie con los pies en y 42, sobre el borde de la góndola,
+# las manos en el manillar (y 39); el cañón en y 42; la hélice gira en (38, 46).
 import os, sys
 from PIL import Image, ImageDraw
 
@@ -73,8 +74,12 @@ def sheet(frames):
     return s
 
 
-# ══ LA MÁQUINA (cuadro 44x40) ═════════════════════════════════════════════════════════════════════════════════════
-MW, MH = 44, 40
+# ══ LA MÁQUINA (cuadro 44x54) ═════════════════════════════════════════════════════════════════════════════════════
+# El globo arriba (y 0..25); cuerdas largas; la góndola baja D filas para que el Monstruo Malvado quepa de pie
+# (cuerpo entero, 16 filas) entre el globo y la góndola, con los pies sobre el borde.
+MW, MH = 44, 54
+D = 14                                               # lo que baja la parte de abajo (góndola, hélice, manillar)
+PILOT_AT = (18, 27)                                  # esquina del piloto 9x16: pies en y 42, la góndola empieza en 43
 
 
 def gondola(im):
@@ -85,10 +90,15 @@ def gondola(im):
     for x in (18, 25):                               # tablas
         rect(im, x, 31, x, 37, WOOD[1])
     px(im, 15, 33, WOOD[0]); px(im, 29, 33, WOOD[0])  # clavos
-    rect(im, 12, 29, 14, 29, WOOD[0]); rect(im, 30, 29, 32, 29, WOOD[0])
 
 
-def ropes(im, y0=24, y1=29):
+def handlebar(im):
+    """Manillar de hierro a la altura de las manos del piloto (fila 12 del piloto), con dos postes hasta la góndola."""
+    rect(im, 17, 25, 27, 25, IRON[0])
+    rect(im, 17, 26, 17, 28, IRON[1]); rect(im, 27, 26, 27, 28, IRON[1])
+
+
+def ropes(im, y0, y1):
     for (xa, xb) in ((9, 13), (35, 31)):
         n = y1 - y0
         for i in range(n + 1):
@@ -109,26 +119,58 @@ def propeller(im, frame):
             rect(im, 36 - i + 1, 36 + i, 38 - i + 1, 37 + i, IRON[1]); px(im, 39 - i, 36 + i, IRON[0])
 
 
+def lower(frame):
+    """La parte de abajo en sus coordenadas de siempre (góndola en y 29..38); se pega D filas más abajo."""
+    lo = new(MW, MH - D)
+    handlebar(lo)
+    gondola(lo)
+    propeller(lo, frame)
+    return lo
+
+
+# Telas de los remiendos: cada uno de una tela distinta del globo (contorno, tela, luz)
+DENIM = [hx('1e2a48'), hx('3c5c94'), hx('6c8cc4')]
+BURLAP = [hx('3a2a10'), hx('a07c3c'), hx('cca868')]
+THREAD = hx('f4ecd0')
+
+
+def patch(im, rows, cloth):
+    """Remiendo cosido: rows = [(y, x0, x1)] (forma un poco torcida). Borde oscuro con puntadas de hilo claro
+    alternas (punto sí, punto no), tela de otro color dentro y una fila de luz arriba."""
+    cells = {(x, y) for (y, x0, x1) in rows for x in range(x0, x1 + 1)}
+    top = min(y for (y, _, _) in rows)
+    for (x, y) in cells:
+        edge = any((x + dx, y + dy) not in cells for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)))
+        if edge:
+            c = THREAD if (x + y) % 2 == 0 else cloth[0]
+        else:
+            c = cloth[2] if y == top + 1 else cloth[1]
+        px(im, x, y, c)
+
+
+def patches(im, dy=0):
+    # remiendo vaquero, grande y algo torcido (la fila de arriba corrida un píxel)
+    patch(im, [(7 + dy, 11, 16), (8 + dy, 10, 16), (9 + dy, 10, 16), (10 + dy, 10, 16), (11 + dy, 10, 16),
+               (12 + dy, 10, 17), (13 + dy, 11, 17)], DENIM)
+    # remiendo de saco, pequeño
+    patch(im, [(15, 27, 32), (16, 27, 32), (17, 27, 32), (18, 28, 32), (19, 28, 31)], BURLAP)
+
+
 def machine(frame):
     im = new(MW, MH)
-    ropes(im)
+    ropes(im, 24, 29 + D)
     ellipse(im, 22, 13, 18, 12.5, RED)
-    # remiendos (amarillos, esquinas «cosidas»)
-    rect(im, 11, 8, 17, 14, PATCH[0]); rect(im, 12, 9, 16, 13, PATCH[1]); rect(im, 12, 9, 16, 9, PATCH[2])
-    px(im, 14, 11, PATCH[0])
-    rect(im, 27, 15, 32, 19, PATCH[0]); rect(im, 28, 16, 31, 18, PATCH[1]); rect(im, 28, 16, 31, 16, PATCH[2])
+    patches(im)
     for x in range(8, 38, 6):                        # costuras
         px(im, x, 23 if x < 30 else 22, RED[0])
-    gondola(im)
-    propeller(im, frame)
-    rect(im, 14, 28, 30, 28, WOOD[0])                # borde de la góndola, por delante del piloto
+    im.alpha_composite(lower(frame), (0, D))
     return im
 
 
 def machine_popped(frame):
     """Fase 2: el globo reventado cuelga como un trapo (más bajo) sobre las cuerdas."""
     im = new(MW, MH)
-    ropes(im, 20, 29)
+    ropes(im, 20, 29 + D)
     d = frame
     pts = [(6, 18), (12, 12 + d), (22, 9), (32, 12 + d), (38, 18), (36, 24 + d), (28, 21), (22, 26 - d), (15, 21), (8, 25 + d)]
     ImageDraw.Draw(im).polygon(pts, fill=RED[0])
@@ -137,10 +179,8 @@ def machine_popped(frame):
     rect(im, 18, 13, 26, 14, RED[3])
     for x in range(10, 36, 5):
         px(im, x, 20, RED[1]); px(im, x + 1, 21, RED[1])
-    rect(im, 12, 15 + d, 16, 17 + d, PATCH[1])      # un remiendo que aguanta
-    gondola(im)
-    propeller(im, 1 - frame)
-    rect(im, 14, 28, 30, 28, WOOD[0])
+    patch(im, [(14 + d, 12, 17), (15 + d, 11, 17), (16 + d, 11, 17), (17 + d, 11, 16), (18 + d, 12, 16)], DENIM)  # aguanta
+    im.alpha_composite(lower(1 - frame), (0, D))
     return im
 
 
@@ -172,53 +212,57 @@ def claw():
     return im
 
 
-# ══ EL PILOTO (26x21, la rejilla de Idle1) ════════════════════════════════════════════════════════════════════════
-def base_pilot(name='Idle1'):
-    return Image.open(os.path.join(ROOT, 'assets', 'images', 'bosses', 'miniboss1', 'monster', name + '.png')).convert('RGBA')
+# ══ EL PILOTO (9x16, el cuerpo del jugador) ═══════════════════════════════════════════════════════════════════════
+# El Monstruo Malvado es el monstruo (player/monstrito1.png: cuello, brazos, torso oscuro con su sombra, piernas) con
+# la cabeza y las antenas de miniboss1/monster (Idle1.png; hurt.png para el daño). Mismo píxel que el jugador (×6).
+# Negro puro de contorno, como su cabeza. Sin alas.
+SHADE = hx('32344a')                                 # la sombra del torso del monstruo (50,52,74)
+BODY = {                                             # filas 8..15 del cuerpo: A negro, E sombra
+    'pedal': ['....A....', '...EAA...', '..AAAAA..', '.A.AAA.A.', 'A...A...A'],          # brazos al manillar
+    'laugh': ['A.......A', '.A..A..A.', '..AEAAA..', '..AAAAA..', '...AAA...', '....A....'],  # filas 7..12, manos arriba
+    'hurt':  ['A...A...A', '.A.EAA.A.', '..AAAAA..', '...AAA...', '....A....'],          # brazos de monstrito1
+}
+LEGS = {                                             # filas 13..15
+    0: ['...A.A...', '..AA.A...', '.....AA..'],      # pedal 1: el pie izquierdo arriba
+    1: ['...A.A...', '...A.AA..', '..AA.....'],      # pedal 2: el derecho arriba
+    'stand': ['...A.A...', '...A.A...', '..AA.AA..'],
+}
 
 
-def legs(im, f):
-    """Piernas que pedalean bajo el cuerpo (fila 10 en adelante): f=0 izquierda abajo, f=1 derecha abajo."""
-    for y in (10, 11, 12):                           # borra los pies de Idle1
-        for x in range(8, 19):
-            if y >= 10:
-                px(im, x, y, (0, 0, 0, 0))
-    px(im, 12, 10, BLACK); px(im, 14, 10, BLACK)
-    if f == 0:
-        for (x, y) in ((11, 11), (10, 12), (10, 13), (11, 13), (15, 11), (16, 11), (17, 11)):
-            px(im, x, y, BLACK)
-    else:
-        for (x, y) in ((15, 11), (16, 12), (16, 13), (17, 13), (11, 11), (10, 11), (9, 11)):
-            px(im, x, y, BLACK)
+def head(name):
+    """Antenas + cabeza de miniboss1/monster/<name>.png (columnas 9..17, filas 2..9) → filas 0..7 del cuerpo."""
+    src = Image.open(os.path.join(ROOT, 'assets', 'images', 'bosses', 'miniboss1', 'monster', name + '.png')).convert('RGBA')
+    return src.crop((9, 2, 18, 10))
+
+
+def draw_rows(im, y0, rows):
+    for j, r in enumerate(rows):
+        for x, ch in enumerate(r):
+            if ch == 'A':
+                px(im, x, y0 + j, BLACK)
+            elif ch == 'E':
+                px(im, x, y0 + j, SHADE)
 
 
 def pilot(kind):
-    if kind == 'hurt':
-        im = base_pilot('hurt'); legs(im, 0)
-        return im
-    im = base_pilot('Idle1')
+    im = new(9, 16)
+    im.alpha_composite(head('hurt' if kind == 'hurt' else 'Idle1'), (0, 0))
     if kind in ('pedal1', 'pedal2'):
-        legs(im, 0 if kind == 'pedal1' else 1)
-        if kind == 'pedal2':                         # el cuerpo sube un píxel al pedalear fuerte
-            im = im.transform(im.size, Image.AFFINE, (1, 0, 0, 0, 1, 1), resample=Image.NEAREST)
-            legs(im, 1) if False else None
+        draw_rows(im, 8, BODY['pedal']); draw_rows(im, 13, LEGS[0 if kind == 'pedal1' else 1])
     elif kind == 'laugh':
-        legs(im, 0)
-        for x in (12, 13, 14):
-            px(im, x, 8, BLACK)                      # boca abierta
-        px(im, 11, 8, WHITE); px(im, 15, 8, WHITE)
-        for (x, y) in ((8, 7), (18, 7), (7, 6), (19, 6)):
-            px(im, x, y, BLACK)                      # brazos arriba, de risa
-        for (x, y) in ((8, 8), (8, 9), (18, 8), (18, 9)):
-            px(im, x, y, (0, 0, 0, 0))
+        draw_rows(im, 7, BODY['laugh']); draw_rows(im, 13, LEGS['stand'])
+        for x in (3, 4, 5):
+            px(im, x, 6, BLACK)                      # boca abierta, de risa
+    else:
+        draw_rows(im, 8, BODY['hurt']); draw_rows(im, 13, LEGS['stand'])
     return im
 
 
 def pilot_flee(frame):
-    """Huye en un trozo de góndola con la hélice rota: 36x30, el piloto de Idle1 recortado encima."""
+    """Huye de pie en un trozo de góndola (36x30), con el manillar y la hélice rota; el cuerpo entero encima."""
     im = new(36, 30)
-    p = pilot('pedal1' if frame == 0 else 'pedal2')
-    im.alpha_composite(p.crop((3, 0, 26, 17)), (10, 2))
+    rect(im, 13, 14, 23, 14, IRON[0]); rect(im, 13, 15, 13, 17, IRON[1]); rect(im, 23, 15, 23, 17, IRON[1])  # manillar
+    im.alpha_composite(pilot('pedal1' if frame == 0 else 'pedal2'), (14, 2))
     rect(im, 9, 18, 29, 25, WOOD[0]); rect(im, 10, 19, 28, 24, WOOD[2]); rect(im, 10, 23, 28, 24, WOOD[1])
     px(im, 14, 21, WOOD[0]); px(im, 24, 21, WOOD[0])
     # hélice rota: un solo palo torcido que gira, humo
@@ -289,28 +333,28 @@ def up(im, k=K):
 
 
 def preview(files):
-    W, H = 1500, 1000
+    W, H = 1500, 1300
     pv = Image.new('RGBA', (W, H), SKY)
-    d = ImageDraw.Draw(pv)
 
     def put(im, x, y):
         pv.alpha_composite(up(im), (x, y))
-    # la máquina montada, fase 1 y fase 2 (piloto de risa), con el cañón
-    for i, (nm, pil) in enumerate((('machine', 'pedal1'), ('machine_popped', 'laugh'))):
-        sh = files[nm + ('' if nm == 'machine' else '') + '-Sheet.png']
-        fr = sh.crop((0, 0, MW, MH))
+    # la máquina montada, fase 1 (pedalea) y fase 2 (se ríe), con el cañón desplegado
+    for i, (nm, fr) in enumerate((('machine', 0), ('machine_popped', 2))):
+        m = files[nm + '-Sheet.png'].crop((0, 0, MW, MH))
         base = new(MW + 18, MH)
-        base.alpha_composite(fr, (18, 0))
-        base.alpha_composite(files['cannon-Sheet.png'].crop((0 if i == 0 else 18, 0, 18 if i == 0 else 36, 12)), (0, 28))
-        base.alpha_composite(files['pilot-Sheet.png'].crop((26 * (2 if pil == 'laugh' else 0), 0, 26 * (3 if pil == 'laugh' else 1), 21)), (18 + 22 - 13, 16))
-        fg = fr.crop((14, 28, 31, 29)); base.alpha_composite(fg, (18 + 14, 28))
-        put(base, 20 + i * 400, 20)
+        base.alpha_composite(files['cannon-Sheet.png'].crop((18 * i, 0, 18 * (i + 1), 12)), (0, 28 + D))
+        base.alpha_composite(m, (18, 0))
+        base.alpha_composite(files['pilot-Sheet.png'].crop((9 * fr, 0, 9 * (fr + 1), 16)), (18 + PILOT_AT[0], PILOT_AT[1]))
+        put(base, 20 + i * 420, 20)
+    # comparación: el jugador (monstrito1) junto a los cuadros del piloto, al mismo tamaño
+    mon = Image.open(os.path.join(ROOT, 'assets', 'images', 'player', 'monstrito1.png')).convert('RGBA')
+    put(mon, 900, 60); put(files['pilot-Sheet.png'], 980, 60)
+    put(files['pilot_flee-Sheet.png'], 900, 200)
     x = 20
     for nm in ('machine-Sheet.png', 'machine_popped-Sheet.png'):
-        put(files[nm], x, 300); x += files[nm].width * K + 30
-    put(files['cannon-Sheet.png'], 20, 560); put(files['claw.png'], 300, 560)
-    put(files['bomb-Sheet.png'], 700, 560); put(files['net.png'], 900, 560); put(files['parts.png'], 1000, 560)
-    put(files['pilot-Sheet.png'], 20, 760); put(files['pilot_flee-Sheet.png'], 700, 760)
+        put(files[nm], x, 380); x += files[nm].width * K + 30
+    put(files['cannon-Sheet.png'], 20, 1100); put(files['claw.png'], 300, 1100)
+    put(files['bomb-Sheet.png'], 700, 1100); put(files['net.png'], 900, 1100); put(files['parts.png'], 1000, 1100)
     return pv
 
 
