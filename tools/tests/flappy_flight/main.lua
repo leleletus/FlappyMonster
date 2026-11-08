@@ -456,13 +456,14 @@ function cases.lanzarredes()
     -- 3. un jugador justo encima: −1 de vida y ctrlLock; la red le envuelve
     local lv3, l3, nets3, pa3 = mk(12 * T - 32, 3.5 * T)
     local hp0 = pa3.hp
-    local locked = false
+    local locked, vxAtHit = false, nil
     step(lv3, 5, function()
         hover(pa3, 3.5 * T)
-        if (pa3.ctrlLockT or 0) > 0 then locked = true end
+        if (pa3.ctrlLockT or 0) > 0 then locked, vxAtHit = true, pa3.vx end
         return locked
     end)
-    local hit = pa3.hp == hp0 - 1 and locked
+    local noShove = vxAtHit ~= nil and math.abs(vxAtHit) < 1          -- (una red hacia arriba no empuja de lado)
+    local hit = pa3.hp == hp0 - 1 and locked and noShove
     -- 4. la ráfaga (potencia 1) la revienta
     local lv4, l4, nets4, pa4 = mk(7 * T, 4.5 * T, 5)       -- (a la altura de la ráfaga: el jugador aletea en torno a 4,5 casillas)
     shoot(lv4, pa4, 1, 4.5 * T)
@@ -474,8 +475,8 @@ function cases.lanzarredes()
     Difficulty.bind(nil)
     local slow = Difficulty.dt(l, 1) == 1
     check('lanzarredes', not firedFar and up and telegraph and slots and hit and dead and fast and slow,
-          ('lejos (>1 pantalla) no hace nada=%s; brilla %.2f s (AIM_T %.1f) y la red sale recta arriba=%s; encima: −1 y ctrlLock=%s; la ráfaga la revienta=%s; trapPace extremo acelera (×%.2f) y sin dificultad no=%s; reserva %d redes=%s'):format(
-           tostring(not firedFar), (fireAt or 0) - (aimAt or 0), TT.AIM_T, tostring(up and true or false), tostring(hit), tostring(dead),
+          ('lejos (>1 pantalla) no hace nada=%s; brilla %.2f s (AIM_T %.1f) y la red sale recta arriba=%s; encima: −1 y ctrlLock sin empujón de lado (vx %s)=%s; la ráfaga la revienta=%s; trapPace extremo acelera (×%.2f) y sin dificultad no=%s; reserva %d redes=%s'):format(
+           tostring(not firedFar), (fireAt or 0) - (aimAt or 0), TT.AIM_T, tostring(up and true or false), tostring(vxAtHit), tostring(hit), tostring(dead),
            fastK, tostring(slow), #nets2, tostring(slots)))
 end
 
@@ -519,16 +520,33 @@ function cases.lanzarredes_techo()
     local stoppedBelow = minY > pillarBottom - 1 and minY < math.huge
     -- 2. nada encima: sale por arriba y no queda ninguna red viva
     local lv2, l2, nets2, pa2 = mk(false, 8 * T)
-    local fired, gone, leaked = false, false, false
+    local fired, gone, snagged2, minY2 = false, false, false, math.huge
+    local snagBefore2 = snagSounds
     step(lv2, 8, function()
         hover(pa2, 4.5 * T)
         local live = false
-        for _, n in ipairs(nets2) do if n.alive then live = true; fired = true end end
+        for _, n in ipairs(nets2) do
+            if n.alive then
+                live, fired = true, true
+                minY2 = math.min(minY2, n.y)
+                if n.state == 'snag' then snagged2 = true end
+            end
+        end
         if fired and not live then gone = true; return true end
     end)
-    -- 3. a quien llega a su alcance no le dispara al instante
-    local lv3, l3, nets3, pa3 = mk(false, 60 * T)
-    step(lv3, 8, function() hover(pa3, 4.5 * T) end)                -- (lejos: en reposo, esperando)
+    local clean = gone and not snagged2 and snagSounds == snagBefore2 and minY2 < 0
+    -- 3. a quien llega a su alcance no le dispara al instante: primero el reloj baja de FIRST (cerca ~4 s: un ciclo y el
+    --    reposo), luego se va 1 s y vuelve: el primer aviso tarda al menos FIRST desde la vuelta
+    local lv3, l3, nets3, pa3 = mk(false, 8 * T)
+    local cycled = false
+    step(lv3, 6, function()
+        hover(pa3, 4.5 * T)
+        if l3.state ~= 'idle' then cycled = true end
+        return cycled and l3.state == 'idle' and l3.waitT < NL.T.FIRST - 0.3
+    end)
+    local waitBefore = l3.waitT
+    pa3.x = 60 * T
+    step(lv3, 1, function() hover(pa3, 4.5 * T) end)
     pa3.x = 8 * T
     local t, firedAt = 0, nil
     step(lv3, 3, function()
@@ -537,10 +555,10 @@ function cases.lanzarredes_techo()
         if not firedAt and l3.state ~= 'idle' then firedAt = t; return true end
     end)
     Sound.play = realPlay
-    local fair = firedAt and firedAt >= NL.T.FIRST - 0.05
-    check('lanzarredes_techo', stoppedBelow and snagged and spent and snagAfter1 == 1 and snagSounds == 1 and gone and fair,
-          ('con un pilar 3 casillas encima: se engancha (netSnag x%d, y ninguno al salir por arriba), nunca lo pasa (y mínima %.0f, base del pilar %d) y se deshace=%s; sin nada encima sale por arriba y no queda ninguna red viva=%s; al llegar a su alcance tarda %.2f s en apuntar (FIRST %.1f)=%s'):format(
-           snagAfter1, minY, pillarBottom, tostring(spent), tostring(gone), firedAt or -1, NL.T.FIRST, tostring(fair and true or false)))
+    local fair = firedAt and firedAt >= NL.T.FIRST - 0.05 and waitBefore < NL.T.FIRST - 0.3
+    check('lanzarredes_techo', stoppedBelow and snagged and spent and snagAfter1 == 1 and clean and fair,
+          ('con un pilar 3 casillas encima: se engancha (netSnag x%d, y ninguno al salir por arriba), nunca lo pasa (y mínima %.0f, base del pilar %d) y se deshace=%s; sin nada encima no se engancha (sin netSnag) y sale por arriba (y mínima %.0f) sin red viva=%s; con el reloj en %.2f s se va 1 s y al volver tarda %.2f s en apuntar (FIRST %.1f)=%s'):format(
+           snagAfter1, minY, pillarBottom, tostring(spent), minY2, tostring(clean), waitBefore, firedAt or -1, NL.T.FIRST, tostring(fair and true or false)))
 end
 
 function cases.muro()

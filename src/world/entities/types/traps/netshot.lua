@@ -28,6 +28,7 @@ local PF = 8                                          -- cuadro de puff-Sheet
 local NET_SETTLE = 0.3                                -- s para llegar a la altura del disparo
 local HIT = { 1, 220, -120, 0.4, 0 }                  -- vida, empujón (vx, vy), s sin control, s aturdido
 Net.HIT = HIT
+local HIT_UP = { 1, 0, -120, 0.4, 0 }                -- la red hacia arriba (lanzarredes): sin empujón de lado
 local WRAP_T = HIT[4]                                 -- s que envuelve al jugador (su ctrlLock)
 local SNAG_T = 0.3                                    -- s deshaciéndose en un pilar
 local UNFURL_T = 0.25                                 -- s desplegándose (ovillo → a medias → abierta)
@@ -152,7 +153,7 @@ function Net:netHitPlayers(level, dir)
     local b = self:getOuterBounds()
     for _, pa in ipairs(level.players or {}) do
         if not pa.dying and pa.alive ~= false and overlap(b, pa:getOuterBounds()) then
-            if Boss.strike(pa, HIT, dir) then
+            if Boss.strike(pa, self.up and HIT_UP or HIT, dir) then
                 Sound.play('netSnare')
                 Entity.emitFx('collect', self.x, self.y)
                 self:wrap(pa)
