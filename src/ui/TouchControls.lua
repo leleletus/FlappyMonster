@@ -24,9 +24,11 @@ local SpriteStrip = require 'src/fx/SpriteStrip'
 
 local TC = {}
 local dpad, jump, lightBtn
-local state = { l = false, r = false, d = false, j = false, f = false, u = false }
-local prev = { d = false, j = false, f = false, u = false }
-local withLight = false       -- (niveles a oscuras: botón de la linterna, encima del salto)
+local state = { l = false, r = false, d = false, j = false, f = false, u = false, x = false }
+local prev = { d = false, j = false, f = false, u = false, x = false }
+-- El botón EXTRA, encima del salto: 'light' (niveles a oscuras: la linterna) · 'special' (niveles Flappy: el ATAQUE
+-- ESPECIAL — src/player/PlayerFlight.lua —) · nil. (`true` = 'light', como antes)
+local extra = nil
 local LIGHT_FRAC = 0.13       -- su tamaño (fracción del alto)
 
 local TOP_FRAC  = 0.30        -- por encima de esta altura (fracción) no hay controles
@@ -72,8 +74,9 @@ function TC.layout(sw, sh)
 end
 
 -- ¿Qué pulsa cada dedo? (posiciones de pantalla)
-function TC.read(L, touches, light)
-    local s = { l = false, r = false, d = false, j = false, f = false, u = false }
+function TC.read(L, touches, ex)
+    if ex == true then ex = 'light' end
+    local s = { l = false, r = false, d = false, j = false, f = false, u = false, x = false }
     local dead = L.padW * DEAD_FRAC
     for _, t in ipairs(touches) do
         local x, y = t[1], t[2]
@@ -85,8 +88,9 @@ function TC.read(L, touches, light)
                 end
                 if dy > dead and dy > 0.45 * math.abs(dx) then s.d = true end
                 if -dy > dead and -dy > 0.45 * math.abs(dx) then s.u = true end
-            elseif light and (x - L.lightX) ^ 2 + (y - L.lightY) ^ 2 <= (L.lightW * 0.75) ^ 2 then
-                s.f = true                                  -- (la linterna tiene prioridad sobre el salto)
+            elseif ex and (x - L.lightX) ^ 2 + (y - L.lightY) ^ 2 <= (L.lightW * 0.75) ^ 2 then
+                -- (el botón extra tiene prioridad sobre el salto)
+                if ex == 'special' then s.x = true else s.f = true end
             else
                 s.j = true
             end
@@ -97,12 +101,12 @@ end
 
 -- Cada frame: lee los dedos y pone las acciones del jugador. `active` = el
 -- estado quiere controles (nivel en marcha, no muerto / espectador)
-function TC.update(active, light)
+function TC.update(active, ex)
     local VP = Input.VirtualPad
-    withLight = light == true
+    extra = (ex == true) and 'light' or ((ex == 'light' or ex == 'special') and ex or nil)
     if not (active and Input.isMobile) then
-        state = { l = false, r = false, d = false, j = false, f = false, u = false }
-        prev.d, prev.j, prev.f, prev.u = false, false, false, false
+        state = { l = false, r = false, d = false, j = false, f = false, u = false, x = false }
+        prev.d, prev.j, prev.f, prev.u, prev.x = false, false, false, false, false
         return
     end
     local sw, sh = love.graphics.getDimensions()
@@ -112,7 +116,7 @@ function TC.update(active, light)
         local x, y = love.touch.getPosition(id)
         touches[#touches + 1] = { x, y }
     end
-    state = TC.read(L, touches, withLight)
+    state = TC.read(L, touches, extra)
     VP.down['move_left'], VP.down['move_right'] = state.l, state.r
     VP.down['crouch'], VP.down['jump'] = state.d, state.j
     -- "Recién pulsado" (este mismo frame: saltar, y abajo en el aire = ground pound)
@@ -120,8 +124,9 @@ function TC.update(active, light)
     if state.d and not prev.d then VP.pressed['crouch'] = true end
     if state.f and not prev.f then VP.pressed['light'] = true end
     if state.u and not prev.u then VP.pressed['grab'] = true end
+    if state.x and not prev.x then VP.pressed['special'] = true end
     VP.down['grab'] = state.u
-    prev.d, prev.j, prev.f, prev.u = state.d, state.j, state.f, state.u
+    prev.d, prev.j, prev.f, prev.u, prev.x = state.d, state.j, state.f, state.u, state.x
 end
 
 -- Cuadro de la cruceta según lo pulsado
@@ -140,8 +145,9 @@ local function show(name, x, y, px) T(name):play(love.timer.getTime(), x, y, 0, 
 
 -- Dibuja en píxeles de pantalla (fuera de lovesize). `st` = lo pulsado (por
 -- defecto, lo del último update)
-function TC.draw(L, st, fade)
+function TC.draw(L, st, fade, ex)
     fade = fade or 1                              -- (entrada de un jefe: se van)
+    ex = ex or extra                              -- (el botón extra: el del último update, o el que pida quien dibuja)
     if fade <= 0.001 then return end
     assets()
     st = st or state
@@ -158,11 +164,13 @@ function TC.draw(L, st, fade)
     show(padFrame(st), L.padX, L.padY, L.padPx)
     love.graphics.setColor(1, 1, 1, (st.j and 0.8 or a) * fade)
     show(st.j and 'jump_pressed' or 'jump_up', L.jumpX, L.jumpY + (st.j and L.jumpPx or 0), L.jumpPx)
-    if withLight then
+    if ex then
+        local on = (ex == 'special') and st.x or st.f
+        local name = ex .. (on and '_pressed' or '_up')
         love.graphics.setColor(0, 0, 0, 0.35 * a / 0.7 * fade)
-        show(st.f and 'light_pressed' or 'light_up', L.lightX + sh, L.lightY + sh, L.lightPx)
-        love.graphics.setColor(1, 1, 1, (st.f and 0.8 or a) * fade)
-        show(st.f and 'light_pressed' or 'light_up', L.lightX, L.lightY, L.lightPx)
+        show(name, L.lightX + sh, L.lightY + sh, L.lightPx)
+        love.graphics.setColor(1, 1, 1, (on and 0.8 or a) * fade)
+        show(name, L.lightX, L.lightY, L.lightPx)
     end
     love.graphics.setColor(1, 1, 1, 1)
 end

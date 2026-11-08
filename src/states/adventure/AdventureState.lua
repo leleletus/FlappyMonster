@@ -565,7 +565,8 @@ function AdventureState:update(dt)
     self.sceneCanvas = require('src/fx/SceneCanvas').get()   -- (el mismo; otro si la pantalla cambió)
 
     -- ── Controles táctiles (móvil): cruceta + salto, ver src/ui/TouchControls ──
-    if not self.demo then TouchControls.update(not self.dead, self.level.dark) end
+    -- (el botón extra: el ATAQUE ESPECIAL en los niveles Flappy; la linterna en los niveles a oscuras)
+    if not self.demo then TouchControls.update(not self.dead, self.level.flappy and 'special' or self.level.dark) end
 
     -- (en la escena final no hay pausa, ni ya ganado: salir en la celebración perdía el nivel)
     if not self.demo and Input.pressed('pause') and not (self.runOut and self.runOut.active) and not self.won and not self.endingT then
@@ -774,13 +775,17 @@ end
 
 function AdventureState:renderBossHud()
     local z = BossZones.fighting(self.level)
-    if z then
+    -- (nivel FLAPPY: su HUD propio — vida siempre a la vista y la carga del ataque especial: src/ui/FlappyHud.lua —)
+    if self.level.flappy then require('src/ui/FlappyHud').draw(self.player) end
+    if z and self.level.flappy then
+        BossHud.drawZone(z, 18, math.min(1, self.bossFightT / 0.8))
+    elseif z then
         local y = 18
         y = BossHud.drawZone(z, y, math.min(1, self.bossFightT / 0.8))
         local p = self.player
         BossHud.drawPlayers({ { name = L('hud.you'), color = { 1, 0.95, 0.2 }, hp = p.hp, hpMax = p.hpMax,
                                 key = p, dead = p.dying } }, 20, 110)
-    elseif self.player.hp < self.player.hpMax and not self.player.dying then
+    elseif self.player.hp < self.player.hpMax and not self.player.dying and not self.level.flappy then
         -- Fuera de una pelea: la vida solo si le falta algo
         local p = self.player
         BossHud.drawPlayers({ { name = L('hud.you'), color = { 1, 0.95, 0.2 }, hp = p.hp, hpMax = p.hpMax, key = p } }, 20, 110)

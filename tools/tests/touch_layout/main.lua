@@ -44,7 +44,7 @@ end
 
 function love.load()
     FONT_SMALL = love.graphics.newFont('assets/fonts/PressStart2P.ttf', 10)
-    local ok = { dentro = true, separados = true, hud = true, grandes = true, zonas = true }
+    local ok = { dentro = true, separados = true, hud = true, grandes = true, zonas = true, especial = true }
     local notes = {}
     local COLS, CW, CH = 4, 480, 300
     local canvas = love.graphics.newCanvas(COLS * CW, math.ceil(#SCREENS / COLS) * CH)
@@ -76,6 +76,15 @@ function love.load()
         if not (a.l and not a.d and b.r and c.d and not c.l and d.j and e.d and e.l) then
             ok.zonas = false; notes[#notes + 1] = S[3] .. ' zonas'
         end
+        -- el botón EXTRA (linterna en niveles a oscuras, ATAQUE ESPECIAL en niveles Flappy): dentro, sin tocar la
+        -- cruceta ni el salto, y tocarlo dispara el especial (no salta)
+        local ex = { x = L.lightX - L.lightW / 2, y = L.lightY - L.lightW / 2, w = L.lightW, h = L.lightW }
+        local tap = TC.read(L, { { L.lightX, L.lightY } }, 'special')
+        local jumpTap = TC.read(L, { { L.jumpX, L.jumpY } }, 'special')
+        if ex.x < 0 or ex.y < 0 or ex.x + ex.w > sw or ex.y + ex.h > sh or overlap(ex, pad) or overlap(ex, jmp)
+           or not tap.x or tap.j or not jumpTap.j or jumpTap.x then
+            ok.especial = false; notes[#notes + 1] = S[3] .. ' especial'
+        end
         -- dibujo (reducido) para la rejilla
         local col, row = (i - 1) % COLS, math.floor((i - 1) / COLS)
         local k = math.min((CW - 10) / sw, (CH - 24) / sh)
@@ -89,7 +98,7 @@ function love.load()
             local hs = toScreen(h)
             love.graphics.setColor(1, 0.9, 0.2, 0.5); love.graphics.rectangle('fill', hs.x, hs.y, hs.w, hs.h)
         end
-        TC.draw(L, { l = false, r = false, d = (i % 2 == 0), j = (i % 3 == 0) })
+        TC.draw(L, { l = false, r = false, d = (i % 2 == 0), j = (i % 3 == 0) }, nil, (i % 2 == 0) and 'special' or 'light')
         love.graphics.pop()
         love.graphics.setColor(1, 1, 1, 1)
         love.graphics.setFont(FONT_SMALL)
@@ -101,6 +110,7 @@ function love.load()
     check('hud', ok.hud, 'no pisan tiempo/puntos, vidas, pausa ni ping' .. (#notes > 0 and (': ' .. table.concat(notes, ', ')) or ''))
     check('grandes', ok.grandes, 'cruceta ≥ 24 % del alto, salto ≥ 17 %')
     check('zonas', ok.zonas, 'brazos, botón y diagonal abajo-izq')
+    check('especial', ok.especial, 'el botón extra (linterna / ataque especial) dentro, sin tocar cruceta ni salto, y tocarlo dispara el especial')
     canvas:newImageData():encode('png', 'touch_layout.png')
     print('captura: ' .. love.filesystem.getSaveDirectory() .. '/touch_layout.png')
     print(fails == 0 and 'TODO OK' or (fails .. ' FALLOS'))

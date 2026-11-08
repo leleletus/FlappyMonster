@@ -14,7 +14,9 @@
     {"h": 32, "image": "assets/images/ui/touch/jump-Sheet.png", "w": 32, "x": 0, "y": 0},
     {"h": 32, "image": "assets/images/ui/touch/jump-Sheet.png", "w": 32, "x": 32, "y": 0},
     {"h": 24, "image": "assets/images/ui/touch/light-Sheet.png", "w": 24, "x": 0, "y": 0},
-    {"h": 24, "image": "assets/images/ui/touch/light-Sheet.png", "w": 24, "x": 24, "y": 0}
+    {"h": 24, "image": "assets/images/ui/touch/light-Sheet.png", "w": 24, "x": 24, "y": 0},
+    {"h": 24, "image": "assets/images/ui/touch/special-Sheet.png", "w": 24, "x": 0, "y": 0},
+    {"h": 24, "image": "assets/images/ui/touch/special-Sheet.png", "w": 24, "x": 24, "y": 0}
   ],
   "anims": {
     "dpad_down": {"fps": 8, "frames": [4], "loop": true},
@@ -27,6 +29,8 @@
     "jump_pressed": {"fps": 8, "frames": [9], "loop": true},
     "jump_up": {"fps": 8, "frames": [8], "loop": true},
     "light_pressed": {"fps": 8, "frames": [11], "loop": true},
-    "light_up": {"fps": 8, "frames": [10], "loop": true}
+    "light_up": {"fps": 8, "frames": [10], "loop": true},
+    "special_pressed": {"fps": 8, "frames": [13], "loop": true},
+    "special_up": {"fps": 8, "frames": [12], "loop": true}
   }
 }
