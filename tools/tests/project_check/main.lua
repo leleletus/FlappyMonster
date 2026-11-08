@@ -221,7 +221,10 @@ function love.load()
         local fh = io.open(ROOT .. page, 'rb')
         local text = fh and fh:read('*a') or ''
         if fh then fh:close() end
-        for p in text:gmatch('`([^`%s]+)`') do
+        -- (un PLAN de implementación nombra archivos que aún no existen: con la marca `project_check: future-paths` en
+        -- la página no se miran sus rutas entre comillas — los enlaces a otras páginas sí —)
+        local future = text:find('project_check: future-paths', 1, true) ~= nil
+        for p in (future and '' or text):gmatch('`([^`%s]+)`') do
             local root = p:match('^(%a+)/')
             if (root == 'src' or root == 'assets' or root == 'tools' or root == 'server' or root == 'libs' or root == 'docs')
                and not p:find('[<>*{}|$…]') and not p:find('...', 1, true) and not p:find('^server/published') then

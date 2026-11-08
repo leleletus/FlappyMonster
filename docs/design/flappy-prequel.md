@@ -213,3 +213,22 @@ Approved by the user on 2026-11-04. Next step: write the implementation plan fro
    the lore fix in [story](../story/story.md).
 
 Projects 2 (online unlock rules) and 3 (online Flappy) come after.
+
+## Plans
+
+One implementation plan per build step, each written (superpowers `writing-plans`) when the step before it is done
+and judged, so it builds on what really exists. Each must leave the game playable and the battery green.
+
+| Plan | Covers | Status |
+|---|---|---|
+| 1 | Debug menu, Adventure lock (off), FLAPPY placeholder | done (0.5.163, menu changes 0.5.166) |
+| 2 | Flight (`PlayerFlight`), pillar tile, test stage | built (0.5.164–0.5.165), feel being judged by the user |
+| 3 | **Campaign frame:** shared save / run core, Flappy saves (3 slots, Easy / Normal / Hard), zone map (placeholder look), stages with lives / Game Over / results, CONTINUE = last mode | **written:** [flappy-plan-3-campaign-frame](flappy-plan-3-campaign-frame.md) |
+| 4 | Flappy HUD (HP, lives, charge); special attack + charge items + return-to-sender; special obstacles; caged flappies (saved on finish); zone food | to write after 3 |
+| 4b | Power-ups ([powerups](powerups.md)): inventory per slot (6 / 3 per type), the quick wheel (touch, pad, PC), `shield` + `heart` first, then the catalog; cages give power-ups | to write after 4 |
+| 5 | Zone 1 complete: Valley background, real stages (same ids as the placeholders), first machine boss, the Evil Monster's look, the zone map's art; map shops + the points wallet | to write after 4b |
+| 6 | Zones 2–6, one sub-plan each (background, music — verified by numbers only —, obstacles, stages, boss); the final over the quarry; **`Campaign.READY = true`** (the Adventure lock goes on) | after 5 |
+| 7 | Films: the campaign's opening and ending; Adventure intro (quarry → volcano) and ending changes; lore fix in [story](../story/story.md) | after 6 |
+| — | Projects 2 (online unlock rules) and 3 (online Flappy) | after 7 |
+
+The Adventure lock turns on in Plan 6, when the campaign can be finished (unless the user asks for it earlier).
