@@ -235,3 +235,7 @@ and judged, so it builds on what really exists. Each must leave the game playabl
 | — | Projects 2 (online unlock rules) and 3 (online Flappy) | after 7 |
 
 The Adventure lock turns on in Plan 6, when the campaign can be finished (unless the user asks for it earlier).
+
+## Later: menu background
+
+The user (2026-11-08): when there are many Flappy levels, the bot in the menu background scene should also play Flappy levels (not only Adventure ones). Not built. History: the old endless-mode background (`MenuScene.flappyBg()`) was first put behind the Flappy screens by a misunderstanding; the user meant the DEBUG menu, and the Flappy screens keep the bot scene.

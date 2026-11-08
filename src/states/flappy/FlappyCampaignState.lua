@@ -53,7 +53,7 @@ function FlappyCampaignState:update(dt)
 end
 
 function FlappyCampaignState:render()
-    MenuScene.flappyBg()
+    MenuScene.draw()
     MenuList.header(L('menu.classic'), 'orange', self.anim, 1)
     self.list:draw()
     MenuList.footer(self.list:desc(), self.anim, N)
