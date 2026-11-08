@@ -195,7 +195,7 @@ local function run()
         local y0 = flies and adv.player.y or 0
         for _ = 1, 4 do press('jump', 0.12) end
         local up = flies and adv.player.y < y0
-        if flies then adv.player.charge = 3; wait(1.0); shot('flight') end      -- (con algo de carga: el HUD de Flappy)
+        if flies then adv.player.charge = 3; wait(1.0); adv.player.shield = true; adv.player.invT = 0; shot('flight') end      -- (con carga y escudo: el HUD de Flappy y la burbuja)
         toAdv = toAdv and flies and up
         check('vuelo', flies and up, ('depuración → %s; nivel Flappy y jugador volando=%s; aletear sube=%s'):format(name(adv), tostring(flies), tostring(up)))
         check('depuracion', toDiff and backDbg and toAdv,

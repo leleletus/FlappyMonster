@@ -94,7 +94,7 @@ end
 function PlayerAdventure:moveAndCollide(level, dx, dy)
     local T      = TILE_PX
     -- Caja con la que choca: la de pie o, agachado, la baja (mismos pies)
-    local yoff, hh = OUTER_YOFF, self.h/2
+    local yoff, hh = OUTER_YOFF * (self.sizeK or 1), self.h/2           -- (sizeK: power-up PEQUEÑO)
     if self.crouching then
         local ob = self:getOuterBounds()
         hh = ob.h / 2
@@ -344,8 +344,9 @@ function PlayerAdventure:moveAndCollide(level, dx, dy)
     end
 
     -- Contacto (hitbox interna) con materiales que matan o dañan
-    local iw2, ih2 = INNER_W/2, INNER_H/2
-    local iy = self.y+OUTER_YOFF
+    local sk = self.sizeK or 1
+    local iw2, ih2 = INNER_W*sk/2, INNER_H*sk/2
+    local iy = self.y+OUTER_YOFF*sk
     if self.crouching then                      -- agachado: la caja interna baja
         local ib = self:getInnerBounds()
         ih2, iy = ib.h/2, ib.y + ib.h/2
@@ -358,7 +359,7 @@ function PlayerAdventure:moveAndCollide(level, dx, dy)
         local t = level:contactAt(c[1],c[2])
         if t then
             if t.mat.contact == 'kill' and self:hazardHit() then return end
-            if t.mat.contact == 'hurt' and self:hurt() then return end
+            if t.mat.contact == 'hurt' and not self:ghostPasses(t) and self:hurt() then return end   -- (FANTASMA: PlayerPowerups)
         end
     end
 

@@ -28,9 +28,12 @@ function PlayerAdventure:render(camX, camY)
         img = PS.rec(self.frame)
     end
     local iw=img.w; local ih=img.h
-    local s=PLAYER_SCALE*self.puff
+    -- (power-up PEQUEÑO: el sprite a ×4 — la densidad de los objetos; a ×3 se vería más fino que todo lo demás —, la caja
+    -- sí a la mitad; FANTASMA: medio transparente — PlayerPowerups.lua —)
+    local s=((self.sizeK or 1) < 1 and 4 or PLAYER_SCALE)*self.puff
     local r, g, b = PlayerAdventure.hurtTint(self.dying and 0 or self.hurtT)
-    love.graphics.setColor(r, g, b, PlayerAdventure.invulnAlpha(not self.dying and self.invT or 0))
+    local ghostA = (not self.dying and self.hasEffect and self:hasEffect('ghost')) and 0.5 or 1
+    love.graphics.setColor(r, g, b, PlayerAdventure.invulnAlpha(not self.dying and self.invT or 0) * ghostA)
     local squashed = not self.dying and (self.squashT or 0) > 0
     local iced = not self.dying and (self.iceT or 0) > 0
     local stunned = not self.dying and (self.stunT or 0) > 0
@@ -71,6 +74,20 @@ function PlayerAdventure:render(camX, camY)
         PlayerAdventure.drawIce(math.floor(self.x-camX), math.floor(self.y-camY), love.timer.getTime(), self.iceT,
                                 self.crouching or squashed)
     end
+    if self.shield and not self.dying then PlayerAdventure.drawShield(self.x - camX, self.y - camY) end
+end
+
+-- La BURBUJA del power-up ESCUDO (assets/images/fx/shield.png, tools/art/ui/make_powerups.py): ×4, late un poco
+local shieldImg
+function PlayerAdventure.drawShield(sx, sy)
+    if not shieldImg then
+        shieldImg = love.graphics.newImage('assets/images/fx/shield.png')
+        shieldImg:setFilter('nearest', 'nearest')
+    end
+    local k = 4                                                -- (siempre ×4: la densidad de los objetos)
+    love.graphics.setColor(1, 1, 1, 0.75 + 0.2 * math.sin(love.timer.getTime() * 5))
+    love.graphics.draw(shieldImg, math.floor(sx), math.floor(sy), 0, k, k, 14, 14)
+    love.graphics.setColor(1, 1, 1, 1)
 end
 
 -- Bloque de hielo alrededor del jugador congelado (x, y = centro en pantalla).

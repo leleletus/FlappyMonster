@@ -55,3 +55,19 @@ def save(rows, path):
 for k in ORDER:
     assert len(ICONS[k]) == 12 and all(len(r) == 12 for r in ICONS[k]), k
 save([''.join(ICONS[k][y] for k in ORDER) for y in range(12)], 'assets/images/ui/powerups/icons-Sheet.png')
+
+# La BURBUJA del escudo (assets/images/fx/shield.png): un aro de 28x28 que rodea al monstruo (×4 → 112 px, como su
+# sprite de 16x16 ×6), con brillo arriba a la izquierda; solo el aro: el monstruo se ve dentro
+def bubble():
+    rows = []
+    for y in range(28):
+        r = ''
+        for x in range(28):
+            dx, dy = x - 13.5, y - 13.5
+            d = (dx * dx + dy * dy) ** 0.5
+            if 12.6 < d <= 13.6: r += 'b'
+            elif 11.6 < d <= 12.6: r += 'w' if (dx < -4 and dy < -4) else 'c'
+            else: r += '.'
+        rows.append(r)
+    return rows
+save(bubble(), 'assets/images/fx/shield.png')

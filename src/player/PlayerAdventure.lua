@@ -109,6 +109,7 @@ function PlayerAdventure:new(x, y)
     o.animT=0; o.frame=3; o.puff=1
     o.lives=3; o.spawnX=x; o.spawnY=y
     o.charge=0               -- (carga del ataque especial: niveles Flappy — PlayerFlight.lua —)
+    o.effects={}; o.shield=false; o.sizeK=1   -- (POWER-UPS: PlayerPowerups.lua)
     o.prevInWater = false   -- para detectar entrada/salida del agua
     -- Ahogamiento
     o.drownTimer  = 0      -- segundos con cabeza bajo agua
@@ -163,7 +164,7 @@ function PlayerAdventure:getOuterBounds(into)
         b.x, b.y, b.w, b.h = self.x-self.w/2, normalBot - h, self.w, h
         return b
     end
-    b.x, b.y, b.w, b.h = self.x-self.w/2, self.y+OUTER_YOFF-self.h/2, self.w, self.h
+    b.x, b.y, b.w, b.h = self.x-self.w/2, self.y+OUTER_YOFF*(self.sizeK or 1)-self.h/2, self.w, self.h
     return b
 end
 function PlayerAdventure:getInnerBounds()
@@ -173,7 +174,8 @@ function PlayerAdventure:getInnerBounds()
         local crouchTop = normalBot - h
         return {x=self.x-INNER_W/2, y=crouchTop, w=INNER_W, h=h}
     end
-    return {x=self.x-INNER_W/2, y=self.y-INNER_H/2, w=INNER_W, h=INNER_H}
+    local k = self.sizeK or 1                                   -- (power-up PEQUEÑO: media caja)
+    return {x=self.x-INNER_W*k/2, y=self.y-INNER_H*k/2, w=INNER_W*k, h=INNER_H*k}
 end
 
 function PlayerAdventure:getHeadPoint()
@@ -258,6 +260,7 @@ end
 function PlayerAdventure:takeDamage()
     if self.dying or not self.alive or self:isInvulnerable() then return false end
     if self.immortal then return false end
+    if self.shield then self:breakShield(); return false end        -- (power-up ESCUDO: PlayerPowerups.lua)
     self.hp=self.hp-1
     if self.hp<=0 then self.hp=self.hpMax; self:die(); return true end
     Sound.play('dies'); Noise.emit(self.x, self.y, Noise.R.hurt, nil, 'hurt'); return false     -- (from 'hurt': el Saltarín Gigante no se asusta de esto)
@@ -267,6 +270,7 @@ end
 -- jefes... Si no lo mata, queda invulnerable HIT_INV s. true si lo mató.
 function PlayerAdventure:hurt(n)
     if self.dying or not self.alive or self:isInvulnerable() then return false end
+    if self.shield and not self.immortal then self:breakShield(); return false end   -- (el ESCUDO para el golpe ENTERO)
     for _ = 1, math.max(1, n or 1) do
         if self:takeDamage() then return true end
     end
@@ -289,6 +293,17 @@ function PlayerAdventure:die(drownDeath, force)
         return false
     end
     if self:isInvulnerable() and not drownDeath and not force then return false end
+    -- ESCUDO (power-up): para pinchos, lava y ahogarse; las muertes FORZADAS (quedarse atrás, el límite de tiempo) no
+    if self.shield and not force then
+        self:breakShield()
+        self.vy, self.onGround = -620, false
+        self.gpPhase, self.gpT = nil, 0
+        if drownDeath then
+            self.drownTimer=0; self.drownChime=0; self.drownPhase='none'; self.drownAudT=0; self.drownDead=false
+            Sound.stopTracked('drowning')
+        end
+        return false
+    end
     self.dying=true; self.vx=0; self.vy=0
     self.gpPhase=nil; self.stunT=0; self.squashT=0; self.iceT=0; self.gulped=false; self.gulpMash=0; self.frostT=0
     self.deathPhase='freeze'; self.deathTimer=0; self.deathY=self.y
@@ -447,6 +462,7 @@ function PlayerAdventure:_update(dt, level)
     if self.stunT > 0 then self.stunT = math.max(0, self.stunT - dt) end
     if (self.invT or 0) > 0 then self.invT = math.max(0, self.invT - dt) end
     if (self.squashT or 0) > 0 then self.squashT = math.max(0, self.squashT - dt) end
+    self:tickEffects(dt, level)                                    -- (power-ups con tiempo: PlayerPowerups.lua)
     local stunned = self.stunT > 0
     if (self.ctrlLockT or 0) > 0 then self.ctrlLockT = math.max(0, self.ctrlLockT - dt) end
     local locked = stunned or (self.ctrlLockT or 0) > 0      -- sin control (lanzado de lado)
@@ -627,6 +643,7 @@ require('src/player/PlayerGroundPound')(PlayerAdventure, P)
 require('src/player/PlayerRender')(PlayerAdventure, P)
 require('src/player/PlayerGulp')(PlayerAdventure, P)
 require('src/player/PlayerFlight')(PlayerAdventure, P)
+require('src/player/PlayerPowerups')(PlayerAdventure, P)
 dropPlatformTop, ICE_FREE_INV, ICE_MASH, loadSprites = P.dropPlatformTop, P.ICE_FREE_INV, P.ICE_MASH, P.loadSprites
 
 return PlayerAdventure

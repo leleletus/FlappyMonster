@@ -16,6 +16,8 @@
 --               una ya liberada en una partida terminada sale vacía
 --   muro        muro agrietado: sólido; una ráfaga más floja que su mínimo no lo rompe (y se para); con bastante, se rompe
 --               y se pasa
+--   powerups    escudo (para un golpe; no una muerte forzada), corazón, fuerza (×2 a jefes, no abre jaulas de más), imanes,
+--               pequeño, fantasma (atraviesa pilares; acabarse dentro = invulnerable), lo que no se puede usar
 --   normal      en un nivel normal el jugador NO vuela (salto de plataformas de siempre)
 --   etapa       la etapa de prueba (assets/levels/_flappy_vuelo.json) se puede pasar: un piloto sencillo (aletea
 --               cuando está por debajo del centro del hueco siguiente) llega a la meta sin morir
@@ -422,7 +424,94 @@ function cases.muro()
            pa.x, tostring(blocked), tostring(held), tostring(broken), pa.x))
 end
 
-local ORDER = { 'aleteo', 'ventana', 'pilar', 'suelo', 'reaparece', 'exclusivo', 'normal', 'carga', 'ataque', 'jaula', 'muro', 'etapa' }
+function cases.powerups()
+    local out = {}
+    local function ok(name, v) out[#out + 1] = name .. '=' .. tostring(v); return v end
+    -- ESCUDO: para un golpe de pilar (vida igual, escudo fuera); el siguiente sí quita
+    -- (el 2º pilar, lejos: que se haya acabado la invulnerabilidad del golpe parado)
+    local lv = stage(40, { { 12, 10, 0 }, { 24, 10, 0 } }, nil, true)
+    local pa = player(lv, 8 * T, 4.5 * T)
+    local used = pa:usePowerup('shield')
+    local again = pa:canUse('shield')
+    stub.state.right = true
+    local hp0 = pa.hp
+    step(lv, 0.9, function() hover(pa, 4.5 * T) end)
+    local a1 = ok('escudo para el 1º', used and not again and pa.hp == hp0 and not pa.shield)
+    step(lv, 3.5, function() hover(pa, 4.5 * T) end)
+    clearInput()
+    local a2 = ok('el 2º quita', pa.hp == hp0 - 1)
+    -- ESCUDO y quedarse atrás de la cámara (muerte forzada): muere y el escudo sigue
+    local lv2 = stage(80, nil, 300, true)
+    for r = 1, 9 do lv2.tiles[r][14] = require('src/world/tiles/TileCodec').encode(1) end
+    local pb = player(lv2, 10 * T, 4.5 * T)
+    pb:usePowerup('shield')
+    stub.state.right = true
+    local died = false
+    step(lv2, 6, function() hover(pb, 4.5 * T); if pb.dying then died = true; return true end end)
+    clearInput()
+    local a3 = ok('atrás muere y conserva el escudo', died and pb.shield == true)
+    -- CORAZÓN: vida máxima 4 y +1
+    local lv3 = stage(40, nil, nil, true)
+    local pc = player(lv3, 8 * T, 4.5 * T)
+    pc.hp = 2
+    pc:usePowerup('heart')
+    local a4 = ok('corazón', pc.hpMax == 4 and pc.hp == 3)
+    -- FUERZA: un jefe recibe 2 × la potencia; una jaula de mínimo 4 NO se abre con potencia 3
+    local Boss = require 'src/world/entities/base/Boss'
+    local boss = { alive = true, x = 13 * T, y = 4.5 * T, dmg = 0, isVulnerable = function() return true end,
+                   damage = function(self, n) self.dmg = self.dmg + n end,
+                   getOuterBounds = function(self) return { x = self.x - 32, y = self.y - 64, w = 64, h = 128 } end }
+    boss.onSpecialHit = Boss.onSpecialHit
+    -- (un JEFE de mentira con lo justo: el resto de lo de Entity, por herencia)
+    setmetatable(boss, { __index = require('src/world/entities/base/Entity') })
+    boss.update = function() end
+    boss.isGhost = function() return true end
+    local lv4 = stage(40, nil, nil, true, { { type = 'cage', col = 20, row = 5, props = { minCharge = 4 } } })
+    table.insert(lv4.liveEntities, 1, boss)
+    local pd = player(lv4, 8 * T, 4.5 * T)
+    pd:usePowerup('strength')
+    shoot(lv4, pd, 3, 4.5 * T)
+    local cage = lv4.liveEntities[2]
+    local a5 = ok('fuerza ×2 al jefe', boss.dmg == 6)
+    table.remove(lv4.liveEntities, 1)
+    shoot(lv4, pd, 3, 4.5 * T)
+    local a6 = ok('la fuerza no abre jaulas de más', cage.state == 'closed')
+    -- IMANES: el de objetos atrae una carga a 3 casillas en 1 s; el de puntos no
+    local function magnetTest(id)
+        local lv5 = stage(40, nil, nil, true, { { type = 'flapcharge', col = 12, row = 3, props = {} } })
+        local pe = player(lv5, 8 * T, 4.5 * T)
+        pe:usePowerup(id)
+        step(lv5, 1.2, function() hover(pe, 4.5 * T) end)
+        return pe.charge
+    end
+    local a7 = ok('imán de objetos', magnetTest('magnet_items') == 1 and magnetTest('magnet_points') == 0)
+    -- PEQUEÑO: media caja
+    local pf = player(lv3, 8 * T, 4.5 * T)
+    local w0 = pf:getOuterBounds().w
+    pf:usePowerup('small')
+    step(lv3, DT)
+    local a8 = ok('pequeño', math.abs(pf:getOuterBounds().w - w0 / 2) < 1)
+    -- FANTASMA: atraviesa un pilar sin perder vida; si se acaba dentro, invulnerable en vez de golpe
+    local lv6 = stage(40, { { 12, 10, 0 }, { 13, 10, 0 }, { 14, 10, 0 } }, nil, true)
+    local pg = player(lv6, 8 * T, 4.5 * T)
+    pg:usePowerup('ghost')
+    stub.state.right = true
+    local hpG = pg.hp
+    step(lv6, 1.0, function() hover(pg, 4.5 * T) end)
+    local a9 = ok('fantasma atraviesa', pg.hp == hpG and pg.x > 11 * T)
+    clearInput()
+    pg.x = 13.5 * T
+    pg.effects.ghost = 0.05
+    step(lv6, 0.3, function() hover(pg, 4.5 * T) end)
+    local a10 = ok('se acaba dentro: invulnerable', pg.hp == hpG and pg:isInvulnerable())
+    -- no se pueden gastar mal: imán con el súper imán puesto
+    local ph = player(lv3, 8 * T, 4.5 * T)
+    ph:usePowerup('magnet_all')
+    local a11 = ok('imán bajo súper imán no', not ph:canUse('magnet_points') and not ph:usePowerup('magnet_items'))
+    check('powerups', a1 and a2 and a3 and a4 and a5 and a6 and a7 and a8 and a9 and a10 and a11, table.concat(out, '; '))
+end
+
+local ORDER = { 'aleteo', 'ventana', 'pilar', 'suelo', 'reaparece', 'exclusivo', 'normal', 'carga', 'ataque', 'jaula', 'muro', 'powerups', 'etapa' }
 function love.load()
     local only = os.getenv('CASE')
     for _, name in ipairs(ORDER) do
