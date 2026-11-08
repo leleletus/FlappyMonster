@@ -77,7 +77,7 @@ ENTER / flap plays the stage or opens the shop (`flappy_shop { zone }`); BACK â†
 tap the selected one to play / enter. The state keeps `sel` (stage index) and `onShop`.
 
 **To add a zone's map:** give the zone `map = { art, music, at, shop }` and make its art (add the zone's drawing to
-`make_flappy_map.py`; the five files with that prefix). `flappy_campaign CASE=zonas` checks the art exists and every
+`make_flappy_map.py`; the files with that prefix: `_bg`, `_pillar`, `_nest-Sheet`, `_boss-Sheet`, `_shop-Sheet`, plus `_sign` when the map has a `shop`). `flappy_campaign CASE=zonas` checks the art exists and every
 node (and the shop, if the zone sells something) has a position on screen that does not overlap another.
 Not judged by the user yet: the look of the map, the merchant and the machine icon (art applied provisionally).
 

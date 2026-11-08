@@ -32,6 +32,7 @@ one with square blocks.
 - **Flappy menu background:** the old Flappy background (`Background.png`, the square blocks, as the endless mode
   draws it, scrolling) behind the Flappy menu (FlappyCampaignState), the Flappy slot screen and the shop; the zone map
   keeps its Valley art; Adventure menus unchanged.
+  Superseded (the user, 2026-11-08): the old background goes only in the DEBUG MENU; Flappy menus keep the bot scene — see flappy-campaign Decisions.
 
 ## Global Constraints
 
@@ -80,6 +81,8 @@ or `netcopter_rules` (case `intro_planea`).
   (Read) → `FlappyMonster_pruebas/valle/mapa_cartel.png`; `menu_flow`, `lang_names` OK. Commit.
 
 ### Task 4: The old Flappy background behind the Flappy menus
+
+Superseded (the user, 2026-11-08): the old background goes only in the DEBUG MENU; Flappy menus keep the bot scene — see flappy-campaign Decisions.
 
 **Files:** find how the endless mode draws `Background.png` (src/states/flappy/PlayState.lua) and make a shared
 background drawer (no copy) used by FlappyCampaignState, the slot screen when `campaign = 'flappy'`, and

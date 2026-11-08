@@ -189,7 +189,7 @@ ground pound):
   Test: `netcopter_rules intro_planea`.
 - Respawn: `AutoScroll.respawnPoint` in a Flappy level = in the air at a third of the window, the free cell closest to
   mid-height (never inside a pillar): `Level:flightSpot(x, minRow, maxRow)`. In a Flappy boss fight
-  `BossZones.respawnPoint` uses the same rule at a third of the zone (never standing on the floor, which hurts).
+  `BossZones.respawnPoint` uses the same rule at a third of the zone (away from the bottom edge).
 - Shared simulation (golden rule 1): nothing new travels online yet (Flappy levels are listed in no online mode).
 
 - FACING in flight: the last non-zero horizontal input (`inX`; starts right, kept while stunned or with no input; the

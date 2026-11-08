@@ -113,7 +113,7 @@ endless mode. Testers keep Adventure and Flappy. Turn it on in the same commit t
 - A new menu screen: `MenuScene.update(dt)` in `update`, `MenuScene.draw()` first in `render`; a `MenuAnim` for its
   elements; `MenuList` for a list of buttons; leave with `anim:leave(function() gStateMachine:change(...) end)` to
   another menu screen, or `Transition.go(...)` to anything else.
-- The DEBUG menu uses `MenuScene.flappyBg()`: the old endless-mode background (Background.png x15, tinted by the `normal` palette of `src/flappy/Palettes.lua`, shared with `PlayState`, scrolling like there). The Flappy screens (menu, slots, shop) keep the living bot scene like the other menus; the zone map keeps its Valley art. SoundTest / FilmTest stay on their bricks backdrop (not part of the debug menu's look).
+- The DEBUG menu uses `MenuScene.flappyBg()`: the old endless-mode background (Background.png x15, tinted by the `normal` palette of `src/flappy/Palettes.lua`, shared with `PlayState`, scrolling like there). The Flappy menu and shop keep the living bot scene; the slot screen draws the story bricks (as Adventure's); the zone map keeps its Valley art. SoundTest / FilmTest stay on their bricks backdrop (not part of the debug menu's look).
 - A content screen designed over black (Free Play, online): `MenuScene.backdrop()` instead of its background.
 - A new background scene: build its graph, find a seed (`FINDSEED`), add `{ level, seed }`.
 - New player-facing text: a row in `assets/lang/translations.csv` with every language (`menu.*`, `adv.desc_*`, `story.slot_*`).

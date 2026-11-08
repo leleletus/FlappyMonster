@@ -222,7 +222,9 @@ function cases.zonas()
         local M, Z = Zones.get(z).map, Zones.get(z)
         if not M then bad[#bad + 1] = Z.id .. ' (sin mapa)'
         else
-            for _, f in ipairs({ '_bg', '_pillar', '_nest-Sheet', '_boss-Sheet', '_shop-Sheet' }) do
+            local files = { '_bg', '_pillar', '_nest-Sheet', '_boss-Sheet', '_shop-Sheet' }
+            if M.shop then files[#files + 1] = '_sign' end
+            for _, f in ipairs(files) do
                 local path = 'assets/images/flappy/map/' .. M.art .. f .. '.png'
                 if not love.filesystem.getInfo(path) then bad[#bad + 1] = path .. ' (no existe)' end
             end
