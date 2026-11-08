@@ -2,6 +2,9 @@
 --   archivo    SaveFile: escribir y leer una tabla; un archivo roto se lee como nil + dañado y NO se sobrescribe
 --   progreso   RunCore con un catálogo de mentira (2 mundos x 2 nodos): orden de los nodos, el mundo siguiente tras el
 --              jefe, frontier, score (mejor nota, puntos), restartWorld (borra lo superado del mundo y guarda los récords)
+--   zonas      cada etapa de src/flappy/Zones.lua existe, es un nivel Flappy con meta y sin errores del editor
+--   partida    FlappyRun: abrir un hueco escribe flappy<n>.sav (no story<n>.sav), las etapas se abren en orden, vidas de
+--              Fácil al empezar, gameOver vuelve al principio de la zona
 --   (los casos de pantallas — mapa, partidas, CONTINUAR — van en menu_flow, que corre el juego de verdad)
 --
 --   tools/tests/run.sh flappy_campaign   (CASE=nombre: solo ese)
@@ -75,7 +78,59 @@ function cases.progreso()
            tostring(s0), tostring(s1), tostring(s2), tostring(fw), tostring(fk), done, total, tostring(s3), R.data.lives))
 end
 
-local ORDER = { 'archivo', 'progreso' }
+function cases.zonas()
+    local Zones = require 'src/flappy/Zones'
+    local Level = require 'src/world/level/Level'
+    local Model = require 'src/editor/EditorModel'
+    local n, bad = 0, {}
+    for z = 1, Zones.count() do
+        for _, node in ipairs(Zones.nodes(z)) do
+            n = n + 1
+            local path = Zones.path(node.id)
+            if not love.filesystem.getInfo(path) then bad[#bad + 1] = node.id .. ' (no existe)'
+            else
+                local lv = Level.new(path)
+                local errs = 0
+                for _, w in ipairs(Model.load(path):validate()) do if w[1] == 'error' then errs = errs + 1 end end
+                if not lv.flappy then bad[#bad + 1] = node.id .. ' (no es Flappy)' end
+                if lv:countTrigger('finish') == 0 then bad[#bad + 1] = node.id .. ' (sin meta)' end
+                if errs > 0 then bad[#bad + 1] = node.id .. ' (' .. errs .. ' errores)' end
+            end
+        end
+    end
+    check('zonas', n >= 2 and #bad == 0 and Zones.get(1).id == 'valle',
+          ('%d etapas en %d zonas; problemas: %s'):format(n, Zones.count(), #bad > 0 and table.concat(bad, ', ') or 'ninguno'))
+end
+
+function cases.partida()
+    local FlappyRun = require 'src/flappy/FlappyRun'
+    local FlappySave = require 'src/flappy/FlappySave'
+    for i = 1, FlappySave.SLOTS do FlappySave.delete(i) end
+    love.filesystem.remove('story2.sav')
+    FlappyRun.open(2, 'easy')
+    local files = love.filesystem.getInfo('flappy2.sav') ~= nil and love.filesystem.getInfo('story2.sav') == nil
+    local lives0 = FlappyRun.data.lives
+    local o0 = FlappyRun.state(1, 1) == 'open' and FlappyRun.state(1, 2) == 'locked'
+    local sum = FlappyRun.complete('valle_pilares_1', { time = 20, width = 150, score = 100 })
+    local o1 = sum ~= nil and FlappyRun.state(1, 2) == 'open' and FlappySave.load(2).done.valle_pilares_1 == true
+    FlappyRun.data.world, FlappyRun.data.node = 1, 2
+    local z = FlappyRun.gameOver()
+    local back = z == 1 and FlappyRun.data.node == 1 and not FlappyRun.isDone('valle_pilares_1') and FlappyRun.data.lives == lives0
+    -- (terminar la última etapa con la campaña aún no lista — Campaign.READY false — NO desbloquea Aventura para siempre)
+    local Save = require 'src/story/Save'
+    local g = Save.global(); g.adventure = nil; Save.writeGlobal(g)
+    FlappyRun.complete('valle_pilares_1', { time = 20, width = 150 })
+    local nodes = require('src/flappy/Zones').nodes(require('src/flappy/Zones').count())
+    FlappyRun.complete(nodes[#nodes].id, { time = 20, width = 150 })
+    local notYet = Save.global().adventure == nil
+    FlappyRun.close()
+    FlappySave.delete(2)
+    check('partida', files and lives0 == 3 and o0 and o1 and back and notYet,
+          ('flappy2.sav sí y story2.sav no=%s; vidas al empezar %d; orden al empezar=%s; tras la 1ª etapa=%s; game over → zona %s, nodo 1, vidas de nuevo=%s; terminarla sin la campaña lista no abre Aventura=%s'):format(
+           tostring(files), lives0, tostring(o0), tostring(o1), tostring(z), tostring(back), tostring(notYet)))
+end
+
+local ORDER = { 'archivo', 'progreso', 'zonas', 'partida' }
 function love.load()
     local only = os.getenv('CASE')
     for _, name in ipairs(ORDER) do

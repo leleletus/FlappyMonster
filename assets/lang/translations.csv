@@ -233,6 +233,7 @@ menu.desc_adventure_locked,Termina la campaña de FLAPPY para desbloquear la ave
 menu.desc_classic,"La precuela: cómo llegó el monstruo a las islas","The prequel: how the monster reached the islands",
 menu.desc_settings,Idioma y opciones,Language and options,
 menu.hint,{move} elegir      {ok} aceptar      {back} volver,{move} choose      {ok} select      {back} back,
+flappy.zone.valle,Valle de los Pilares,Valley of the Pillars,"Zona 1 de la campaña Flappy (src/flappy/Zones.lua)"
 fc.campaign,CAMPAÑA,CAMPAIGN,"CLÁSICO (src/states/flappy/FlappyCampaignState.lua): la campaña Flappy, aún sin hacer"
 fc.desc_soon,"Próximamente: cómo llegó el monstruo a las islas","Coming soon: how the monster reached the islands",
 fc.endless,INFINITO,ENDLESS,

@@ -24,4 +24,10 @@ function Campaign.unlockAdventure()
     Save.writeGlobal(g)
 end
 
+-- La ÚLTIMA etapa de la última zona superada (src/flappy/FlappyRun.lua): la campaña está terminada. Solo cuenta con la
+-- campaña LISTA (READY): terminar la zona provisional de hoy no puede dejar Aventura abierta para siempre
+function Campaign.finished()
+    if Campaign.READY then Campaign.unlockAdventure() end
+end
+
 return Campaign
