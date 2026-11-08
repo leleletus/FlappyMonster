@@ -200,6 +200,9 @@ Approved by the user in [frozen-islands-design](../design/archive/frozen-islands
 generic moving platform on a cable"). Both generic: any island can use them. Harnesses `avalanche_rules` and
 `cablecar_rules`; online: `online_smoke LEVEL=tools/tests/avalanche_rules/montana.json WATCH=avalanche|cablecar`.
 
+### Net-launcher (`traps/netlauncher.lua`, Flappy campaign only)
+Ground turret of the Evil Monster: glows 0.6 s, then fires a straight net upward (`netshot.launch` vertical mode) every 3.5 s (`trapPace`); `diesToSpecial` lets the special blast destroy it. Full description: [flappy-campaign](../gameplay/flappy-campaign.md#evil-monster-machines-plan-5b).
+
 ### Avalanche (`traps/avalanche.lua`, "Alud", Trampas)
 
 - A SNOW CHUTE: a band of `width` columns from the entity cell to the right, up to `length` tiles down. Placed on the

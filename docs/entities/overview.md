@@ -47,7 +47,7 @@ wraps a player —; `reflectable` is NOT one of them but a CLASS field (`GlowBom
 `activatable`. In the base: RESERVE minions for ANY entity (`Entity:makeReserve` + default `netAtRest/netRest`; hook
 `onMakeReserve`), APPEAR IN PLACE for any reserve entity (`Entity:appearAt(x, y)`: it goes back into play at that spot in its usual state, a flier stays floating; used by the Flappy boss help and the Net-Copter's net / bomb), FALL FROM THE SKY for any entity (`Entity:dropFromSky(x, y, lift)`: back in play in the common state 'skyfall', slow gravity, rests on the ground, then its usual state; used by the boss-fight help, `docs/gameplay/difficulty.md`), stock crawler (`Crawler.mixin(Class)`: rotated boxes, surface normal, release, no fall while
 attached; `Crawler.entityAhead`), block-break deaths (`Level:forStanders`, crawlers included), and for bosses
-`Boss:enter(st)`, `Boss:zoneBounds()`, `Boss:minions(level)`, `Boss:nearestPlayer(level)`, `Boss.strike(pa, hit, dir)`
+`Boss:enter(st)`, `Boss:zoneBounds()`, `Entity:minions(level)` / `Entity:freeMinion(level)` (moved from `Boss` to the base in Plan 5b so a turret like the `netlauncher` also reuses its minions; the boss keeps calling them), `Boss:nearestPlayer(level)`, `Boss.strike(pa, hit, dir)`
 (the Snowball Boss's, now shared) and `src/fx/BossFx.lua` (`stars` = stun stars, `anger` = anger symbols, `target` =
 landing mark; sprites in `assets/images/bosses/common/`). Asset layout: enemies `assets/images/<enemy>/`, EVERY boss
 `assets/images/bosses/<boss>/` (megacrabby and megacrabby_ice moved there), sounds `player/` (incl. the flashlight

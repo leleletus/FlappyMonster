@@ -187,6 +187,10 @@ the air inside the zone with full HP), `touch_layout` (`especial`), `menu_flow` 
 `continuar_flappy`, `candado`).
 
 **Decisions**
+- 2026-11-08, the user: approved the Plan 5b proposal (Valley look, 3 stages, map, shop + wallet) unchanged.
+- Plan 5b: the grade-reward points also enter the wallet; replaying a finished stage adds its points again (farming
+  is allowed, prices are high) - FLAGGED for the user to confirm. All 5b art (sky, map, merchant, net-launcher) is
+  provisional until the user plays it.
 - 2026-11-08, the user: the first boss is the Net-Copter as proposed; `tuffi` music for all Flappy bosses for now
   (details in [netcopter](../bosses/netcopter.md#history)).
 - 2026-11-07, the user: FLAPPY first in the main menu, CONTINUE = the last mode played, Free Play only in the debug menu.
