@@ -180,9 +180,14 @@ function cases.jaulas()
     FlappyRun.open(3, 'normal')
     FlappyRun.setLives(FlappyRun.data.lives - 1)                         -- (salir a medias: solo vidas)
     local none = next(FlappySave.load(3).rescued or {}) == nil
-    FlappyRun.complete('valle_pilares_1', { time = 20, width = 120, rescued = { 1 } })
+    -- (el índice de colocación de la jaula de verdad de la etapa)
+    local cageIdx
+    for i, e in ipairs(require('libs/json').decode(love.filesystem.read('assets/levels/valle_pilares_1.json')).entities) do
+        if e.type == 'cage' then cageIdx = i end
+    end
+    FlappyRun.complete('valle_pilares_1', { time = 20, width = 120, rescued = { cageIdx } })
     local d = FlappySave.load(3)
-    local saved = d.rescued and d.rescued.valle_pilares_1 and d.rescued.valle_pilares_1[1] == true
+    local saved = cageIdx and d.rescued and d.rescued.valle_pilares_1 and d.rescued.valle_pilares_1[cageIdx] == true
     local freed, total = FlappyRun.rescuedCount('valle_pilares_1')
     FlappyRun.close(); FlappySave.delete(3)
     check('jaulas', none and saved and freed == 1 and FlappySave.VERSION >= 2,
@@ -220,7 +225,32 @@ function cases.inventario()
            codes, tostring(spent), tostring(inFile), tostring(missing), total, tostring(old and old.inventory and next(old.inventory) == nil), table.concat(ids, ',')))
 end
 
-local ORDER = { 'archivo', 'progreso', 'zonas', 'partida', 'premio', 'jaulas', 'inventario' }
+-- Cada jaula REGALA su power-up (`gift`) al terminar la etapa; una vez por partida; con el inventario lleno se pierde
+-- (y se avisa) pero la jaula cuenta como liberada
+function cases.regalos()
+    local FlappyRun, FlappySave = require 'src/flappy/FlappyRun', require 'src/flappy/FlappySave'
+    local ents = require('libs/json').decode(love.filesystem.read('assets/levels/valle_pilares_1.json')).entities
+    local cageIdx, gift
+    for i, e in ipairs(ents) do if e.type == 'cage' then cageIdx, gift = i, (e.props or {}).gift or 'shield' end end
+    FlappySave.delete(3)
+    FlappyRun.open(3, 'normal')
+    local s1 = FlappyRun.complete('valle_pilares_1', { time = 20, width = 120, rescued = { cageIdx } })
+    local got = (FlappyRun.data.inventory[gift] or 0) == 1 and s1.gifts and s1.gifts[1] == gift
+    FlappyRun.complete('valle_pilares_1', { time = 20, width = 120, rescued = { cageIdx } })   -- (otra vez: ya liberada)
+    local once = (FlappyRun.data.inventory[gift] or 0) == 1
+    -- lleno: 6 en total → se pierde, con aviso; la jaula cuenta como liberada
+    FlappyRun.data.rescued = {}
+    FlappyRun.data.inventory = { heart = 3, strength = 3 }
+    local s3 = FlappyRun.complete('valle_pilares_1', { time = 20, width = 120, rescued = { cageIdx } })
+    local lost = s3.lostGifts and s3.lostGifts[1] == gift and FlappyRun.inventoryCount() == 6
+                 and FlappySave.load(3).rescued.valle_pilares_1[cageIdx] == true
+    FlappyRun.close(); FlappySave.delete(3)
+    check('regalos', cageIdx and got and once and lost,
+          ('la jaula %s regala %s=%s; una sola vez=%s; con el inventario lleno se pierde y se avisa=%s'):format(
+           tostring(cageIdx), tostring(gift), tostring(got), tostring(once), tostring(lost)))
+end
+
+local ORDER = { 'archivo', 'progreso', 'zonas', 'partida', 'premio', 'jaulas', 'inventario', 'regalos' }
 function love.load()
     local only = os.getenv('CASE')
     for _, name in ipairs(ORDER) do

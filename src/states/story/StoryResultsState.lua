@@ -97,6 +97,9 @@ function StoryResultsState:enter(args)
         if rw.lives then reward({ lives = rw.lives }) end
         if rw.points then reward({ points = rw.points }) end
     end
+    -- (campaña Flappy: los power-ups que regalaron los flappies liberados; los que no cupieron en el inventario)
+    for _, id in ipairs(s.gifts or {}) do add(L('flappy.results.gift', { name = L('powerup.' .. id) }), { 0.6, 0.9, 1 }) end
+    for _, id in ipairs(s.lostGifts or {}) do add(L('flappy.results.gift_lost', { name = L('powerup.' .. id) }), { 1, 0.6, 0.5 }) end
     if s.world then
         add(L('story.results.world', { grade = s.world.grade }), (GRADE[s.world.grade] or GRADE.C).col)
         reward(s.world.reward)

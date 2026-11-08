@@ -26,7 +26,7 @@
     {"type":"flapcharge","col":74,"row":7,"props":{}},
     {"type":"apple","col":56,"row":4,"props":{}},
     {"type":"apple","col":92,"row":6,"props":{}},
-    {"type":"cage","col":47,"row":2,"props":{"minCharge":3}},
+    {"type":"cage","col":47,"row":2,"props":{"minCharge":3,"gift":"heart"}},
     {"type":"crackwall","col":83,"row":2,"props":{"minCharge":2,"rows":2}},
     {"type":"flapcharge","col":84,"row":1,"props":{}}
   ],

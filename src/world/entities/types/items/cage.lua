@@ -3,6 +3,7 @@
 -- no llega, la jaula aguanta y para la ráfaga). Libre, sale volando a casa (por magia: sin alas).
 -- Estados: 'closed' · 'open' (liberado AHORA: `rescuedNow`, que AdventureState junta al TERMINAR la etapa en
 -- `result.rescued`; FlappyRun lo guarda — golden rule 7 —) · 'empty' (`freed`: liberado en una partida ya terminada).
+-- Cada uno REGALA un power-up (`gift`, docs/design/powerups.md) al terminar la etapa: src/flappy/FlappyRun.lua.
 -- Arte: assets/images/items/cage-Sheet.png (tools/art/items/make_flappy_items.py): cerrada · abierta · el flappy suelto.
 local Entity = require 'src/world/entities/base/Entity'
 
@@ -76,6 +77,13 @@ return {
     props = {
         { key = 'minCharge', kind = 'int', label = 'Carga mínima', group = 'Jaula', default = 1, min = 1, max = 5, step = 1,
           help = 'Potencia del ataque especial que hace falta para abrirla (1..5)' },
+        { key = 'gift', kind = 'enum', label = 'Regala', group = 'Jaula', default = 'shield', options = (function()
+              local o = {}
+              for _, p in ipairs(require('src/world/powerups/Powerups').forMode('flappy')) do
+                  o[#o + 1] = { value = p.id, label = p.id }
+              end
+              return o
+          end)(), help = 'El power-up que da al liberarlo (al terminar la etapa, una vez por partida)' },
     },
     editor = { draw = function(x, y, s)                    -- (la jaula cerrada, el primer cuadro)
         Cage.loadAssets()

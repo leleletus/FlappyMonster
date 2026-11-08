@@ -104,6 +104,7 @@ local function run()
             usedTouch = pa:hasEffect('strength') and inv('strength') == 0 and name(top()) == 'AdventureState'
         end
     end
+    shot('efectos')                                  -- (el HUD con los power-ups activos: escudo, súper imán, fuerza)
     check('tactil', touchOpen and usedTouch, ('la bolsa abre=%s; tocar la fuerza la usa=%s'):format(tostring(touchOpen), tostring(usedTouch)))
     -- muriendo: no se abre; y lo gastado sigue gastado
     pa:die(nil, true); wait(0.1)

@@ -76,7 +76,7 @@ def ent(kind, col, row, **props):
     return {"type": kind, "col": col, "row": row, "props": props}
 
 
-def populate(gaps, charges, food, cage, wall):
+def populate(gaps, charges, food, cage, wall, gift='shield'):
     """Objetos de una etapa (Plan 4): CARGAS en el centro del hueco de los pilares `charges` (índices de gaps), COMIDA
     en el de `food`, la JAULA (índice, carga mínima) arriba entre dos pilares y el MURO (índice) arriba entre dos pilares
     ENCERRANDO una carga (bloques sólidos debajo y a su derecha: solo se llega rompiéndolo). La ruta principal (los
@@ -89,7 +89,7 @@ def populate(gaps, charges, food, cage, wall):
         c, top, h = gaps[i]
         out.append(ent('apple', c, top + (h - 1) // 2))
     ci, cmin = cage
-    out.append(ent('cage', gaps[ci][0] + 3, 2, minCharge=cmin))
+    out.append(ent('cage', gaps[ci][0] + 3, 2, minCharge=cmin, gift=gift))
     wc = gaps[wall][0] + 3
     out.append(ent('crackwall', wc, 2, minCharge=2, rows=2))
     out.append(ent('flapcharge', wc + 1, 1))

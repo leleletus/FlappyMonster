@@ -40,6 +40,31 @@ function FlappyHud.drawBag(n)
     love.graphics.setColor(1, 1, 1, 1)
 end
 
+local iconImg, iconQ
+function FlappyHud.drawEffects(pa, x, y)
+    local Powerups = require 'src/world/powerups/Powerups'
+    if not iconImg then
+        iconImg = love.graphics.newImage('assets/images/ui/powerups/icons-Sheet.png')
+        iconImg:setFilter('nearest', 'nearest')
+        iconQ = {}
+        for i = 1, iconImg:getWidth() / 12 do iconQ[i] = love.graphics.newQuad((i - 1) * 12, 0, 12, 12, iconImg:getDimensions()) end
+    end
+    local list = {}
+    if pa.shield then list[#list + 1] = { id = 'shield' } end
+    for _, p in ipairs(Powerups.LIST) do
+        local t = pa.effects and pa.effects[p.id]
+        if t and t > 0 then list[#list + 1] = { id = p.id, t = t } end
+    end
+    for i, it in ipairs(list) do
+        local px = x + (i - 1) * 56
+        local blink = (it.t and it.t < 3 and math.floor(love.timer.getTime() * 8) % 2 == 0) and 0.4 or 1
+        love.graphics.setColor(1, 1, 1, blink)
+        love.graphics.draw(iconImg, iconQ[Powerups.get(it.id).icon], px, y, 0, 4, 4)      -- (×4: la densidad de los objetos)
+        if it.t then require('src/ui/PixelFont').shadow(tostring(math.ceil(it.t)), px + 34, y + 34, 2, 1) end
+    end
+    love.graphics.setColor(1, 1, 1, 1)
+end
+
 function FlappyHud.draw(pa)
     if not pa then return end
     load()
@@ -50,6 +75,8 @@ function FlappyHud.draw(pa)
         local full = not pa.dying and i <= (pa.hp or 0)
         love.graphics.draw(img, quads[full and 1 or 2], Ly.hearts.x + (i - 1) * Ly.hearts.step, Ly.hearts.y, 0, S, S)
     end
+    -- los POWER-UPS activos (src/player/PlayerPowerups.lua): su icono y los segundos que quedan; el escudo mientras está
+    FlappyHud.drawEffects(pa, Ly.cells.x, Ly.cells.y + 9 * S + 6)
     local max, c = PA.CHARGE_MAX or 5, pa.charge or 0
     local blink = (c >= max) and (math.floor(love.timer.getTime() * 6) % 2 == 0) and 0.55 or 1
     for i = 1, max do

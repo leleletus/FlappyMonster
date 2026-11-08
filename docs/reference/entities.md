@@ -120,7 +120,7 @@ and the network use; **Label** is the (Spanish) name in the editor. Own props = 
 
 | Id | Label | File | Flags | Own props |
 |---|---|---|---|---|
-| `cage` | Flappy enjaulado | `types/items/cage.lua` |  | `minCharge`: int = 1 |
+| `cage` | Flappy enjaulado | `types/items/cage.lua` |  | `minCharge`: int = 1 · `gift`: enum = shield |
 | `crackwall` | Muro agrietado | `types/mechanisms/crackwall.lua` |  | `minCharge`: int = 2 · `rows`: int = 3 |
 | `flapcharge` | Carga de aleteo | `types/items/flapcharge.lua` | pickup |  |
 

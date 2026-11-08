@@ -13,7 +13,7 @@ import flappy_lib
 g1, col = [], 20
 for t in [4, 5, 4, 3, 5, 6, 4, 5, 3, 4, 5, 4]:
     g1.append((col, t, 4)); col += 7
-e1, s1 = flappy_lib.populate(g1, charges=[0, 2, 4, 6, 8], food=[5, 10], cage=(3, 2), wall=7)
+e1, s1 = flappy_lib.populate(g1, charges=[0, 2, 4, 6, 8], food=[5, 10], cage=(3, 2), wall=7, gift='shield')
 flappy_lib.write('assets/levels/valle_pilares_1.json', "Valle de los Pilares 1", "Valley of the Pillars 1", col + 10, g1,
                  entities=e1, solids=s1)
 
@@ -23,6 +23,6 @@ for t in [4, 6, 3, 5, 2]:
     g2.append((col, t, 4)); col += 6
 for t in [6, 3, 5, 2, 6, 4, 2, 5, 3, 6]:
     g2.append((col, t, 3)); col += 6
-e2, s2 = flappy_lib.populate(g2, charges=[0, 1, 3, 5, 7, 9], food=[6, 12], cage=(4, 3), wall=10)
+e2, s2 = flappy_lib.populate(g2, charges=[0, 1, 3, 5, 7, 9], food=[6, 12], cage=(4, 3), wall=10, gift='heart')
 flappy_lib.write('assets/levels/valle_pilares_2.json', "Valle de los Pilares 2", "Valley of the Pillars 2", col + 10, g2,
                  entities=e2, solids=s2)
