@@ -133,7 +133,11 @@ may become new modifiers in that table *(Claude's call)*.
 
 ## Menus and access
 
-- **Main menu:** the "CLÁSICO / CLASSIC" button (`menu.classic`) becomes the Flappy campaign. It opens a menu similar
+- **Main menu (the user, 2026-11-07):** CONTINUE · **FLAPPY** · ADVENTURE · SETTINGS. The button is called FLAPPY
+  (was CLÁSICO; id `classic` kept) and comes FIRST. Free Play left the Adventure menu (only in the debug menu).
+  **CONTINUE resumes the last mode played**: the most recently written save, Flappy or Adventure, opens its map
+  (built when the Flappy campaign gets saves, step 3). Done in 0.5.166: the order, the name, Free Play.
+- The "CLÁSICO / CLASSIC" button (`menu.classic`) becomes the Flappy campaign. It opens a menu similar
   to Adventure's (3 save slots, a map of the zones) but with its own look (e.g. the Valley's stone and nests)
   *(look: Claude's suggestion)*. Flappy saves are separate from Adventure's.
 - **Adventure (story, Free Play, online) is locked until the Flappy campaign is finished in ANY one Flappy slot**;

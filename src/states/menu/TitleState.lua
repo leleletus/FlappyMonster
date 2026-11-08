@@ -5,11 +5,11 @@
 --     una a una y luego se mecen en ola;
 --     "Presiona ENTER" parpadea debajo.
 --   · Al pulsar, el logo SUBE y entran los botones desde abajo, uno detrás de otro: CONTINUAR (solo si hay una
---     partida de la historia: la última que se jugó), AVENTURA, CLÁSICO y CONFIGURACIÓN. Atrás = vuelta al título.
+--     partida de la historia: la última que se jugó), FLAPPY, AVENTURA y CONFIGURACIÓN. Atrás = vuelta al título.
 --   · Al elegir, los botones y el logo SALEN y se pasa a la pantalla siguiente (que entra sobre el mismo fondo);
 --     CONTINUAR va directamente al mapa de la historia con la transición de bloques (src/ui/menu/Transition).
 -- Dos nombres de estado: `title` (empieza en el título) y `main_menu` (empieza con los botones; a él vuelven las
--- demás pantallas: args.selected = qué botón queda elegido).
+-- demás pantallas: args.select = el id del botón que queda elegido: 'classic' (FLAPPY), 'adventure', 'settings').
 local BaseState  = require 'src/core/BaseState'
 local L          = require 'src/core/Lang'
 local CornerButtons = require 'src/ui/CornerButtons'
@@ -45,11 +45,11 @@ function TitleState:enter(args)
     self.dropped = self.menu                      -- (en el menú directo no vuelven a caer las letras)
     self.logoSlide = self.menu                    -- (… sino que el logo entra desde arriba)
     self.anim = MenuAnim.new({ n = 6 })
-    self:_buildList(args.selected)
+    self:_buildList(args.select)
     Sound.playMusic('menus')
 end
 
-function TitleState:_buildList(selected)
+function TitleState:_buildList(select)
     -- Aventura bloqueada (hasta terminar la campaña Flappy: src/flappy/Campaign.lua): botón gris con su aviso y sin
     -- CONTINUAR (las partidas siguen en el disco y vuelven al desbloquear)
     local locked = Campaign.adventureLocked()
@@ -60,6 +60,9 @@ function TitleState:_buildList(selected)
         items[#items + 1] = { text = 'menu.continue', color = 'pink', desc = 'menu.desc_continue', descArgs = { n = slot },
                               id = 'continue', go = function() self:_continue() end }
     end
+    -- FLAPPY primero (el usuario, 2026-11-07), luego AVENTURA (id 'classic': el de siempre, no cambia)
+    items[#items + 1] = { text = 'menu.classic', color = 'orange', desc = 'menu.desc_classic', id = 'classic',
+                          go = function() self:_leave('flappy_campaign') end }
     if locked then
         items[#items + 1] = { text = 'menu.adventure', color = 'grey', desc = 'menu.desc_adventure_locked', id = 'adventure',
                               locked = true, go = function() Sound.play('headBump') end }
@@ -67,12 +70,11 @@ function TitleState:_buildList(selected)
         items[#items + 1] = { text = 'menu.adventure', color = 'green', desc = 'menu.desc_adventure', id = 'adventure',
                               go = function() self:_leave('adv_mode_select') end }
     end
-    items[#items + 1] = { text = 'menu.classic', color = 'orange', desc = 'menu.desc_classic', id = 'classic',
-                          go = function() self:_leave('flappy_campaign') end }
     items[#items + 1] = { text = 'menu.settings', color = 'blue', desc = 'menu.desc_settings', id = 'settings',
                           go = function() self:_leave('settings') end }
-    -- args.selected = 1 aventura, 2 clásico, 3 configuración (sin contar CONTINUAR, que no siempre está)
-    local sel = selected and (selected + (slot and 1 or 0)) or 1
+    -- `select` = id del botón elegido al volver de otra pantalla (sin él, el primero: CONTINUAR si está)
+    local sel = 1
+    for i, it in ipairs(items) do if it.id == select then sel = i end end
     self.list = MenuList.new({ items = items, anim = self.anim, first = 2, top = 0.33, selected = sel })
 end
 

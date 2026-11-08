@@ -17,7 +17,7 @@ save slots are **cartridges** (Sonic 3 style save select).
 
 | File | Role |
 |---|---|
-| `src/states/menu/TitleState.lua` | title + main menu (`title` starts on the title, `main_menu` starts with the buttons; `args.selected` = 1 adventure, 2 classic, 3 settings) |
+| `src/states/menu/TitleState.lua` | title + main menu (`title` starts on the title, `main_menu` starts with the buttons; buttons CONTINUE (when a story save exists) · FLAPPY (id `classic`) · ADVENTURE · SETTINGS; `args.select` = the id of the button selected when coming back) |
 | `src/states/menu/AdventureModeSelectState.lua`, `SettingsState.lua`, `src/states/flappy/DifficultySelectionState.lua`, `src/states/flappy/FlappyCampaignState.lua` (CLÁSICO), `src/states/menu/DebugMenuState.lua` | the sub-menus, built with the pieces below |
 | `src/flappy/Campaign.lua` | the Adventure lock (below) |
 | `src/states/story/StorySlotState.lua` | the save slots as cartridges (see below) |
@@ -180,6 +180,10 @@ difficulty and back, the match starting with it). `online_smoke`, `online_boss`,
 
 **Decisions / history**
 
+- 0.5.166, the user (2026-11-07): the main menu is FLAPPY (was CLÁSICO; id `classic` kept) first, then ADVENTURE;
+  Free Play left the Adventure menu (it is in the debug menu: "redundant"); CONTINUE will resume the LAST MODE played,
+  Flappy or Adventure, once the Flappy campaign has saves ([flappy-prequel](../design/flappy-prequel.md)). Screens now
+  return to the main menu by button id (`select`), not by position.
 - 2026-10-20 (3.103.0): requested by the user ("the menu is just the usual background with a lot of monsters
   bouncing and the logo… simple and easy to improve"). Proposals 1 (living background), 2 (title + menu merged,
   Continue) and 3 (animated logo) were accepted, plus enter / leave / transition animations and changing

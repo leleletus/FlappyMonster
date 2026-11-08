@@ -1,5 +1,6 @@
 -- src/states/menu/AdventureModeSelectState.lua
--- Menú intermedio: HISTORIA (un jugador), ONLINE (multijugador) o JUEGO LIBRE (pruebas: todos los niveles).
+-- Menú intermedio: HISTORIA (un jugador) u ONLINE (multijugador). (JUEGO LIBRE salió de aquí el 2026-11-07: está en
+-- el menú de depuración — DebugMenuState —.)
 -- Se muestra al elegir Aventura en el menú principal. Como todas las pantallas de menú (docs/architecture/menus.md): sobre
 -- el fondo vivo (MenuScene), rótulo arriba, botones de colores que entran y salen escalonados (MenuList, MenuAnim)
 -- y la descripción del elegido abajo. A otra pantalla de menú se pasa con la salida de los botones; a las que no
@@ -20,7 +21,6 @@ function AdventureModeSelectState:enter(args)
     self.list = MenuList.new({ anim = self.anim, first = 2, top = 0.34, selected = (args and args.selected) or 1, items = {
         { text = 'adv.story',  color = 'yellow', desc = 'adv.desc_story',  go = go('story_slots') },
         { text = 'adv.online', color = 'purple', desc = 'adv.desc_online', go = go('online_login') },
-        { text = 'adv.free',   color = 'teal',   desc = 'adv.desc_free',   go = go('free_play') },
     } })
     Sound.playMusic('menus')
 end
@@ -33,7 +33,7 @@ end
 function AdventureModeSelectState:_back()
     if self.anim:busy() then return end
     Sound.play('select', 0.85)
-    self.anim:leave(function() gStateMachine:change('main_menu', { selected = 1 }) end, 5)
+    self.anim:leave(function() gStateMachine:change('main_menu', { select = 'adventure' }) end, 5)
 end
 
 function AdventureModeSelectState:update(dt)

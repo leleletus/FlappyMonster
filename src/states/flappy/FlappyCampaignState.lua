@@ -35,7 +35,7 @@ end
 function FlappyCampaignState:_back()
     if self.anim:busy() then return end
     Sound.play('select', 0.85)
-    self:_leave('main_menu', { selected = 2 })
+    self:_leave('main_menu', { select = 'classic' })
 end
 
 function FlappyCampaignState:update(dt)

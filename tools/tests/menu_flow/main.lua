@@ -244,8 +244,10 @@ local function run()
         Campaign.READY = true
         gStateMachine:change('main_menu'); wait(0.6)
         local m = top()
-        local it = m.list.items[m.list.selected]
-        local lockedOk = m.slot == nil and selId(m) == 'adventure' and it.locked == true and it.color == 'grey'
+        local function advItem(st) for i, x in ipairs(st.list.items) do if x.id == 'adventure' then return x, i end end end
+        local it, ai = advItem(m)
+        local lockedOk = m.slot == nil and it and it.locked == true and it.color == 'grey'
+        m.list.selected = ai
         shot('locked')
         press('confirm', 0.75)
         local stays = name(top()) == 'TitleState'
@@ -253,7 +255,7 @@ local function run()
         local noEndless = #top().list.items == 1
         Campaign.debugOpen = true
         gStateMachine:change('main_menu'); wait(0.1)
-        local dbgOpen = not top().list.items[top().list.selected].locked and top().slot == 1
+        local dbgOpen = not advItem(top()).locked and top().slot == 1
         Campaign.debugOpen = false
         Campaign.unlockAdventure()
         gStateMachine:change('main_menu'); wait(0.1)
@@ -264,7 +266,7 @@ local function run()
         check('candado', lockedOk and stays and noEndless and dbgOpen and unlocked,
             ('bloqueada: gris sin CONTINUAR=%s, no entra=%s; campaña lista sin infinito=%s; depuración la abre=%s; terminar la campaña la abre (global)=%s'):format(
              tostring(lockedOk), tostring(stays), tostring(noEndless), tostring(dbgOpen), tostring(unlocked)))
-        gStateMachine:change('main_menu', { selected = 2 }); wait(0.6)
+        gStateMachine:change('main_menu', { select = 'classic' }); wait(0.6)
     end
     go('settings', 'SettingsState', 'settings')
     local lang0 = L.current()
@@ -341,7 +343,10 @@ local function run()
     local Save = require 'src/story/Save'
     for i = 1, Save.SLOTS do Save.delete(i) end
     gStateMachine:change('main_menu')
-    check('sin partida', top().slot == nil and selId(top()) == 'adventure', 'sin partidas no hay CONTINUAR')
+    local order = {}
+    for _, x in ipairs(top().list.items) do order[#order + 1] = x.id end
+    check('sin partida', top().slot == nil and table.concat(order, ',') == 'classic,adventure,settings',
+          'sin partidas no hay CONTINUAR; orden: ' .. table.concat(order, ','))
     Save.write(2, Save.new('normal'))
     gStateMachine:change('main_menu')
     check('con partida', top().slot == 2 and selId(top()) == 'continue', 'con la partida 2: CONTINUAR, el primero')

@@ -1,6 +1,6 @@
 # Free Play (single-player level hub)
 
-Aventura → JUEGO LIBRE opens every level as a scrolling grid of cards. Nothing is saved or unlocked: it is the test
+The DEBUG MENU → FREE PLAY (since 0.5.166; before, Aventura → JUEGO LIBRE — [menus](../architecture/menus.md#debug-menu-secret)) opens every level as a scrolling grid of cards. Nothing is saved or unlocked: it is the test
 hub (for beta testers and for development). It also offers a difficulty selector (◀ X ▶ at the top right — under the title on narrow screens —: key F, tapping either
 half, or keyboard / pad: UP from the first row focuses it, ◀ ▶ change it, DOWN / confirm go back to the cards; ORIGINAL → every id of `Difficulty.ORDER`, remembered) and starts King-of-the-Hill arenas as a
 match against the bot.

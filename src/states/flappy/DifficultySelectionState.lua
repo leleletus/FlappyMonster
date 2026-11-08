@@ -38,7 +38,7 @@ function DifficultySelectionState:_back()
     self.anim:leave(function()
         if from == 'debug_menu' then gStateMachine:change('debug_menu', { select = 'classic' })
         elseif from == 'flappy_campaign' then gStateMachine:change('flappy_campaign', { selected = 2 })
-        else gStateMachine:change('main_menu', { selected = 2 }) end
+        else gStateMachine:change('main_menu', { select = 'classic' }) end
     end)
 end
 

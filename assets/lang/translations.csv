@@ -48,10 +48,8 @@ free.hint,{arrows} elegir    {ok} jugar    {up} pestañas · {diff} dificultad  
 adv.title,AVENTURA,ADVENTURE,
 adv.story,HISTORIA,STORY,
 adv.online,ONLINE,ONLINE,
-adv.free,JUEGO LIBRE (PRUEBAS),FREE PLAY (TESTING),
 adv.desc_story,Para un jugador: 6 islas y 7 jefes,Single-player: 6 islands and 7 bosses,
 adv.desc_online,"Carreras, Rey de la Colina y más contra otros jugadores","Races, King of the Hill and more against other players",
-adv.desc_free,Juega cualquier nivel para practicar,Play any level to practice,
 difficulty.title,ELIGE LA DIFICULTAD,CHOOSE THE DIFFICULTY,
 difficulty.hint,{arrows} elegir    {ok} empezar    {back} volver,{arrows} choose    {ok} start    {back} back,
 difficulty.easy,FÁCIL,EASY,
@@ -226,13 +224,13 @@ hud.collect,¡UN TESORO SECRETO!,A SECRET TREASURE!,(un coleccionable que suelta
 hud.boss_defeated,¡JEFE DERROTADO!,BOSS DEFEATED!,
 hud.you,TÚ,YOU,
 menu.adventure,AVENTURA,ADVENTURE,
-menu.classic,CLÁSICO,CLASSIC,
+menu.classic,FLAPPY,FLAPPY,"El modo Flappy (antes CLÁSICO; el id no cambia)"
 menu.settings,CONFIGURACIÓN,SETTINGS,
 menu.continue,CONTINUAR,CONTINUE,
 menu.desc_continue,Continúa tu última aventura (partida {n}),Continue your last adventure (save {n}),
 menu.desc_adventure,"Aventura de plataformas: historia, juego libre y en línea","A platforming adventure: story, free play and online",
-menu.desc_adventure_locked,Termina la campaña de CLÁSICO para desbloquear la aventura,Finish the CLASSIC campaign to unlock the adventure,"Aventura bloqueada (src/flappy/Campaign.lua)"
-menu.desc_classic,El Flappy de siempre: pasa entre las tuberías,The original Flappy: get through the pipes,
+menu.desc_adventure_locked,Termina la campaña de FLAPPY para desbloquear la aventura,Finish the FLAPPY campaign to unlock the adventure,"Aventura bloqueada (src/flappy/Campaign.lua)"
+menu.desc_classic,"La precuela: cómo llegó el monstruo a las islas","The prequel: how the monster reached the islands",
 menu.desc_settings,Idioma y opciones,Language and options,
 menu.hint,{move} elegir      {ok} aceptar      {back} volver,{move} choose      {ok} select      {back} back,
 fc.campaign,CAMPAÑA,CAMPAIGN,"CLÁSICO (src/states/flappy/FlappyCampaignState.lua): la campaña Flappy, aún sin hacer"
@@ -240,7 +238,7 @@ fc.desc_soon,"Próximamente: cómo llegó el monstruo a las islas","Coming soon:
 fc.endless,INFINITO,ENDLESS,
 fc.desc_endless,El Flappy de siempre: pasa entre las tuberías,The original Flappy: get through the pipes,
 dbg.title,DEPURACIÓN,DEBUG,"Menú secreto (src/states/menu/DebugMenuState.lua): ↑↑↓↓←→←→ o 7 toques en la versión"
-dbg.classic,CLÁSICO INFINITO,ENDLESS CLASSIC,
+dbg.classic,FLAPPY INFINITO,ENDLESS FLAPPY,
 dbg.desc_classic,El Flappy infinito de siempre con sus 3 dificultades,The original endless Flappy with its 3 difficulties,
 dbg.adventure,AVENTURA SIN CANDADO,UNLOCKED ADVENTURE,
 dbg.desc_adventure,Abre la aventura en esta sesión aunque no se haya terminado la campaña,Opens the adventure for this session even if the campaign is not finished,

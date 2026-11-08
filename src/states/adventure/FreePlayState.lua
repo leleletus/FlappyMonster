@@ -269,7 +269,7 @@ end
 
 function FreePlayState:_back()
     Sound.play('select')
-    gStateMachine:change('adv_mode_select')
+    gStateMachine:change('debug_menu', { select = 'free' })
 end
 
 -- Tarjeta en el punto (coordenadas lógicas), o nil

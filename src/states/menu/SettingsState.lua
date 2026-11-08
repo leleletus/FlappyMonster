@@ -107,7 +107,7 @@ end
 function SettingsState:_back()
     if self.anim:busy() then return end
     Sound.play('select', 0.85)
-    self.anim:leave(function() gStateMachine:change('main_menu', { selected = 3 }) end, 5)
+    self.anim:leave(function() gStateMachine:change('main_menu', { select = 'settings' }) end, 5)
 end
 
 -- Elegir una fila: la lista se desplaza para que se vea
