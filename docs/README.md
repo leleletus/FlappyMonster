@@ -56,7 +56,7 @@ are never edited by hand.
 - **gameplay/** — [player](gameplay/player.md) · [tiles-and-blocks](gameplay/tiles-and-blocks.md) ·
   [water-and-floods](gameplay/water-and-floods.md) · [dark-levels](gameplay/dark-levels.md) ·
   [difficulty](gameplay/difficulty.md) · [game-modes](gameplay/game-modes.md) · [autoscroll](gameplay/autoscroll.md) · [start-countdown](gameplay/start-countdown.md) ·
-  [pickups](gameplay/pickups.md) · [free-play](gameplay/free-play.md) · [flappy-mode](gameplay/flappy-mode.md) · [flappy-campaign](gameplay/flappy-campaign.md)
+  [pickups](gameplay/pickups.md) · [free-play](gameplay/free-play.md) · [flappy-mode](gameplay/flappy-mode.md) · [flappy-campaign](gameplay/flappy-campaign.md) · [powerups](gameplay/powerups.md)
 - **entities/** — [overview](entities/overview.md) · [enemies](entities/enemies.md) ·
   [traps-and-mechanisms](entities/traps-and-mechanisms.md) · [enemy-editor](entities/enemy-editor.md) ·
   [how-to-add-an-enemy](entities/how-to-add-an-enemy.md)

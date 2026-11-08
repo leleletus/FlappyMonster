@@ -1,6 +1,7 @@
 # Power-ups and the quick wheel (design, 2026-11-07)
 
-Status: **design, not built.** Decided with the user in conversation on 2026-11-07, as an addition to the
+Status: **built for the Flappy campaign in 0.5.172** (system page: [powerups](../gameplay/powerups.md)); still to
+build: the map shops and the wallet (Plan 5), Adventure's inventory and `big`. Originally: **design, not built.** Decided with the user in conversation on 2026-11-07, as an addition to the
 [Flappy prequel campaign](flappy-prequel.md). Lines marked *(Claude's call)* were proposed by Claude and still wait for
 the user's verdict; everything else is the user's.
 

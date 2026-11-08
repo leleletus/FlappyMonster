@@ -52,7 +52,7 @@ while Adventure is locked, its saves do not count.
   it (`rescuedNow`), less is absorbed. `AdventureState` returns `result.rescued` (placement indices) only when the stage
   is FINISHED; `FlappyRun.complete` stores `rescued[stage]`; replays pass `rescued` and those cages are empty. The map
   card shows "Flappies freed n/m". What freeing ALL of them gives is still PENDING (the user); each one will give a
-  power-up (Plan 4b).
+  power-up: its `gift`, given when the stage is finished ([powerups](powerups.md), Plan 4b, 0.5.172).
 - **Cracked walls** (`crackwall`, Flappy-only, props `minCharge`, `rows`): solid like the door until a burst with enough
   power breaks it. They hide shortcuts / prizes: the main route never needs them (the zero-charge bot clears every
   Valley stage — `flappy_flight etapa`). The camera's left edge never pushes the player through an intact wall (0.5.170, final review of

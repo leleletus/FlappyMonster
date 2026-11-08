@@ -42,6 +42,9 @@ Actions (`input.lua`): `move_left`, `move_right`, `jump`, `crouch`, `light` (lev
   40x40) and `jump-Sheet.png` (2 frames 32x32) from `tools/art/ui/make_sprites.py`, integer scale,
   D-pad ≈ 30 % / jump ≈ 22 % of the screen height (the user found 40 % too big), 0.38 alpha over
   the game (0.7 in bands). Harness `touch_layout` (8 phone/tablet sizes) and `sp_boss MOBILE=1`.
+- The EXTRA button above the jump button: the flashlight in dark levels, the SPECIAL ATTACK in Flappy levels
+  (`TC.update(active, 'light' | 'special')`, 0.5.169). Flappy levels also have the power-up BAG in the top HUD band
+  (`FlappyHud.bagRect`: opens the quick wheel — [powerups](../gameplay/powerups.md)).
 
 - Testing other screens: run the REAL main.lua from a scratch app with a
   custom window size and `love.system.getOS = function() return 'Android' end`
