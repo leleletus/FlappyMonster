@@ -29,7 +29,9 @@ playTime, points, gameOvers }` ([save-data](../architecture/save-data.md)).
 
 **Playing a stage:** the map calls `AdventureState` with the same contract as the story map: `lives`, `onLeave` (lives
 LOST are saved however the stage ends), `onGameOver` (`FlappyRun.gameOver()`: the zone starts again, lives back to the
-start, records kept), `onFinish` (`FlappyRun.complete` → `story_results` with `returnTo = 'flappy_map'`). Nothing gained
+start, records kept), `onFinish` (`FlappyRun.complete`: score, record and the GRADE REWARD the first time — S +1 life, A +500 points, as in the
+story — → `story_results` with `returnTo = 'flappy_map'`; its RETRY comes back with `replay` + `cleared` and the map
+plays that stage again), and `taken` (extra lives already picked up there only give points). Nothing gained
 in a stage is saved before it is finished (golden rule 7).
 
 **CONTINUE** (main menu): the most recently written save of ANY campaign (`TitleState` `lastSave`), Flappy or Adventure;
@@ -48,5 +50,7 @@ while Adventure is locked, its saves do not count.
 
 **Decisions**
 - 2026-11-07, the user: FLAPPY first in the main menu, CONTINUE = the last mode played, Free Play only in the debug menu.
+- Final review of Plan 3 (fixed in 0.5.168): the grade reward was shown but not given; RETRY did nothing; `taken`
+  was not passed (extra lives could be farmed once stages have them).
 - Plan 3 rulings: finishing the placeholder zone does not unlock Adventure (`Campaign.finished` only counts with
   `READY`); the slot screen is shared with the story through descriptors instead of a copy.

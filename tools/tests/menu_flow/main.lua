@@ -331,8 +331,27 @@ local function run()
                 fin = name(top()) == 'FlappyMapState' and FlappyRun.state(1, 2) == 'open' and FlappyRun.isDone('valle_pilares_1')
             end
         end
+        -- REINTENTAR en los resultados: la misma etapa otra vez, con las vidas extra ya cogidas apuntadas (`taken`)
+        local retry = false
+        local m2 = top()
+        if name(m2) == 'FlappyMapState' then
+            m2.sel = 1
+            press('confirm', 1.6)
+            local a3 = top()
+            if name(a3) == 'AdventureState' and a3.onFinish then
+                a3.onFinish({ time = 30, width = 114, score = 200, lives = FlappyRun.data.lives, deaths = 0, hits = 0, taken = { 1 } })
+                wait(0.3)
+                if name(top()) == 'StoryResultsState' then
+                    top().t = 999; top():_continue(true); wait(1.8)
+                    local a4 = top()
+                    retry = name(a4) == 'AdventureState' and a4.levelPath == 'assets/levels/valle_pilares_1.json'
+                            and a4.takenArg ~= nil and a4.takenArg[1] == true
+                end
+            end
+        end
+        fin = fin and retry
         check('mapa', inMap and nodesOk and plays and left and fin,
-            ('mapa=%s; nodos abierto/cerrado=%s; jugar → nivel Flappy que vuelve al mapa=%s; salir a medias guarda la vida perdida y nada más=%s; terminar → resultados → mapa con la 2 abierta=%s'):format(
+            ('mapa=%s; nodos abierto/cerrado=%s; jugar → nivel Flappy que vuelve al mapa=%s; salir a medias guarda la vida perdida y nada más=%s; terminar → resultados → mapa con la 2 abierta y REINTENTAR → la misma, con sus vidas cogidas=%s'):format(
              tostring(inMap), tostring(nodesOk), tostring(plays), tostring(left), tostring(fin)))
         FlappyRun.close()
         for i = 1, FlappySave.SLOTS do FlappySave.delete(i) end

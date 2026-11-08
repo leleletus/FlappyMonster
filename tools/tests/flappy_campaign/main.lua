@@ -3,6 +3,7 @@
 --   progreso   RunCore con un catálogo de mentira (2 mundos x 2 nodos): orden de los nodos, el mundo siguiente tras el
 --              jefe, frontier, score (mejor nota, puntos), restartWorld (borra lo superado del mundo y guarda los récords)
 --   zonas      cada etapa de src/flappy/Zones.lua existe, es un nivel Flappy con meta y sin errores del editor
+--   premio     el premio de la nota (S: +1 vida; A: +500 puntos) se DA y se guarda, no solo sale en los resultados
 --   partida    FlappyRun: abrir un hueco escribe flappy<n>.sav (no story<n>.sav), las etapas se abren en orden, vidas de
 --              Fácil al empezar, gameOver vuelve al principio de la zona
 --   (los casos de pantallas — mapa, partidas, CONTINUAR — van en menu_flow, que corre el juego de verdad)
@@ -130,7 +131,26 @@ function cases.partida()
            tostring(files), lives0, tostring(o0), tostring(o1), tostring(z), tostring(back), tostring(notYet)))
 end
 
-local ORDER = { 'archivo', 'progreso', 'zonas', 'partida' }
+-- El premio de la nota (Score.LEVEL_REWARD: S +1 vida, A +500 puntos), la primera vez: se DA, no solo se enseña
+function cases.premio()
+    local FlappyRun, FlappySave = require 'src/flappy/FlappyRun', require 'src/flappy/FlappySave'
+    local Score = require 'src/story/Score'
+    FlappySave.delete(3)
+    FlappyRun.open(3, 'normal')
+    local l0, p0 = FlappyRun.data.lives, FlappyRun.data.points
+    local out = FlappyRun.complete('valle_pilares_1', { time = 1, width = 400, deaths = 0, hits = 0, score = 0, lives = l0 })
+    local rw = out and out.reward
+    local given = rw ~= nil and ((rw.lives and FlappyRun.data.lives == l0 + rw.lives) or (rw.points and FlappyRun.data.points == p0 + (out.gain or 0) + rw.points))
+    local saved = FlappySave.load(3)
+    local kept = saved and saved.lives == FlappyRun.data.lives and saved.points == FlappyRun.data.points
+    FlappyRun.close(); FlappySave.delete(3)
+    check('premio', out and out.grade == 'S' and given and kept,
+          ('nota %s; premio %s; vidas %d → %d; puntos %d → %d; guardado=%s'):format(out and out.grade or '-',
+           rw and (rw.lives and ('+' .. rw.lives .. ' vida') or ('+' .. tostring(rw.points) .. ' puntos')) or 'ninguno',
+           l0, FlappyRun.data and FlappyRun.data.lives or -1, p0, FlappyRun.data and FlappyRun.data.points or -1, tostring(kept)))
+end
+
+local ORDER = { 'archivo', 'progreso', 'zonas', 'partida', 'premio' }
 function love.load()
     local only = os.getenv('CASE')
     for _, name in ipairs(ORDER) do

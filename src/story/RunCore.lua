@@ -2,7 +2,7 @@
 -- Las reglas de PROGRESO que comparten las campañas (la historia: src/story/Run.lua; la campaña Flappy:
 -- src/flappy/FlappyRun.lua). RunCore.install(R, saves, worlds) añade a la tabla `R` (con `R.slot`, `R.data`):
 --   open(i[, difficulty]) · close() · active() · save() · isDone(id) · worldOpen(w) · state(w, k) · progress([w])
---   frontier() · setLives(n) · worldRating(w) · score(id, result) → resumen · restartWorld(w)
+--   frontier() · setLives(n) · worldRating(w) · score(id, result) → resumen · giveReward(rw) · restartWorld(w)
 -- `saves`: SLOTS, new(difficulty), load(i), write(i, d). `worlds`: count(), get(w) (con `.boss`, que puede faltar),
 -- nodes(w) → { { id = nivel }, ... } en orden (el jefe, el último).
 -- Reglas: en un mundo los niveles se abren en orden; el mundo siguiente, al superar el último nodo del anterior (su
@@ -129,6 +129,14 @@ function RunCore.install(R, saves, worlds)
             d.taken[id] = t
         end
         return out
+    end
+
+    -- Da un PREMIO (Score.LEVEL_REWARD, WORLD_REWARD…): { lives = n } y/o { points = n } (vidas hasta 99). No guarda.
+    function R.giveReward(rw)
+        local d = R.data
+        if not (d and rw) then return end
+        if rw.lives then d.lives = math.min(99, d.lives + rw.lives) end
+        if rw.points then d.points = (d.points or 0) + rw.points end
     end
 
     -- GAME OVER de mundo: sus niveles dejan de estar superados, las vidas vuelven a las del principio y se va a su

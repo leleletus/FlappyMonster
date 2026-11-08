@@ -7,7 +7,8 @@
 -- Jugar = el mismo contrato que el mapa de la historia (StoryMapState:_start): AdventureState con las vidas de la
 -- partida, `onLeave` (las PERDIDAS se guardan salga como salga), `onGameOver` (al principio de la zona) y `onFinish`
 -- (FlappyRun.complete y los resultados, que vuelven aquí). Lo ganado en una etapa solo se guarda al terminarla.
---   args = { world = zona, node = etapa elegida, notice = clave de idioma (aviso arriba) }
+--   args = { world = zona, node = etapa elegida, notice = clave de idioma (aviso arriba),
+--            replay = true + cleared = etapa: REINTENTAR desde los resultados — esa etapa otra vez en cuanto el mapa está listo — }
 local BaseState     = require 'src/core/BaseState'
 local CornerButtons = require 'src/ui/CornerButtons'
 local MenuScene     = require 'src/ui/menu/MenuScene'
@@ -34,6 +35,7 @@ function FlappyMapState:enter(args)
     self.nodes = Zones.nodes(self.world)
     self.sel = math.max(1, math.min(#self.nodes, args.node or (d and d.node) or 1))
     self.notice, self.noticeT = args.notice, args.notice and 3 or 0
+    if args.replay then self.sel, self.playOnArrive = args.cleared or self.sel, true end
     self.anim = MenuAnim.new({ n = 4 })
     self.t = 0
     Sound.playMusic('menus')
@@ -73,6 +75,7 @@ function FlappyMapState:_play()
     Transition.go('adventure', {
         level = Zones.path(id), returnTo = 'flappy_map', difficulty = FlappyRun.data.difficulty,
         lives = FlappyRun.data.lives,
+        taken = FlappyRun.data.taken and FlappyRun.data.taken[id] or nil,   -- (vidas extra ya cogidas aquí: solo dan puntos)
         onLeave = function(lives) FlappyRun.setLives(lives) end,
         gameOverNote = L('flappy.go_zone'),
         onGameOver = function()
@@ -86,7 +89,7 @@ function FlappyMapState:_play()
             FlappyRun.data.world, FlappyRun.data.node = world, nk
             FlappyRun.save()
             gStateMachine:change('story_results', { level = id, result = result, summary = summary, color = COLOR,
-                                                    returnTo = 'flappy_map', map = { world = world, node = nk } })
+                                                    returnTo = 'flappy_map', map = { world = world, node = nk, cleared = node } })
         end,
     }, p.x, p.y, { style = 'level' })
 end
@@ -102,6 +105,7 @@ function FlappyMapState:update(dt)
     self.anim:update(dt)
     if self.noticeT > 0 then self.noticeT = math.max(0, self.noticeT - dt) end
     if self.anim:busy() then return end
+    if self.playOnArrive then self.playOnArrive = false; return self:_play() end
     if Input.pressed('nav_left') then self:_move(-1) end
     if Input.pressed('nav_right') then self:_move(1) end
     if Input.pressed('confirm') or Input.pressed('flap') then return self:_play() end

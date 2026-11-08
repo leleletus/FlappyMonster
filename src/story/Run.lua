@@ -38,10 +38,7 @@ function Run.complete(id, result)
         end
     end
     -- (los dos premios, cada uno si lo hay: con ipairs un nil delante se saltaba el del mundo)
-    for _, rw in pairs({ a = out.reward, b = out.world and out.world.reward or nil }) do
-        if rw.lives then d.lives = math.min(99, d.lives + rw.lives) end
-        if rw.points then d.points = d.points + rw.points end
-    end
+    for _, rw in pairs({ a = out.reward, b = out.world and out.world.reward or nil }) do Run.giveReward(rw) end
     -- ¿JUEGO ACABADO (el jefe del último mundo)? → desbloquea la dificultad siguiente (global, para las 3
     -- partidas: Difícil → Extremo, Extremo → Xtra extremo; src/core/Difficulty.lua UNLOCKS)
     local lastNodes = Worlds.nodes(Worlds.count())
