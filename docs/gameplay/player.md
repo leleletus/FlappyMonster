@@ -181,7 +181,8 @@ ground pound):
 - The FLOOR (anything solid it lands on) costs 1 HP (not while invulnerable) and bounces it up (`FLOOR_HOP` -560).
   Ceiling and walls only stop it.
 - Respawn: `AutoScroll.respawnPoint` in a Flappy level = in the air at a third of the window, the free cell closest to
-  mid-height (never inside a pillar).
+  mid-height (never inside a pillar): `Level:flightSpot(x, minRow, maxRow)`. In a Flappy boss fight
+  `BossZones.respawnPoint` uses the same rule at a third of the zone (never standing on the floor, which hurts).
 - Shared simulation (golden rule 1): nothing new travels online yet (Flappy levels are listed in no online mode).
 
 - CHARGE and the SPECIAL ATTACK (0.5.169): `pa.charge` (0..`CHARGE_MAX` 5, `addCharge`), `fireSpecial` /

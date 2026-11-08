@@ -38,7 +38,8 @@ def build(width, gaps, solids=None):
     return tiles
 
 
-def write(out, name, name_en, width, gaps, speed=200, music='flappy', entities=None, solids=None):
+def write(out, name, name_en, width, gaps, speed=200, music='flappy', entities=None, solids=None, arena=None):
+    """arena = lo que devuelve boss_arena(): la cámara automática se para en ella y el nivel lleva su zona de jefe"""
     lvl = {
         "name": name,
         "name_en": name_en,
@@ -50,6 +51,12 @@ def write(out, name, name_en, width, gaps, speed=200, music='flappy', entities=N
         "music": music,
         "flappy": True,
     }
+    if arena:
+        lvl["autoScroll"]["endCol"] = arena["endCol"]
+        lvl["bossZones"] = [arena["zone"]]
+        lvl["entities"] = lvl["entities"] + arena["entities"]
+        gaps = gaps + arena["gaps"]
+        lvl["tiles"] = build(width, gaps, solids)
     with open(out, 'w') as f:
         f.write('{\n')
         keys = list(lvl.keys())
@@ -69,7 +76,7 @@ def write(out, name, name_en, width, gaps, speed=200, music='flappy', entities=N
             else:
                 f.write('  ' + json.dumps(k) + ': ' + json.dumps(v, ensure_ascii=False, separators=(',', ':')) + ('' if last else ',') + '\n')
         f.write('}\n')
-    print('escrito', out, len(gaps), 'pilares', len(entities or []), 'entidades')
+    print('escrito', out, len(gaps), 'pilares', len(lvl["entities"]), 'entidades')
 
 
 def ent(kind, col, row, **props):
@@ -95,3 +102,17 @@ def populate(gaps, charges, food, cage, wall, gift='shield'):
     out.append(ent('flapcharge', wc + 1, 1))
     solids = [(wc + 1, 2), (wc + 2, 1), (wc + 2, 2)]
     return out, solids
+
+
+def boss_arena(col, boss, w=20, music='tuffi', boss_at=(15, 5), stubs=()):
+    """La ARENA del jefe de una etapa Flappy: una zona de jefe de `w` columnas (una pantalla, toda la altura) que empieza en
+    la columna `col`, con el jefe `boss` en (col + boss_at[0], boss_at[1]); la cámara automática se PARA justo en ella
+    (endCol = su última columna: la ventana queda encima de la zona, AutoScroll 'stop' y la zona se queda la cámara).
+    `stubs` = pilares cortos de dentro para cubrirse, como huecos de build() [(columna relativa, fila de arriba, alto)].
+    Vencido el jefe, la zona se abre y se sigue volando a la meta (la de build(), al final del nivel). → dict para write()"""
+    return {
+        "zone": {"id": 1, "col": col, "row": 1, "w": w, "h": H, "music": music},
+        "endCol": col + w - 1,
+        "entities": [ent(boss, col + boss_at[0], boss_at[1])],
+        "gaps": [(col + c, top, h) for c, top, h in stubs],
+    }

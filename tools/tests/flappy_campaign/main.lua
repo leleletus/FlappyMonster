@@ -3,7 +3,8 @@
 --   progreso   RunCore con un catálogo de mentira (2 mundos x 2 nodos): orden de los nodos, el mundo siguiente tras el
 --              jefe, frontier, score (mejor nota, puntos), restartWorld (borra lo superado del mundo y guarda los récords)
 --   zonas      cada etapa de src/flappy/Zones.lua existe, es un nivel Flappy con meta y sin errores del editor, con al
---              menos 1 jaula, 3 cargas y 1 comida (la de su zona)
+--              menos 1 jaula, 3 cargas y 1 comida (la de su zona); la etapa del JEFE, sin jaula pero con su zona de jefe
+--              y un jefe dentro
 --   premio     el premio de la nota (S: +1 vida; A: +500 puntos) se DA y se guarda, no solo sale en los resultados
 --   partida    FlappyRun: abrir un hueco escribe flappy<n>.sav (no story<n>.sav), las etapas se abren en orden, vidas de
 --              Fácil al empezar, gameOver vuelve al principio de la zona
@@ -116,13 +117,29 @@ function cases.zonas()
                         if not closed then bad[#bad + 1] = node.id .. ' (el muro de la columna ' .. c .. ' no encierra nada)' end
                     end
                 end
+                -- (la etapa del jefe: sin jaula, pero con su zona de jefe y un jefe dentro)
+                if node.boss then
+                    local bosses = 0
+                    for _, e in ipairs(lv.entities) do
+                        local d = require('src/world/entities/base/EntityTypes').get(e.type)
+                        if d and d.boss then
+                            for _, bz in ipairs(lv.bossZones or {}) do
+                                if require('src/world/systems/BossZones').containsCell(bz, e.col, e.row) then bosses = bosses + 1 end
+                            end
+                        end
+                    end
+                    if #(lv.bossZones or {}) < 1 or bosses < 1 then
+                        bad[#bad + 1] = ('%s (jefe: %d zonas, %d jefes dentro)'):format(node.id, #(lv.bossZones or {}), bosses)
+                    end
+                    cages = math.max(cages, 1)
+                end
                 if cages < 1 or charges < 3 or food < 1 then
                     bad[#bad + 1] = ('%s (%d jaulas, %d cargas, %d comidas)'):format(node.id, cages, charges, food)
                 end
             end
         end
     end
-    check('zonas', n >= 2 and #bad == 0 and Zones.get(1).id == 'valle',
+    check('zonas', n >= 3 and #bad == 0 and Zones.get(1).id == 'valle',
           ('%d etapas en %d zonas; problemas: %s'):format(n, Zones.count(), #bad > 0 and table.concat(bad, ', ') or 'ninguno'))
 end
 

@@ -4,14 +4,15 @@
 3 save slots of its own (Easy / Normal / Hard), a map of ZONES, and STAGES that are Flappy levels (`"flappy": true`, the
 player flies: [player](player.md#flight-flappy-levels)) played on Adventure's engine with lives, Game Over and the
 results screen. Built in Plan 3 ([flappy-plan-3-campaign-frame](../design/flappy-plan-3-campaign-frame.md), 0.5.167).
-Today: zone 1 (Valley of the Pillars) with two PLACEHOLDER stages and a placeholder map look; the real content comes in
+Today: zone 1 (Valley of the Pillars) with two PLACEHOLDER stages, its boss stage `valle_redcoptero` (Plan 5) and a
+placeholder map look; the real content comes in
 Plans 4–7 (roadmap: [flappy-prequel § Plans](../design/flappy-prequel.md#plans)).
 
 **Files**
 
 | File | Role |
 |---|---|
-| `src/flappy/Zones.lua` | the campaign as DATA: zones in order, each with its stages and (later) its boss |
+| `src/flappy/Zones.lua` | the campaign as DATA: zones in order, each with its stages and its boss stage (`boss`) |
 | `src/flappy/FlappySave.lua` | slots `flappy1..3.sav` (separate from Adventure's `story<n>.sav`), `DIFFICULTIES` |
 | `src/flappy/FlappyRun.lua` | the open slot: RunCore + `complete` (score; the last stage of the last zone → `Campaign.finished`) and `gameOver` (back to the start of the zone) |
 | `src/story/RunCore.lua` | progress rules SHARED with the story (`Run.lua`): open / save / state / frontier / setLives / score / restartWorld |
@@ -24,6 +25,7 @@ Plans 4–7 (roadmap: [flappy-prequel § Plans](../design/flappy-prequel.md#plan
 | `src/world/entities/types/items/flapcharge.lua`, `items/cage.lua`, `mechanisms/crackwall.lua` | the Flappy-only entities (category Flappy) |
 | `src/ui/FlappyHud.lua` | hearts + charge meter |
 | `tools/levelgen/levels_flappy_valle.py`, `flappy_lib.py` | the two placeholder stages `valle_pilares_1/2` |
+| `tools/levelgen/levels_flappy_valle_boss.py` | the Valley's boss stage `valle_redcoptero` (writes only that file) |
 
 **Data:** a zone = one entry in `Zones.LIST` (`id`, `stages`, `boss`, `food`) + a lang key `flappy.zone.<id>`. Stage ids are level
 file names and are stored in saves: never rename them. A slot: `{ version, difficulty, world, node, lives, done, best,
@@ -65,16 +67,31 @@ while Adventure is locked, its saves do not count.
 - Stage objects come from `tools/levelgen/flappy_lib.py` `populate` (charges in the gaps, food, a cage up high, a wall
   over a hidden charge).
 
+## Boss stages (Plan 5)
+
+A zone's `boss` is a Flappy level like the others, built with `flappy_lib.boss_arena(col, boss, ...)` passed to
+`write(..., arena=)`: pillars first, then a one-screen BOSS ZONE (full height, its music) with the boss in its right
+third and a couple of short pillars inside (`stubs`), then a few columns to the finish. The auto-scroll's `endCol` is
+the zone's last column, so the window stops exactly over the zone (`AutoScroll` 'stop', no walls) and the zone takes
+the camera; once the boss is beaten the zone opens and the player flies on to the finish (`onFinish` as in any stage).
+Inside the fight the boss director (`bossdrops`) hands out charges / food. Dying in the fight respawns IN THE AIR in
+the zone's left third (`BossZones.respawnPoint` → `Level:flightSpot`, the same rule as the auto-scroll's Flappy respawn):
+standing on the floor would cost 1 HP. `valle_redcoptero`: pillars at columns 18-60 (3 charges, 1 food), zone 66-85
+with the `netcopter` at (81, 5) and music `tuffi`, finish at column 93.
+
 **SP / server / client:** single player only. Flappy levels are listed in no online mode yet (project 3).
 
 **How to extend**
 - A stage: a Flappy level file (editor: Nivel → "Nivel Flappy (se vuela)", plus the auto-scroll) and its id in
-  `Zones.LIST`; `run.sh flappy_campaign CASE=zonas` checks it.
+  `Zones.LIST`; `run.sh flappy_campaign CASE=zonas` checks it (a boss stage needs a boss zone with a boss inside, no cage).
+- A boss stage: a generator like `levels_flappy_valle_boss.py` (`flappy_lib.boss_arena`) and the id as the zone's `boss`.
 - A zone: an entry in `Zones.LIST` + `flappy.zone.<id>` in `assets/lang/translations.csv`.
 - Turn the Adventure lock on: `Campaign.READY = true` in the same commit that makes the campaign finishable (Plan 6).
 
 **Tests:** `flappy_campaign` (`archivo`, `progreso`, `zonas`, `partida`, `premio`, `jaulas`), `flappy_flight` (`carga`,
-`ataque`, `jaula`, `muro`, `etapa` on every Valley stage), `touch_layout` (`especial`), `menu_flow` (`flappy_slots`, `mapa`,
+`ataque`, `jaula`, `muro`, `etapa` on every Valley stage), `netcopter_rules` (`etapa_jefe`: the boss stage is passable
+— arena reached, camera stopped, zone fighting, walls down after the win, finish touched; `muerte_en_pelea`: respawn in
+the air inside the zone with full HP), `touch_layout` (`especial`), `menu_flow` (`flappy_slots`, `mapa`,
 `continuar_flappy`, `candado`).
 
 **Decisions**

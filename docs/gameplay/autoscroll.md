@@ -19,7 +19,9 @@ first update after it, the camera runs at once (`cdSkip`); `countdown` only appl
 boss zones): wait = both sides, run = right side only; behind `x - margin`
 → forced death (`die(nil,true)`, attributed via `PlayerAdventure.asOwner`).
 Respawn: `AutoScroll.respawnPoint(level)` (lowest safe ground near the window
-centre) — set `pa.spawnX/Y` right before `pa:respawn()` (SP + server).
+centre; in a Flappy level, in the air at a third of the window: `Level:flightSpot`) — set `pa.spawnX/Y` right before
+`pa:respawn()` (SP + server). A Flappy boss stage sets `endCol` to its boss zone's last column: the window stops over
+the zone ([flappy-campaign § Boss stages](flappy-campaign.md#boss-stages-plan-5)).
 Camera X = window centre ONLY (never the player: on screens narrower than the
 window it is cropped equally both sides; no lerp), keeps moving while you die. Net: snapshot `sc`,
 client extrapolates with `AutoScroll.clientUpdate`. Race-only (hunt rejects

@@ -386,6 +386,9 @@ end
 function BossZones.respawnPoint(level, pa)
     for _, z in ipairs(level.bossZones or {}) do
         if z.state == 'fight' and (contains(z, pa.spawnX, pa.spawnY) or contains(z, pa.x, pa.y)) then
+            -- (nivel FLAPPY: se vuela y el suelo hace daño → en el aire, a un tercio de la zona, como con la cámara
+            --  automática; el jefe Flappy se queda en el tercio derecho)
+            if level.flappy then return level:flightSpot(z.x0 + (z.x1 - z.x0) / 3, z.row, z.row + z.h - 1) end
             local x, y = BossZones.safeSpawn(level, z)
             if x then return x, y end
             -- (sin sitio bueno: el de siempre si aún tiene suelo)

@@ -315,6 +315,22 @@ function Level:findGround(col, minCol, maxCol, minRow, maxRow)
     return nil
 end
 
+-- Punto en el AIRE para reaparecer VOLANDO (niveles Flappy: src/player/PlayerFlight.lua) en la columna de x: la casilla
+-- libre (ni sólida ni de las que hacen daño, como los pilares) más cercana al medio de las filas [minRow, maxRow] (por
+-- defecto, todo el nivel). Lo usan AutoScroll.respawnPoint y BossZones.respawnPoint. → x, y (el centro de la casilla)
+function Level:flightSpot(x, minRow, maxRow)
+    local T = TILE_PX
+    minRow, maxRow = math.max(1, minRow or 1), math.min(self.tileH, maxRow or self.tileH)
+    local c, mid = math.floor(x / T) + 1, math.floor((minRow + maxRow) / 2)
+    for d = 0, maxRow - minRow do
+        for _, r in ipairs({ mid - d, mid + d }) do
+            local def = (r >= minRow and r <= maxRow) and self:getDef(c, r)
+            if def and def.collision == 'none' and not def.mat.contact then return x, (r - 0.5) * T end
+        end
+    end
+    return x, (mid - 0.5) * T
+end
+
 -- ── Conexiones (bloques ON/OFF → objetos activables) ─────────────────────────
 -- Casillas de los bloques conectados al objeto `id`
 function Level:linkedCells(id)

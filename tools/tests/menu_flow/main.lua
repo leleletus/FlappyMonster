@@ -308,7 +308,7 @@ local function run()
         gStateMachine:change('flappy_map', { world = 1, node = 1 }); wait(0.6)
         local m = top()
         local inMap = name(m) == 'FlappyMapState'
-        local nodesOk = inMap and #m.nodes == 2 and FlappyRun.state(1, 1) == 'open' and FlappyRun.state(1, 2) == 'locked'
+        local nodesOk = inMap and #m.nodes == #require('src/flappy/Zones').nodes(1) and FlappyRun.state(1, 1) == 'open' and FlappyRun.state(1, 2) == 'locked'
         for _, w in ipairs({ 960, 1600, 1280 }) do resize(w, 720); wait(0.3); shot('flappy_map_' .. w) end
         press('confirm', 1.6)
         local adv = top()

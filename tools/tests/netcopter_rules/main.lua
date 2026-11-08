@@ -22,6 +22,11 @@
 --   bomba    la góndola suelta una bomba suya (owner = el jefe); devuelta subiendo, le quita 2
 --   azar     dos semillas de rollStart → la primera red sale a tiempos distintos
 --   paquete  netPackExtra → otro Redcóptero (cliente): mismo aspecto, la misma franja y la misma garra
+-- Y su etapa de la campaña (assets/levels/valle_redcoptero.json, el nivel de verdad):
+--   etapa_jefe       un piloto sencillo llega a la arena sin morir: la cámara automática 'stop' y la zona 'fight';
+--                    el jefe vencido a la fuerza → sin paredes, vuela a la derecha y toca la meta (→ onFinish)
+--   muerte_en_pelea  morir en la pelea → reaparece EN EL AIRE dentro de la zona con toda la vida (el suelo, que en
+--                    vuelo hace daño, no le toca), el jefe con la misma vida y como mucho una carga a la vez
 --
 --   tools/tests/run.sh netcopter_rules   (CASE=nombre: solo ese)
 io.stdout:setvbuf('no')
@@ -490,8 +495,140 @@ function cases.paquete()
         a and ('%.0f'):format(a.x) or '-', b and ('%.0f'):format(b.x) or '-'))
 end
 
+-- ── La etapa del jefe en la campaña (assets/levels/valle_redcoptero.json) ────────────────────────────────────────
+-- Se carga el nivel de verdad y se juega con un paso como el de AdventureState: cuerpos → jugadores → nivel → entidades
+-- → cámara automática → zonas de jefe → interacciones. Quien muere reaparece como en AdventureState (Sim.respawnPoint
+-- y respawn). La META: tocarla es lo que en AdventureState lanza win() → onFinish
+local AutoScroll = require 'src/world/systems/AutoScroll'
+local Sim = require 'src/world/systems/Sim'
+local STAGE = 'assets/levels/valle_redcoptero.json'
+local function stageLevel()
+    local level = Level.new(STAGE)
+    Difficulty.bind(level)
+    local es = {}
+    for _, pl in ipairs(level.entities) do es[#es + 1] = Entities.create(pl) end
+    for _, e in ipairs(es) do if e.wantsLevel then e.levelRef = level end end
+    level.liveEntities, level.players = es, {}
+    local boss
+    for _, e in ipairs(es) do if e.def.name == 'netcopter' then boss = e end end
+    local sx, sy = level:getSpawnPx()
+    local pa = player(level, sx, sy, 0)
+    pa.spawnX, pa.spawnY = sx, sy
+    local ctrl = BossZones.newController(level, es)
+    return level, es, boss, pa, ctrl, level.bossZones[1]
+end
+local function stageStep(level, es, ctrl, pa)
+    Sim.bodies(level, es)
+    pa:update(DT, level)
+    level:update(DT)
+    Sim.stepEntities(level, es, DT)
+    AutoScroll.update(level, DT)
+    ctrl:update(DT)
+    if not pa.dying then Interactions.run(pa, es, {}) end
+    if pa.dying and not pa.alive then
+        Sim.respawnPoint(level, pa)
+        pa:respawn()
+        return 'respawn'
+    end
+end
+-- El hueco del siguiente pilar por delante de x: centro en px (nil = no hay más)
+local function nextGap(level, x, xMax)
+    for c = math.floor(x / T) + 1, math.floor(xMax / T) + 1 do
+        if level:getTile(c, 1) == PILLAR or level:getTile(c, 9) == PILLAR then
+            local top, bot
+            for r = 1, 9 do if level:getTile(c, r) ~= PILLAR then top = top or r; bot = r end end
+            if top then return ((top - 1) * T + bot * T) / 2 end
+        end
+    end
+end
+
+function cases.etapa_jefe()
+    local level, es, boss, pa, ctrl, z = stageLevel()
+    check('etapa_jefe', boss and z and level.autoScroll and boss.zone == z and z.music == 'tuffi',
+        ('el nivel: jefe %s en su zona, música %s'):format(boss and boss.def.name or '-', z and z.music or '-'))
+    if not (boss and z) then return end
+    local deaths, phase, finished, t = 0, 'pilares', false, 0
+    local reached, scroll
+    for _ = 1, 150 * 60 do
+        t = t + DT
+        for k in pairs(stub.state) do stub.state[k] = false end
+        if pa.x >= z.x0 then pa.invT = math.max(pa.invT or 0, 1) end      -- (en la arena no se prueba esquivar)
+        -- El piloto: el centro del siguiente hueco antes de la arena; dentro y después, la fila 4
+        local target = (pa.x < z.x0 - T) and nextGap(level, pa.x - 40, z.x0 - T) or (4.5 * T)
+        if pa.y > target + 20 and pa.vy > -60 then stub.state.jump_pressed = true end
+        if phase == 'pilares' and z.state == 'fight' then
+            phase, reached, scroll = 'pelea', t, level.autoScroll.state
+            boss.inv = 0
+            boss:damage(boss.hp)                                -- (vencido a la fuerza)
+        elseif phase == 'pelea' and z.state == 'cleared' then
+            phase = 'meta'
+        end
+        stub.state.right = phase == 'meta'
+        if stageStep(level, es, ctrl, pa) == 'respawn' then deaths = deaths + 1 end
+        local ob = pa:getOuterBounds()
+        if phase == 'meta' and not pa.dying and level:triggerInBox(ob.x, ob.y, ob.w, ob.h, 'finish') then finished = true; break end
+        if pa.lives and pa.lives <= 0 then break end
+    end
+    for k in pairs(stub.state) do stub.state[k] = false end
+    check('etapa_jefe', reached and scroll == 'stop' and deaths == 0,
+        ('llega a la arena sin morir (%s s), cámara %s, zona en pelea; muertes %d'):format(
+        reached and ('%.1f'):format(reached) or 'no', tostring(scroll), deaths))
+    check('etapa_jefe', z.state == 'cleared' and level:arenaAt(pa.x, pa.y) == nil, 'vencido: zona ' .. z.state .. ', sin paredes')
+    check('etapa_jefe', finished, ('vuela a la derecha y toca la meta (→ onFinish) en %.1f s; x=%.0f'):format(t, pa.x))
+    Difficulty.bind(nil)
+end
+
+function cases.muerte_en_pelea()
+    local level, es, boss, pa, ctrl, z = stageLevel()
+    -- (directamente a la arena: el jugador en su tercio izquierdo, la ventana parada encima)
+    local a = level.autoScroll
+    a.x, a.state = a.endX, 'stop'
+    pa.x, pa.y = z.x0 + 4 * T, 5 * T
+    for _ = 1, 8 * 60 do
+        pa.x, pa.y, pa.vy = z.x0 + 4 * T, 5 * T, 0
+        stageStep(level, es, ctrl, pa)
+        if z.state == 'fight' then break end
+    end
+    check('muerte_en_pelea', z.state == 'fight', 'la pelea empieza: ' .. z.state)
+    run(level, es, 1, nil, ctrl, function() pa.x, pa.y, pa.vy, pa.invT = z.x0 + 4 * T, 5 * T, 0, 1 end)
+    local hp0 = boss.hp
+    pa.invT = 0
+    pa:die(nil, true)
+    local back
+    local maxCharges = 0
+    for _ = 1, 5 * 60 do
+        if stageStep(level, es, ctrl, pa) == 'respawn' then back = true; break end
+    end
+    local x, y = pa.x, pa.y
+    local def = level:getDef(math.floor(x / T) + 1, math.floor(y / T) + 1)
+    check('muerte_en_pelea', back and BossZones.contains(z, x, y) and z.state == 'fight',
+        ('reaparece dentro de la zona (%.0f, %.0f) con la pelea en marcha'):format(x, y))
+    check('muerte_en_pelea', def.collision == 'none' and not def.mat.contact and y < (FLOOR - 2) * T,
+        ('en el AIRE (casilla %s, %.1f casillas sobre el suelo), no de pie en el suelo'):format(def.name, ((FLOOR - 1) * T - y) / T))
+    -- (sin la invulnerabilidad de reaparecer y sin tocar nada: no toca el suelo)
+    pa.invT = 0
+    for _ = 1, 18 do stageStep(level, es, ctrl, pa) end
+    check('muerte_en_pelea', pa.hp == pa.hpMax, ('vida al reaparecer: %d/%d (sin golpe del suelo)'):format(pa.hp, pa.hpMax))
+    check('muerte_en_pelea', boss.hp == hp0, ('el jefe sigue con su vida: %d → %d'):format(hp0, boss.hp))
+    -- (la ayuda del jefe sigue: nunca más de una carga a la vez en pantalla — la arena —; las de los pilares no cuentan)
+    pa.charge = 0
+    for _ = 1, 20 * 60 do
+        pa.invT = 1
+        pa.x, pa.y, pa.vy = z.x0 + 4 * T, 5 * T, 0
+        stageStep(level, es, ctrl, pa)
+        local n = 0
+        for _, e in ipairs(es) do
+            if e.def.name == 'flapcharge' and e.alive and e.state ~= 'reserve' and BossZones.contains(z, e.x, e.y) then n = n + 1 end
+        end
+        maxCharges = math.max(maxCharges, n)
+    end
+    check('muerte_en_pelea', maxCharges == 1, 'sale alguna carga y nunca dos a la vez: como mucho ' .. maxCharges)
+    Difficulty.bind(nil)
+end
+
 local ORDER = { 'rebote', 'de_lado', 'falla', 'mecha', 'cargas', 'lastima', 'aire', 'aventura', 'ultima_vida',
-                'vida', 'fase2', 'especial', 'no_pisa', 'red', 'garra', 'huye', 'bomba', 'azar', 'paquete' }
+                'vida', 'fase2', 'especial', 'no_pisa', 'red', 'garra', 'huye', 'bomba', 'azar', 'paquete',
+                'etapa_jefe', 'muerte_en_pelea' }
 function love.load()
     local only = os.getenv('CASE')
     for _, name in ipairs(ORDER) do

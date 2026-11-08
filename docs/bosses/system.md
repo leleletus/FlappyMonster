@@ -193,7 +193,9 @@ Harness `giantbeetle_rules purga`.
   (`Level:isStandable`) — far from the boss (its `markerX` while aiming; capped at 7
   tiles), no other enemy within 2.5 tiles, head out of water, below a flood's max
   level penalised, never inside a solid body (boss walls). Fallback: old spawn if it
-  still has ground, else `Level:findGround`. Frozen players (boss intro) are
+  still has ground, else `Level:findGround`. In a FLAPPY level (the player flies, the floor hurts) it respawns IN THE
+  AIR instead, at a third of the zone's width (`Level:flightSpot`, the auto-scroll's Flappy rule; Flappy bosses stay
+  in the right third). Frozen players (boss intro) are
   invulnerable (`isInvulnerable` = invT or `pa.frozen`, no blink).
 
 Player HP: 3 (`pa.hp/hpMax`), `pa:hurt(n)` = n dmg + invulnerability + red flash; 0 → die.

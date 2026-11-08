@@ -17,6 +17,7 @@ Try it: `love . --editor tools/levelgen/arenas/NetcopterArena.json`, then play f
 | `src/world/entities/types/traps/glowbomb.lua` | its glowing bomb (`glowbomb`, a reserve minion; the `reflectable` trait) |
 | `tools/art/bosses/make_netcopter.py` | art (`--apply` → `assets/images/bosses/netcopter/`, all ×6) |
 | `tools/levelgen/arenas/NetcopterArena.json` | test arena: 40x11 Flappy, zone columns 17-36 (full height), music `tuffi` |
+| `assets/levels/valle_redcoptero.json` | its campaign stage (zone 1's `boss`), by `tools/levelgen/levels_flappy_valle_boss.py` ([flappy-campaign § Boss stages](../gameplay/flappy-campaign.md#boss-stages-plan-5)) |
 
 Anchors in the 44x40 machine frame (its centre = the entity's x, y): gondola x 12..32, y 29..38; pilot (26x21, the
 Evil Monster's `Idle1` grid) top-left at (9, 16); cannon (18x12) top-left at (-6, 28) unfolded, folded behind the
@@ -61,7 +62,7 @@ are not online: no `Protocol.VERSION` change (ruling R2 of the plan).
 ## Tests
 
 `tools/tests/run.sh netcopter_rules` (cases `vida`, `fase2`, `especial`, `no_pisa`, `red`, `garra`, `huye`, `bomba`,
-`azar`, `paquete`, besides the bomb and drop cases); `boss_intro LEVEL=tools/levelgen/arenas/NetcopterArena.json`;
+`azar`, `paquete`, `etapa_jefe`, `muerte_en_pelea`, besides the bomb and drop cases); `boss_intro LEVEL=tools/levelgen/arenas/NetcopterArena.json`;
 `boss_frames LEVEL=tools/levelgen/arenas/NetcopterArena.json FX=1 ZONE=1
 STATES=intro,hover,aim_net,sweep_warn,sweep,dying_hold,fleeing` (a special hit every 3 s to see it all).
 
@@ -71,3 +72,5 @@ the wide machine) and the reused sounds.
 ## History
 
 - 2026-11-08 (Plan 5, task 4): first version (provisional art, reused sounds).
+- 2026-11-08 (Plan 5, task 5): the campaign stage `valle_redcoptero`; ruling R4: dying in a Flappy boss fight respawns
+  in the air (it respawned standing on the floor, which costs 1 HP in flight).
