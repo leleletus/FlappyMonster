@@ -1,9 +1,12 @@
 -- src/player/PlayerFlight.lua
 -- PARTE de src/player/PlayerAdventure.lua: el VUELO de los niveles Flappy (nivel con `"flappy": true`; la campaña
 -- precuela, docs/design/flappy-prequel.md). La carga PlayerAdventure.lua con require(...)(PlayerAdventure, P).
---   · Se aletea con SALTAR (sin límite, como en el Flappy de siempre: misma gravedad GRAVITY y mismo aleteo
---     FLAP_VELOCITY de settings.lua) y se mueve a los lados a voluntad DENTRO de la ventana de la cámara automática:
---     sin tocar nada, el monstruo va con la ventana (como en un juego de naves), no se queda atrás.
+--   · Se aletea con SALTAR (sin límite) y se mueve a los lados a voluntad DENTRO de la ventana de la cámara
+--     automática: sin tocar nada, el monstruo va con la ventana (como en un juego de naves), no se queda atrás.
+--   · Gravedad y aleteo PROPIOS, más flotantes que los del Flappy de siempre (GRAVITY 1800 / FLAP_VELOCITY -480): el
+--     usuario, 0.5.164, "la gravedad es más fuerte de lo que debería".
+--   · Hacia ATRÁS (contra la cámara) va más rápido en pantalla: FLY_SPD + lo que avanza la ventana, lo mismo que
+--     recorre hacia delante en el mundo (el usuario: hacia la izquierda "todo se siente más pesado y lento").
 --   · Sin agacharse, ground pound, cargar ni saltos de plataformas.
 --   · Los PILARES (tile `pillar`) no son sólidos: tocarlos quita 1 de vida y la invulnerabilidad deja atravesarlos.
 --   · El SUELO (lo sólido por debajo) también hace daño al tocarlo y lo devuelve hacia arriba de un bote; el techo y
@@ -12,12 +15,15 @@
 return function(PlayerAdventure, P)
 local PUFF_SCALE, PUFF_SPD, OUTER_W = P.PUFF_SCALE, P.PUFF_SPD, P.OUTER_W
 
-local FLY_SPD    = 330      -- px/s a los lados respecto a la ventana
+local FLY_SPD    = 330      -- px/s a los lados respecto a la ventana (hacia atrás, más lo que avanza la ventana)
+local FLY_GRAVITY = 1350    -- px/s² (el Flappy de siempre: 1800)
+local FLY_FLAP    = -450    -- px/s del aleteo (el Flappy de siempre: -480)
 local FLY_ACC    = 12       -- lo rápido que llega a esa velocidad (1/s)
 local MAX_FALL   = 900      -- px/s cayendo como mucho
 local FLOOR_HOP  = -560     -- px/s del bote al tocar el suelo
 local GLIDE_FPS  = 6
 PlayerAdventure.FLY_SPD, PlayerAdventure.FLOOR_HOP = FLY_SPD, FLOOR_HOP
+PlayerAdventure.FLY_GRAVITY, PlayerAdventure.FLY_FLAP = FLY_GRAVITY, FLY_FLAP
 
 -- Lo que avanza la ventana de la cámara automática ahora (px/s; 0 si está parada o no hay)
 local function windowSpeed(level)
@@ -33,14 +39,15 @@ function PlayerAdventure:updateFlight(dt, level, pJump, inX)
 
     -- Aleteo: siempre se puede (no gasta saltos)
     if pJump and not stunned then
-        self.vy = FLAP_VELOCITY
+        self.vy = FLY_FLAP
         self.puff = PUFF_SCALE
         Sound.play('jump')
     end
-    -- A los lados: con la ventana, más lo que pida el jugador
-    local want = windowSpeed(level) + inX * FLY_SPD
+    -- A los lados: con la ventana, más lo que pida el jugador (hacia atrás, además, lo que avanza la ventana)
+    local ws = windowSpeed(level)
+    local want = ws + (inX > 0 and FLY_SPD or (inX < 0 and -(FLY_SPD + ws) or 0))
     self.vx = self.vx + (want - self.vx) * math.min(1, FLY_ACC * dt)
-    self.vy = math.min(MAX_FALL, self.vy + GRAVITY * dt)
+    self.vy = math.min(MAX_FALL, self.vy + FLY_GRAVITY * dt)
 
     self:moveSteps(level, self.vx * dt, self.vy * dt)
     if self.dying then return end

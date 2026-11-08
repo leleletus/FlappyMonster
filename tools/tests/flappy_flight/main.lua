@@ -1,9 +1,10 @@
 -- tools/tests/flappy_flight — el VUELO de los niveles Flappy (src/player/PlayerFlight.lua; paso 2 de
 -- docs/design/flappy-prequel.md), caso a caso en niveles hechos en el arnés:
---   aleteo      SALTAR pone la velocidad del aleteo del Flappy de siempre (FLAP_VELOCITY), sin límite de aleteos; sin
---               pulsar cae con su gravedad (GRAVITY)
+--   aleteo      SALTAR pone la velocidad del aleteo (FLY_FLAP), sin límite de aleteos; sin pulsar cae con su gravedad
+--               (FLY_GRAVITY)
 --   ventana     sin tocar nada va con la ventana de la cámara automática; a la derecha no la adelanta; a la izquierda el
---               borde lo lleva (no se queda atrás ni muere)
+--               borde lo lleva (no se queda atrás ni muere); en pantalla, a la derecha FLY_SPD y a la izquierda FLY_SPD +
+--               lo que avanza la ventana
 --   pilar       volar contra un pilar quita 1 de vida UNA vez y lo atraviesa (invulnerable)
 --   suelo       tocar el suelo quita 1 y lo devuelve hacia arriba de un bote
 --   reaparece   en un nivel Flappy se reaparece en el aire, en una casilla libre (no dentro de un pilar)
@@ -95,11 +96,11 @@ function cases.aleteo()
     local vA = pa.vy
     step(level, 0.2)
     local g = (pa.vy - vA) / 0.2
-    local tol = math.abs(GRAVITY) * DT * 2
-    check('aleteo', pa.flight and math.abs(v1 - FLAP_VELOCITY) <= tol and math.abs(v2 - FLAP_VELOCITY) <= tol
-          and math.abs(g - GRAVITY) < GRAVITY * 0.05,
-          ('vuela=%s; aleteo %.0f y otro en el aire %.0f (FLAP_VELOCITY %d); gravedad %.0f (GRAVITY %d)'):format(
-           tostring(pa.flight), v1, v2, FLAP_VELOCITY, g, GRAVITY, 0))
+    local tol = PlayerAdventure.FLY_GRAVITY * DT * 2
+    check('aleteo', pa.flight and math.abs(v1 - PlayerAdventure.FLY_FLAP) <= tol and math.abs(v2 - PlayerAdventure.FLY_FLAP) <= tol
+          and math.abs(g - PlayerAdventure.FLY_GRAVITY) < PlayerAdventure.FLY_GRAVITY * 0.05,
+          ('vuela=%s; aleteo %.0f y otro en el aire %.0f (FLY_FLAP %d); gravedad %.0f (FLY_GRAVITY %d)'):format(
+           tostring(pa.flight), v1, v2, PlayerAdventure.FLY_FLAP, g, PlayerAdventure.FLY_GRAVITY))
 end
 
 -- Mantiene la altura (aletea al bajar de `y`)
@@ -116,14 +117,34 @@ function cases.ventana()
     stub.state.right = true
     local maxR = 0
     step(level, 3, function() hover(pa, 5 * T); maxR = math.max(maxR, pa.x - a.x) end)
+    -- (velocidad EN PANTALLA a cada lado, a media ventana: hacia atrás, FLY_SPD + lo que avanza la ventana)
+    local function screenSpeed(dir)
+        clearInput()
+        step(level, 0.6, function() hover(pa, 5 * T); if pa.x - a.x > a.W / 2 + 40 then stub.state.left = true end end)
+        clearInput()
+        while pa.x - a.x > a.W / 2 do step(level, DT, function() hover(pa, 5 * T); stub.state.left = true end) end
+        clearInput()
+        while pa.x - a.x < a.W / 2 - 200 do step(level, DT, function() hover(pa, 5 * T); stub.state.right = true end) end
+        clearInput()
+        stub.state[dir] = true
+        step(level, 0.4, function() hover(pa, 5 * T) end)
+        local r0 = pa.x - a.x
+        step(level, 0.25, function() hover(pa, 5 * T) end)
+        clearInput()
+        return math.abs((pa.x - a.x) - r0) / 0.25
+    end
+    local vR = screenSpeed('right')
+    local vL = screenSpeed('left')
+    SPEEDS = ('en pantalla: derecha %.0f, izquierda %.0f px/s'):format(vR, vL)
+    SPEED_OK = math.abs(vR - PlayerAdventure.FLY_SPD) < 25 and math.abs(vL - (PlayerAdventure.FLY_SPD + a.speed)) < 25
     stub.state.right = false
     stub.state.left = true
     local minL = math.huge
     step(level, 6, function() hover(pa, 5 * T); minL = math.min(minL, pa.x - a.x) end)
     clearInput()
     local ob = pa:getOuterBounds()
-    check('ventana', a.state == 'run' and drift < 8 and maxR <= a.W + 1 and minL >= ob.w / 2 - a.speed * DT - 1 and not pa.dying,
-          ('quieto se aleja %.1f px de su sitio en la ventana; a la derecha llega a %.0f de %d; a la izquierda baja a %.0f (el borde, menos lo que avanza la ventana en un paso); vivo=%s'):format(
+    check('ventana', SPEED_OK and a.state == 'run' and drift < 8 and maxR <= a.W + 1 and minL >= ob.w / 2 - a.speed * DT - 1 and not pa.dying,
+          (SPEEDS .. '; quieto se aleja %.1f px de su sitio en la ventana; a la derecha llega a %.0f de %d; a la izquierda baja a %.0f (el borde, menos lo que avanza la ventana en un paso); vivo=%s'):format(
            drift, maxR, a.W, minL, tostring(not pa.dying)))
 end
 

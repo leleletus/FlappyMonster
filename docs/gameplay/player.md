@@ -170,9 +170,10 @@ plant: [enemies](../entities/enemies.md#carnivorous-plant-carnivoreplant-planta-
 0.5.164, step 2 of [flappy-prequel](../design/flappy-prequel.md). In a level with `"flappy": true` the player FLIES
 (`pa.flight`, set from the level in `update` like `peaceful`; `PlayerFlight.lua`, called from `_update` before the
 ground pound):
-- JUMP flaps: `vy = FLAP_VELOCITY` (-480) with the old Flappy's `GRAVITY` (1800), any number of times; falls at most
-  900 px/s. No crouch, ground pound, carrying or double jump.
-- Left / right at will (`FLY_SPD` 330 px/s relative to the camera window). With the level's auto-scroll running the
+- JUMP flaps: `vy = FLY_FLAP` (-450) with its own `FLY_GRAVITY` (1350), any number of times; falls at most 900 px/s.
+  No crouch, ground pound, carrying or double jump.
+- Left / right at will: on screen `FLY_SPD` (330 px/s) forward and `FLY_SPD` + the window's speed backward (530 at
+  200 px/s), so going back covers on screen what going forward covers in the world. With the level's auto-scroll running the
   monster moves WITH the window (like a scrolling shooter): no input = it keeps its place on screen. The right wall is
   the window's (AutoScroll arena); the left edge carries it along (if a block is in the way, AutoScroll's usual rule —
   left behind = dies — applies).
@@ -184,6 +185,10 @@ ground pound):
 - Shared simulation (golden rule 1): nothing new travels online yet (Flappy levels are listed in no online mode).
 
 **Feel: not judged yet** — waiting for the user (debug menu → FLAPPY FLIGHT (TEST)). Harness `flappy_flight`.
+
+History: 0.5.164 used the old Flappy's `GRAVITY` 1800 / `FLAP_VELOCITY` -480 and 330 px/s both ways on screen. The
+user: the gravity "is stronger than it should be", and going left "everything feels heavier and slower". 0.5.165:
+`FLY_GRAVITY` 1350, `FLY_FLAP` -450, and backward = `FLY_SPD` + the window's speed.
 
 ## Network
 
