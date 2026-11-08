@@ -98,7 +98,8 @@ function love.load()
         difficulty         = function() return DifficultySelectionState:new() end,
         settings           = function() return SettingsState:new() end,
         debug_menu         = function() return require('src/states/menu/DebugMenuState'):new() end,   -- (secreto: ver TitleState)
-        flappy_campaign    = function() return require('src/states/flappy/FlappyCampaignState'):new() end, -- CLÁSICO: la campaña Flappy
+        flappy_campaign    = function() return require('src/states/flappy/FlappyCampaignState'):new() end, -- FLAPPY: la campaña
+        flappy_map         = function() return require('src/states/flappy/FlappyMapState'):new() end,      -- FLAPPY: el mapa de zonas
         sound_test         = function() return SoundTestState:new() end,   -- (desde el menú de depuración)
         film_test          = function() return FilmTestState:new() end,    -- (desde el menú de depuración)
         play               = function() return PlayState:new() end,

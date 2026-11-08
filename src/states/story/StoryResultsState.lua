@@ -7,7 +7,9 @@
 -- pedestal (src/story/Score.lua). S y A: fiesta completa; B: confeti; D: trombón triste.
 -- Luego, si los hay: mejor nota, premio y la nota del MUNDO (al vencer a su jefe).
 -- ENTER / toque: durante la animación la salta; después, vuelve al mapa.
---   args = { level = id, result = (AdventureState), summary = (Run.complete), map = args del mapa, color = {r,g,b} }
+--   args = { level = id, result = (AdventureState), summary = (Run.complete), map = args del mapa, color = {r,g,b},
+--            returnTo = estado al que se vuelve (por defecto 'story_map'; la campaña Flappy: 'flappy_map'),
+--            name = título del nivel (por defecto, el de su archivo) }
 local BaseState   = require 'src/core/BaseState'
 local PixelFont   = require 'src/ui/PixelFont'
 local Celebration = require 'src/ui/Celebration'
@@ -137,7 +139,7 @@ function StoryResultsState:_continue(retry)
     local map = {}
     for k, v in pairs(self.args.map or {}) do map[k] = v end
     if retry then map.replay, map.opened = true, nil end
-    gStateMachine:change('story_map', map)
+    gStateMachine:change(self.args.returnTo or 'story_map', map)
 end
 
 function StoryResultsState:update(dt)
@@ -305,7 +307,7 @@ function StoryResultsState:render()
     love.graphics.pop()
     love.graphics.setFont(FONT_MED)
     local sa = clamp01((t - T_TITLE - 0.35) / 0.3)
-    shadowText(Worlds.levelName(self.args.level or ''), 0, 104, WINDOW_W, 'center', c, sa)
+    shadowText(self.args.name or Worlds.levelName(self.args.level or ''), 0, 104, WINDOW_W, 'center', c, sa)
 
     -- El PEDESTAL (uno: modo de un jugador) y el monstruo encima
     local rise = easeOutBack((t - T_PODIUM) / 0.55)

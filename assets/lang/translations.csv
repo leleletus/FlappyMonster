@@ -234,6 +234,12 @@ menu.desc_classic,"La precuela: cómo llegó el monstruo a las islas","The prequ
 menu.desc_settings,Idioma y opciones,Language and options,
 menu.hint,{move} elegir      {ok} aceptar      {back} volver,{move} choose      {ok} select      {back} back,
 flappy.zone.valle,Valle de los Pilares,Valley of the Pillars,"Zona 1 de la campaña Flappy (src/flappy/Zones.lua)"
+flappy.go_zone,Te quedaste sin vidas: vuelves al inicio de esta zona,Out of lives: you'll go back to the start of this zone,"Campaña Flappy (src/states/flappy/FlappyMapState.lua)"
+flappy.go_notice,GAME OVER: DE VUELTA AL INICIO DE LA ZONA,GAME OVER: BACK TO THE START OF THE ZONE,
+flappy.map_hint,{lr} elegir    {ok} jugar    {back} partidas,{lr} choose    {ok} play    {back} saves,
+flappy.map_locked,Supera la etapa anterior para abrirla,Clear the previous stage to open it,
+flappy.map_new,Sin jugar todavía,Not played yet,
+flappy.map_best,"Mejor nota: {grade}    Mejor tiempo: {t} s","Best grade: {grade}    Best time: {t} s",
 fc.campaign,CAMPAÑA,CAMPAIGN,"CLÁSICO (src/states/flappy/FlappyCampaignState.lua): la campaña Flappy, aún sin hacer"
 fc.desc_soon,"Próximamente: cómo llegó el monstruo a las islas","Coming soon: how the monster reached the islands",
 fc.endless,INFINITO,ENDLESS,

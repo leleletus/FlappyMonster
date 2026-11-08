@@ -268,6 +268,47 @@ local function run()
              tostring(lockedOk), tostring(stays), tostring(noEndless), tostring(dbgOpen), tostring(unlocked)))
         gStateMachine:change('main_menu', { select = 'classic' }); wait(0.6)
     end
+    -- ── 2c. el MAPA DE ZONAS de la campaña Flappy: nodos, jugar una etapa (nivel Flappy, vuelve al mapa), terminarla
+    --        (resultados → el mapa con la siguiente abierta) y salir a medias (vidas perdidas sí, nada ganado) ──
+    do
+        local FlappyRun = require 'src/flappy/FlappyRun'
+        local FlappySave = require 'src/flappy/FlappySave'
+        for i = 1, FlappySave.SLOTS do FlappySave.delete(i) end
+        FlappyRun.open(1, 'normal')
+        local lives0 = FlappyRun.data.lives
+        gStateMachine:change('flappy_map', { world = 1, node = 1 }); wait(0.6)
+        local m = top()
+        local inMap = name(m) == 'FlappyMapState'
+        local nodesOk = inMap and #m.nodes == 2 and FlappyRun.state(1, 1) == 'open' and FlappyRun.state(1, 2) == 'locked'
+        for _, w in ipairs({ 960, 1600, 1280 }) do resize(w, 720); wait(0.3); shot('flappy_map_' .. w) end
+        press('confirm', 1.6)
+        local adv = top()
+        local plays = name(adv) == 'AdventureState' and adv.level.flappy == true and adv.returnTo == 'flappy_map'
+        -- salir a medias tras perder una vida: se guarda la vida perdida, la etapa no
+        if plays then adv.stats.deaths = 1; adv.player.lives = lives0 - 1 end
+        gStateMachine:change('flappy_map'); wait(0.3)
+        local left = FlappyRun.data.lives == lives0 - 1 and FlappySave.load(1).lives == lives0 - 1 and not FlappyRun.isDone('valle_pilares_1')
+        -- terminarla: resultados y, al seguir, el mapa con la etapa 2 abierta
+        press('confirm', 1.6)
+        local adv2 = top()
+        local fin = false
+        if name(adv2) == 'AdventureState' and adv2.onFinish then
+            adv2.onFinish({ time = 30, width = 114, score = 200, lives = FlappyRun.data.lives, deaths = 0, hits = 0 })
+            wait(0.3)
+            local res = top()
+            fin = name(res) == 'StoryResultsState'
+            if fin then
+                press('confirm', 0.1); press('confirm', 0.6)
+                fin = name(top()) == 'FlappyMapState' and FlappyRun.state(1, 2) == 'open' and FlappyRun.isDone('valle_pilares_1')
+            end
+        end
+        check('mapa', inMap and nodesOk and plays and left and fin,
+            ('mapa=%s; nodos abierto/cerrado=%s; jugar → nivel Flappy que vuelve al mapa=%s; salir a medias guarda la vida perdida y nada más=%s; terminar → resultados → mapa con la 2 abierta=%s'):format(
+             tostring(inMap), tostring(nodesOk), tostring(plays), tostring(left), tostring(fin)))
+        FlappyRun.close()
+        for i = 1, FlappySave.SLOTS do FlappySave.delete(i) end
+        gStateMachine:change('main_menu', { select = 'classic' }); wait(0.6)
+    end
     go('settings', 'SettingsState', 'settings')
     local lang0 = L.current()
     press('nav_right', 0.3)
