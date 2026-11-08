@@ -17,8 +17,8 @@ Try it: `love . --editor tools/levelgen/arenas/NetcopterArena.json`, then play f
 | `src/world/entities/types/traps/netshot.lua` | its net (`netshot`, a reserve minion) |
 | `src/world/entities/types/traps/glowbomb.lua` | its glowing bomb (`glowbomb`, a reserve minion; the `reflectable` trait) |
 | `tools/art/bosses/make_netcopter.py` | art (`--apply` → `assets/images/bosses/netcopter/`, all ×6) |
-| `tools/levelgen/arenas/NetcopterArena.json` | test arena: 40x11 Flappy, zone columns 17-36 (full height), music `tuffi` |
-| `assets/levels/valle_redcoptero.json` | its campaign stage (zone 1's `boss`), by `tools/levelgen/levels_flappy_valle_boss.py` ([flappy-campaign § Boss stages](../gameplay/flappy-campaign.md#boss-stages-plan-5)) |
+| `tools/levelgen/arenas/NetcopterArena.json` | test arena: 40x11 Flappy, zone columns 17-36 (full height), music `tuffi`; floor = the last row only (grass, rows 1-10 air); hand-made, no generator |
+| `assets/levels/valle_redcoptero.json` | its campaign stage (zone 1's `boss`), by `tools/levelgen/levels_flappy_valle_boss.py` ([flappy-campaign § Boss stages](../gameplay/flappy-campaign.md#boss-stages-plan-5)); floor on the last row (`floor=H`), one row lower than the other Valley stages |
 
 Art lives in `assets/images/bosses/netcopter/` (all drawn at ×6, the player's pixel). Sheets (frame size, frames):
 
@@ -28,7 +28,7 @@ Art lives in `assets/images/bosses/netcopter/` (all drawn at ×6, the player's p
 | `propeller-Sheet` | 12x18 ×4 | the pedal propeller (spins; faster while crossing) |
 | `cannon-Sheet` | 18x12 ×2 | the cannon (frame 2 = glowing before firing) |
 | `cannon_arm-Sheet` | 3x12 ×3 | the iron arm bolted to the gondola: clamp (12 px from the cannon corner), bar (1 column, repeated), plate at x 9..11 |
-| `claw` | 54x14 | claw head on the left; the arm is lengthened by repeating its 9-px slice from x 36 |
+| `claw-Sheet` | 54x14 ×3 | closed, half open, open; claw head on the left; the arm is lengthened by repeating its 9-px slice from x 36 (was the single-frame `claw` until round 2) |
 | `pilot-Sheet` | 9x16 ×4 | pedal1, pedal2, (3 = an old laugh frame, no longer drawn, see History), hurt |
 | `pilot_laugh-Sheet` | 9x16 ×2 | blank head, hands up (A) / head 1 px lower, hands down (B) |
 | `joy_eyes` | 5x2 | the «^ ^» laughing eyes painted over the blank head (see below) |
@@ -79,22 +79,30 @@ Hp 12 + 4 per extra player (`bossHp` scales it: 11 at Normal, 14 at Extreme). Ph
   `glowbomb.lua`.
 - **Claw** (phase 2, every second attack): `sweep_warn` 0.8 s (`clawServo`) — the band (the claw's height, 84 px) is
   fixed at the player's height when it starts and marked by blinking target marks; the machine moves so the gondola
-  lines up. Then `sweep`: the claw goes out across the zone, towards where it faces, to the far edge in 1.0 s and back
-  in 0.6 s; −2 inside the band (arm included), nothing outside it.
+  lines up. The claw slides out of the gondola (`CLAW_OUT_T` 0.2 s) to its READY spot (`CLAW_REST`: the head just past
+  the cannon's mouth, which is at the same height) CLOSED, and OPENS at 0.3 s (`clawOpen`; half-open frame 0.1 s). Then
+  `sweep`: the open claw goes out across the zone, towards where it faces, to the far edge in 1.0 s, SNAPS SHUT there
+  (`clawSnap`, sparks; half-closed frame the last `SNAP_T` 0.08 s) and comes back closed in 0.6 s; −2 inside the band
+  (arm included), nothing outside it. The frame comes from `state` + `deadTimer` (`clawFrame`); the drawing is cut at
+  the gondola's back edge so the arm never pokes out behind the machine.
 - **Alive** (all derived from `state`, `deadTimer`, x, y, `facing`, `netPackExtra`): the propeller spins (4 frames,
   faster crossing), the balloon sways, the legs pedal at their own rate; after a hit: sparks, hurt 0.2 s then ANGRY
   (raised fist) 0.6 s; phase 2: smoke leaves the burst balloon; each hit shakes the screen (fx `shake_tick`, 0.15 s).
 - **Laugh** (intro, and 1.2 s whenever a player dies, without stopping the fight): like the Mirror's — the head
   turns blank (`pilot_laugh-Sheet`) and `joy_eyes` «^ ^» are drawn over it; the head goes up and down every 1/6 s.
   The eyes are drawn at the BOSS pixel size (×6, a 5x2 sprite), not the Mirror's half-size cell (pixel-density rule).
-- **Vulnerable always** while fighting (no stun windows): the special attack (damage = the charge spent) and returned
-  bombs; `Boss.INV_TIME` after each hit. **Never stomped:** `interact` returns nil; touching its body costs 1 HP and a
-  push towards `facing` (towards the middle; while crossing, downwards and away from it) (`Boss.strike`, checked in
-  `updateBoss`). Not a solid body.
+- **Vulnerable always** while fighting (no stun windows): the special attack (damage = the charge spent; it hits the
+  whole outer box, balloon included) and returned bombs (they fly at `aimPoint()` = the gondola's centre and hit the
+  whole outer box); `Boss.INV_TIME` after each hit. **Never stomped:** `interact` returns nil. **Only the CABIN hurts
+  on contact** (`contactBoxes()`: the gondola, art 12..31 x 43..52, and the pilot standing on it, 18..26 x 27..42,
+  mirrored around x with `drawFace`; red F1 boxes): touching it costs 1 HP and a push towards `facing` (towards the
+  middle; while crossing, downwards and away from it) (`Boss.strike`, checked in `updateBoss`). The balloon, the
+  ropes, the propeller and the cannon never hurt. Not a solid body.
 - **Entry** (3.5 s): pedals in from the right (2 s, `miniAppear`), laughs at 2.1 s (`mirrorLaugh`), unfolds the cannon
   at 2.6 s (`cannonLoad`).
 - **Sounds** (`tools/sounds/netcopter.py` → `assets/sounds/bosses/netcopter/`, [sound](../audio/sound.md)): `netFire`,
-  `netSnare`, `netSnag`, `bombLob`, `balloonPop` (phase 2), `clawServo`, plus the rate-limited ambience `pedalSqueak`
+  `netSnare`, `netSnag`, `bombLob`, `balloonPop` (phase 2), `clawServo`, `clawOpen` and `clawSnap` (once per claw
+  attack each), plus the rate-limited ambience `pedalSqueak`
   (0.7 s, 0.4 s crossing), `propWhir` (0.55 s / 0.35 s) and `leakHiss` (phase 2, 1.8 s). Still reused: `cannonFuse`,
   `cannonLoad`, `miniAppear`, `mirrorLaugh`, `gustBlow`, `bossExplode`, `megaFlee`.
 - **Defeat:** the generic `dying_hold` (explosions, the pilot's hurt face) and then, instead of falling, `fleeing`
@@ -120,16 +128,21 @@ are not online: no `Protocol.VERSION` change (ruling R2 of the plan).
 `fase2`, `especial`, `no_pisa`, `red` (+ `netSnare`, the wrap drawn in front), `garra`, `huye`, `bomba`, `azar`,
 `paquete`, `etapa_jefe`, `muerte_en_pelea`, `pilar` (+ `netSnag`), `red_repetida`, `derrota_bombas`; plan 5c:
 `lanzada`, `devuelta_arco`, `cruza`, `mira_izq`, `cruce_justo`, `risa`, `dibujo` (+ the turn flip), `ruido`
-(+ `balloonPop`), `reaparece_lejos`); `boss_intro LEVEL=tools/levelgen/arenas/NetcopterArena.json` (its `reaparece`
+(+ `balloonPop`), `reaparece_lejos`; round 2: `cabina` (only the cabin hurts; the burst hits the balloon; the returned
+bomb aims at the gondola), `garra_anim` (claw frames and `clawOpen` / `clawSnap` once each); `no_pisa` now checks
+both the balloon (nothing) and the pilot (−1)); `flappy_flight ataque` (the burst's direction); `boss_intro LEVEL=tools/levelgen/arenas/NetcopterArena.json` (its `reaparece`
 case accepts the air respawn of Flappy levels and requires ≥ 2 tiles from the boss and from where it holds — while it
 crosses, from its destination);
 `boss_frames LEVEL=tools/levelgen/arenas/NetcopterArena.json FX=1 ZONE=1
 STATES=intro,hover,aim_net,sweep_warn,sweep,dying_hold,fleeing` (a special hit every 3 s to see it all);
 `boss_frames LEVEL=tools/levelgen/arenas/NetcopterArena.json FX=1 HOVER=1 ENTSTATE=netshot:wrap EVERY=0.1` (a net
-wrapping the player, drawn in front of it).
+wrapping the player, drawn in front of it); `boss_frames LEVEL=tools/levelgen/arenas/NetcopterArena.json FX=1 RAGE=1
+ZOOM=2.4 STATES=sweep_warn,sweep EVERY=0.1` (the claw opening; `ZONE=1` for the whole arena with its floor). Round 2
+capture: `/home/mtvemo/FlappyMonster_pruebas/redcoptero/ronda2.png`.
 
 **Not judged yet** (needs the user): the feel and timings of the patrol, the lobbed bomb and the nets; the whole
-plan 5c art (arm, laugh, angry frame, smoke, sparks); the nine new sounds (verified by numbers only, never listened to).
+plan 5c art (arm, laugh, angry frame, smoke, sparks); the eleven own sounds (verified by numbers only, never listened
+to); round 2: whether one more row of air is enough room, the claw's three frames and timing, the cabin-only contact.
 
 ## SP / server / client
 
@@ -172,6 +185,22 @@ fight in the `T` table of `netcopter.lua`. A new reflectable projectile: the `re
   the eyes at the boss pixel size (×6) and not at the Mirror's half-size cell (pixel-density rule); nine own sounds
   instead of the reused placeholders.
 - Ruling R2: no `Protocol.VERSION` change (Flappy is not online). R4: air respawn in Flappy boss fights.
+- 2026-11-08, the user after playing 0.5.177 (round 2, 4 points): (1) "the hitbox that hurts the player is too big,
+  it should only be the central cabin (not the balloon)"; (2) "the monster's attack only goes right: when the boss
+  changes side it shoots at nothing; make the shot go where it is moving or last moved (like throwing things)";
+  (3) "the mechanical arm lacks an opening / closing sound and animation"; (4) "lower the floor: it is too high and
+  gets in the way of the fight".
+- Round 2 decisions: (1) contact damage only from `contactBoxes()` (gondola + pilot); the burst and the returned bomb
+  still hit the whole outer box (a big target for the player's own attacks), and the returned bomb aims at the
+  gondola (`Entity:aimPoint`, a new base hook). (2) the burst follows the player's `facing`, the rule Carry already
+  uses for throws; in flight `facing` = the last non-zero horizontal input (starts right), and the sprite flips with
+  it ([player](../gameplay/player.md#flight-flappy-levels)). (3) `claw-Sheet` with 3 frames + `clawOpen` / `clawSnap`;
+  the claw now waits CLEAR of the cannon (`CLAW_REST`): at its old spot it was hidden behind the cannon and its opening
+  could not be seen. (4) the floor goes to the level's last row (grass only, no dirt row) in `valle_redcoptero` and
+  `NetcopterArena`: 10 air rows instead of 9. The level stays 11 rows (704 px): the screen is 720 px tall, so a 12th
+  row would need vertical scrolling and would hide the ceiling or the floor; one row is the most the fixed camera
+  allows without changing the level height. The arena's short pillars keep their height (the floor one moved down
+  with the floor).
 
 ## History
 
@@ -190,5 +219,9 @@ fight in the `T` table of `netcopter.lua`. A new reflectable projectile: the `re
   the machine to half width for 0.2 s (breaks the one-pixel-size rule) → it flips at once halfway (`drawFace`). The
   wrapping net was drawn behind the monster → in front (`Entity:drawsInFront`, a base hook derived from what travels
   in snapshots; the renderers use it instead of reading `renderFront` directly).
+- 2026-11-08 (round 2, after the user's 4 points above): cabin-only contact damage, burst direction from `facing`,
+  claw open / snap animation and sounds, the floor one row lower. `boss_frames` now draws the whole level for its
+  zoom (with `ZONE=1` the floor was cut off: the level culls its tiles to the game window). `project_check` no longer
+  reads `server/published/` (the last published copy, which still names deleted assets until the next deploy).
 - `pilot-Sheet` frame 3 (the old laugh with an open mouth) is no longer drawn by the boss; it stays in the sheet
   because the hurt frame is read by index (4) by the game and the generator preview.

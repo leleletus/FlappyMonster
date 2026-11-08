@@ -185,8 +185,13 @@ ground pound):
   `BossZones.respawnPoint` uses the same rule at a third of the zone (never standing on the floor, which hurts).
 - Shared simulation (golden rule 1): nothing new travels online yet (Flappy levels are listed in no online mode).
 
+- FACING in flight: the last non-zero horizontal input (`inX`; starts right, kept while stunned or with no input; the
+  window's own speed does not count). The sprite flips with it. Before 0.5.178 it was forced to the right.
 - CHARGE and the SPECIAL ATTACK (0.5.169): `pa.charge` (0..`CHARGE_MAX` 5, `addCharge`), `fireSpecial` /
   `updateBursts` / `renderBursts`, `pa.bursts` — see [flappy-campaign](flappy-campaign.md#charge-special-attack-cages-walls-food-hud-plan-4-05169).
+  The burst leaves towards `facing` (`b.dir`), the same rule `systems/Carry` uses for throws (the user, 2026-11-08:
+  it only went right, so it missed the Net-Copter once it changed side); entities get `onSpecialHit(power, pa, dir)`
+  and enemies are flung that way.
 
 - POWER-UPS (0.5.172): `PlayerPowerups.lua` — the shield in the hurt / die path, `effects` timers, `sizeK`, ghost,
   magnets ([powerups](powerups.md)).

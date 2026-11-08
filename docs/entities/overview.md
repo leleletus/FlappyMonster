@@ -82,9 +82,13 @@ landing mark; sprites in `assets/images/bosses/common/`). Asset layout: enemies 
 
 ## Player ↔ entity interactions
 
-**The special attack's burst** (Flappy levels, 0.5.169): `Entity:onSpecialHit(power, pa)` → true absorbs the burst.
-Base: enemies (not bosses) die flung; `Boss`: `damage(power, 'special')`; `cage` and `crackwall` open / break at
-`minCharge`. Types that should react differently override it ([flappy-campaign](../gameplay/flappy-campaign.md)).
+**The special attack's burst** (Flappy levels, 0.5.169): `Entity:onSpecialHit(power, pa, dir)` → true absorbs the
+burst (`dir` ±1 = where the burst goes, the player's `facing`, 0.5.178). Base: enemies (not bosses) die flung that way;
+`Boss`: `damage(power, 'special')`; `cage` and `crackwall` open / break at `minCharge`. Types that should react
+differently override it ([flappy-campaign](../gameplay/flappy-campaign.md)).
+
+**Aim point** (0.5.178): `Entity:aimPoint()` → x, y where things sent back AT it fly (the returned `glowbomb`). Base:
+its centre; a type whose body is not at the centre of its box overrides it (the Net-Copter: its gondola).
 
 
 - `Interactions.check` returns kill/hurt/stomp/pickup/checkpoint; `run()` also

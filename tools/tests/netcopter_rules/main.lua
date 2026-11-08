@@ -16,7 +16,8 @@
 --   vida     12 de vida con un jugador (sin dificultad); la dificultad la escala (`bossHp`)
 --   fase2    con la mitad de vida pasa a la fase 2 y se dibuja con el globo reventado (machine_popped)
 --   especial una ráfaga de potencia 3 le quita 3; otra dentro de su INV_TIME, nada
---   no_pisa  un jugador que vuela y le cae encima nunca le pisa: el jefe sigue igual y el jugador pierde 1
+--   no_pisa  un jugador que vuela y le cae encima nunca le pisa: sobre el globo, nada; sobre la cabeza del piloto (la
+--            cabina), el jefe sigue igual y el jugador pierde 1
 --   red      la red sale a la altura del jugador y, si le da, −1 y ctrlLock 0,4 s; le envuelve ese rato (dibujada
 --            por delante de él: drawsInFront, también en el cliente) y desaparece; suena netSnare
 --   garra    la garra (fase 2) solo hace daño en la franja marcada: dentro −2, fuera nada
@@ -50,6 +51,12 @@
 --                 con balloonPop (+ bossExplode) al pasar a la fase 2
 --   reaparece_lejos  muere un jugador: reaparece volando en el tercio LEJOS del jefe (guardando la izquierda o cruzando
 --                 hacia ella → a la derecha; guardando la derecha → en el tercio izquierdo)
+-- Y la ronda 2 (el usuario, 2026-11-08, tras jugarlo):
+--   cabina        solo la CABINA (la góndola y el piloto) hace daño al tocarla: el globo y las cuerdas, nada (aunque
+--                 estén dentro de su caja); la góndola −1 (mirando a la izquierda y a la derecha); la ráfaga le da en el
+--                 globo; la bomba devuelta sale hacia la góndola (aimPoint)
+--   garra_anim    la garra asoma cerrada en el aviso, se abre (clawOpen, una vez), barre abierta, se cierra de golpe al
+--                 final (clawSnap, una vez) y vuelve cerrada; dibujada en todo el aviso y el barrido
 --
 --   tools/tests/run.sh netcopter_rules   (CASE=nombre: solo ese)
 io.stdout:setvbuf('no')
@@ -336,6 +343,7 @@ end
 -- vuelve con la pelea empezada. El jugador NO se mueve solo (se le coloca a mano: si no, caería al suelo)
 local Difficulty = require 'src/core/Difficulty'
 local BossZones = require 'src/world/systems/BossZones'
+local Boss = require 'src/world/entities/base/Boss'
 local NW = 36
 local function fight(diff)
     local tiles = {}
@@ -428,17 +436,77 @@ function cases.no_pisa()
     local level, es, boss, pa = fight(nil)
     boss.inv, boss.bombT, boss.netT = 0, 99, 99
     local hp0, php = boss.hp, pa.hp
-    local ob = boss:getOuterBounds()
     local r0
-    run(level, es, 0.5, function() return pa.hp < php end, nil, function()
-        -- cayendo encima, en vuelo, con los pies justo en lo alto de su caja
-        pa.x, pa.vy = boss.x, 500
-        pa.y = ob.y + 20 - pa:getOuterBounds().h / 2
-        pa.prevY = pa.y - 12
-        r0 = r0 or Interactions.check(pa, boss)
-    end)
+    -- cayendo encima, en vuelo, con los pies justo en lo alto de `topY` (el globo: lo alto de su caja; la cabina: la
+    -- cabeza del piloto)
+    local function fall(topY)
+        run(level, es, 0.5, function() return pa.hp < php end, nil, function()
+            pa.x, pa.vy = boss.x, 500
+            pa.y = topY() + 20 - pa:getOuterBounds().h / 2
+            pa.prevY = pa.y - 12
+            r0 = r0 or Interactions.check(pa, boss)
+        end)
+    end
+    fall(function() return boss:getOuterBounds().y end)
+    local hpBalloon = pa.hp
+    fall(function() return boss:contactBoxes()[2].y end)
     check('no_pisa', r0 == nil, 'nunca se le pisa: ' .. tostring(r0))
-    check('no_pisa', boss.hp == hp0 and pa.hp == php - 1, ('jefe %d → %d, jugador %d → %d'):format(hp0, boss.hp, php, pa.hp))
+    check('no_pisa', boss.hp == hp0 and hpBalloon == php and pa.hp == php - 1,
+        ('jefe %d → %d; jugador sobre el globo %d → %d, sobre el piloto → %d'):format(hp0, boss.hp, php, hpBalloon, pa.hp))
+end
+
+-- Solo la cabina hace daño al tocarla (el usuario, 2026-11-08: "la hitbox es muy grande, solo la cabina central")
+function cases.cabina()
+    local level, es, boss, pa = fight(nil)
+    boss.inv, boss.bombT, boss.netT, boss.holdT = 0, 99, 99, 99
+    local php = pa.hp
+    -- quieto en un punto relativo al jefe (que se mueve) durante 0,5 s → ¿cuánto pierde?
+    local function touch(dx, dy)
+        pa.hp, pa.invT, pa.ctrlLockT = php, 0, 0
+        local inBox = false
+        run(level, es, 0.5, function() return pa.hp < php end, nil, function()
+            pa.x, pa.y, pa.vy, pa.vx = boss.x + dx, boss.y + dy, 0, 0
+            inBox = inBox or Boss.overlap(pa:getOuterBounds(), boss:getOuterBounds())
+        end)
+        return php - pa.hp, inBox
+    end
+    local ob = boss:getOuterBounds()
+    local balloon, inB = touch(0, ob.y - boss.y + 40)                       -- (dentro de la caja, en el globo)
+    local rope, inR = touch(-ob.w / 2 + 30, -10)                            -- (a un lado, entre el globo y la góndola)
+    local cab = boss:contactBoxes()[1]
+    local gondola = touch(0, cab.y + cab.h / 2 - boss.y)
+    check('cabina', inB and inR and balloon == 0 and rope == 0 and gondola == 1,
+        ('dentro de su caja: globo −%d, cuerdas −%d; la góndola −%d'):format(balloon, rope, gondola))
+    -- mirando a la derecha, la cabina en espejo (alrededor de x): sigue haciendo daño
+    local p0 = boss:contactBoxes()[2]
+    local off0 = p0.x + p0.w / 2 - boss.x
+    boss.facing = 1
+    local pl = boss:contactBoxes()[2]
+    local mirrored = off0 ~= 0 and math.abs((pl.x + pl.w / 2 - boss.x) + off0) < 1e-6
+    local right = touch(pl.x + pl.w / 2 - boss.x, pl.y + pl.h / 2 - boss.y)
+    check('cabina', right == 1 and mirrored, ('mirando a la derecha, el piloto −%d'):format(right))
+    -- la ráfaga le da también en el globo (toda su caja)
+    boss.inv = 0
+    local hp0 = boss.hp
+    pa.x, pa.y, pa.charge, pa.bursts = boss.x - 3 * T, ob.y + 40, 2, nil
+    pa.facing = 1
+    pa:fireSpecial()
+    run(level, es, 1, function() return boss.hp < hp0 end, nil, function()
+        pa.vy = 0
+        pa:updateBursts(DT, level)
+    end)
+    check('cabina', boss.hp == hp0 - 2, ('una ráfaga contra el globo: %d → %d'):format(hp0, boss.hp))
+    -- la bomba devuelta sale hacia la góndola
+    local b = liveOf(es, 'glowbomb')[1]
+    for _, e in ipairs(es) do if e.def.name == 'glowbomb' and not b then b = e end end
+    b:appearAt(boss.x - 4 * T, boss.y - 2 * T)
+    b.owner, b.state = boss, 'falling'
+    b:onReflect(pa)
+    local ax, ay = boss:aimPoint()
+    local g = boss:contactBoxes()[1]
+    local k = (ax - b.x) / b.vx
+    check('cabina', b.state == 'returning' and ay > g.y and ay < g.y + g.h and math.abs(b.y + b.vy * k - ay) < 1,
+        ('devuelta: apunta a (%.0f, %.0f), la góndola y %.0f..%.0f'):format(ax, ay, g.y, g.y + g.h))
 end
 
 function cases.red()
@@ -513,6 +581,33 @@ local function sweep(dodge)
     end)
     return php, pa.hp, band, seen
 end
+-- La garra se abre y se cierra (el usuario, 2026-11-08: "le falta un sonido y animación de abrirse y cerrarse")
+function cases.garra_anim()
+    local level, es, boss, pa = fight(nil)
+    boss.inv = 0
+    boss:damage(6)
+    boss.bombT, boss.netT, boss.inv = 99, 99, 0
+    pa.x, pa.y = 13 * T, 6 * T
+    boss:enter('sweep_warn')
+    local seq, drawn, last = {}, true, nil
+    local snd = heard(function()
+        run(level, es, 4, function()
+            local st = boss.state
+            if st ~= 'sweep_warn' and st ~= 'sweep' then return true end
+            local f = boss:clawFrame()
+            drawn = drawn and boss:clawDrawBox() ~= nil
+            local key = st .. ':' .. f
+            if key ~= last then seq[#seq + 1] = key; last = key end
+        end, nil, function() if pa.hp < 3 then pa.invT = 99 end end)
+    end)
+    local got = table.concat(seq, ' ')
+    local want = 'sweep_warn:1 sweep_warn:2 sweep_warn:3 sweep:3 sweep:2 sweep:1'
+    check('garra_anim', got == want and drawn, ('cuadros: %s (esperado %s); dibujada siempre=%s'):format(got, want, tostring(drawn)))
+    check('garra_anim', (snd.clawServo or 0) == 1 and (snd.clawOpen or 0) == 1 and (snd.clawSnap or 0) == 1,
+        ('sonidos: clawServo %d, clawOpen %d, clawSnap %d (una vez cada uno)'):format(snd.clawServo or 0,
+        snd.clawOpen or 0, snd.clawSnap or 0))
+end
+
 function cases.garra()
     local php, hp, band, seen = sweep(false)
     check('garra', seen.sweep_warn and seen.sweep and band and math.abs(band - 6 * T) < 1,
@@ -1065,7 +1160,7 @@ local ORDER = { 'rebote', 'de_lado', 'falla', 'mecha', 'cargas', 'lastima', 'air
                 'vida', 'fase2', 'especial', 'no_pisa', 'red', 'garra', 'huye', 'bomba', 'azar', 'paquete',
                 'etapa_jefe', 'muerte_en_pelea', 'pilar', 'red_repetida', 'derrota_bombas',
                 'lanzada', 'devuelta_arco', 'cruza', 'mira_izq', 'cruce_justo', 'risa', 'dibujo', 'ruido',
-                'reaparece_lejos' }
+                'reaparece_lejos', 'cabina', 'garra_anim' }
 function love.load()
     local only = os.getenv('CASE')
     for _, name in ipairs(ORDER) do

@@ -16,7 +16,7 @@ require 'settings'
 Sound = require 'src/audio/Sound'
 
 local NAMES = os.getenv('NAMES') or
-    'switchOn,switchOff,helmetBounce,helmetBreak,pufferWarn,pufferInflate,pufferDeflate,pufferPrick,cryoWindup,cryoBlast,cryoFreeze,cryoFree,snowLaugh,snowRoar,snowSpit,snowSplat,snowRoll,snowLand,snowSlam,snowCrash,snowDizzy,snowCrack,snowBurst,snowFlee,snowIntroRoll,snowBreath,netFire,netSnare,netSnag,pedalSqueak,propWhir,balloonPop,clawServo,bombLob,leakHiss'
+    'switchOn,switchOff,helmetBounce,helmetBreak,pufferWarn,pufferInflate,pufferDeflate,pufferPrick,cryoWindup,cryoBlast,cryoFreeze,cryoFree,snowLaugh,snowRoar,snowSpit,snowSplat,snowRoll,snowLand,snowSlam,snowCrash,snowDizzy,snowCrack,snowBurst,snowFlee,snowIntroRoll,snowBreath,netFire,netSnare,netSnag,pedalSqueak,propWhir,balloonPop,clawServo,bombLob,leakHiss,clawOpen,clawSnap'
 
 local fails = 0
 local function check(ok, msg)

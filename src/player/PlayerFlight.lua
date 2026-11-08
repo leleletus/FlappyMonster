@@ -40,7 +40,9 @@ end
 
 -- ── ATAQUE ESPECIAL ────────────────────────────────────────────────────────────
 -- ESPECIAL con carga: una RÁFAGA de magia de aleteo sale por delante con potencia = la carga (que se gasta entera) y
--- avanza BURST_SPD px/s hasta BURST_RANGE casillas. La para un bloque SÓLIDO (los pilares no lo son) o una entidad que
+-- avanza BURST_SPD px/s hasta BURST_RANGE casillas. "Por delante" = `facing`, la misma regla que al lanzar lo que se
+-- carga (systems/Carry): en vuelo, la última dirección que pidió el jugador a los lados (empieza a la derecha; el
+-- usuario, 2026-11-08: "solo va hacia la derecha; que salga hacia donde está yendo o estaba por última vez"). La para un bloque SÓLIDO (los pilares no lo son) o una entidad que
 -- la absorba (`onSpecialHit(potencia, jugador)` → true: base/Entity.lua — los enemigos mueren —, base/Boss.lua — daño
 -- = potencia —, la jaula, el muro agrietado). A cada entidad le da una vez. Estado del jugador (`bursts`), simulado
 -- igual en todas partes; se dibuja en renderBursts.
@@ -50,7 +52,9 @@ PlayerAdventure.BURST_SPD, PlayerAdventure.BURST_RANGE = BURST_SPD, BURST_RANGE
 function PlayerAdventure:fireSpecial()
     if (self.charge or 0) <= 0 then return false end
     self.bursts = self.bursts or {}
-    self.bursts[#self.bursts + 1] = { x = self.x + OUTER_W / 2, y = self.y, power = self.charge, dist = 0, hit = {} }
+    local dir = (self.facing or 1) < 0 and -1 or 1
+    self.bursts[#self.bursts + 1] = { x = self.x + dir * OUTER_W / 2, y = self.y, dir = dir, power = self.charge, dist = 0,
+                                      hit = {} }
     self.charge = 0
     self.puff = PUFF_SCALE
     Sound.play('gpStart', 1.3)
@@ -63,16 +67,17 @@ function PlayerAdventure:updateBursts(dt, level)
     local range = BURST_RANGE * TILE_PX
     for i = #list, 1, -1 do
         local b = list[i]
+        local dir = b.dir or 1
         local dx = BURST_SPD * dt
-        b.x, b.dist = b.x + dx, b.dist + dx
-        local done = b.dist >= range or (level and level:collisionAt(b.x + BURST_R / 2, b.y) ~= nil)
+        b.x, b.dist = b.x + dir * dx, b.dist + dx
+        local done = b.dist >= range or (level and level:collisionAt(b.x + dir * BURST_R / 2, b.y) ~= nil)
         if not done and level then
             for _, e in ipairs(level.liveEntities or {}) do
                 if e.alive and not b.hit[e] and e.onSpecialHit then
                     local o = e:getOuterBounds()
                     if b.x + BURST_R > o.x and b.x - BURST_R < o.x + o.w and b.y + BURST_R > o.y and b.y - BURST_R < o.y + o.h then
                         b.hit[e] = true
-                        if e:onSpecialHit(b.power, self) then done = true; break end
+                        if e:onSpecialHit(b.power, self, dir) then done = true; break end
                     end
                 end
             end
@@ -95,7 +100,7 @@ function PlayerAdventure:renderBursts(camX, camY)
     for _, b in ipairs(self.bursts) do
         local f = math.floor(b.dist / 40) % 4 + 1
         love.graphics.setColor(1, 1, 1, 1)
-        love.graphics.draw(burstImg, burstQuads[f], math.floor(b.x - camX), math.floor(b.y - camY), 0, 4, 4, 6, 6)
+        love.graphics.draw(burstImg, burstQuads[f], math.floor(b.x - camX), math.floor(b.y - camY), 0, 4 * (b.dir or 1), 4, 6, 6)
     end
 end
 
@@ -139,7 +144,8 @@ function PlayerAdventure:updateFlight(dt, level, pJump, inX)
         if not self:isInvulnerable() and self:hurt() then return end
     end
 
-    self.facing = 1
+    -- Mira hacia la última dirección que pidió a los lados (la del ataque especial; el dibujo se gira con ella)
+    if inX ~= 0 then self.facing = inX end
     if self.vy < 0 then
         self.frame, self.animT = 2, 0
     else

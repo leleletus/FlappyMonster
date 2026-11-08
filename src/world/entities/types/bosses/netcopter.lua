@@ -11,11 +11,14 @@
 --   3. BOMBA LUMINOSA (cada ~6 s a Normal, con su propio reloj; no cruzando): la LANZA la góndola en arco hacia donde
 --      está el jugador al lanzarla, con la cima ~2,5 casillas sobre su cabeza (traps/glowbomb.lua: la marca parpadea
 --      allí). Un jugador que vuela SUBIENDO la toca → vuelve a la máquina: 2 de daño. Si no → explota (−1 a una casilla).
---   4. GARRA (fase 2): una línea que parpadea marca una franja de filas 0,8 s ('sweep_warn'), luego el brazo de la
---      garra cruza la zona por ella hacia donde mira ('sweep', −2). Se esquiva cambiando de altura.
---   5. Vulnerable SIEMPRE en la pelea (no hay ventanas: aquí no se pisa). Boss.INV_TIME tras cada golpe. Tocar su cuerpo:
---      −1 y empujón hacia donde mira (al centro; cruzando: hacia abajo y lejos de él); nunca se le pisa (`interact` →
---      nil; el contacto, con Boss.strike).
+--   4. GARRA (fase 2): una línea que parpadea marca una franja de filas 0,8 s ('sweep_warn': la garra asoma de la
+--      góndola y se ABRE, clawOpen), luego el brazo cruza la zona por ella hacia donde mira ('sweep', −2) y al llegar al
+--      final se CIERRA de golpe (clawSnap) y vuelve cerrada. Se esquiva cambiando de altura.
+--   5. Vulnerable SIEMPRE en la pelea (no hay ventanas: aquí no se pisa). Boss.INV_TIME tras cada golpe. Tocar la
+--      CABINA (la góndola y el piloto de pie en ella: contactBoxes; el globo y las cuerdas no hacen daño — el usuario,
+--      2026-11-08): −1 y empujón hacia donde mira (al centro; cruzando: hacia abajo y lejos de él); nunca se le pisa
+--      (`interact` → nil; el contacto, con Boss.strike). La ráfaga y la bomba devuelta le dan en toda su caja; la
+--      devuelta apunta a la góndola (aimPoint).
 --   6. Vida: `hp` 12 con un jugador (la dificultad la escala: `bossHp`). Fase 2 con ≤ 50 %: revienta el globo.
 --   7. Entrada (~3,5 s): llega pedaleando por la derecha, se ríe y despliega el cañón de redes.
 --   8. Muerte: explosiones (la espera genérica, 'dying_hold'), el globo y el cañón se caen a trozos y el Monstruo
@@ -78,6 +81,9 @@ local T = {
     BOMB_APEX = 2.5,                -- la cima del arco: tantas casillas sobre la cabeza del jugador
     SWEEP_EACH = 2,                 -- fase 2: uno de cada tantos ataques es la garra
     WARN_T = 0.8, SWEEP_OUT = 1.0, SWEEP_BACK = 0.6,
+    CLAW_OUT_T = 0.2,               -- aviso: lo que tarda la garra en salir de detrás de la góndola (hasta CLAW_REST)
+    CLAW_OPEN_AT = 0.3, CLAW_OPEN_T = 0.1,  -- aviso: cuándo se abre (clawOpen) y cuánto dura el cuadro a medio abrir
+    SNAP_T = 0.08,                  -- barrido: el cuadro a medio cerrar antes de cerrarse de golpe al final (clawSnap)
     HIT_CLAW = { 2, 300, -220, 0.4, 0 },
     HIT_BODY = { 1, 420, -200, 0.3, 0 },
     HIT_CROSS = { 1, 160, 380, 0.3, 0 },  -- cruzando: hacia abajo, fuera de su camino (nunca contra una pared)
@@ -112,6 +118,9 @@ local ANGRY_DX, ANGRY_W = 2, 11                            -- el piloto enfadado
 local PUFF, SPARK = 8, 7
 local MOUTH_DY = (CANNON_Y + CANNON_H / 2 - CY) * S        -- altura de la boca del cañón (y la de la red)
 local CLAW_W, CLAW_H, CLAW_HEAD = 54, 14, 20               -- la garra: cabeza a la izquierda, brazo a la derecha
+-- La garra PREPARADA (el aviso; y de donde sale el barrido): la cabeza asoma por delante de la boca del cañón (que está a
+-- su misma altura), no detrás de él — px desde el borde delantero de la góndola hasta la punta de la garra
+local CLAW_REST = (12 - CANNON_OUT + 1 + CLAW_HEAD) * S
 local CLAW_DY = (47.5 - CY) * S                            -- la garra sale a la altura del centro de la góndola
 local ARM_Q0, ARM_QW = 36, 9                               -- trozo del brazo que se repite para alargarlo
 local PILOT_X, PILOT_Y = 18, 27
@@ -141,8 +150,9 @@ function NC.loadAssets()
     imgs.pilot          = strip('pilot-Sheet', PILOT_W, PILOT_H)
     imgs.pilot_flee     = strip('pilot_flee-Sheet', FLEE_W, FLEE_H)
     imgs.parts          = strip('parts', PART, PART)
-    imgs.claw           = strip('claw', CLAW_W, CLAW_H)
+    imgs.claw           = strip('claw-Sheet', CLAW_W, CLAW_H)                 -- (cerrada, a medio abrir, abierta)
     imgs.arm = love.graphics.newQuad(ARM_Q0, 0, ARM_QW, CLAW_H, imgs.claw.image:getDimensions())
+    imgs.clawCut = love.graphics.newQuad(0, 0, CLAW_W, CLAW_H, imgs.claw.image:getDimensions())   -- (recortada: setViewport)
     imgs.cannon_arm     = strip('cannon_arm-Sheet', ARM_W, CANNON_H)
     imgs.armBar = love.graphics.newQuad(ARM_W, 0, 1, CANNON_H, imgs.cannon_arm.image:getDimensions())  -- (1 columna)
     imgs.prop           = strip('propeller-Sheet', PROP_W, PROP_H)
@@ -342,22 +352,69 @@ function NC:clawBox(left)
     local t, k = self.deadTimer, 0
     if t < T.SWEEP_OUT then k = t / T.SWEEP_OUT
     else k = math.max(0, 1 - (t - T.SWEEP_OUT) / T.SWEEP_BACK) end
-    local w = CLAW_HEAD * S + (self.reach or 0) * k
+    local w = CLAW_REST + (self.reach or 0) * k
     local x = self.x - FRONT - w
     if not left and (self.facing or -1) > 0 then x = self.x + FRONT end
     return { x = x, y = self.bandY - CLAW_H * S / 2, w = w, h = CLAW_H * S }
 end
 
+-- Cuadro de la garra (1 cerrada, 2 a medio abrir, 3 abierta), de state + deadTimer: en el aviso asoma cerrada y se
+-- abre; barriendo va abierta y se cierra de golpe al llegar al final (SWEEP_OUT); vuelve cerrada
+function NC:clawFrame()
+    local t = self.deadTimer or 0
+    if self.state == 'sweep_warn' then
+        if t < T.CLAW_OPEN_AT then return 1 end
+        return (t < T.CLAW_OPEN_AT + T.CLAW_OPEN_T) and 2 or 3
+    elseif self.state == 'sweep' then
+        if t < T.SWEEP_OUT - T.SNAP_T then return 3 end
+        return (t < T.SWEEP_OUT) and 2 or 1
+    end
+    return 1
+end
+-- Dónde se DIBUJA la garra (como si mirara a la izquierda): barriendo, su caja; en el aviso sale de detrás de la
+-- góndola, a la altura de su centro, hasta quedar preparada (CLAW_REST: la cabeza por delante del cañón)
+function NC:clawDrawBox()
+    if self.state == 'sweep' then return self:clawBox(true) end
+    if self.state ~= 'sweep_warn' then return nil end
+    local w = math.floor(CLAW_REST * math.min(1, (self.deadTimer or 0) / T.CLAW_OUT_T))
+    return { x = self.x - FRONT - w, y = self.y + CLAW_DY - CLAW_H * S / 2, w = w, h = CLAW_H * S }
+end
+
 local overlap = Boss.overlap
 
+-- Lo que hace daño al tocarlo: la CABINA — la góndola y el piloto de pie en ella — (en px de arte del cuadro de la
+-- máquina: x, y, ancho, alto, mirando a la izquierda); el globo, las cuerdas, la hélice y el cañón, no. Mirando a la
+-- derecha (drawFace: lo que se VE), en espejo alrededor de x
+local CABIN = { { 12, 43, 20, 10 }, { 18, 27, 9, 16 } }
+function NC:contactBoxes()
+    local out, f = self._cabin or {}, self:drawFace()
+    self._cabin = out
+    for i, c in ipairs(CABIN) do
+        local b = out[i] or {}
+        out[i] = b
+        local dx, w = (c[1] - CX) * S, c[3] * S
+        if f > 0 then dx = -dx - w end
+        b.x, b.y, b.w, b.h = self.x + dx, self.y + (c[2] - CY) * S, w, c[4] * S
+    end
+    return out
+end
+-- Adónde apunta lo que se le devuelve (la bomba): el centro de la góndola
+local AIM_DY = ((43 + 53) / 2 - CY) * S
+function NC:aimPoint() return self.x, self.y + AIM_DY end
+
+local function touches(ob, boxes)
+    for _, b in ipairs(boxes) do if overlap(ob, b) then return true end end
+    return false
+end
+
 function NC:hurtPlayers(level)
-    local claw, inner = self:clawBox(), self:getInnerBounds()
+    local claw, cabin = self:clawBox(), self:contactBoxes()
     for _, pa in ipairs(level.players or {}) do
         if not pa.dying and pa.alive ~= false and not pa:isInvulnerable() then
             local ob = pa:getOuterBounds()
             local f = self.facing or -1
             if claw and overlap(ob, claw) then Boss.strike(pa, T.HIT_CLAW, f)
-            elseif overlap(ob, inner) then
+            elseif touches(ob, cabin) then
                 if self.state == 'cross' then Boss.strike(pa, T.HIT_CROSS, pa.x < self.x and -1 or 1)
                 else Boss.strike(pa, T.HIT_BODY, f) end
             end
@@ -434,11 +491,13 @@ function NC:updateBoss(dt, level)
             local zx0, zx1, zy0 = self:zb()
             local floor = self.floorY or self:floorAt(level, self.x)
             self.bandY = math.floor(clamp(pa and pa.y or self.y, zy0 + 1.5 * TP, floor - 0.75 * TP) + 0.5)
-            local reach = (self.facing or -1) < 0 and ((self.x - FRONT - CLAW_HEAD * S) - (zx0 + TP / 4))
-                or ((zx1 - TP / 4) - (self.x + FRONT + CLAW_HEAD * S))
+            local reach = (self.facing or -1) < 0 and ((self.x - FRONT - CLAW_REST) - (zx0 + TP / 4))
+                or ((zx1 - TP / 4) - (self.x + FRONT + CLAW_REST))
             self.reach = math.max(0, math.floor(reach))
+            self.clawStep = 0
             Sound.play('clawServo')
         end
+        if t >= T.CLAW_OPEN_AT and (self.clawStep or 0) < 1 then self.clawStep = 1; Sound.play('clawOpen') end
         self.y = self.y + ((self.bandY - CLAW_DY) - self.y) * math.min(1, dt * 6)
         if t >= T.WARN_T then
             self.y = self.bandY - CLAW_DY
@@ -446,6 +505,12 @@ function NC:updateBoss(dt, level)
             Sound.play('gustBlow')
         end
     elseif st == 'sweep' then
+        if t >= T.SWEEP_OUT and (self.clawStep or 0) < 2 then           -- (al final del barrido se cierra de golpe)
+            self.clawStep = 2
+            Sound.play('clawSnap')
+            local cb = self:clawBox()
+            if cb then Entity.emitFx('sparks', (self.facing or -1) < 0 and cb.x or (cb.x + cb.w), self.bandY) end
+        end
         if t >= T.SWEEP_OUT + T.SWEEP_BACK then
             self.bandY, self.reach = nil, 0
             self.netT = rand(T.NET_EVERY[ph][1], T.NET_EVERY[ph][2])
@@ -576,11 +641,15 @@ end
 -- ── Dibujo ────────────────────────────────────────────────────────────────────
 -- (la garra y el aviso se dibujan como si mirara a la izquierda: render los pone en espejo si mira a la derecha)
 function NC:drawClaw(camX, camY)
-    local box = self:clawBox(true)
+    local box = self:clawDrawBox()
     if not box then return end
     local im = imgs.claw.image
     local x, y = math.floor(box.x - camX), math.floor(box.y - camY)
-    love.graphics.draw(im, imgs.claw.quads[1], x, y, 0, S, S)
+    -- (recortada al borde de atrás de la góndola: el brazo nunca asoma por detrás de la máquina)
+    local back = math.floor(self.x + FRONT - camX)
+    local cw = math.max(1, math.min(CLAW_W, math.floor((back - x) / S)))
+    imgs.clawCut:setViewport((self:clawFrame() - 1) * CLAW_W, 0, cw, CLAW_H)
+    love.graphics.draw(im, imgs.clawCut, x, y, 0, S, S)
     -- (más largo que el dibujo: se repite un trozo del brazo hasta la góndola)
     local gl = math.floor(self.x + GONDOLA_L - camX)
     local ax = x + CLAW_W * S
@@ -594,7 +663,7 @@ function NC:drawWarn(camX, camY)
     if self.state ~= 'sweep_warn' or not self.bandY then return end
     if math.floor(self.deadTimer * 8) % 2 == 1 then return end           -- (parpadea)
     local gl = self.x + GONDOLA_L
-    local x0 = gl - CLAW_HEAD * S - (self.reach or 0)
+    local x0 = gl - CLAW_REST - (self.reach or 0)
     local h = CLAW_H * S / 2
     for x = x0 + 48, gl, 96 do
         BossFx.target(self.deadTimer * 4, math.floor(x - camX), math.floor(self.bandY - h - camY), S, S)
@@ -743,13 +812,16 @@ function NC:render(camX, camY)
     if xf then love.graphics.pop() end
 end
 
--- Lo que hiere y no son sus cajas: la garra (y la franja avisada)
+-- Lo que hiere y no son sus cajas: la cabina (lo único de su cuerpo que hace daño), la garra (y la franja avisada)
 function NC:debugBoxes()
     local out = {}
+    if self:isActive() then
+        for _, b in ipairs(self:contactBoxes()) do out[#out + 1] = { x = b.x, y = b.y, w = b.w, h = b.h, kind = 'hurt' } end
+    end
     local c = self:clawBox()
     if c then out[#out + 1] = { x = c.x, y = c.y, w = c.w, h = c.h, kind = 'hazard' } end
     if self.state == 'sweep_warn' and self.bandY then
-        local w = CLAW_HEAD * S + (self.reach or 0)
+        local w = CLAW_REST + (self.reach or 0)
         local x0 = ((self.facing or -1) > 0) and (self.x + FRONT) or (self.x - FRONT - w)
         out[#out + 1] = { x = x0, y = self.bandY - CLAW_H * S / 2, w = w, h = CLAW_H * S, kind = 'area' }
     end

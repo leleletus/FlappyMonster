@@ -6,8 +6,9 @@
 --                un tile sólido (los pilares también: por delante, por abajo o por arriba) o el suelo; la mecha (`fuse`
 --                s) solo es un respaldo. La explosión (Explosions.blast, 1 casilla) quita 1 de vida al que esté cerca
 --   'returning'  DEVUELTA AL REMITENTE (rasgo `reflectable`: un jugador que vuela SUBIENDO la toca — Interactions): sale
---                hacia donde estaba el centro de su `owner` al devolverla, en línea recta a 700 px/s. Si le da, el jefe
---                pierde 2 (`owner:damage(2, 'reflect')`); un tile sólido o salir del nivel la revienta sin dañar a nadie
+--                hacia el `aimPoint` de su `owner` al devolverla (el Redcóptero: la góndola), en línea recta a 700 px/s.
+--                Si le da (en toda su caja), el jefe pierde 2 (`owner:damage(2, 'reflect')`); un tile sólido o salir
+--                del nivel la revienta sin dañar a nadie
 --   'exploding'  fogonazo breve y desaparece. Una bomba devuelta NO hace daño a ningún jugador al explotar
 -- Arte: assets/images/bosses/netcopter/bomb-Sheet.png (2 cuadros 14x18: la mecha) y mark-Sheet.png (la marca, 2 cuadros
 -- 12x12: cuatro esquinas de mira que laten); tools/art/bosses/make_netcopter.py. Lo que se dibuja sale de x, y, state,
@@ -73,13 +74,13 @@ function GlowBomb:interact(pa) return nil end
 -- Una bomba en el aire solo se devuelve estando entera
 function GlowBomb:canReflect() return self.alive and self.state == 'falling' end
 
--- La devuelve un jugador que vuela subiendo (Interactions.run): apunta al centro actual del dueño y sale en línea recta
--- (si el jefe se mueve después, falla: se esquiva)
+-- La devuelve un jugador que vuela subiendo (Interactions.run): apunta a donde está AHORA el dueño (su aimPoint: el
+-- Redcóptero, la góndola) y sale en línea recta (si el jefe se mueve después, falla: se esquiva)
 function GlowBomb:onReflect(pa)
     if not self:canReflect() then return end
     local o = self.owner
     local tx, ty = self.x, self.y + 1
-    if o then tx, ty = o.x, o.y end
+    if o then tx, ty = o:aimPoint() end
     local dx, dy = tx - self.x, ty - self.y
     local d = math.sqrt(dx * dx + dy * dy)
     if d < 1 then dx, dy, d = 0, 1, 1 end

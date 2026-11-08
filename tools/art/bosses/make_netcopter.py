@@ -243,16 +243,31 @@ def cannon_arm():
 
 
 # ══ LA GARRA (brazo de 54x14; la garra a la izquierda) ═════════════════════════════════════════════════════════════
-def claw():
+# Tres cuadros (claw-Sheet): 0 cerrada (los dedos juntos), 1 a medio abrir (las puntas hacia dentro), 2 abierta (los
+# dedos separados, las puntas hacia fuera). El jefe la abre en el aviso y la cierra de golpe al final del barrido (el
+# usuario, 2026-11-08: "al brazo mecánico le falta una animación de abrirse y cerrarse").
+def claw(k=1):
     im = new(54, 14)
     rect(im, 14, 5, 53, 8, IRON[0]); rect(im, 14, 6, 53, 7, IRON[2]); rect(im, 14, 6, 53, 6, IRON[3])
     for x in range(20, 52, 8):
         rect(im, x, 4, x + 1, 9, IRON[0]); px(im, x, 6, IRON[1])                   # articulaciones
     rect(im, 8, 3, 15, 10, IRON[0]); rect(im, 9, 4, 14, 9, IRON[1])                # palma
-    for (y0, y1) in ((0, 4), (9, 13)):                                             # dos dedos
-        rect(im, 1, y0, 9, y1, IRON[0]); rect(im, 2, y0 + 1, 8, y1 - 1, IRON[2])
-    rect(im, 0, 3, 2, 4, IRON[0]); rect(im, 0, 9, 2, 10, IRON[0])                 # puntas que se cierran
-    rect(im, 3, 4, 6, 4, IRON[3])
+    if k == 0:                                                                     # cerrada: los dedos se tocan
+        for (y0, y1) in ((2, 6), (7, 11)):
+            rect(im, 1, y0, 9, y1, IRON[0]); rect(im, 2, y0 + 1, 8, y1 - 1, IRON[2])
+        rect(im, 0, 4, 1, 9, IRON[0])                                              # las puntas, juntas delante
+        rect(im, 3, 3, 6, 3, IRON[3])
+    elif k == 1:                                                                   # a medio abrir
+        for (y0, y1) in ((0, 4), (9, 13)):                                         # dos dedos
+            rect(im, 1, y0, 9, y1, IRON[0]); rect(im, 2, y0 + 1, 8, y1 - 1, IRON[2])
+        rect(im, 0, 3, 2, 4, IRON[0]); rect(im, 0, 9, 2, 10, IRON[0])             # puntas que se cierran
+        rect(im, 3, 4, 6, 4, IRON[3])
+    else:                                                                          # abierta: los dedos, abiertos
+        for (y0, y1) in ((0, 3), (10, 13)):                                        # hacia fuera
+            rect(im, 3, y0, 9, y1, IRON[0]); rect(im, 4, y0 + 1, 8, y1 - 1, IRON[2])
+        rect(im, 0, 0, 3, 1, IRON[0]); rect(im, 0, 12, 3, 13, IRON[0])           # puntas hacia fuera
+        rect(im, 4, 1, 7, 1, IRON[3])
+        rect(im, 9, 4, 14, 9, IRON[1]); rect(im, 8, 5, 8, 8, IRON[0])             # la palma vacía, por dentro
     return im
 
 
@@ -556,7 +571,7 @@ def build():
         'cannon-Sheet.png': sheet([cannon(False), cannon(True)]),
         'cannon_arm-Sheet.png': cannon_arm(),
         'propeller-Sheet.png': sheet([propeller(i) for i in range(4)]),
-        'claw.png': claw(),
+        'claw-Sheet.png': sheet([claw(0), claw(1), claw(2)]),
         'pilot-Sheet.png': sheet([pilot('pedal1'), pilot('pedal2'), pilot('laugh'), pilot('hurt')]),
         'pilot_laugh-Sheet.png': sheet([pilot_laugh(False), pilot_laugh(True)]),
         'joy_eyes.png': joy_eyes(),
@@ -633,7 +648,7 @@ def preview(files):
     put(lj, 1400, 170, 8)
     # fila 3: piezas
     put(files['propeller-Sheet.png'], 10, 720); put(files['cannon-Sheet.png'], 340, 720)
-    put(files['cannon_arm-Sheet.png'], 580, 720); put(files['claw.png'], 700, 720)
+    put(files['cannon_arm-Sheet.png'], 580, 720); put(files['claw-Sheet.png'], 10, 1250, 4)
     put(files['pilot_flee-Sheet.png'], 1080, 720)
     put(files['net-Sheet.png'], 10, 900)
     put(files['bomb-Sheet.png'], 700, 900); put(files['mark-Sheet.png'], 900, 900); put(files['parts.png'], 1080, 900)

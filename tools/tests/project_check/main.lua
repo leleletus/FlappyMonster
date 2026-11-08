@@ -81,7 +81,11 @@ function love.load()
 
     -- rutas escritas en el código
     local code = walk('src', {})
-    for _, f in ipairs(walk('server_src', {})) do code[#code + 1] = f end
+    -- (server/published es la copia de lo ÚLTIMO publicado, sin git: tras borrar un asset nombra el viejo hasta el
+    -- próximo despliegue; no es código del proyecto)
+    for _, f in ipairs(walk('server_src', {})) do
+        if not f:find('^server_src/published/') then code[#code + 1] = f end
+    end
     code[#code + 1] = 'game_src.lua'
     local lost, nPaths, seen = {}, 0, {}
     for _, f in ipairs(code) do

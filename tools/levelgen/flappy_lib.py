@@ -1,7 +1,8 @@
 # tools/levelgen/flappy_lib.py
 # Lo común de los generadores de etapas FLAPPY (levels_flappy_test.py, levels_flappy_valle.py): un nivel "flappy": true
 # de 11 filas con suelo (césped sobre tierra), PILARES (tile 59) con su hueco, la meta al final y la cámara automática.
-# Solo escribe el archivo que se le pide.
+# `floor` = la fila del césped (FLOOR por defecto; H = solo césped en la última fila, sin tierra: una fila más de aire,
+# la etapa del jefe — el usuario, 2026-11-08: "bajar el suelo"). Solo escribe el archivo que se le pide.
 import json
 
 H = 11
@@ -19,33 +20,37 @@ AIR, DIRT, GRASS, FINISH, PILLAR = raw(0), raw(16), raw(17), raw(11), raw(59)
 SOLID = raw(1)
 
 
-def build(width, gaps, solids=None):
+def build(width, gaps, solids=None, floor=FLOOR):
     """gaps = [(columna, fila de arriba del hueco, alto del hueco), ...]; solids = [(columna, fila), ...] bloques
-    sólidos sueltos (el escondite de detrás de un muro agrietado) → filas de tiles"""
+    sólidos sueltos (el escondite de detrás de un muro agrietado); floor = la fila del césped (debajo, tierra) → filas
+    de tiles"""
     tiles = [[AIR] * width for _ in range(H)]
     for c in range(width):
-        tiles[FLOOR - 1][c] = GRASS
-        tiles[H - 1][c] = DIRT
+        tiles[floor - 1][c] = GRASS
+        for r in range(floor + 1, H + 1):
+            tiles[r - 1][c] = DIRT
     for c, top, h in gaps:
         assert 1 <= c <= width - 6, c
-        for r in range(1, FLOOR):        # filas 1..9 (la 10 es el suelo)
+        for r in range(1, floor):        # filas 1..floor-1 (la del césped es el suelo)
             if not (top <= r < top + h):
                 tiles[r - 1][c - 1] = PILLAR
-    for r in range(1, FLOOR):
+    for r in range(1, floor):
         tiles[r - 1][width - 3] = FINISH
     for c, r in solids or []:
         tiles[r - 1][c - 1] = SOLID
     return tiles
 
 
-def write(out, name, name_en, width, gaps, speed=200, music='flappy', entities=None, solids=None, arena=None):
-    """arena = lo que devuelve boss_arena(): la cámara automática se para en ella y el nivel lleva su zona de jefe"""
+def write(out, name, name_en, width, gaps, speed=200, music='flappy', entities=None, solids=None, arena=None,
+          floor=FLOOR):
+    """arena = lo que devuelve boss_arena(): la cámara automática se para en ella y el nivel lleva su zona de jefe;
+    floor = la fila del césped (build)"""
     lvl = {
         "name": name,
         "name_en": name_en,
         "width": width, "height": H,
         "playerStart": [4, 5],
-        "tiles": build(width, gaps, solids),
+        "tiles": build(width, gaps, solids, floor),
         "entities": entities or [],
         "autoScroll": {"startCol": 1, "endCol": 0, "speed": speed, "width": 20, "margin": 0.6, "countdown": 0},
         "music": music,
@@ -56,7 +61,7 @@ def write(out, name, name_en, width, gaps, speed=200, music='flappy', entities=N
         lvl["bossZones"] = [arena["zone"]]
         lvl["entities"] = lvl["entities"] + arena["entities"]
         gaps = gaps + arena["gaps"]
-        lvl["tiles"] = build(width, gaps, solids)
+        lvl["tiles"] = build(width, gaps, solids, floor)
     with open(out, 'w') as f:
         f.write('{\n')
         keys = list(lvl.keys())

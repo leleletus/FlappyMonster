@@ -241,6 +241,8 @@
     {"id": "balloonPop", "file": "assets/sounds/bosses/netcopter/balloon_pop.wav", "note": "Redcóptero: el globo revienta · no escuchado aún"},
     {"id": "clawServo", "file": "assets/sounds/bosses/netcopter/claw_servo.wav", "note": "Redcóptero: la garra se prepara · no escuchado aún"},
     {"id": "bombLob", "file": "assets/sounds/bosses/netcopter/bomb_lob.wav", "note": "Redcóptero: la bomba lanzada en arco · no escuchado aún"},
-    {"id": "leakHiss", "file": "assets/sounds/bosses/netcopter/leak_hiss.wav", "note": "Redcóptero: fuga de aire del globo · no escuchado aún"}
+    {"id": "leakHiss", "file": "assets/sounds/bosses/netcopter/leak_hiss.wav", "note": "Redcóptero: fuga de aire del globo · no escuchado aún"},
+    {"id": "clawOpen", "file": "assets/sounds/bosses/netcopter/claw_open.wav", "note": "Redcóptero: la garra se abre (aviso) · no escuchado aún"},
+    {"id": "clawSnap", "file": "assets/sounds/bosses/netcopter/claw_snap.wav", "note": "Redcóptero: la garra se cierra de golpe · no escuchado aún"}
   ]
 }

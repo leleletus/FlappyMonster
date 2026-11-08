@@ -11,7 +11,9 @@
 --   exclusivo   un pilar en un nivel normal es un error del editor (validate); en un nivel Flappy, no
 --   carga       las cargas de aleteo suben el medidor hasta CHARGE_MAX (5); morir y reaparecer la conserva
 --   ataque      ESPECIAL sin carga: nada; con carga: una ráfaga con esa potencia que gasta toda la carga, atraviesa
---               pilares, mata a un enemigo y la para un bloque sólido
+--               pilares, mata a un enemigo y la para un bloque sólido; sale hacia donde mira (`facing`, como al lanzar
+--               lo que se carga): sin haberse movido, a la derecha; tras ir a la izquierda y soltar, a la izquierda
+--               (y el monstruo se dibuja mirando allí), matando a un enemigo de ese lado
 --   jaula       flappy enjaulado: una ráfaga con menos potencia que su mínimo no la abre (y se para); con más, la abre;
 --               una ya liberada en una partida terminada sale vacía
 --   muro        muro agrietado: sólido; una ráfaga más floja que su mínimo no lo rompe (y se para); con bastante, se rompe
@@ -352,6 +354,30 @@ function cases.ataque()
     check('ataque', none and fired and killed and stopped,
           ('sin carga no pasa nada=%s; con 3: una ráfaga de 3 y carga a 0=%s; el Gummy tras el pilar muere=%s; el bloque la para (llega a %.0f, bloque en %d)=%s'):format(
            tostring(none), tostring(fired), tostring(killed), maxX, 11 * T, tostring(stopped)))
+    -- la dirección: sin haberse movido, a la derecha (la de antes); tras ir a la izquierda y soltar, a la izquierda
+    local right = b ~= nil and b.dir == 1 and pa3.facing == 1
+    local lv4 = stage(40, nil, nil, true,
+        { { type = 'gummy', col = 12, row = 5, props = { movement = 'fly', speed = 0 } } })
+    local pa4 = player(lv4, 22 * T, 4.5 * T)
+    local g4 = lv4.liveEntities[1]
+    pa4.charge = 2
+    stub.state.left = true
+    step(lv4, 0.4, function() hover(pa4, 4.5 * T) end)
+    clearInput()
+    step(lv4, 0.3, function() hover(pa4, 4.5 * T) end)               -- (ya sin pulsar nada)
+    local x0 = pa4.x
+    stub.state.special_pressed = true
+    step(lv4, DT)
+    local b4 = pa4.bursts and pa4.bursts[1]
+    local bx0 = b4 and b4.x
+    step(lv4, 0.15, function() hover(pa4, 4.5 * T) end)
+    local wentLeft = b4 ~= nil and b4.dir == -1 and bx0 < x0 and b4.x < bx0 - 100 and pa4.facing == -1
+    step(lv4, 1, function() hover(pa4, 4.5 * T) end)
+    local killedL = tostring(g4.state):find('dead') ~= nil or not g4.alive
+    clearInput()
+    check('ataque', right and wentLeft and killedL,
+          ('sin moverse sale a la derecha=%s; tras ir a la izquierda y soltar sale a la izquierda (x %.0f → %.0f, mira a %s)=%s; el Gummy de la izquierda muere=%s'):format(
+           tostring(right), bx0 or -1, b4 and b4.x or -1, tostring(pa4.facing), tostring(wentLeft), tostring(killedL)))
 end
 
 -- Dispara con `power` contra lo que haya delante (a la altura y) y deja volar la ráfaga 1 s

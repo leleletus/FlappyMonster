@@ -47,8 +47,9 @@ while Adventure is locked, its saves do not count.
   `PlayerAdventure.CHARGE_MAX` = 5, applied in the shared pickup path (`Interactions.run` → `pa:addCharge`). Dying keeps
   it; each stage starts at 0.
 - **Special attack** (action `special`: X / K, pad R shoulder, touch: the extra button above the jump button): with
-  charge, a BURST leaves the monster's front with `power` = the whole charge (spent), at 900 px/s for up to 8 tiles. A
-  solid tile stops it (pillars do not); each entity it overlaps gets `onSpecialHit(power, pa)` once — the base: enemies
+  charge, a BURST leaves the monster's front (towards `facing`: the last direction it was steered, right at the start)
+  with `power` = the whole charge (spent), at 900 px/s for up to 8 tiles. A solid tile stops it (pillars do not);
+  each entity it overlaps gets `onSpecialHit(power, pa, dir)` once — the base: enemies
   (not bosses) die flung, `Boss` takes `power` damage; returning true absorbs the burst ([player](player.md#flight-flappy-levels)).
 - **Caged flappies** (`cage`, Flappy-only, prop `minCharge` 1–5, shown as dots over it): a burst with enough power frees
   it (`rescuedNow`), less is absorbed. `AdventureState` returns `result.rescued` (placement indices) only when the stage
@@ -77,7 +78,9 @@ the camera; once the boss is beaten the zone opens and the player flies on to th
 Inside the fight the boss director (`bossdrops`) hands out charges / food. Dying in the fight respawns IN THE AIR in
 the zone's left third (`BossZones.respawnPoint` → `Level:flightSpot`, the same rule as the auto-scroll's Flappy respawn):
 standing on the floor would cost 1 HP. `valle_redcoptero`: pillars at columns 18-60 (3 charges, 1 food), zone 66-85
-with the `netcopter` at (81, 5) and music `tuffi`, finish at column 93.
+with the `netcopter` at (81, 5) and music `tuffi`, finish at column 93. Its floor is the level's LAST row (grass only:
+`write(..., floor=H)`, 10 air rows instead of 9; the user, 2026-11-08: the floor was too high for the fight); the
+other stages keep `FLOOR` 10 (grass + dirt). 11 rows is the most the fixed 720-px camera shows whole.
 
 **Return to sender** (Plan 5): a trait `reflectable` on an entity (+ optional `canReflect()`) makes a player who FLIES
 and is RISING (`pa.vy < 0`) when touching it get the interaction `'reflect'` (`Interactions.check`) instead of being

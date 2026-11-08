@@ -203,7 +203,12 @@ function love.load()
             -- (lo que va detrás de los bloques: el escenario y el público del Cangrejo Groove)
             for _, e in ipairs(ents) do if e.alive and e.renderBack then e:renderBack(camX, camY) end end
             love.graphics.setColor(1, 1, 1, 1)
+            -- (el nivel recorta sus casillas a la ventana del juego: aquí, a lo que se ve con este zoom; si no, con ZONE=1
+            -- el suelo de la zona quedaba sin dibujar)
+            local ww, wh = WINDOW_W, WINDOW_H
+            WINDOW_W, WINDOW_H = math.max(ww, math.ceil(CW * zoom)), math.max(wh, math.ceil(CH * zoom))
             level:render(camX, camY)
+            WINDOW_W, WINDOW_H = ww, wh
             for _, f in ipairs(level.floods or {}) do          -- (el agua de las inundaciones, sin el efecto del juego)
                 love.graphics.setColor(0.2, 0.45, 0.85, 0.35)
                 love.graphics.rectangle('fill', f.x0 - camX, f.surf - camY, f.x1 - f.x0, f.y1 - f.surf)

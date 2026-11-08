@@ -11,6 +11,8 @@
 #   bosses/netcopter/claw_servo.wav   la garra se prepara: motorcito que sube + trinquete
 #   bosses/netcopter/bomb_lob.wav     la bomba lanzada en arco: golpe seco + silbido que sube y baja
 #   bosses/netcopter/leak_hiss.wav    fuga de aire del globo roto (fase 2): siseo corto
+#   bosses/netcopter/claw_open.wav    la garra se abre (aviso): muelle que se suelta + clac de los dedos (ronda 2)
+#   bosses/netcopter/claw_snap.wav    la garra se cierra de golpe al final del barrido: chasquido de hierro (ronda 2)
 #
 #   python3 tools/sounds/netcopter.py            → previas en FlappyMonster_pruebas/netcopter/sonidos/
 #   python3 tools/sounds/netcopter.py --apply    → assets/sounds/bosses/netcopter/
@@ -110,6 +112,18 @@ def sounds():
     tt = t_(d)
     out['leak_hiss'] = fade(sweep_band(noise(d), 4200, 2800, q=0.35) * np.interp(tt, [0, 0.06, 0.3, d], [0, 1, 0.7, 0]) *
                             (0.8 + 0.2 * np.sin(2 * np.pi * 9 * tt)) * 1.2, 0.02, 0.1)
+    # (ronda 2, al final para no cambiar el azar de los de arriba)
+    # ── la garra se abre: trinquete que se suelta, muelle que baja y el clac de los dedos al llegar (0,3 s)
+    d = 0.3
+    spring = tone(1300, 520, 0.18, 0.5) * np.interp(t_(0.18), [0, 0.02, 0.18], [0, 1, 0]) * 0.35
+    out['claw_open'] = fade(place(d, [(0, click(2400, 0.012, 0.003) * 0.6), (0.015, spring),
+                                      (0.02, band(noise(0.14), 1500, 5000) * env(0.14, 0.004, 0.05) * 0.4),
+                                      (0.17, click(1700, 0.03, 0.007) * 0.9), (0.17, thud(260, 120, 0.08, 0.02) * 0.5)]))
+    # ── la garra se cierra de golpe: dos dedos de hierro que chocan + golpe seco (0,35 s)
+    d = 0.35
+    out['claw_snap'] = fade(place(d, [(0, click(3000, 0.02, 0.004) * 1.0), (0.012, click(2200, 0.03, 0.006) * 0.9),
+                                      (0, thud(300, 90, 0.16, 0.04) * 0.9),
+                                      (0.01, band(noise(0.22), 2000, 8000) * env(0.22, 0.001, 0.05) * 0.5)]))
     return out
 
 

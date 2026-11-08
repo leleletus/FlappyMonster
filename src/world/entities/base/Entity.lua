@@ -619,15 +619,19 @@ function Entity:canBeStomped() return true end
 function Entity:isBodyDisabled() return false end
 function Entity:getHazardBoxes() return nil end
 -- La RÁFAGA del ataque especial (niveles Flappy: src/player/PlayerFlight.lua) toca a esta entidad con `power` (la carga
--- gastada). true = la absorbe (se para). Por defecto: los enemigos (no jefes) mueren despedidos; lo demás no la nota.
--- Los tipos que reaccionan de otra manera lo sobrescriben (Boss: daño; la jaula, el muro agrietado).
-function Entity:onSpecialHit(power, pa)
+-- gastada), yendo hacia `dir` (±1). true = la absorbe (se para). Por defecto: los enemigos (no jefes) mueren despedidos
+-- hacia donde iba; lo demás no la nota. Los tipos que reaccionan de otra manera lo sobrescriben (Boss: daño; la jaula,
+-- el muro agrietado).
+function Entity:onSpecialHit(power, pa, dir)
     if self.def and self.def.category == 'Enemigos' and not self.def.boss and self.state ~= 'dead' and self.dieFling then
-        self:dieFling(1)
+        self:dieFling(dir or 1)
         return true
     end
     return false
 end
+-- Adónde apunta lo que se le devuelve o se le lanza (la bomba luminosa devuelta: types/traps/glowbomb.lua): por defecto
+-- su centro; un tipo cuyo cuerpo no está en el centro de su caja lo sobrescribe (el Redcóptero: la góndola)
+function Entity:aimPoint() return self.x, self.y end
 -- ¿Se dibuja en el plano por DELANTE de los jugadores? Por defecto, el rasgo `renderFront` (pez globo, Espejo…); un tipo
 -- que cambia de plano según lo que hace lo sobrescribe, mirando solo lo que viaja en el snapshot (state, deadTimer…)
 -- para que el cliente online lo dibuje igual (AdventureState, OnlineAdventureRender)
