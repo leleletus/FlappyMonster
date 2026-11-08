@@ -40,7 +40,7 @@
 --   cruza        tras su HOLD cruza al otro tercio y se gira (facing al centro), sin atacar cruzando; y vuelve
 --   mira_izq     desde el lado izquierdo la red sale y vuela a la derecha, y la bomba sale hacia la derecha
 --   cruce_justo  un jugador en la franja de arriba cuando cruza pierde exactamente 1 (nunca una cadena)
---   risa         muere un jugador: se ríe (cabeza en blanco, cara de carcajada, dos cuadros) y la pelea sigue
+--   risa         muere un jugador: se ríe (cabeza en blanco, ojos de risa, dos cuadros) y la pelea sigue
 --   dibujo       la mecha de una bomba devuelta sigue corriendo; empezando la pelea a la izquierda mira a la derecha;
 --                la risa y el disparo (retroceso, humo) viajan en netPackExtra
 --
@@ -903,7 +903,7 @@ function cases.cruce_justo()
     check('cruce_justo', seen and pa.hp == php - 1, ('cruzando por la franja de arriba: vida %d -> %d'):format(php, pa.hp))
 end
 
--- Muere un jugador en la pelea: se ríe como el Espejo (cabeza en blanco + cara de carcajada, la cabeza sube y baja: los
+-- Muere un jugador en la pelea: se ríe como el Espejo (cabeza en blanco + ojos de risa, la cabeza sube y baja: los
 -- dos cuadros) y la pelea SIGUE (el otro jugador: le dispara una red mientras se ríe o justo después)
 function cases.risa()
     local level, es, boss, pa, ctrl, z = fight(nil)

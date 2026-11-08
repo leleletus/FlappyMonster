@@ -26,7 +26,7 @@
 -- pedalean a su ritmo; al cruzar se GIRA en TURN_T s (la máquina a media anchura, primero mirando a un lado y luego al
 -- otro); el cañón cuelga de su BRAZO de hierro atornillado a la góndola y retrocede 1 px al disparar (humo y hebras en
 -- la boca: `shotT`); tras un golpe, chispas, le duele HURT_T s y luego se ENFADA (puño en alto) ANGRY_T s; se RÍE como
--- el Espejo (cabeza en blanco + cara de carcajada, la cabeza sube y baja cada LAUGH_F s) en la entrada y cuando cae un
+-- el Espejo (cabeza en blanco + ojos de risa, la cabeza sube y baja cada LAUGH_F s) en la entrada y cuando cae un
 -- jugador, sin parar la pelea; fase 2: humo saliendo del globo roto.
 -- Estados: dormant → intro → ready → hover ↔ aim_net (la bomba sale con su reloj) → [fase 2] sweep_warn → sweep → … ↔
 -- cross (cambia de lado) … → dying_hold → fleeing → dead. Todo lo que se dibuja sale de state + deadTimer + x, y +
@@ -104,7 +104,7 @@ local CANNON_OUT, CANNON_IN, CANNON_Y = -12, 14, 42        -- esquina del cañó
 local CANNON_W, CANNON_H = 18, 12
 local COLLAR_DX, PLATE_X, ARM_W = 12, 9, 3                 -- el brazo: abrazadera (desde el cañón), placa (fija)
 local PROP_X, PROP_Y, PROP_W, PROP_H = 32, 37, 12, 18      -- la hélice
-local JOY_X, JOY_Y = 2, 4                                  -- la cara de la carcajada, en el cuadro del piloto
+local JOY_X, JOY_Y = 2, 4                                  -- los ojos de risa, en el cuadro del piloto
 local ANGRY_DX, ANGRY_W = 2, 11                            -- el piloto enfadado: 2 columnas más a la izquierda
 local PUFF, SPARK = 8, 7
 local MOUTH_DY = (CANNON_Y + CANNON_H / 2 - CY) * S        -- altura de la boca del cañón (y la de la red)
@@ -144,7 +144,7 @@ function NC.loadAssets()
     imgs.armBar = love.graphics.newQuad(ARM_W, 0, 1, CANNON_H, imgs.cannon_arm.image:getDimensions())  -- (1 columna)
     imgs.prop           = strip('propeller-Sheet', PROP_W, PROP_H)
     imgs.laugh          = strip('pilot_laugh-Sheet', PILOT_W, PILOT_H)
-    imgs.joy            = strip('joy_face', 5, 3)
+    imgs.joy            = strip('joy_eyes', 5, 2)
     imgs.angry          = strip('pilot_angry', ANGRY_W, PILOT_H)
     imgs.puff           = strip('puff-Sheet', PUFF, PUFF)
     imgs.spark          = strip('spark-Sheet', SPARK, SPARK)
@@ -631,7 +631,7 @@ function NC:drawLeak(ox, oy, now)
     end
 end
 
--- El Monstruo Malvado de pie en la góndola: pedalea, se ríe (cabeza en blanco + cara de carcajada), le duele o se enfada
+-- El Monstruo Malvado de pie en la góndola: pedalea, se ríe (cabeza en blanco + ojos de risa), le duele o se enfada
 function NC:drawPilot(ox, oy, now, fast)
     local pose = self:pilotPose()
     local px, py = ox + PILOT_X * S, oy + PILOT_Y * S
@@ -702,7 +702,7 @@ function NC:render(camX, camY)
     local m = imgs[look]
     local mf
     if look == 'machine' then
-        local v = math.sin(now * 1.7)
+        local v = math.sin((self.deadTimer or 0) * 1.7)                -- (el vaivén sale del reloj del estado)
         mf = (v > 0.6) and 2 or ((v < -0.6) and 3 or 1)
     else
         mf = math.floor(now * 6) % 2 + 1

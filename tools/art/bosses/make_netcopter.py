@@ -13,7 +13,7 @@
 # (cannon_arm-Sheet: abrazadera a 12 px de la esquina del cañón, barra, placa en x 9..11); la hélice (propeller-Sheet,
 # 12x18, 4 cuadros) con la esquina en (32, 37) y el buje en (37, 45). Plan 5c (docs/design/flappy-plan-5c-netcopter-
 # polish.md): el globo se mece (machine-Sheet: 3 cuadros, 0 / +1 / -1 px), la red se despliega y gira (net-Sheet), la
-# risa como la del Espejo (pilot_laugh-Sheet + joy_face), enfadado (pilot_angry), humo, hebras y chispas (puff-Sheet,
+# risa como la del Espejo (pilot_laugh-Sheet + joy_eyes), enfadado (pilot_angry), humo, hebras y chispas (puff-Sheet,
 # spark-Sheet) y la marca de la bomba (mark-Sheet). Todo lo monta netcopter.lua / netshot.lua igual que la vista previa.
 import os, sys
 from PIL import Image, ImageDraw
@@ -397,9 +397,9 @@ def net_frame(k):
     return im
 
 
-# ══ LA RISA (como la del Espejo: cabeza en blanco + cara de carcajada encima, la cabeza sube y baja) ══════════════════
+# ══ LA RISA (como la del Espejo: cabeza en blanco + ojos de risa encima, la cabeza sube y baja) ═══════════════════════
 # pilot_laugh-Sheet (9x16 ×2): A = cabeza arriba (antenas tiesas) + brazos arriba; B = cabeza 1 px abajo (antenas
-# abiertas) + brazos abajo. La cabeza, sin ojos. joy_face.png (5x3): la cara de la carcajada, se pinta encima
+# abiertas) + brazos abajo. La cabeza, sin ojos ni boca. joy_eyes.png (5x2): los ojos de risa «^ ^», se pintan encima
 # (en la columna 2, fila 4 del piloto; + 1 fila en el cuadro B).
 LAUGH_BODY = {
     'up':   ['A...A...A', '.A.EAA.A.', '..AAAAA..', '...AAA...', '....A....'],              # filas 8..12
@@ -429,11 +429,11 @@ def pilot_laugh(down):
     return im
 
 
-def joy_face():
-    """La cara de la carcajada (5x3, sobre la cabeza en blanco): los ojos subidos por la risa y la boca abierta de lado
-    a lado. Con 5 px de cara no caben dos «^» ni «> <» (se pegan al contorno y se leen como ojos normales o «X X»)."""
-    im = new(5, 3)
-    for (x, y) in ((1, 0), (3, 0), (1, 2), (2, 2), (3, 2)):
+def joy_eyes():
+    """Los ojos de risa (5x2, sobre la cabeza en blanco, como los del Espejo): dos arcos cerrados «^ ^» que comparten el
+    pie del medio; los de fuera tocan el contorno de la cabeza."""
+    im = new(5, 2)
+    for (x, y) in ((1, 0), (3, 0), (0, 1), (2, 1), (4, 1)):
         px(im, x, y, BLACK)
     return im
 
@@ -559,7 +559,7 @@ def build():
         'claw.png': claw(),
         'pilot-Sheet.png': sheet([pilot('pedal1'), pilot('pedal2'), pilot('laugh'), pilot('hurt')]),
         'pilot_laugh-Sheet.png': sheet([pilot_laugh(False), pilot_laugh(True)]),
-        'joy_face.png': joy_face(),
+        'joy_eyes.png': joy_eyes(),
         'pilot_angry.png': pilot_angry(),
         'pilot_flee-Sheet.png': sheet([pilot_flee(0), pilot_flee(1)]),
         'net.png': net(),
@@ -602,7 +602,7 @@ def assemble(files, look='machine', mf=0, pilot=None, pdx=0, prop=0, glow=False,
     if pilot is not None:
         im.alpha_composite(pilot, (L + PILOT_AT[0] - pdx, PILOT_AT[1]))
     if eyes is not None:
-        im.alpha_composite(files['joy_face.png'], (L + PILOT_AT[0] + JOY_AT[0], PILOT_AT[1] + JOY_AT[1] + eyes))
+        im.alpha_composite(files['joy_eyes.png'], (L + PILOT_AT[0] + JOY_AT[0], PILOT_AT[1] + JOY_AT[1] + eyes))
     return im
 
 
@@ -620,7 +620,7 @@ def preview(files):
     b = assemble(files, pilot=crop(ps, 1, 9, 16), prop=1, glow=True, recoil=1)
     put(b, 380, 10)
     put(a.transpose(Image.FLIP_LEFT_RIGHT), 750, 10)
-    # fila 2: se ríe (dos cuadros con la cara de la carcajada), enfadado, fase 2
+    # fila 2: se ríe (dos cuadros con los ojos de risa), enfadado, fase 2
     put(assemble(files, pilot=crop(pl, 0, 9, 16), eyes=0, prop=2, mf=1), 10, 360)
     put(assemble(files, pilot=crop(pl, 1, 9, 16), eyes=1, prop=3, mf=2), 380, 360)
     put(assemble(files, pilot=files['pilot_angry.png'], pdx=ANGRY_DX, prop=0), 750, 360)
@@ -629,7 +629,7 @@ def preview(files):
     mon = Image.open(os.path.join(ROOT, 'assets', 'images', 'player', 'monstrito1.png')).convert('RGBA')
     put(mon, 1130, 20, 8); put(ps, 1220, 20, 8)
     put(pl, 1130, 170, 8); put(files['pilot_angry.png'], 1290, 170, 8)
-    lj = new(9, 16); lj.alpha_composite(crop(pl, 0, 9, 16)); lj.alpha_composite(files['joy_face.png'], JOY_AT)
+    lj = new(9, 16); lj.alpha_composite(crop(pl, 0, 9, 16)); lj.alpha_composite(files['joy_eyes.png'], JOY_AT)
     put(lj, 1400, 170, 8)
     # fila 3: piezas
     put(files['propeller-Sheet.png'], 10, 720); put(files['cannon-Sheet.png'], 340, 720)
