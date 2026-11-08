@@ -10,7 +10,8 @@
 --                pierde 2 (`owner:damage(2, 'reflect')`); un tile sólido o salir del nivel la revienta sin dañar a nadie
 --   'exploding'  fogonazo breve y desaparece. Una bomba devuelta NO hace daño a ningún jugador al explotar
 -- Arte: assets/images/bosses/netcopter/bomb-Sheet.png (2 cuadros 14x18: la mecha) y mark-Sheet.png (la marca, 2 cuadros
--- 12x12: parpadea); tools/art/bosses/make_netcopter.py. Lo que se dibuja sale de x, y, state, deadTimer y la marca.
+-- 12x12: cuatro esquinas de mira que laten); tools/art/bosses/make_netcopter.py. Lo que se dibuja sale de x, y, state,
+-- deadTimer (corre en el aire y de vuelta: la mecha nunca se congela) y la marca.
 local Entity     = require 'src/world/entities/base/Entity'
 local Boss       = require 'src/world/entities/base/Boss'
 local Explosions = require 'src/world/systems/Explosions'
@@ -139,6 +140,7 @@ function GlowBomb:updateCustom(dt, level)
         end
         if hit then self:explode(level) end
     elseif st == 'returning' then
+        self.deadTimer = self.deadTimer + dt                -- (la mecha sigue chisporroteando de vuelta)
         self.x, self.y = self.x + self.vx * dt, self.y + self.vy * dt
         local o = self.owner
         if o and o.alive and overlap(self:getOuterBounds(), o:getOuterBounds()) then

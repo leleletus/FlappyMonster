@@ -17,7 +17,7 @@
 --   fase2    con la mitad de vida pasa a la fase 2 y se dibuja con el globo reventado (machine_popped)
 --   especial una ráfaga de potencia 3 le quita 3; otra dentro de su INV_TIME, nada
 --   no_pisa  un jugador que vuela y le cae encima nunca le pisa: el jefe sigue igual y el jugador pierde 1
---   red      la red sale a la altura del jugador y, si le da, −1 y ctrlLock 0,4 s
+--   red      la red sale a la altura del jugador y, si le da, −1 y ctrlLock 0,4 s; le envuelve ese rato y desaparece
 --   garra    la garra (fase 2) solo hace daño en la franja marcada: dentro −2, fuera nada
 --   huye     a 0 de vida: explosiones, sin sprite de muerte, se va por la derecha fuera de la zona y la zona queda
 --            superada ('cleared')
@@ -30,7 +30,7 @@
 --                    el jefe vencido a la fuerza → sin paredes, vuela a la derecha y toca la meta (→ onFinish)
 --   muerte_en_pelea  morir en la pelea → reaparece EN EL AIRE dentro de la zona con toda la vida (el suelo, que en
 --                    vuelo hace daño, no le toca), el jefe con la misma vida y como mucho una carga a la vez
---   pilar            los pilares (enemySolid) paran la red y la bomba
+--   pilar            los pilares (enemySolid) paran la red (se engancha y se deshace) y la bomba
 --   red_repetida     una red lanzada dos veces llega exacta a su altura la segunda
 --   derrota_bombas   vencido el jefe no queda ninguna bomba cayendo ni hace daño
 -- Y la pelea pulida (docs/design/flappy-plan-5c-netcopter-polish.md):
@@ -40,6 +40,9 @@
 --   cruza        tras su HOLD cruza al otro tercio y se gira (facing al centro), sin atacar cruzando; y vuelve
 --   mira_izq     desde el lado izquierdo la red sale y vuela a la derecha, y la bomba sale hacia la derecha
 --   cruce_justo  un jugador en la franja de arriba cuando cruza pierde exactamente 1 (nunca una cadena)
+--   risa         muere un jugador: se ríe (cabeza en blanco, cara de carcajada, dos cuadros) y la pelea sigue
+--   dibujo       la mecha de una bomba devuelta sigue corriendo; empezando la pelea a la izquierda mira a la derecha;
+--                la risa y el disparo (retroceso, humo) viajan en netPackExtra
 --
 --   tools/tests/run.sh netcopter_rules   (CASE=nombre: solo ese)
 io.stdout:setvbuf('no')
@@ -434,10 +437,18 @@ function cases.red()
     if not net then return end
     local php = pa.hp
     local hitX = net.x
-    run(level, es, 3, function() return pa.hp < php or not net.alive end)
+    run(level, es, 3, function() return pa.hp < php or net.state ~= 'fly' end)
     check('red', pa.hp == php - 1 and (pa.ctrlLockT or 0) >= 0.39,
         ('le da (desde x=%.0f): vida %d → %d, ctrlLock %.2f'):format(hitX, php, pa.hp, pa.ctrlLockT or 0))
-    check('red', not net.alive, 'la red desaparece al dar')
+    -- (le envuelve mientras dura su ctrlLock, pegada a él y sin volver a herir; luego desaparece)
+    local wrapped = net.state == 'wrap'
+    pa.x = pa.x + 30
+    run(level, es, 0.2)
+    local onHim = net.alive and net.x == pa.x and net.y == pa.y
+    run(level, es, net.WRAP_T)
+    check('red', wrapped and onHim and not net.alive and pa.hp == php - 1,
+        ('le envuelve (%s, pegada %s) y desaparece (%s), vida %d'):format(tostring(wrapped), tostring(onHim),
+        tostring(not net.alive), pa.hp))
 end
 
 -- Una red disparada dos veces llega EXACTO a `ty` la segunda vez (settled se reinicia al lanzarla)
@@ -511,9 +522,12 @@ function cases.pilar()
     net:launch(4.5 * T, 0, -math.huge)
     for _ = 1, 120 do
         net:update(DT, level)
-        if not net.alive then break end
+        if net.state ~= 'fly' then break end
     end
-    check('pilar', not net.alive and net.x > 9 * T, ('la red se para en el pilar (x=%.0f)'):format(net.x))
+    local snag = net.state == 'snag'
+    for _ = 1, math.ceil(net.SNAG_T / DT) + 1 do net:update(DT, level) end
+    check('pilar', snag and not net.alive and net.x > 9 * T, ('la red se engancha en el pilar (x=%.0f, %s) y se deshace'):format(
+        net.x, snag and 'enganchada' or net.state))
 end
 
 function cases.huye()
@@ -889,10 +903,58 @@ function cases.cruce_justo()
     check('cruce_justo', seen and pa.hp == php - 1, ('cruzando por la franja de arriba: vida %d -> %d'):format(php, pa.hp))
 end
 
+-- Muere un jugador en la pelea: se ríe como el Espejo (cabeza en blanco + cara de carcajada, la cabeza sube y baja: los
+-- dos cuadros) y la pelea SIGUE (el otro jugador: le dispara una red mientras se ríe o justo después)
+function cases.risa()
+    local level, es, boss, pa, ctrl, z = fight(nil)
+    local zx0 = boss:zb()
+    local pb = player(level, zx0 + 3 * T, 5 * T, 0)
+    pb.invT = 99
+    boss.bombT, boss.netT = 99, 0.5
+    pa.dying = true
+    ctrl:update(DT)
+    check('risa', (boss.laughT or 0) > 0 and boss:laughing(), ('muere un jugador: laughT %.2f, se ríe %s'):format(
+        boss.laughT or 0, tostring(boss:laughing())))
+    local frames, states, shot = {}, {}, false
+    local hold = holdAt(pb, zx0 + 3 * T, 5 * T)
+    run(level, es, 3, function()
+        if boss:laughing() then frames[boss:laughFrame()] = true end
+        states[boss.state] = true
+        shot = shot or #liveOf(es, 'netshot') > 0
+        return shot and not boss:laughing()
+    end, ctrl, hold)
+    check('risa', frames[1] and frames[2], ('la cabeza sube y baja: cuadros %s %s'):format(tostring(frames[1]), tostring(frames[2])))
+    check('risa', shot and states.aim_net and not boss:laughing() and boss:isActive(),
+        ('la pelea sigue: red disparada %s, apunta %s, activo %s'):format(tostring(shot), tostring(states.aim_net), tostring(boss:isActive())))
+end
+
+-- Lo que se dibuja sigue vivo y cuadra: la mecha de una bomba DEVUELTA sigue chisporroteando (su reloj corre); si la
+-- pelea empieza con él a la izquierda, mira a la derecha (el lado sale de su x); la risa y el disparo viajan
+function cases.dibujo()
+    local level, bomb = room(5 * T, 4 * T)
+    local pa = player(level, 5 * T, 4 * T, -300)
+    step(level, bomb, pa)
+    local t0 = bomb.deadTimer
+    for _ = 1, 6 do bomb:update(DT, level) end
+    check('dibujo', bomb.state == 'returning' and bomb.deadTimer > t0 + 0.05,
+        ('devuelta: su reloj %.2f -> %.2f (%s)'):format(t0, bomb.deadTimer, bomb.state))
+    local _, _, boss = fight(nil)
+    local zx0, zx1 = boss:zb()
+    boss.x = zx0 + (zx1 - zx0) / 6
+    boss:onFightStart(1)
+    check('dibujo', boss.side == -1 and boss.facing == 1, ('empieza a la izquierda: lado %d, mira %d'):format(boss.side, boss.facing))
+    local _, _, cl = fight(nil)
+    boss.laughT, boss.shotT = 0.7, 0.05
+    local pk = boss:netPack()
+    cl:netApply(pk, pk, 1)
+    check('dibujo', math.abs(cl.laughT - 0.7) < 0.011 and math.abs(cl.shotT - 0.05) < 0.011 and cl:laughFrame() == boss:laughFrame(),
+        ('viajan: risa %.2f, disparo %.2f, cuadro %d/%d'):format(cl.laughT, cl.shotT, cl:laughFrame(), boss:laughFrame()))
+end
+
 local ORDER = { 'rebote', 'de_lado', 'falla', 'mecha', 'cargas', 'lastima', 'aire', 'aventura', 'ultima_vida',
                 'vida', 'fase2', 'especial', 'no_pisa', 'red', 'garra', 'huye', 'bomba', 'azar', 'paquete',
                 'etapa_jefe', 'muerte_en_pelea', 'pilar', 'red_repetida', 'derrota_bombas',
-                'lanzada', 'devuelta_arco', 'cruza', 'mira_izq', 'cruce_justo' }
+                'lanzada', 'devuelta_arco', 'cruza', 'mira_izq', 'cruce_justo', 'risa', 'dibujo' }
 function love.load()
     local only = os.getenv('CASE')
     for _, name in ipairs(ORDER) do

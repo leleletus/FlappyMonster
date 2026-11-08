@@ -22,14 +22,21 @@
 --      Malvado HUYE por la derecha ('fleeing') pedaleando una hélice rota: NO muere (vuelve en cada zona).
 --   9. rollStart(r): al azar la primera red, la primera bomba, cuánto guarda el primer lado y la altura con la que empieza.
 --  10. Daño a los jugadores: red 1, bomba 1, garra 2, cuerpo 1.
+-- Vivo (Plan 5c): la hélice gira (4 cuadros, más deprisa cruzando), el globo se mece (±1 px de arte), las piernas
+-- pedalean a su ritmo; al cruzar se GIRA en TURN_T s (la máquina a media anchura, primero mirando a un lado y luego al
+-- otro); el cañón cuelga de su BRAZO de hierro atornillado a la góndola y retrocede 1 px al disparar (humo y hebras en
+-- la boca: `shotT`); tras un golpe, chispas, le duele HURT_T s y luego se ENFADA (puño en alto) ANGRY_T s; se RÍE como
+-- el Espejo (cabeza en blanco + cara de carcajada, la cabeza sube y baja cada LAUGH_F s) en la entrada y cuando cae un
+-- jugador, sin parar la pelea; fase 2: humo saliendo del globo roto.
 -- Estados: dormant → intro → ready → hover ↔ aim_net (la bomba sale con su reloj) → [fase 2] sweep_warn → sweep → … ↔
 -- cross (cambia de lado) … → dying_hold → fleeing → dead. Todo lo que se dibuja sale de state + deadTimer + x, y +
 -- facing + netPackExtra (la fase sale de hp / hpMax, que ya viajan). El arte mira a la IZQUIERDA; mirando a la derecha
 -- se dibuja la máquina entera en espejo alrededor de x.
 -- Arte: assets/images/bosses/netcopter/ (tools/art/bosses/make_netcopter.py), todo a ×6. Anclas en el cuadro de la
 -- máquina (44x54, centro = la entidad): globo y 0..25; góndola x 12..32, y 43..52; piloto 9x16 (el cuerpo del jugador
--- con la cabeza del Monstruo Malvado) de pie sobre la góndola con su esquina en (18, 27); cañón a la izquierda de la
--- góndola (esquina en (-6, 42), plegado detrás de ella en (12, 42)).
+-- con la cabeza del Monstruo Malvado) de pie sobre la góndola con su esquina en (18, 27); hélice (12x18) en (32, 37);
+-- cañón a la izquierda de la góndola (esquina en (-12, 42), plegado detrás de ella en (14, 42)) con su brazo: la
+-- abrazadera a 12 px de la esquina del cañón, la barra y la placa atornillada en x 9..11.
 
 local Entity = require 'src/world/entities/base/Entity'
 local Boss   = require 'src/world/entities/base/Boss'
@@ -76,6 +83,10 @@ local T = {
     HIT_CROSS = { 1, 160, 380, 0.3, 0 },  -- cruzando: hacia abajo, fuera de su camino (nunca contra una pared)
     INTRO = 3.5, ENTER_T = 2.0, LAUGH_AT = 2.1, LAUGH_T = 0.8, UNFOLD_AT = 2.6, UNFOLD_T = 0.5,
     LAUGH_DEATH = 1.2,              -- se ríe cuando cae un jugador
+    LAUGH_F = 1 / 6,                -- s por cuadro de la risa (cabeza arriba / abajo, como el Espejo)
+    TURN_T = 0.2,                   -- s que tarda en girarse al final del cruce
+    HURT_T = 0.2, ANGRY_T = 0.6,    -- tras un golpe: le duele, luego se enfada (puño en alto)
+    RECOIL_T = 0.12, SHOT_FX_T = 0.3,  -- el cañón retrocede / humo y hebras en la boca tras disparar
     FLEE_SPD = 240,                 -- px/s huyendo
     NET_POOL = 6, BOMB_POOL = 3,    -- súbditos de reserva
 }
@@ -89,8 +100,13 @@ local CX, CY = 22, 27                                      -- centro del cuadro 
 local GONDOLA_L, GONDOLA_B = (12 - CX) * S, (53 - CY) * S  -- borde izquierdo y fondo de la góndola
 local FRONT = (CX - 12) * S                                -- de x al borde DELANTERO de la góndola (hacia donde mira)
 local THROW_DY = (43 - CY) * S                             -- la bomba sale del borde de arriba de la góndola
-local CANNON_OUT, CANNON_IN, CANNON_Y = -6, 12, 42         -- esquina del cañón (desplegado / plegado)
+local CANNON_OUT, CANNON_IN, CANNON_Y = -12, 14, 42        -- esquina del cañón (desplegado / plegado)
 local CANNON_W, CANNON_H = 18, 12
+local COLLAR_DX, PLATE_X, ARM_W = 12, 9, 3                 -- el brazo: abrazadera (desde el cañón), placa (fija)
+local PROP_X, PROP_Y, PROP_W, PROP_H = 32, 37, 12, 18      -- la hélice
+local JOY_X, JOY_Y = 2, 4                                  -- la cara de la carcajada, en el cuadro del piloto
+local ANGRY_DX, ANGRY_W = 2, 11                            -- el piloto enfadado: 2 columnas más a la izquierda
+local PUFF, SPARK = 8, 7
 local MOUTH_DY = (CANNON_Y + CANNON_H / 2 - CY) * S        -- altura de la boca del cañón (y la de la red)
 local CLAW_W, CLAW_H, CLAW_HEAD = 54, 14, 20               -- la garra: cabeza a la izquierda, brazo a la derecha
 local CLAW_DY = (47.5 - CY) * S                            -- la garra sale a la altura del centro de la góndola
@@ -124,6 +140,14 @@ function NC.loadAssets()
     imgs.parts          = strip('parts', PART, PART)
     imgs.claw           = strip('claw', CLAW_W, CLAW_H)
     imgs.arm = love.graphics.newQuad(ARM_Q0, 0, ARM_QW, CLAW_H, imgs.claw.image:getDimensions())
+    imgs.cannon_arm     = strip('cannon_arm-Sheet', ARM_W, CANNON_H)
+    imgs.armBar = love.graphics.newQuad(ARM_W, 0, 1, CANNON_H, imgs.cannon_arm.image:getDimensions())  -- (1 columna)
+    imgs.prop           = strip('propeller-Sheet', PROP_W, PROP_H)
+    imgs.laugh          = strip('pilot_laugh-Sheet', PILOT_W, PILOT_H)
+    imgs.joy            = strip('joy_face', 5, 3)
+    imgs.angry          = strip('pilot_angry', ANGRY_W, PILOT_H)
+    imgs.puff           = strip('puff-Sheet', PUFF, PUFF)
+    imgs.spark          = strip('spark-Sheet', SPARK, SPARK)
 end
 function NC.sizePx() return FW * S, FH * S end
 
@@ -133,7 +157,7 @@ function NC:initBoss()
     self.holdT = T.HOLD[1]
     self.summonKey = 'nc' .. self.col .. ',' .. self.row      -- (sus redes y bombas de reserva: def.summons)
     self.netT, self.bombT, self.attackN = T.NET_FIRST[2], T.BOMB_FIRST[2], 0
-    self.yOff, self.laughT = 0, 0
+    self.yOff, self.laughT, self.shotT = 0, 0, 9
     self.bandY, self.reach = nil, 0
     self.fleeX0, self.fleeY0 = nil, nil
 end
@@ -233,6 +257,7 @@ function NC:fireNets(level, pa)
             n:launch(ty, d, f < 0 and zx0 or zx1, f)
         end
     end
+    self.shotT = 0
     Sound.play('cannonWhoosh')
     Entity.emitFx('sparks', mx, my)
 end
@@ -266,7 +291,11 @@ end
 function NC:onFightStart(n)
     self:enter('hover')
     self.netT, self.bombT, self.attackN = T.NET_FIRST[2], T.BOMB_FIRST[2], 0
-    self.side, self.facing, self.holdT = 1, -1, T.HOLD[1]
+    -- (el lado, de dónde está AHORA: tras la entrada, el derecho; si la pelea vuelve a empezar con él a la izquierda,
+    -- el izquierdo, mirando al centro)
+    local zx0, zx1 = self:zb()
+    self.side = (self.x < (zx0 + zx1) / 2) and -1 or 1
+    self.facing, self.holdT = -self.side, T.HOLD[1]
     if self.levelRef then self.floorY = self:floorAt(self.levelRef, self.x) end
 end
 function NC:rollStart(r)
@@ -287,7 +316,9 @@ function NC:onDamaged(n, kind)
     end
 end
 
+-- Cae un jugador: se ríe (como el Espejo) sin dejar de pelear; en la entrada o cayendo, no
 function NC:onPlayerDeath(pa)
+    if self:isDying() or Boss.INTRO[self.state] or self.state == 'dormant' then return end
     self.laughT = T.LAUGH_DEATH
     Sound.play('mirrorLaugh')
 end
@@ -329,6 +360,7 @@ function NC:updateBoss(dt, level)
     self.deadTimer = self.deadTimer + dt
     local t = self.deadTimer
     if self.laughT > 0 then self.laughT = math.max(0, self.laughT - dt) end
+    self.shotT = math.min(9, (self.shotT or 9) + dt)
     if st == 'fleeing' then return self:updateFlee(dt, level, t) end
     if not self:isActive() then return end
 
@@ -442,10 +474,34 @@ function NC:cannonK()
     if st == 'intro' then return clamp((self.deadTimer - T.UNFOLD_AT) / T.UNFOLD_T, 0, 1) end
     return 1
 end
-function NC:laughing()
-    local st = self.state
-    if st == 'intro' then return self.deadTimer >= T.LAUGH_AT and self.deadTimer < T.LAUGH_AT + T.LAUGH_T end
-    return (self.laughT or 0) > 0
+-- Cuánto lleva riéndose (nil = no se ríe): en la entrada, desde LAUGH_AT; si cae un jugador, desde que cayó
+function NC:laughTime()
+    if self.state == 'intro' then
+        local lt = self.deadTimer - T.LAUGH_AT
+        if lt >= 0 and lt < T.LAUGH_T then return lt end
+        return nil
+    end
+    if (self.laughT or 0) > 0 then return math.max(0, T.LAUGH_DEATH - self.laughT) end
+    return nil
+end
+function NC:laughing() return self:laughTime() ~= nil end
+-- 1 = cabeza arriba (brazos arriba), 2 = cabeza abajo (brazos abajo)
+function NC:laughFrame()
+    return math.floor((self:laughTime() or 0) / T.LAUGH_F) % 2 + 1
+end
+-- Lo que lleva desde el último golpe (nil = ninguno reciente): sale de `inv`, que ya viaja
+function NC:hitAge()
+    if self.inv > 0 and not self.ghost then return Boss.INV_TIME - self.inv end
+    return nil
+end
+-- Cómo está el Monstruo Malvado: 'hurt' (explotando o recién golpeado), 'angry', 'laugh' o 'pedal'
+function NC:pilotPose()
+    if self.state == 'dying_hold' then return 'hurt' end
+    local a = self:hitAge()
+    if a and a < T.HURT_T then return 'hurt' end
+    if a and a < T.HURT_T + T.ANGRY_T then return 'angry' end
+    if self:laughing() then return 'laugh' end
+    return 'pedal'
 end
 
 -- ── Derrota: explosiones (genéricas), se rompe y huye por la derecha ──────────
@@ -478,12 +534,14 @@ end
 
 -- ── Red ───────────────────────────────────────────────────────────────────────
 function NC:netPackExtra()
-    return { self.laughT > 0 and 1 or 0, self.bandY or 0, math.floor(self.reach or 0),
-             self.fleeX0 or 0, self.fleeY0 or 0, (self.facing or -1) > 0 and 1 or -1 }
+    return { math.floor((self.laughT or 0) * 100 + 0.5), self.bandY or 0, math.floor(self.reach or 0),
+             self.fleeX0 or 0, self.fleeY0 or 0, (self.facing or -1) > 0 and 1 or -1,
+             math.floor(math.min(9, self.shotT or 9) * 100 + 0.5) }
 end
 function NC:netApplyExtra(a, b, f)
     if type(b[1]) ~= 'number' then return end
-    self.laughT = (b[1] == 1) and 1 or 0
+    self.laughT = b[1] / 100
+    if type(b[7]) == 'number' then self.shotT = b[7] / 100 end
     self.bandY = (b[2] ~= 0) and b[2] or nil
     self.reach = b[3] or 0
     self.fleeX0, self.fleeY0 = b[4], b[5]
@@ -530,6 +588,65 @@ function NC:drawParts(camX, camY)
     end
 end
 
+-- El cañón con su brazo (detrás de la góndola: plegado queda tapado). `cx` = esquina del cañón en px de arte
+function NC:drawCannon(ox, oy, cx, glow)
+    local c = imgs.cannon_arm
+    love.graphics.draw(imgs.cannon.image, imgs.cannon.quads[glow and 2 or 1], ox + cx * S, oy + CANNON_Y * S, 0, S, S)
+    local col = cx + COLLAR_DX                                          -- abrazadera, y la barra hasta la placa
+    for ax = col + ARM_W, PLATE_X - 1 do
+        love.graphics.draw(c.image, imgs.armBar, ox + ax * S, oy + CANNON_Y * S, 0, S, S)
+    end
+    love.graphics.draw(c.image, c.quads[1], ox + col * S, oy + CANNON_Y * S, 0, S, S)
+    love.graphics.draw(c.image, c.quads[3], ox + PLATE_X * S, oy + CANNON_Y * S, 0, S, S)
+end
+
+-- Humo y hebras en la boca del cañón tras disparar (de shotT); chispas en la máquina tras un golpe (de inv)
+function NC:drawShotFx(ox, oy, cx)
+    local t = self.shotT or 9
+    if t >= T.SHOT_FX_T then return end
+    local k = math.min(2, math.floor(t / T.SHOT_FX_T * 3))
+    local mx, my = ox + (cx - 1) * S, oy + (CANNON_Y + CANNON_H / 2) * S
+    local rise = math.floor(t * 20) * S
+    love.graphics.draw(imgs.puff.image, imgs.puff.quads[1 + k], mx, my - rise, 0, S, S, PUFF / 2, PUFF / 2)
+    love.graphics.draw(imgs.puff.image, imgs.puff.quads[4 + k], mx - (4 + k * 2) * S, my + S, 0, S, S, PUFF / 2, PUFF / 2)
+end
+local SPARK_AT = { { 14, 41 }, { 31, 18 }, { 9, 10 } }
+function NC:drawHitFx(ox, oy)
+    local a = self:hitAge()
+    if not a or a >= 0.24 then return end
+    local k = math.floor(a / 0.08) + 1
+    for i, p in ipairs(SPARK_AT) do
+        local q = imgs.spark.quads[math.min(3, k + (i - 1) % 2)]
+        love.graphics.draw(imgs.spark.image, q, ox + p[1] * S, oy + p[2] * S, 0, S, S, SPARK / 2, SPARK / 2)
+    end
+end
+-- Fase 2: humo que sale del globo roto y se queda atrás (subiendo, hacia detrás de la máquina)
+function NC:drawLeak(ox, oy, now)
+    for i = 0, 2 do
+        local u = (now * 0.8 + i / 3) % 1
+        local q = imgs.puff.quads[1 + math.min(2, math.floor(u * 3))]
+        local wob = math.floor(math.sin(u * 7 + i * 2.1) * 2.5 + 0.5)          -- (no sale en fila: se ondula)
+        love.graphics.draw(imgs.puff.image, q, ox + math.floor(27 + u * 15 + wob) * S, oy + math.floor(13 - u * 15 - wob) * S,
+            0, S, S, PUFF / 2, PUFF / 2)
+    end
+end
+
+-- El Monstruo Malvado de pie en la góndola: pedalea, se ríe (cabeza en blanco + cara de carcajada), le duele o se enfada
+function NC:drawPilot(ox, oy, now, fast)
+    local pose = self:pilotPose()
+    local px, py = ox + PILOT_X * S, oy + PILOT_Y * S
+    if pose == 'laugh' then
+        local f = self:laughFrame()
+        love.graphics.draw(imgs.laugh.image, imgs.laugh.quads[f], px, py, 0, S, S)
+        love.graphics.draw(imgs.joy.image, imgs.joy.quads[1], px + JOY_X * S, py + (JOY_Y + (f == 2 and 1 or 0)) * S, 0, S, S)
+    elseif pose == 'angry' then
+        love.graphics.draw(imgs.angry.image, imgs.angry.quads[1], px - ANGRY_DX * S, py, 0, S, S)
+    else
+        local fr = (pose == 'hurt') and 4 or (math.floor(now * (fast and 12 or 6)) % 2 + 1)
+        love.graphics.draw(imgs.pilot.image, imgs.pilot.quads[fr], px, py, 0, S, S)
+    end
+end
+
 function NC:render(camX, camY)
     local st = self.state
     if st == 'dormant' and not EDITOR_VIEW then return end
@@ -549,12 +666,22 @@ function NC:render(camX, camY)
         y = y + math.floor((math.random() * 2 - 1) * 3)
         ox, oy = x - CX * S, y - CY * S
     end
-    -- mirando a la derecha: toda la máquina (garra, aviso, cañón, piloto) en espejo alrededor de x
-    local flip = (self.facing or -1) > 0
-    if flip then
+    -- mirando a la derecha: toda la máquina (garra, aviso, cañón, piloto) en espejo alrededor de x. Al final del cruce
+    -- se gira: TURN_T s a media anchura (la mitad mirando aún al lado de antes, la otra mitad ya al nuevo)
+    local face, sx = self.facing or -1, 1
+    if st == 'cross' then
+        local left = T.CROSS_T - self.deadTimer
+        if left < T.TURN_T then
+            sx = 0.5
+            if left < T.TURN_T / 2 then face = -(self.side or 1) end
+        end
+    end
+    local flip = face > 0
+    local xf = flip or sx ~= 1
+    if xf then
         love.graphics.push()
         love.graphics.translate(x, 0)
-        love.graphics.scale(-1, 1)
+        love.graphics.scale((flip and -1 or 1) * sx, 1)
         love.graphics.translate(-x, 0)
     end
     self:drawWarn(camX, camY)
@@ -563,23 +690,33 @@ function NC:render(camX, camY)
         if red then love.graphics.setColor(1, 0.3, 0.3, 1) else love.graphics.setColor(1, 1, 1, self:ghostAlpha()) end
     end
     tint()
-    -- la garra y el cañón, DETRÁS de la góndola (plegados quedan tapados)
+    -- la garra y el cañón con su brazo, DETRÁS de la góndola (plegados quedan tapados); retrocede 1 px al disparar
     self:drawClaw(camX, camY)
     local k = self:cannonK()
-    local cx = CANNON_IN + (CANNON_OUT - CANNON_IN) * k
+    local cx = math.floor(CANNON_IN + (CANNON_OUT - CANNON_IN) * k + 0.5) + (((self.shotT or 9) < T.RECOIL_T) and 1 or 0)
     local glow = st == 'aim_net' and math.floor(self.deadTimer * 10) % 2 == 0
-    love.graphics.draw(imgs.cannon.image, imgs.cannon.quads[glow and 2 or 1], ox + math.floor(cx) * S, oy + CANNON_Y * S, 0, S, S)
-    -- la máquina (la hélice gira: 2 cuadros)
-    local m = imgs[self:look()]
-    local pf = (st == 'dying_hold') and 1 or (math.floor(now * 10) % 2 + 1)
-    love.graphics.draw(m.image, m.quads[pf], ox, oy, 0, S, S)
-    -- el Monstruo Malvado, de pie en la góndola: pedalea, se ríe o le duele
-    local hurt = st == 'dying_hold' or (self.inv > 0 and not self.ghost)
-    local fr = hurt and 4 or (self:laughing() and 3 or (math.floor(now * 6) % 2 + 1))
+    self:drawCannon(ox, oy, cx, glow)
+    -- la máquina: el globo se mece (±1 px) o, reventado, aletea; la hélice gira (más deprisa cruzando)
+    local fast = st == 'cross'
+    local look = self:look()
+    local m = imgs[look]
+    local mf
+    if look == 'machine' then
+        local v = math.sin(now * 1.7)
+        mf = (v > 0.6) and 2 or ((v < -0.6) and 3 or 1)
+    else
+        mf = math.floor(now * 6) % 2 + 1
+    end
+    love.graphics.draw(m.image, m.quads[mf], ox, oy, 0, S, S)
+    local pf = (st == 'dying_hold') and 1 or (math.floor(now * (fast and 24 or 12)) % 4 + 1)
+    love.graphics.draw(imgs.prop.image, imgs.prop.quads[pf], ox + PROP_X * S, oy + PROP_Y * S, 0, S, S)
     love.graphics.setColor(1, 1, 1, self:ghostAlpha())
-    love.graphics.draw(imgs.pilot.image, imgs.pilot.quads[fr], ox + PILOT_X * S, oy + PILOT_Y * S, 0, S, S)
+    self:drawPilot(ox, oy, now, fast)
     love.graphics.setColor(1, 1, 1, 1)
-    if flip then love.graphics.pop() end
+    self:drawShotFx(ox, oy, cx)
+    if look == 'machine_popped' then self:drawLeak(ox, oy, now) end
+    self:drawHitFx(ox, oy)
+    if xf then love.graphics.pop() end
 end
 
 -- Lo que hiere y no son sus cajas: la garra (y la franja avisada)
