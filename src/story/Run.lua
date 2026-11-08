@@ -9,64 +9,10 @@
 local Save = require 'src/story/Save'
 local Worlds = require 'src/story/Worlds'
 
-local Run = { slot = nil, data = nil }
-
-function Run.open(i, difficulty)
-    Run.slot = i
-    Run.data = Save.load(i)
-    if not Run.data then
-        Run.data = Save.new(difficulty)
-        Save.write(i, Run.data)
-    end
-    return Run.data
-end
-
-function Run.close() Run.slot, Run.data = nil, nil end
-function Run.active() return Run.data ~= nil end
-function Run.save() if Run.slot and Run.data then Save.write(Run.slot, Run.data) end end
-
-function Run.isDone(id) return Run.data ~= nil and Run.data.done[id] == true end
-
--- (o, en una partida de antes de que se metiera un mundo nuevo delante de él, el que ya tenía abierto: Save.migrate)
-function Run.worldOpen(w)
-    if w <= 1 then return true end
-    local prev, W = Worlds.get(w - 1), Worlds.get(w)
-    if not (prev and W) then return false end
-    return Run.isDone(prev.boss) or (Run.data ~= nil and Run.data.open ~= nil and Run.data.open[W.id] == true)
-end
-
-function Run.state(w, k)
-    local nodes = Worlds.nodes(w)
-    local n = nodes[k]
-    if not n or not Run.worldOpen(w) then return 'locked' end
-    if Run.isDone(n.id) then return 'done' end
-    if k == 1 or Run.isDone(nodes[k - 1].id) then return 'open' end
-    return 'locked'
-end
-
--- Superados / total (de un mundo, o de todo el juego)
-function Run.progress(w)
-    local done, total = 0, 0
-    for i = (w or 1), (w or Worlds.count()) do
-        for _, n in ipairs(Worlds.nodes(i)) do
-            total = total + 1
-            if Run.isDone(n.id) then done = done + 1 end
-        end
-    end
-    return done, total
-end
-
--- Dónde colocarse al abrir el mapa: el primer nodo sin superar del mundo más avanzado
-function Run.frontier()
-    for w = 1, Worlds.count() do
-        if Run.worldOpen(w) then
-            for k = 1, #Worlds.nodes(w) do
-                if Run.state(w, k) == 'open' then return w, k end
-            end
-        end
-    end
-    return Worlds.count(), #Worlds.nodes(Worlds.count())      -- todo superado
-end
+local Run = {}
+-- (open, close, active, save, isDone, worldOpen, state, progress, frontier, setLives, worldRating, score, restartWorld:
+--  las reglas compartidas con la campaña Flappy, src/story/RunCore.lua)
+require('src/story/RunCore').install(Run, Save, Worlds)
 
 -- Nivel superado: se apunta, se guardan las vidas, se calcula su NOTA (src/story/Score.lua) y se dan
 -- los premios. Devuelve el resumen para la pantalla de resultados:
@@ -76,38 +22,9 @@ function Run.complete(id, result)
     local d = Run.data
     if not d then return nil end
     local Score = require 'src/story/Score'
-    local Difficulty = require 'src/core/Difficulty'
-    result = result or {}
-    local first = not d.done[id]
-    d.done[id] = true
-    if result.lives then d.lives = result.lives end      -- (las vidas se llevan al nivel siguiente)
-    local sc = Score.level({ time = result.time, par = result.par or Score.par(result.width), deaths = result.deaths, hits = result.hits,
-                             kills = result.kills, killable = result.killable, stars = result.stars, starsTotal = result.starsTotal })
-    local points = math.floor((result.score or 0) * Difficulty.of(d.difficulty, 'scoreMult', 1) + 0.5)
-    local b = d.best[id] or {}
-    -- (`record`: solo si MEJORA una nota que ya tenía en ESTA partida; la primera vez no hay récord que batir)
-    local out = { rating = sc.rating, grade = sc.grade, parts = sc.parts, points = points, record = b.rating ~= nil and sc.rating > b.rating,
-                  par = result.par or Score.par(result.width) }
-    -- premio del nivel: solo la primera vez que se llega a esa letra
-    local had = b.grade
-    local order = { S = 4, A = 3, B = 2, C = 1, D = 0 }
-    if (order[sc.grade] or 0) > (order[had or ''] or -1) then out.reward = Score.LEVEL_REWARD[sc.grade] end
-    -- PUNTOS de la partida: solo lo que MEJORA el récord del nivel (repetir un nivel para subir la nota sigue valiendo,
-    -- pero ya no suma puntos sin fin); `gain` = lo que se suma ahora
-    out.gain = math.max(0, points - (b.score or 0))
-    if points > (b.score or -1) then b.score = points end
-    if result.time and (not b.time or result.time < b.time) then b.time = math.floor(result.time * 100) / 100 end
-    if sc.rating > (b.rating or -1) then b.rating, b.grade = sc.rating, sc.grade end
-    d.best[id] = b
-    d.points = (d.points or 0) + out.gain
-    d.playTime = d.playTime + (result.time or 0)
-    -- vidas extra cogidas: ya no vuelven a dar vidas en este nivel (AdventureState `taken`)
-    if result.taken and #result.taken > 0 then
-        d.taken = d.taken or {}
-        local t = d.taken[id] or {}
-        for _, i in ipairs(result.taken) do t[i] = true end
-        d.taken[id] = t
-    end
+    local out = Run.score(id, result)
+    local first = out.first
+    out.first = nil
     -- ¿con este se completa su mundo? → nota del mundo y su premio (una vez)
     for w = 1, Worlds.count() do
         local nodes = Worlds.nodes(w)
@@ -228,17 +145,6 @@ function Run.unlockAfter(difficulty)
     return nxt
 end
 
--- Nota de un mundo: la media de la mejor valoración de cada nivel suyo (los no superados, 0)
-function Run.worldRating(w)
-    local Score = require 'src/story/Score'
-    local list, nodes = {}, Worlds.nodes(w)
-    for _, n in ipairs(nodes) do
-        local b = Run.data and Run.data.best[n.id]
-        if b and b.rating and Run.isDone(n.id) then list[#list + 1] = b.rating end
-    end
-    return Score.average(list, #nodes)
-end
-
 -- FRAGMENTOS DEL ESPEJO (src/story/Shards.lua): quedan en la partida al TERMINAR el nivel en que se recogieron
 -- (StoryMapState: salir a medias no guarda nada de lo conseguido)
 -- (noSave: el nivel terminado lo guarda todo junto en Run.complete — fragmento y nivel en UNA escritura)
@@ -251,13 +157,6 @@ function Run.addShard(id, noSave)
 end
 function Run.shards() return require('src/story/Shards').count(Run.data or { shards = {} }) end
 
--- Vidas con las que sigue la aventura (al salir de un nivel sin acabarlo también cuentan las perdidas)
-function Run.setLives(n)
-    if not Run.data then return end
-    Run.data.lives = math.max(1, math.floor(n))
-    Run.save()
-end
-
 -- GAME OVER (sin vidas): se vuelve al PRINCIPIO DEL MUNDO `w` — sus niveles dejan de estar superados
 -- y las vidas vuelven a las del principio. En las dificultades con `restartGame` (Xtra extremo) se
 -- pierde TODO: de vuelta al mundo 1. Los récords (`best`) se conservan. Devuelve el mundo al que se va.
@@ -265,17 +164,14 @@ function Run.gameOver(w)
     local d = Run.data
     if not d then return 1 end
     local Difficulty = require 'src/core/Difficulty'
+    if not Difficulty.of(d.difficulty, 'restartGame', false) then return Run.restartWorld(w) end
     d.lives = Difficulty.of(d.difficulty, 'livesStart', 3)
     d.gameOvers = (d.gameOvers or 0) + 1
-    if Difficulty.of(d.difficulty, 'restartGame', false) then
-        d.done, d.shards, d.open, w = {}, {}, {}, 1      -- (todo el juego otra vez: también los fragmentos,
-        d.collect, d.found = {}, {}                       --  los coleccionables y las salidas secretas encontradas)
-    else
-        for _, n in ipairs(Worlds.nodes(w)) do d.done[n.id] = nil end
-    end
-    d.world, d.node = w, 1
+    d.done, d.shards, d.open = {}, {}, {}            -- (todo el juego otra vez: también los fragmentos,
+    d.collect, d.found = {}, {}                       --  los coleccionables y las salidas secretas encontradas)
+    d.world, d.node = 1, 1
     Run.save()
-    return w
+    return 1
 end
 
 return Run

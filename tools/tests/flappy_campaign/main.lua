@@ -1,5 +1,7 @@
 -- tools/tests/flappy_campaign — la CAMPAÑA FLAPPY a nivel de módulos (docs/design/flappy-plan-3-campaign-frame.md):
 --   archivo    SaveFile: escribir y leer una tabla; un archivo roto se lee como nil + dañado y NO se sobrescribe
+--   progreso   RunCore con un catálogo de mentira (2 mundos x 2 nodos): orden de los nodos, el mundo siguiente tras el
+--              jefe, frontier, score (mejor nota, puntos), restartWorld (borra lo superado del mundo y guarda los récords)
 --   (los casos de pantallas — mapa, partidas, CONTINUAR — van en menu_flow, que corre el juego de verdad)
 --
 --   tools/tests/run.sh flappy_campaign   (CASE=nombre: solo ese)
@@ -43,7 +45,37 @@ function cases.archivo()
            tostring(roundOk), tostring(d2 == nil), tostring(dmg2), tostring(kept), tostring(mt), tostring(gone)))
 end
 
-local ORDER = { 'archivo' }
+function cases.progreso()
+    local RunCore = require 'src/story/RunCore'
+    local store = {}
+    local saves = { SLOTS = 3,
+        new = function(diff) return { difficulty = diff or 'normal', world = 1, node = 1, lives = 3, done = {}, best = {},
+                                      playTime = 0, points = 0, gameOvers = 0 } end,
+        load = function(i) return store[i] end,
+        write = function(i, d) store[i] = d; return true end }
+    local W = { { id = 'a', levels = { 'a1' }, boss = 'a2' }, { id = 'b', levels = { 'b1' }, boss = 'b2' } }
+    local worlds = { count = function() return #W end, get = function(w) return W[w] end,
+        nodes = function(w) local n = {}; for _, id in ipairs(W[w].levels) do n[#n + 1] = { id = id } end
+                            n[#n + 1] = { id = W[w].boss }; return n end }
+    local R = {}
+    RunCore.install(R, saves, worlds)
+    R.open(1, 'normal')
+    local s0 = R.state(1, 1) == 'open' and R.state(1, 2) == 'locked' and not R.worldOpen(2)
+    local sum = R.score('a1', { time = 10, width = 40, score = 500 })
+    local s1 = R.state(1, 2) == 'open' and sum and sum.grade ~= nil and R.data.best.a1 ~= nil and R.data.points > 0
+    R.score('a2', { time = 10, width = 40 })
+    local s2 = R.worldOpen(2) and R.state(2, 1) == 'open'
+    local fw, fk = R.frontier()
+    local done, total = R.progress()
+    R.restartWorld(1)
+    local s3 = not R.isDone('a1') and not R.isDone('a2') and R.data.best.a1 ~= nil and store[1] == R.data
+    R.setLives(0)
+    check('progreso', s0 and s1 and s2 and fw == 2 and fk == 1 and done == 2 and total == 4 and s3 and R.data.lives == 1,
+          ('al empezar=%s; tras a1=%s; tras el jefe, mundo 2=%s; frontier %s,%s; progreso %d/%d; reiniciar el mundo 1=%s; vidas mínimas %d'):format(
+           tostring(s0), tostring(s1), tostring(s2), tostring(fw), tostring(fk), done, total, tostring(s3), R.data.lives))
+end
+
+local ORDER = { 'archivo', 'progreso' }
 function love.load()
     local only = os.getenv('CASE')
     for _, name in ipairs(ORDER) do
