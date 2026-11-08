@@ -14,6 +14,8 @@
 --               pilares, mata a un enemigo y la para un bloque sólido
 --   jaula       flappy enjaulado: una ráfaga con menos potencia que su mínimo no la abre (y se para); con más, la abre;
 --               una ya liberada en una partida terminada sale vacía
+--   muro        muro agrietado: sólido; una ráfaga más floja que su mínimo no lo rompe (y se para); con bastante, se rompe
+--               y se pasa
 --   normal      en un nivel normal el jugador NO vuela (salto de plataformas de siempre)
 --   etapa       la etapa de prueba (assets/levels/_flappy_vuelo.json) se puede pasar: un piloto sencillo (aletea
 --               cuando está por debajo del centro del hueco siguiente) llega a la meta sin morir
@@ -367,7 +369,28 @@ function cases.jaula()
            tostring(weak), tostring(opened), tostring(empty)))
 end
 
-local ORDER = { 'aleteo', 'ventana', 'pilar', 'suelo', 'reaparece', 'exclusivo', 'normal', 'carga', 'ataque', 'jaula', 'etapa' }
+function cases.muro()
+    -- muro de 7 casillas de alto (filas 3..9) en la columna 12, carga mínima 3
+    local lv = stage(40, nil, nil, true, { { type = 'crackwall', col = 12, row = 9, props = { minCharge = 3, rows = 7 } } })
+    local w = lv.liveEntities[1]
+    local pa = player(lv, 8 * T, 4.5 * T)
+    stub.state.right = true
+    step(lv, 1.5, function() hover(pa, 5.5 * T) end)
+    clearInput()
+    local blocked = pa.x < 11 * T + 4 and w.alive and w:isSolidBody()
+    shoot(lv, pa, 2, 5.5 * T)
+    local held = w:isSolidBody() and #(pa.bursts or {}) == 0
+    shoot(lv, pa, 3, 5.5 * T)
+    local broken = not w:isSolidBody()
+    stub.state.right = true
+    step(lv, 1.5, function() hover(pa, 5.5 * T) end)
+    clearInput()
+    check('muro', blocked and held and broken and pa.x > 13 * T,
+          ('intacto para al jugador (x %.0f)=%s; potencia 2 < 3: aguanta y para la ráfaga=%s; potencia 3: se rompe=%s; luego pasa (x %.0f)'):format(
+           pa.x, tostring(blocked), tostring(held), tostring(broken), pa.x))
+end
+
+local ORDER = { 'aleteo', 'ventana', 'pilar', 'suelo', 'reaparece', 'exclusivo', 'normal', 'carga', 'ataque', 'jaula', 'muro', 'etapa' }
 function love.load()
     local only = os.getenv('CASE')
     for _, name in ipairs(ORDER) do

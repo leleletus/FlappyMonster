@@ -6,6 +6,7 @@
 #   assets/images/fx/flapburst-Sheet.png     la RÁFAGA del ataque especial: una media luna de magia que avanza (4 cuadros)
 #   assets/images/items/cage-Sheet.png       el FLAPPY ENJAULADO: jaula cerrada con un flappy dentro · jaula abierta · el
 #                                            flappy libre (de otro color que el monstruo: rosa, con cuernitos; SIN alas)
+#   assets/images/world/flappy/crackwall.png el MURO AGRIETADO: un bloque de piedra del Valle con grietas (se repite)
 #   /usr/bin/python3 tools/art/items/make_flappy_items.py
 #   (nada de esto está retocado a mano: se puede volver a generar)
 import os
@@ -24,6 +25,10 @@ PAL = {
     'p': (240, 120, 170, 255),     # flappy enjaulado (rosa)
     'P': (255, 190, 215, 255),     # su brillo
     'k': (30, 16, 26, 255),        # sus ojos
+    's': (150, 135, 120, 255),     # piedra
+    'S': (185, 170, 150, 255),     # su brillo
+    'r': (100, 88, 78, 255),       # su sombra
+    'x': (40, 32, 30, 255),        # grieta
 }
 
 CHARGE = [
@@ -145,3 +150,23 @@ FREED = [
     '................',
 ]
 save([CAGE_CLOSED[y] + CAGE_OPEN[y] + FREED[y] for y in range(16)], 'assets/images/items/cage-Sheet.png')
+
+CRACKWALL = [
+    'rrrrrrrrrrrrrrrr',
+    'rSSSSSSSrSSSSSSr',
+    'rSsssssxrsssssrr',
+    'rSssssxsrssxsssr',
+    'rSsssxssrsxsssrr',
+    'rrrrxrrrrrxrrrrr',
+    'rSSSxSSSSSxSSSSr',
+    'rSssxxsssxssssrr',
+    'rSssssxsxsssssrr',
+    'rSsssssxssssssrr',
+    'rrrrrrrxrrrrrrrr',
+    'rSSSSSSxSrSSSSSr',
+    'rSssssxssrssssrr',
+    'rSsssxsssrssssrr',
+    'rSssssssrrssssrr',
+    'rrrrrrrrrrrrrrrr',
+]
+save(CRACKWALL, 'assets/images/world/flappy/crackwall.png')
