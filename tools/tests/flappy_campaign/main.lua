@@ -5,6 +5,8 @@
 --   zonas      cada etapa de src/flappy/Zones.lua existe, es un nivel Flappy con meta y sin errores del editor, con al
 --              menos 1 jaula, 3 cargas y 1 comida (la de su zona); cada muro agrietado TAPA algo (lo de detrás no se
 --              alcanza desde delante sin romperlo); la etapa del JEFE, sin jaula pero con su zona de jefe y un jefe dentro;
+--              SIN SUELO (Plan 5d): ni césped ni tierra, ningún pilar flota (cuelga del techo o sube desde el borde de
+--              abajo), cada lanzarredes sobre su soporte hasta el borde y todas las etapas de la zona con su fondo;
 --              el MAPA de cada zona: su arte existe, cada nodo (y la tienda, si vende algo) tiene su sitio y no se pisan
 --   premio     el premio de la nota (S: +1 vida; A: +500 puntos) se DA y se guarda, no solo sale en los resultados
 --   partida    FlappyRun: abrir un hueco escribe flappy<n>.sav (no story<n>.sav), las etapas se abren en orden, vidas de
@@ -90,7 +92,7 @@ function cases.zonas()
     local Zones = require 'src/flappy/Zones'
     local Level = require 'src/world/level/Level'
     local Model = require 'src/editor/EditorModel'
-    local n, bad = 0, {}
+    local n, bad, zoneBg = 0, {}, {}
     for z = 1, Zones.count() do
         for _, node in ipairs(Zones.nodes(z)) do
             n = n + 1
@@ -145,6 +147,52 @@ function cases.zonas()
                         end
                         if reached then bad[#bad + 1] = node.id .. ' (el muro de la columna ' .. c .. ' no encierra nada)' end
                     end
+                end
+                -- (SIN SUELO, Plan 5d: ni césped ni tierra; en la última fila solo pilares, soportes y la meta; cada tramo de
+                --  pilar cuelga del techo o sube desde el borde de abajo —o de un bloque sólido: el suelo de un túnel—,
+                --  nunca flota; cada lanzarredes, sobre su soporte hasta el borde de abajo; todas las etapas de la zona
+                --  con el mismo fondo, puesto: el de la zona, no el prado por defecto)
+                local H = lv.tileH
+                local function nameAt(c, r) return lv:getDef(c, r).name end
+                local ground
+                for c = 1, lv.tileW do
+                    for r = 1, H do
+                        local nm = nameAt(c, r)
+                        if (nm == 'grass' or nm == 'dirt') and not ground then
+                            ground = true
+                            bad[#bad + 1] = ('%s (suelo: %s en %d,%d)'):format(node.id, nm, c, r)
+                        end
+                        if r == H and nm ~= 'empty' and nm ~= 'pillar' and nm ~= 'mount' and nm ~= 'finish' and not ground then
+                            bad[#bad + 1] = ('%s (fila de abajo: %s en la columna %d)'):format(node.id, nm, c)
+                        end
+                    end
+                    local r = 1
+                    while r <= H do
+                        if nameAt(c, r) == 'pillar' then
+                            local top = r
+                            while r + 1 <= H and nameAt(c, r + 1) == 'pillar' do r = r + 1 end
+                            local up = top == 1 or lv:getDef(c, top - 1).collision == 'solid'
+                            local down = r == H or lv:getDef(c, r + 1).collision == 'solid'
+                            if not (up or down) then
+                                bad[#bad + 1] = ('%s (pilar flotando: columna %d, filas %d-%d)'):format(node.id, c, top, r)
+                            end
+                        end
+                        r = r + 1
+                    end
+                end
+                for _, e in ipairs(lv.entities) do
+                    if e.type == 'netlauncher' then
+                        for r = e.row + 1, H do
+                            if nameAt(e.col, r) ~= 'mount' then
+                                bad[#bad + 1] = ('%s (lanzarredes %d,%d sin soporte en la fila %d)'):format(node.id, e.col, e.row, r)
+                                break
+                            end
+                        end
+                    end
+                end
+                zoneBg[z] = zoneBg[z] or lv.background
+                if not lv.background or lv.background ~= zoneBg[z] then
+                    bad[#bad + 1] = ('%s (fondo %s, el de la zona %s)'):format(node.id, tostring(lv.background), tostring(zoneBg[z]))
                 end
                 -- (la etapa del jefe: sin jaula, pero con su zona de jefe y un jefe dentro)
                 if node.boss then

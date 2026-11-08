@@ -113,7 +113,11 @@ while Adventure is locked, its saves do not count.
 - Stage objects come from `tools/levelgen/flappy_lib.py`: `at_gaps` (charges / food at the centre of chosen pillar
   gaps), `cubby` (a cracked wall at rows 1-2 with one thing — a charge, a cage — shut in behind it), `tunnel` (a
   shortcut: rows 1-2 behind a cracked wall over a floor of solid blocks at row 3; the pillars inside lose rows 1-2 —
-  `build(..., air=)` —; the gaps below start at row 5 or lower). `write(..., background=)` sets the level's sky biome.
+  `build(..., air=)` —; the gaps below start at row 5 or lower), `launcher(col, row)` (a net-launcher and its `mount`
+  from row + 1 to the bottom edge: `write(..., mounts=)`). `write(..., background=)` sets the level's sky biome. NO
+  FLOOR (Plan 5d): every pillar column runs from row 1 to the last row except its gap, so the bottom pillars reach the
+  bottom edge; `flappy_campaign zonas` checks there is no grass / dirt, no pillar floats and every launcher has its
+  mount.
   `flappy_campaign zonas` checks every wall SHUTS something: the cell behind its top row cannot be reached from in
   front of it without breaking it (a search through non-solid cells, pillars passable, up to two columns behind).
 
@@ -153,10 +157,10 @@ the zone's last column, so the window stops exactly over the zone (`AutoScroll` 
 the camera; once the boss is beaten the zone opens and the player flies on to the finish (`onFinish` as in any stage).
 Inside the fight the boss director (`bossdrops`) hands out charges / food. Dying in the fight respawns IN THE AIR in
 the zone's left third (`BossZones.respawnPoint` → `Level:flightSpot`, the same rule as the auto-scroll's Flappy respawn):
-standing on the floor would cost 1 HP. `valle_redcoptero`: pillars at columns 18-60 (3 charges, 1 food), zone 66-85
-with the `netcopter` at (81, 5) and music `tuffi`, finish at column 93. Its floor is the level's LAST row (grass only:
-`write(..., floor=H)`, 10 air rows instead of 9; the user, 2026-11-08: the floor was too high for the fight); the
-other stages keep `FLOOR` 10 (grass + dirt). 11 rows is the most the fixed 720-px camera shows whole.
+falling out of the bottom edge would cost 1 HP. `valle_redcoptero`: pillars at columns 18-60 (3 charges, 1 food), zone
+66-85 with the `netcopter` at (81, 5) and music `tuffi`, finish at column 93, the Valley sky (`background: valley`).
+No floor, like every Flappy stage since Plan 5d (before: grass on the last row, `floor=H`, after the user's "too high"
+of 2026-11-08). 11 rows is the most the fixed 720-px camera shows whole.
 
 **Return to sender** (Plan 5): a trait `reflectable` on an entity (+ optional `canReflect()`) makes a player who FLIES
 and is RISING (`pa.vy < 0`) when touching it get the interaction `'reflect'` (`Interactions.check`) instead of being

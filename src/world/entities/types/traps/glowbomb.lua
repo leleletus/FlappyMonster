@@ -3,8 +3,10 @@
 -- jugador al lanzarla (`tx`, `ty`: la MARCA que parpadea allí desde el lanzamiento; lob). Sin lanzar, cae a plomo con
 -- esa gravedad. Estados:
 --   'falling'    en el aire (subiendo o bajando); explota si toca un jugador que no sube (de lado, por encima, quieto),
---                un tile sólido (los pilares también: por delante, por abajo o por arriba) o el suelo; la mecha (`fuse`
---                s) solo es un respaldo. La explosión (Explosions.blast, 1 casilla) quita 1 de vida al que esté cerca
+--                un tile sólido (los pilares también: por delante, por abajo o por arriba) o el FONDO: el borde de abajo
+--                de la zona de su jefe (`owner.zone`) o del nivel, lo que esté más arriba (los niveles Flappy no tienen
+--                suelo: Plan 5d); la mecha (`fuse` s) solo es un respaldo. La explosión (Explosions.blast, 1 casilla)
+--                quita 1 de vida al que esté cerca
 --   'returning'  DEVUELTA AL REMITENTE (rasgo `reflectable`: un jugador que vuela SUBIENDO la toca — Interactions): sale
 --                hacia el `aimPoint` de su `owner` al devolverla (el Redcóptero: la góndola), en línea recta a 700 px/s.
 --                Si le da (en toda su caja), el jefe pierde 2 (`owner:damage(2, 'reflect')`); un tile sólido o salir
@@ -107,8 +109,13 @@ function GlowBomb:explode(level, harmless)
     end
 end
 
-local function solidAt(level, x, y)
-    return level:isEnemySolidAt(x, y) or y >= level.heightPx
+-- El fondo: el borde de abajo del nivel o, si está más arriba, el de la zona de su jefe
+function GlowBomb:bottomY(level)
+    local z = self.owner and self.owner.zone
+    return math.min(level.heightPx, z and z.y1 or math.huge)
+end
+local function solidAt(level, x, y, bottom)
+    return level:isEnemySolidAt(x, y) or y >= (bottom or level.heightPx)
 end
 local overlap = Boss.overlap
 
@@ -126,7 +133,7 @@ function GlowBomb:updateCustom(dt, level)
         self.vy = self.vy + (self.g or G) * dt
         self.x, self.y = self.x + self.vx * dt, self.y + self.vy * dt
         local hw, hh = self.outerW / 2, self.outerH / 2
-        local hit = self.fuseT >= (self.props.fuse or 4) or solidAt(level, self.x, self.y + hh)
+        local hit = self.fuseT >= (self.props.fuse or 4) or solidAt(level, self.x, self.y + hh, self:bottomY(level))
             or (self.vy < 0 and self.y - hh > 0 and solidAt(level, self.x, self.y - hh))   -- (por encima del nivel: cielo)
             or (self.vx ~= 0 and solidAt(level, self.x + (self.vx > 0 and hw or -hw), self.y))
         if not hit then

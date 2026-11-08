@@ -164,11 +164,12 @@ function Drops.airFree(level, c, r)
 end
 
 -- Dónde aparece la ayuda Flappy para `pa`: casilla de aire libre de la zona a ≥ 4 casillas del jefe y a 2-6 del
--- jugador (mejor, a ~3,5 y lejos del jefe). Devuelve x, y del centro de la casilla, o nil
+-- jugador (mejor, a ~3,5 y lejos del jefe). Devuelve x, y del centro de la casilla, o nil. Sin suelo (`openBottom`),
+-- nunca en la última fila: cogerla obligaría a rozar el borde de abajo, que quita vida
 function Drops.spotAir(level, z, pa)
     local T = TILE_PX
     local c0, c1 = z.col + 1, z.col + z.w - 2
-    local r0, r1 = math.max(1, z.row), math.min(level.tileH, z.row + z.h - 1)
+    local r0, r1 = math.max(1, z.row), math.min(level.tileH - (level.openBottom and 1 or 0), z.row + z.h - 1)
     local bosses = {}
     for _, b in ipairs(z.bosses or {}) do
         if b.alive and not b.offstage and not (b.isDying and b:isDying()) then bosses[#bosses + 1] = b end

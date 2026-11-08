@@ -73,5 +73,5 @@ Every file in `assets/levels/` (68). **Story** = world number, world id and posi
 | `valle_pilares_1` | Valle de los Pilares 1 / Valley of the Pillars 1 | 130x11 |  |  | `flappy` |  | valley · auto-scroll |
 | `valle_pilares_2` | Valle de los Pilares 2 / Valley of the Pillars 2 | 139x11 |  |  | `flappy` |  | valley · auto-scroll |
 | `valle_pilares_3` | Valle de los Pilares 3 / Valley of the Pillars 3 | 139x11 |  |  | `flappy` |  | valley · auto-scroll |
-| `valle_redcoptero` | El Redcóptero / The Net-Copter | 95x11 |  |  | `flappy` | `netcopter` | meadow · auto-scroll |
+| `valle_redcoptero` | El Redcóptero / The Net-Copter | 95x11 |  |  | `flappy` | `netcopter` | valley · auto-scroll |
 | `valle_soleado` | Valle Soleado / Sunny Valley | 130x18 | 1 pradera · 1 | race | `pradera_1` |  | meadow |

@@ -9,7 +9,11 @@
 --     recorre hacia delante en el mundo (el usuario: hacia la izquierda "todo se siente más pesado y lento").
 --   · Sin agacharse, ground pound, cargar ni saltos de plataformas.
 --   · Los PILARES (tile `pillar`) no son sólidos: tocarlos quita 1 de vida y la invulnerabilidad deja atravesarlos.
---   · El SUELO (lo sólido por debajo) también hace daño al tocarlo y lo devuelve hacia arriba de un bote; el techo y
+--   · Los niveles Flappy NO TIENEN SUELO (Level.openBottom; Plan 5d: los pilares suben desde el borde de abajo): caer
+--     por el BORDE DE ABAJO del nivel (se hunde solo lo justo: el centro del monstruo llega al borde y ahí se queda)
+--     quita 1 de vida por la vía de siempre (hurt: luego invulnerable, nunca una cadena) y lo devuelve al nivel de un
+--     bote (EDGE_HOP).
+--   · Posarse en algo SÓLIDO (el soporte de un lanzarredes, el suelo de un túnel) también quita 1 y bota; el techo y
 --     las paredes solo paran.
 -- Es simulación compartida (golden rule 1): lee el Input del paso como el resto del jugador y nada de dibujo.
 return function(PlayerAdventure, P)
@@ -20,9 +24,9 @@ local FLY_GRAVITY = 1350    -- px/s² (el Flappy de siempre: 1800)
 local FLY_FLAP    = -450    -- px/s del aleteo (el Flappy de siempre: -480)
 local FLY_ACC    = 12       -- lo rápido que llega a esa velocidad (1/s)
 local MAX_FALL   = 900      -- px/s cayendo como mucho
-local FLOOR_HOP  = -560     -- px/s del bote al tocar el suelo
+local EDGE_HOP   = -560     -- px/s del bote al caer por el borde de abajo o posarse en algo sólido
 local GLIDE_FPS  = 6
-PlayerAdventure.FLY_SPD, PlayerAdventure.FLOOR_HOP = FLY_SPD, FLOOR_HOP
+PlayerAdventure.FLY_SPD, PlayerAdventure.EDGE_HOP = FLY_SPD, EDGE_HOP
 PlayerAdventure.FLY_GRAVITY, PlayerAdventure.FLY_FLAP = FLY_GRAVITY, FLY_FLAP
 
 -- CARGA del ataque especial (docs/design/flappy-plan-4-attack-and-cages.md): 0..CHARGE_MAX, +1 por cada carga de
@@ -137,10 +141,14 @@ function PlayerAdventure:updateFlight(dt, level, pJump, inX)
         if self.x < minX and not level:collisionAt(px, self.y) and not level:bodyAt(px, self.y, self) then self.x = minX end
     end
 
-    -- El suelo: daño y bote hacia arriba
-    if self.onGround then
+    -- Algo sólido debajo o el borde de abajo del nivel (sin suelo: se cae fuera): daño y bote hacia arriba, de vuelta
+    -- al nivel (invulnerable, solo el bote)
+    -- (se hunde solo lo justo: el centro se queda EN el borde — sigue dentro de una zona de jefe que llega abajo —)
+    local out = level and level.openBottom and self.y >= level.heightPx
+    if out then self.y = level.heightPx end
+    if self.onGround or out then
         self.onGround = false
-        self.vy = FLOOR_HOP
+        self.vy = EDGE_HOP
         if not self:isInvulnerable() and self:hurt() then return end
     end
 

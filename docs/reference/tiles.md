@@ -57,6 +57,7 @@ Every tile registered in `src/world/tiles/Tiles.lua`. **Id** is stored in the le
 | 57 | `frost_platform` | Plataforma helada (traspasable) | Plataformas | oneway (drop-through) | wood | partial hitbox |
 | 58 | `ice_ledge` | Repisa de hielo (traspasable) | Plataformas | oneway (drop-through) | ice | partial hitbox |
 | 59 | `pillar` | Pilar (Flappy) | Flappy | none | hurtful | partial hitbox |
+| 60 | `mount` | Soporte (Flappy) | Flappy | solid | default |  |
 
 ## Materials
 

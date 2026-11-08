@@ -221,6 +221,13 @@ wide: touching it with the inner hitbox costs 1 HP and the invulnerability lets 
 air (top or bottom; another pillar, a solid block or the map edge closes it). Art: `pillar.png`, `pillar_cap.png` from
 `tools/art/world/make_flappy_pillars.py`.
 
+`mount` (60, category Flappy, Plan 5d): the riveted iron POST a net-launcher stands on, now that Flappy levels have no
+floor; solid, it rises from the level's bottom edge (`flappy_lib.launcher` puts it from the launcher's row + 1 to the
+last row). It draws its rusty top plate where the cell above is not another mount, the post below. Art: `mount.png`,
+`mount_top.png` from `tools/art/enemies/make_netlauncher.py`. In a level with no floor (`openBottom`, every Flappy level)
+`Level:render` draws the last row once more below it (the 720-px screen shows 16 px under the 11 rows): pillars and
+mounts reach the bottom of the screen; the pillar treats the map edge as closed (no cap at the bottom).
+
 **Flappy-only** (`flappyOnly = true` in a tile def): the editor's palette offers it only in a Flappy level (Nivel →
 "Nivel Flappy (se vuela)"), and `Model:validate` reports an ERROR when a normal level uses one (so `level_check` fails).
 The user's condition on the design: Flappy content never leaks into Adventure levels.

@@ -6,7 +6,10 @@
 --               borde lo lleva (no se queda atrás ni muere); en pantalla, a la derecha FLY_SPD y a la izquierda FLY_SPD +
 --               lo que avanza la ventana
 --   pilar       volar contra un pilar quita 1 de vida UNA vez y lo atraviesa (invulnerable)
---   suelo       tocar el suelo quita 1 y lo devuelve hacia arriba de un bote
+--   fondo       SIN SUELO (las etapas Flappy no tienen): caer por el borde de abajo del nivel quita 1 UNA vez (por la
+--               vía de siempre: queda invulnerable) y lo devuelve de un bote al nivel (entero por encima del borde); se
+--               hunde solo lo justo (el centro llega al borde, no más); cayendo sin aletear, nunca una cadena de golpes
+--   soporte     posarse en un bloque SÓLIDO (el soporte de un lanzarredes) quita 1 y lo devuelve hacia arriba de un bote
 --   reaparece   en un nivel Flappy se reaparece en el aire, en una casilla libre (no dentro de un pilar)
 --   exclusivo   un pilar en un nivel normal es un error del editor (validate); en un nivel Flappy, no
 --   carga       las cargas de aleteo suben el medidor hasta CHARGE_MAX (5); morir y reaparecer la conserva
@@ -45,7 +48,7 @@ local Model = require 'src/editor/EditorModel'
 local T = TILE_PX
 local DT = 1 / 60
 local Codec = require 'src/world/tiles/TileCodec'
-local PILLAR, GRASS = Codec.encode(59), Codec.encode(17)
+local PILLAR, GRASS, MOUNT = Codec.encode(59), Codec.encode(17), Codec.encode(60)
 local PILLAR_ID = 59
 
 local fails = 0
@@ -54,16 +57,18 @@ local function check(case, ok, msg)
     if not ok then fails = fails + 1 end
 end
 
--- Nivel W x 11 con suelo en la fila 10-11; `pillars` = { {col, filaHuecoArriba, alto}, ... }; `scroll` = velocidad
+-- Nivel W x 11; los Flappy SIN SUELO (como las etapas de verdad: los pilares llegan al borde de abajo), los normales con
+-- suelo en las filas 10-11; `pillars` = { {col, filaHuecoArriba, alto}, ... } (alto 0: el pilar entero); `scroll` =
+-- velocidad
 local function stage(W, pillars, scroll, flappy, ents)
     local tiles = {}
     for r = 1, 11 do
         local row = {}
-        for c = 1, W do row[c] = (r >= 10) and GRASS or 0 end
+        for c = 1, W do row[c] = (r >= 10 and flappy == false) and GRASS or 0 end
         tiles[r] = row
     end
     for _, p in ipairs(pillars or {}) do
-        for r = 1, 9 do if not (r >= p[2] and r < p[2] + p[3]) then tiles[r][p[1]] = PILLAR end end
+        for r = 1, 11 do if not (r >= p[2] and r < p[2] + p[3]) then tiles[r][p[1]] = PILLAR end end
     end
     local data = { name = 't', width = W, height = 11, playerStart = { 4, 5 }, tiles = tiles, entities = ents or {},
                    flappy = flappy ~= false or nil }
@@ -183,16 +188,49 @@ function cases.pilar()
           ('golpes %d (vida %d → %d); pasa al otro lado: x %.0f (pilar acaba en %d)'):format(hits, hp0, pa.hp, pa.x, 12 * T))
 end
 
-function cases.suelo()
-    local level = stage(40, nil, nil)
-    local pa = player(level, 8 * T, 7 * T)
+-- Sin suelo: caer por el borde de abajo quita 1 una vez, invulnerable después, y lo devuelve al nivel de un bote
+function cases.fondo()
+    local level = stage(40, nil, nil, true)
+    local bottom = level.heightPx
+    local pa = player(level, 8 * T, 8 * T)
+    local hp0, hitAt, inv, maxY, t = pa.hp, nil, false, 0, 0
+    local backIn, hits, lastHp = false, 0, pa.hp
+    -- (cae sin aletear durante la invulnerabilidad del golpe: el borde lo devuelve sin volver a quitarle)
+    step(level, 1.5, function()
+        t = t + DT
+        maxY = math.max(maxY, pa.y)
+        if pa.hp < lastHp then hits = hits + 1; lastHp = pa.hp end
+        if hits > 0 and not hitAt then hitAt, inv = t, pa:isInvulnerable() end
+        if hitAt and pa.y + pa:getOuterBounds().h / 2 < bottom then backIn = true end
+    end)
+    local okDepth = maxY >= bottom and maxY <= bottom + 16      -- (un paso cayendo a lo más rápido: 900 px/s)
+    check('fondo', hits == 1 and pa.hp == hp0 - 1 and inv and backIn and okDepth and not pa.dying and pa.y < bottom + T,
+          ('cae por el borde (y %d): golpes %d (vida %d → %d), invulnerable después=%s, vuelve entero al nivel=%s; se hunde hasta y %.0f (el centro llega al borde, no más)'):format(
+           bottom, hits, hp0, pa.hp, tostring(inv), tostring(backIn), maxY))
+    -- sin aletear, nunca una cadena: en 4 s, un golpe por invulnerabilidad como mucho y sigue vivo dentro del nivel
+    local lv2 = stage(40, nil, nil, true)
+    local pb = player(lv2, 8 * T, 8 * T)
+    pb.hp = 9
+    local n, last = 0, pb.hp
+    step(lv2, 4, function() if pb.hp < last then n = n + 1; last = pb.hp end end)
+    local maxHits = math.ceil(4 / 1.6)
+    check('fondo', n >= 1 and n <= maxHits and not pb.dying and pb.y < lv2.heightPx + T,
+          ('4 s cayendo sin aletear: %d golpes (como mucho %d: uno por invulnerabilidad), vivo=%s'):format(n, maxHits, tostring(not pb.dying)))
+end
+
+-- Un bloque SÓLIDO debajo (el soporte de un lanzarredes): posarse en él quita 1 y bota hacia arriba
+function cases.soporte()
+    local level = stage(40, nil, nil, true)
+    for r = 9, 11 do level.tiles[r][8] = MOUNT; level.tiles[r][9] = MOUNT end
+    local pa = player(level, 8.5 * T, 6 * T)
     local hp0, minVy, hitAt = pa.hp, 0, nil
-    step(level, 1.2, function()
+    step(level, 1.0, function()
         if pa.hp < hp0 and not hitAt then hitAt = true end
         if hitAt then minVy = math.min(minVy, pa.vy) end
     end)
-    check('suelo', pa.hp == hp0 - 1 and minVy < -300 and not pa.dying,
-          ('vida %d → %d; bote hacia arriba %.0f px/s'):format(hp0, pa.hp, minVy))
+    local def = level:getDef(8, 10)
+    check('soporte', def.name == 'mount' and def.collision == 'solid' and pa.hp == hp0 - 1 and minVy < -300 and not pa.dying,
+          ('tile %s (%s); vida %d → %d; bote hacia arriba %.0f px/s'):format(def.name, def.collision, hp0, pa.hp, minVy))
 end
 
 function cases.reaparece()
@@ -255,17 +293,17 @@ end
 
 -- El hueco del siguiente pilar por delante de x: arriba y abajo en px (nil = no hay más). El hueco es el tramo de filas
 -- libres (ni pilar ni sólido) que no toca un bloque sólido: un túnel de arriba (suelo de bloques: las etapas del Valle)
--- no cuenta como hueco
+-- no cuenta como hueco. Sin suelo: los pilares van de la fila 1 a la última (level.tileH)
 local function nextGap(level, x)
-    local c0 = math.floor(x / T) + 1
-    local function solid(c, r) return r >= 1 and r <= 9 and level:getDef(c, r).collision == 'solid' end
+    local c0, H = math.floor(x / T) + 1, level.tileH
+    local function solid(c, r) return r >= 1 and r <= H and level:getDef(c, r).collision == 'solid' end
     for c = c0, level.tileW do
-        if level:getTile(c, 1) == PILLAR_ID or level:getTile(c, 9) == PILLAR_ID then
+        if level:getTile(c, 1) == PILLAR_ID or level:getTile(c, H) == PILLAR_ID then
             local r = 1
-            while r <= 9 do
+            while r <= H do
                 if level:getTile(c, r) ~= PILLAR_ID and not solid(c, r) then
                     local top = r
-                    while r + 1 <= 9 and level:getTile(c, r + 1) ~= PILLAR_ID and not solid(c, r + 1) do r = r + 1 end
+                    while r + 1 <= H and level:getTile(c, r + 1) ~= PILLAR_ID and not solid(c, r + 1) do r = r + 1 end
                     if not solid(c, top - 1) and not solid(c, r + 1) then return (top - 1) * T, r * T, c end
                 end
                 r = r + 1
@@ -346,7 +384,7 @@ function cases.ataque()
     local killed = tostring(g.state):find('dead') ~= nil or not g.alive
     -- un bloque sólido 3 casillas delante la para
     local lv3 = stage(40, nil, nil, true)
-    for r = 1, 9 do lv3.tiles[r][12] = require('src/world/tiles/TileCodec').encode(1) end
+    for r = 1, 11 do lv3.tiles[r][12] = require('src/world/tiles/TileCodec').encode(1) end
     local pa3 = player(lv3, 8 * T, 4.5 * T)
     pa3.charge = 2
     step(lv3, 0.1, function() hover(pa3, 4.5 * T) end)
@@ -417,7 +455,7 @@ function cases.jaula()
            tostring(weak), tostring(opened), tostring(empty)))
 end
 
--- LANZARREDES (docs/design/flappy-plan-5b-valley.md, tarea 2): torreta en el suelo (col 12, fila 9) que, tras brillar, dispara
+-- LANZARREDES (docs/design/flappy-plan-5b-valley.md, tarea 2): torreta en su soporte (col 12, fila 9; el soporte en las 10-11) que, tras brillar, dispara
 -- una red recta hacia arriba
 function cases.lanzarredes()
     local NL = require('src/world/entities/types/traps/netlauncher').class
@@ -425,6 +463,7 @@ function cases.lanzarredes()
     local TT = NL.T
     local function mk(px, py, row)
         local lv = stage(80, nil, nil, true, { { type = 'netlauncher', col = 12, row = row or 9, props = {} } })
+        lv.tiles[10][12], lv.tiles[11][12] = MOUNT, MOUNT          -- (su soporte, hasta el borde de abajo)
         local l
         for _, e in ipairs(lv.liveEntities) do if e.def.name == 'netlauncher' then l = e end end
         local nets = {}
@@ -486,6 +525,7 @@ function cases.lanzarredes_techo()
     local NL = require('src/world/entities/types/traps/netlauncher').class
     local function mk(pillar, px)
         local lv = stage(80, nil, nil, true, { { type = 'netlauncher', col = 12, row = 9, props = {} } })
+        lv.tiles[10][12], lv.tiles[11][12] = MOUNT, MOUNT          -- (su soporte, hasta el borde de abajo)
         if pillar then lv.tiles[6][12] = PILLAR end              -- (3 casillas por encima)
         local l, nets = nil, {}
         for _, e in ipairs(lv.liveEntities) do
@@ -579,7 +619,7 @@ function cases.muro()
     clearInput()
     -- con la CÁMARA corriendo: aguantar contra un muro intacto que tapa todo el alto NO lo atraviesa (el borde de la
     -- ventana no lo empuja a través: o se queda delante o se queda atrás y muere, como contra un bloque)
-    local lv4 = stage(80, nil, 200, true, { { type = 'crackwall', col = 20, row = 9, props = { minCharge = 3, rows = 9 } } })
+    local lv4 = stage(80, nil, 200, true, { { type = 'crackwall', col = 20, row = 11, props = { minCharge = 3, rows = 11 } } })
     local w4 = lv4.liveEntities[1]
     local pa4 = player(lv4, 8 * T, 4.5 * T)
     stub.state.right = true
@@ -622,7 +662,7 @@ function cases.powerups()
     local a2 = ok('el 2º quita', pa.hp == hp0 - 1)
     -- ESCUDO y quedarse atrás de la cámara (muerte forzada): muere y el escudo sigue
     local lv2 = stage(80, nil, 300, true)
-    for r = 1, 9 do lv2.tiles[r][14] = require('src/world/tiles/TileCodec').encode(1) end
+    for r = 1, 11 do lv2.tiles[r][14] = require('src/world/tiles/TileCodec').encode(1) end
     local pb = player(lv2, 10 * T, 4.5 * T)
     pb:usePowerup('shield')
     stub.state.right = true
@@ -691,7 +731,7 @@ function cases.powerups()
     check('powerups', a1 and a2 and a3 and a4 and a5 and a6 and a7 and a8 and a9 and a10 and a11, table.concat(out, '; '))
 end
 
-local ORDER = { 'aleteo', 'ventana', 'pilar', 'suelo', 'reaparece', 'exclusivo', 'normal', 'carga', 'ataque', 'jaula', 'lanzarredes', 'lanzarredes_techo', 'muro', 'powerups', 'etapa' }
+local ORDER = { 'aleteo', 'ventana', 'pilar', 'fondo', 'soporte', 'reaparece', 'exclusivo', 'normal', 'carga', 'ataque', 'jaula', 'lanzarredes', 'lanzarredes_techo', 'muro', 'powerups', 'etapa' }
 function love.load()
     local only = os.getenv('CASE')
     for _, name in ipairs(ORDER) do
