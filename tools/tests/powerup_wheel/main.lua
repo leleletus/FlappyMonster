@@ -106,12 +106,54 @@ local function run()
     end
     shot('efectos')                                  -- (el HUD con los power-ups activos: escudo, súper imán, fuerza)
     check('tactil', touchOpen and usedTouch, ('la bolsa abre=%s; tocar la fuerza la usa=%s'):format(tostring(touchOpen), tostring(usedTouch)))
+    -- revisión final: (C1) tocar la bolsa y LEVANTAR el mismo dedo no cierra la rueda; (I2) el ratón: clic en la bolsa abre y
+    -- clic en una casilla la usa; (I1) con la opción PULSAR, Q abre y Q otra vez usa; (I3) soltar con la dirección en el
+    -- centro cancela (no gasta)
+    for _, id in ipairs({ 'magnet_points', 'heart', 'heart', 'strength' }) do FlappyRun.addPowerup(id) end
+    FlappyRun.save()
+    pa.effects.magnet_all = nil
+    adv:touchpressed('d', b.x + b.w / 2, b.y + b.h / 2); wait(0.05)
+    local tw2 = top()
+    if name(tw2) == 'WheelState' then tw2:touchreleased('d', b.x + b.w / 2, b.y + b.h / 2) end
+    wait(0.1)
+    local stays = name(top()) == 'WheelState'
+    if stays then top():touchpressed('e', 0, 0); top():touchreleased('e', 0, 0); wait(0.05) end      -- (tocar fuera: cancela)
+    local mouseOk = false
+    local mp0 = inv('magnet_points')
+    adv:touchpressed('mouse', b.x + b.w / 2, b.y + b.h / 2); wait(0.05)
+    local mw = top()
+    if name(mw) == 'WheelState' then
+        local r
+        for i, it in ipairs(mw.items) do if it.id == 'magnet_points' then r = mw:_layout().cells[i] end end
+        if r then mw:touchpressed('mouse', r.x + r.w / 2, r.y + r.h / 2); wait(0.1) end
+        mouseOk = name(top()) == 'AdventureState' and inv('magnet_points') == mp0 - 1 and pa:hasEffect('magnet_points')
+    end
+    local Settings = require 'src/core/Settings'
+    Settings.wheelToggle = true
+    pressed.wheel = true; wait(0.2)                 -- (pulsar, sin mantener)
+    local toggleOpen = name(top()) == 'WheelState'
+    choose('heart'); pressed.wheel = true; wait(0.1)
+    local toggleUse = name(top()) == 'AdventureState' and inv('heart') == 1
+    Settings.wheelToggle = false
+    openWheel(); held.move_right = true; wait(0.1)
+    local pointed = top().sel ~= nil
+    held.move_right = false; wait(0.05)
+    release()
+    local cancelled = name(top()) == 'AdventureState' and inv('heart') == 1 and inv('strength') == 1
+    check('revision', stays and mouseOk and toggleOpen and toggleUse and pointed and cancelled,
+          ('tocar la bolsa y levantar: sigue abierta=%s; ratón: clic en la bolsa y en una casilla la usa=%s; opción pulsar: abre=%s y usa=%s; flecha: apunta=%s y soltarla y luego Q cancela=%s'):format(
+           tostring(stays), tostring(mouseOk), tostring(toggleOpen), tostring(toggleUse), tostring(pointed), tostring(cancelled)))
+    -- (M2) con 3 corazones de más (7 en Fácil) los corazones no pisan la bolsa
+    local FH = require 'src/ui/FlappyHud'
+    local Ly = FH.layout()
+    local lastHeartRight = Ly.hearts.x + 6 * Ly.hearts.step + 8 * 4
+    check('bolsa', FH.bagRect().x >= lastHeartRight, ('el 7º corazón acaba en %d; la bolsa empieza en %d'):format(lastHeartRight, FH.bagRect().x))
     -- muriendo: no se abre; y lo gastado sigue gastado
     pa:die(nil, true); wait(0.1)
     openWheel(); release()
     local noOpen = name(top()) ~= 'WheelState'
     check('muriendo', noOpen, 'con el jugador muriendo la rueda no se abre')
-    check('gastado', inv('shield') == 0 and inv('heart') == 0 and inv('strength') == 0, 'lo gastado sigue gastado tras morir')
+    check('gastado', inv('shield') == 0 and inv('heart') == 1 and inv('strength') == 1, 'lo gastado sigue gastado tras morir (escudo 0, corazón 1, fuerza 1)')
     FlappyRun.close()
     for i = 1, 3 do FlappySave.delete(i) end
     print(fails == 0 and 'TODO OK' or ('FALLOS: ' .. fails))

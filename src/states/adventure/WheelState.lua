@@ -8,7 +8,11 @@
 --   · Táctil (la bolsa del HUD de Flappy): tocar una casilla la usa (o mantener la bolsa, deslizar y levantar); tocar el
 --     centro o fuera cancela.
 -- Usar = `inv.spend(id)` (se GUARDA ya: el usuario) y `pa:usePowerup(id)`.
---   args = { pa = jugador, inv = { items() → { {id, count}, ... }, spend(id) → bool }, mode = 'hold' | 'tap' }
+--   args = { pa = jugador, inv = { items() → { {id, count}, ... }, spend(id) → bool }, mode = 'hold' | 'toggle' | 'tap'
+--            (nil = el de la opción: mantener o pulsar), touchId = el dedo que la abrió (su levantar no cuenta) }
+-- Revisión final del Plan 4b: tocar la bolsa y levantar el MISMO dedo ya no la cierra; el ratón (game.lua lo manda como
+-- touchpressed 'mouse', sin soltar) usa la casilla al hacer clic; soltar con la dirección (palanca / flechas) en el
+-- centro CANCELA (el diseño: "soltar L con la palanca centrada")
 local BaseState = require 'src/core/BaseState'
 local MenuKit   = require 'src/ui/menu/MenuKit'
 local PixelFont = require 'src/ui/PixelFont'
@@ -32,6 +36,7 @@ function WheelState:enter(args)
     args = args or {}
     self.pa, self.inv = args.pa, args.inv
     self.mode = args.mode or (require('src/core/Settings').wheelToggle and 'toggle' or 'hold')
+    self.openTouch = args.touchId                   -- (el dedo que abrió la rueda: su levantar se ignora)
     self.items = self.inv and self.inv.items() or {}
     self.sel = nil
     self.t = 0
@@ -88,7 +93,12 @@ function WheelState:update(dt)
     local kx = (Input.down('move_right') and 1 or 0) - (Input.down('move_left') and 1 or 0)
     local ky = (Input.down('crouch') and 1 or 0) - (Input.down('grab') and 1 or 0)
     local p = self:_pick(sx, sy) or self:_pick(kx, ky)
-    if p and p ~= self.sel then self.sel = p; Sound.play('select') end
+    if p then
+        if p ~= self.sel then Sound.play('select') end
+        self.sel, self.lastSrc = p, 'dir'
+    elseif self.lastSrc == 'dir' then
+        self.sel = nil                              -- (la palanca / las flechas vuelven al centro: nada elegido)
+    end
     if self.mode == 'hold' then
         if not Input.down('wheel') then return self:_choose() end
     elseif self.mode == 'toggle' then
@@ -118,7 +128,8 @@ function WheelState:render()
         MenuKit.text(FONT_SMALL, self:_usable(self.sel) and L('powerup.' .. it.id .. '.desc') or L('wheel.cant'),
                      Ly.cx - W / 2 + 10, Ly.cy + 2, W - 20, 'center', { 1, 1, 1 }, a)
     else
-        MenuKit.text(FONT_SMALL, #self.items == 0 and L('wheel.empty') or L('wheel.hint'), Ly.cx - W / 2 + 10, Ly.cy - 6,
+        local hint = (self.mode == 'tap' and 'wheel.hint_tap') or (self.mode == 'toggle' and 'wheel.hint_toggle') or 'wheel.hint'
+        MenuKit.text(FONT_SMALL, #self.items == 0 and L('wheel.empty') or L(hint), Ly.cx - W / 2 + 10, Ly.cy - 6,
                      W - 20, 'center', { 1, 1, 1 }, a)
     end
     love.graphics.setColor(1, 1, 1, 1)
@@ -132,17 +143,20 @@ end
 function WheelState:mousemoved(x, y)
     local Ly = self:_layout()
     local p = self:_pick((x - Ly.cx) / 60, (y - Ly.cy) / 60)
-    if p and p ~= self.sel then self.sel = p; Sound.play('select') end
-end
-function WheelState:mousepressed(x, y, b)
-    local i = self:_cellAt(x, y)
-    if i then self.sel = i; return self:_choose() end
-    self.sel = nil
-    return self:_close()
+    if p then
+        if p ~= self.sel then Sound.play('select') end
+        self.sel, self.lastSrc = p, 'mouse'
+    end
 end
 function WheelState:touchpressed(id, x, y)
-    self.touch = { id = id }
+    self.openTouch = nil                            -- (un toque nuevo: el dedo que la abrió ya se levantó — en Android el id se reusa —)
     local i = self:_cellAt(x, y)
+    -- el RATÓN (game.lua: un clic llega como touchpressed 'mouse', sin soltar): el clic es la elección entera
+    if id == 'mouse' then
+        if i then self.sel = i; return self:_choose() end
+        self.sel = nil
+        return self:_close()
+    end
     if i then self.sel = i end
 end
 function WheelState:touchmoved(id, x, y)
@@ -150,6 +164,7 @@ function WheelState:touchmoved(id, x, y)
     if i then self.sel = i end
 end
 function WheelState:touchreleased(id, x, y)
+    if id == self.openTouch then self.openTouch = nil; return end      -- (el dedo que la abrió: tocar la bolsa no la cierra)
     local i = self:_cellAt(x, y)
     if i then self.sel = i; return self:_choose() end
     self.sel = nil

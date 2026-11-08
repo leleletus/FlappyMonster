@@ -48,5 +48,10 @@ it can go online later (the shield and size would travel in the own state; `Prot
 
 **Tests:** `flappy_campaign` (`inventario`, `regalos`), `flappy_flight` (`powerups`), `powerup_wheel`.
 
-**Decisions:** the user's rules (2026-11-07) are in [powerups](../design/powerups.md). Plan 4b rulings: the small sprite at
+**Decisions:** the user's rules (2026-11-07) are in [powerups](../design/powerups.md). Final review of Plan 4b (fixed in 0.5.173): tapping the
+bag and lifting the same finger no longer closes the wheel; a mouse click on a cell uses it (`game.lua` sends clicks as
+`touchpressed('mouse')`); the "press" option really opens a press-to-choose wheel; releasing with the stick / arrows back
+in the centre CANCELS (the design); the bag sits right of 7 hearts. **Open for the user:** keys 1–6 use the n-th type
+HELD, so the meaning of a key shifts when a type runs out (the design wants stable keys but also a wheel of only the
+types held). Plan 4b rulings: the small sprite at
 ×4 (density rule of 2026-11-08); a full inventory loses a cage's gift with a notice.

@@ -25,7 +25,8 @@ end
 
 -- La BOLSA de los power-ups (táctil: abre la rueda; AdventureState:touchpressed): a la derecha de los corazones, en la
 -- franja de arriba donde no hay controles táctiles (src/ui/TouchControls.lua TOP_FRAC)
-function FlappyHud.bagRect() return { x = X0 + 6 * 8 * S, y = Y0 - 4, w = 16 * S, h = 16 * S } end
+-- (a la derecha de 7 corazones — Fácil con 3 corazones extra —: nunca los pisa)
+function FlappyHud.bagRect() return { x = X0 + 7 * 8 * S + 8, y = Y0 - 4, w = 16 * S, h = 16 * S } end
 
 local bagImg
 function FlappyHud.drawBag(n)

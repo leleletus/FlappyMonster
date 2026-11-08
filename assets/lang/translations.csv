@@ -245,7 +245,9 @@ settings.wheel_hold,RUEDA DE POWER-UPS: MANTENER,POWER-UP WHEEL: HOLD,
 settings.wheel_toggle,RUEDA DE POWER-UPS: PULSAR,POWER-UP WHEEL: PRESS,
 flappy.results.gift,Un flappy liberado te regala: {name},A freed flappy gives you: {name},
 flappy.results.gift_lost,No cabía en tu inventario: {name},No room in your inventory: {name},
-wheel.hint,Apunta y suelta,Point and release,La rueda de los power-ups (src/states/adventure/WheelState.lua)
+wheel.hint,Apunta y suelta,Point and release,
+wheel.hint_tap,Toca uno,Tap one,
+wheel.hint_toggle,Apunta y pulsa otra vez,Point and press again,La rueda de los power-ups (src/states/adventure/WheelState.lua)
 wheel.empty,Sin power-ups,No power-ups,
 wheel.cant,No se puede usar ahora,Can't use it now,
 powerup.shield,ESCUDO,SHIELD,"Power-ups (src/world/powerups/)"

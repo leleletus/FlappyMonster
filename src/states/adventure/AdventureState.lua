@@ -276,8 +276,8 @@ function AdventureState:canUsePowerups()
            and not self.startCd and not (self.runOut and self.runOut.active)
 end
 
-function AdventureState:openWheel(mode)
-    gStateMachine:push('powerup_wheel', { pa = self.player, inv = self.powerups, mode = mode })
+function AdventureState:openWheel(mode, touchId)
+    gStateMachine:push('powerup_wheel', { pa = self.player, inv = self.powerups, mode = mode, touchId = touchId })
 end
 
 -- Atajo n (teclas 1–6): el n-ésimo tipo que se tiene (el orden de la rueda); si no se puede usar ahora, nada se gasta
@@ -596,7 +596,7 @@ function AdventureState:update(dt)
     end
     -- La RUEDA de los power-ups (mantener) y los atajos 1–6 (el tipo de esa posición, directamente)
     if self.powerups and self:canUsePowerups() then
-        if Input.pressed('wheel') then return self:openWheel('hold') end
+        if Input.pressed('wheel') then return self:openWheel() end          -- (mantener o pulsar: la opción)
         for n = 1, 6 do
             if Input.pressed('wheel_' .. n) then self:usePowerupAt(n); break end
         end
@@ -1115,7 +1115,7 @@ function AdventureState:touchpressed(id, tx, ty, dx, dy, pressure)
     -- La BOLSA de los power-ups (HUD de Flappy): abre la rueda para tocar
     if self.powerups and self.level.flappy and self:canUsePowerups() then
         local b = require('src/ui/FlappyHud').bagRect()
-        if tx >= b.x and tx <= b.x + b.w and ty >= b.y and ty <= b.y + b.h then return self:openWheel('tap') end
+        if tx >= b.x and tx <= b.x + b.w and ty >= b.y and ty <= b.y + b.h then return self:openWheel('tap', id) end
     end
     -- Botón de pausa (ratón y táctil)
     if CornerButtons.hitPause(tx, ty) then
