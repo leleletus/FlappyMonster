@@ -905,9 +905,12 @@ function cases.fondo_pelea()
     end
     pa.invT = 0
     local back, deepest = fall(1.4)
-    check('fondo_pelea', z.state == 'fight' and edgeHits == 1 and back and not pa.dying and BossZones.contains(z, pa.x, pa.y),
-        ('en la pelea cae por el borde (y %d, llega a %.0f): golpes del borde %d, vuelve entero a la zona=%s, pelea %s'):format(
-        bottom, deepest, edgeHits, tostring(back), z.state))
+    local screenBottom = math.max(bottom, WINDOW_H)
+    local headTop = deepest - 8 * PLAYER_SCALE
+    local depthOk = deepest > bottom and deepest >= pa.flightEdgeDepth(level) and headTop < screenBottom
+    check('fondo_pelea', z.state == 'fight' and edgeHits == 1 and back and depthOk and not pa.dying and BossZones.contains(z, pa.x, pa.y),
+        ('en la pelea cae por el borde (y %d, llega a %.0f; coronilla en %.0f de %d en pantalla): golpes del borde %d, vuelve entero a la zona=%s, pelea %s'):format(
+        bottom, deepest, headTop, screenBottom, edgeHits, tostring(back), z.state))
     pa:die(nil, true)
     for _ = 1, 5 * 60 do if stageStep(level, es, ctrl, pa) == 'respawn' then break end end
     local hpR, inv = pa.hp, pa:isInvulnerable()

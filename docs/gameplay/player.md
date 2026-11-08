@@ -179,9 +179,14 @@ ground pound):
   left behind = dies — applies).
 - PILLARS (tile `pillar`) are not solid: touching one costs 1 HP and the hit's invulnerability lets it fly through.
 - NO FLOOR (Plan 5d): a Flappy level has nothing solid below it (`Level.openBottom` = `flappy`: `getRaw` returns air
-  under the last row). Falling through the level's BOTTOM EDGE (the centre reaches `heightPx`; it is held there, so it
-  never sinks further and stays inside a boss zone that reaches the bottom) costs 1 HP through the normal `hurt` (then
-  invulnerable: never a chain) and bounces it back up into the level (`EDGE_HOP` -560). Landing on anything SOLID (a
+  under the last row). Falling through the level's BOTTOM EDGE
+  costs 1 HP through the normal `hurt` (then invulnerable: never a chain) and bounces it back up into the level
+  (`EDGE_HOP` -560). The trigger is NOT the level edge but what the screen shows (user, 2026-11-08, "more margin"):
+  the player sinks until only the top of its head (antennae + crown, `EDGE_SHOW_PX` = 3 art px) is still visible above the
+  bottom of the screen. The screen is taller than the level (720 vs 704), so the visible bottom is
+  `max(heightPx, WINDOW_H)`; the centre is held at `PlayerAdventure.flightEdgeDepth(level)` = visible bottom - 3 art px +
+  half a sprite = `heightPx` + 46 px in the standard view (it stays inside a boss zone that reaches the bottom). Tests:
+  `flappy_flight fondo`, `netcopter_rules fondo_pelea`. Landing on anything SOLID (a
   net-launcher's `mount`, a tunnel's floor) does the same. Ceiling and walls only stop it.
 - NO CONTROL (Plan 5d): while `frozen` (a boss intro, a finished game) a flying player AUTO-HOVERS: it keeps the height it
   had (clamped to one tile above the bottom edge) with small automatic flaps (`HOVER_FLAP` -170, the sprite keeps

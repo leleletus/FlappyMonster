@@ -203,10 +203,14 @@ function cases.fondo()
         if hits > 0 and not hitAt then hitAt, inv = t, pa:isInvulnerable() end
         if hitAt and pa.y + pa:getOuterBounds().h / 2 < bottom then backIn = true end
     end)
-    local okDepth = maxY >= bottom and maxY <= bottom + 16      -- (un paso cayendo a lo más rápido: 900 px/s)
-    check('fondo', hits == 1 and pa.hp == hp0 - 1 and inv and backIn and okDepth and not pa.dying and pa.y < bottom + T,
-          ('cae por el borde (y %d): golpes %d (vida %d → %d), invulnerable después=%s, vuelve entero al nivel=%s; se hunde hasta y %.0f (el centro llega al borde, no más)'):format(
-           bottom, hits, hp0, pa.hp, tostring(inv), tostring(backIn), maxY))
+    -- (se hunde hasta que de la cabeza solo se ve lo de arriba: la coronilla dentro de la pantalla y más hondo que el borde antiguo)
+    local depth, screenBottom = pa.flightEdgeDepth(level), math.max(bottom, WINDOW_H)
+    local headTop = maxY - 8 * PLAYER_SCALE
+    local okDepth = maxY >= bottom and maxY >= depth and maxY <= depth + 16 and headTop < screenBottom
+        and headTop >= screenBottom - 4 * PLAYER_SCALE      -- (un paso cayendo a lo más rápido: 900 px/s)
+    check('fondo', hits == 1 and pa.hp == hp0 - 1 and inv and backIn and okDepth and not pa.dying and pa.y < bottom + 2 * T,
+          ('cae por el borde (y %d): golpes %d (vida %d → %d), invulnerable después=%s, vuelve entero al nivel=%s; se hunde hasta y %.0f (solo asoma la coronilla: tope del sprite en %.0f de %d en pantalla)'):format(
+           bottom, hits, hp0, pa.hp, tostring(inv), tostring(backIn), maxY, headTop, screenBottom))
     -- sin aletear, nunca una cadena: en 4 s, un golpe por invulnerabilidad como mucho y sigue vivo dentro del nivel
     local lv2 = stage(40, nil, nil, true)
     local pb = player(lv2, 8 * T, 8 * T)
@@ -214,7 +218,7 @@ function cases.fondo()
     local n, last = 0, pb.hp
     step(lv2, 4, function() if pb.hp < last then n = n + 1; last = pb.hp end end)
     local maxHits = math.ceil(4 / 1.6)
-    check('fondo', n >= 1 and n <= maxHits and not pb.dying and pb.y < lv2.heightPx + T,
+    check('fondo', n >= 1 and n <= maxHits and not pb.dying and pb.y < lv2.heightPx + 2 * T,
           ('4 s cayendo sin aletear: %d golpes (como mucho %d: uno por invulnerabilidad), vivo=%s'):format(n, maxHits, tostring(not pb.dying)))
 end
 
