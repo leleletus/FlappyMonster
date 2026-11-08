@@ -518,6 +518,23 @@ the old level tune in the final boss, Verity's hook).
   intro's F#m–E / D–E). Lead: mean interval 2.99 → 2.57 st, steps 57 → 61 %, leaps ≥ 5 st 18 → 12 %, octave leaps 4 → 0 %.
   Base, bass, form, mix, transitions and the kept motifs (la llamada coda) unchanged; 0 of 79 bars copied from Final Fall.
 
+## Tuffi (`tools/music/tuffi.py`, an epic theme on the user's melody; 2026-11-08)
+
+The user: a new theme using `tuffi.mid` (their 8-bar melody: an 8th-note arpeggio grouped 3+3+2, F♯ minor, Dmaj7 ·
+C♯7 · F♯m7 · E7, 135 BPM, a bass that climbs D-E♯-F♯ and falls A-G♯-F♯-E-D-C♯ in 3+3+3+3+2+2) as the main melody,
+"much faster, more epic, much more instrumentation, instruments that hit hard, and above all that it sounds good".
+180 BPM with double-time drums; the melody note for note (an octave up) and the user's harmony and walking bass. The
+melody's 3+3+2 is the band's rhythm (slap, brass stabs, taikos, kick on 0 6 12). Intro 8 bars (10.7 s) + loop 72
+(96 s): fanfare with la llamada (horns) · A theme ×2 · B hymn (the theme's head in horns + choir settling on long
+notes; Bm7 C♯7 F♯m7…; the dark turn = Neapolitan G → C♯7; half time then double) · S solo (the theme in diminution,
+16ths) · D breath (the theme on the N163 music box as in the original, then a build and half a bar of silence) ·
+C climax (guitars, choir, orchestra hits, double kick) · R fanfare ending like the intro. Two variants: **A "chip
+épico"** (VRC6 saw lead, 2A03 pulse solo with the house echo) and **B "orquesta"** (GM synth brass + distorted guitar
+lead, guitar solo). Previews in `FlappyMonster_pruebas/musica/tuffi/`, not installed and not in `index.json` (where it
+plays is still open). −10 LUFS, lead 15 % of the energy, no clashes outside the chords, seam correlation ≥ 0.998.
+Verified by numbers only; **not listened to**.
+- **The user chose A "chip épico"** (B "orquesta" rejected), installed as boss track `tuffi` «Tuffi (tema épico)» with `INSTALL=1 TUFFI=A`; `levels.py` volume 0.64 (−13.9 in game). The user's melody is kept as `tools/music/mid/tuffi_original.mid`, the track's as `mid/tuffi.mid`. Not used by any level or boss yet.
+
 ## Tifón (`tools/music/tifon.py`, the Supreme Gust's theme; 2026-11-04)
 
 The user: compose Tifón's boss theme while its art is made (clean-context agent). D minor, 160 BPM, intro 8 bars (12 s) + loop 76 bars (114 s). Its own rhythm "la ráfaga" 3+3+4+3+3 (the wind comes in, holds, goes out) in slap, kick and melody; wind sections in triplets with the fortress triplet fanfare quoting la llamada. i–VI–III–VII, real A major dominant, dark turn B♭m → A. "El relámpago": a vibraphone zigzag in the melody's rests, thunder on the next downbeat. The form tells the fight: A theme, S blow (warning bar + 7 bars of a panning arpeggio), B low with the inhale (band stops, reverse cymbal, the swallowed-bomb hit into C), C chorus, H hail (no melody, xylophone + pizzicato, slap solo), C′ phase 2 (the arpeggio reverses mid-bar), R fanfare ending like the intro. Three melodies over the same band: **A "remolino"** (riff on the VRC6 saw, recommended), B "vendaval" (2A03 pulse + N163 sung), C "granizo" (xylophone patter + saw below). Previews in `FlappyMonster_pruebas/musica/tifon/` (with seam files and `LEEME.txt`), not installed. Loudness −10.5 LUFS, no clashes or loose notes; A and B move by step more than the jungle range. Verified by numbers only; **not listened to**. By ear: whether the melodies sing, the 16ths ↔ triplets switches (0:36, 0:48), the inhale (≈1:09), the stereo sweep, the GM wind's level.

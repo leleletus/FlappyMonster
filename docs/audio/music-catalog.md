@@ -27,6 +27,7 @@ screens play `victory`; the Flappy mode plays `flappy`.
 | `story_music.py [intro ending chase lair]` | the film scores, composed ON `assets/story/films.json` and the shard catalog `assets/story/shards.json` (one bell / hit / note per boss or shard; re-run after adding a boss with a shard) |
 | `reina.py [A B C]` | `reina`, the Carnivorous Queen's theme; `INSTALL=1 REINA=B` installs the chosen one |
 | `tifon.py [A B C]` | `tifon`, Tifón's theme «Vendaval» (D minor, 160 BPM, the gust rhythm 3+3+4+3+3); `INSTALL=1 TIFON=B` installs the chosen one |
+| `tuffi.py [A B]` | `tuffi`, an epic theme on the user's melody `tuffi.mid` (F♯ minor, 180 BPM; intro 8 + loop 72 bars); previews in `FlappyMonster_pruebas/musica/tuffi/`; `INSTALL=1 TUFFI=A` writes `bosses/tuffi_intro\|_loop.ogg` (installed: A "chip épico", 2026-11-08) |
 | `obsidiana.py [A B C]` | `obsidiana`, the Triple Strike Scorpion's theme (a fire bulería); `INSTALL=1 OBSIDIANA=B` installs the chosen one; `B_LEAD=sierra` (chosen) or `pulso` |
 | `credits_music.py` | `story_credits`: the credits medley, cut bar-exact from the game's own tracks as `films.json` `credits` says ([credits](../story/credits.md)) |
 | `groove_mejora.py [A B C]` | `groove` as installed since 0.5.123: the improved theme, built on `slap_boss.py`'s bars; `INSTALL=1 GROOVE=B` installs the chosen one. The old version: `FlappyMonster_originals/music/versiones/groove_antes_de_la_mejora/` |

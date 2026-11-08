@@ -63,6 +63,7 @@
     { "id": "obsidiana",        "name": "Obsidiana (Escorpión Triple Aguijón)", "intro": "bosses/obsidiana_intro.ogg", "loop": "bosses/obsidiana_loop.ogg", "level": false, "boss": true, "volume": 0.66 },
     { "id": "reina",            "name": "Raíces (Reina Carnívora)", "intro": "bosses/reina_intro.ogg", "loop": "bosses/reina_loop.ogg", "level": false, "boss": true, "volume": 0.63 },
     { "id": "tifon",            "name": "Vendaval (Tifón)", "intro": "bosses/tifon_intro.ogg", "loop": "bosses/tifon_loop.ogg", "level": false, "boss": true, "volume": 0.67 },
+    { "id": "tuffi",            "name": "Tuffi (tema épico)", "intro": "bosses/tuffi_intro.ogg", "loop": "bosses/tuffi_loop.ogg", "level": false, "boss": true, "volume": 0.64 },
     { "id": "groove",           "name": "El Groove (jefe secreto)",    "intro": "bosses/groove_intro.ogg", "loop": "bosses/groove_loop.ogg", "level": false, "boss": true, "volume": 0.49 },
     { "id": "crab_mashup",      "name": "Mega Mashup de los Cangrejos (evento)", "intro": "bosses/crab_mashup_intro.ogg", "loop": "bosses/crab_mashup_loop.ogg", "level": false, "boss": true, "volume": 0.50 },
 
