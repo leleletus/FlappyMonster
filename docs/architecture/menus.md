@@ -113,6 +113,7 @@ endless mode. Testers keep Adventure and Flappy. Turn it on in the same commit t
 - A new menu screen: `MenuScene.update(dt)` in `update`, `MenuScene.draw()` first in `render`; a `MenuAnim` for its
   elements; `MenuList` for a list of buttons; leave with `anim:leave(function() gStateMachine:change(...) end)` to
   another menu screen, or `Transition.go(...)` to anything else.
+- The Flappy screens (FLAPPY menu, Flappy slots, Flappy shop) use `MenuScene.flappyBg()`: the old endless-mode background (Background.png x15, tinted by the endless palette, scrolling like there); Adventure keeps the living scene / bricks, the zone map its Valley art.
 - A content screen designed over black (Free Play, online): `MenuScene.backdrop()` instead of its background.
 - A new background scene: build its graph, find a seed (`FINDSEED`), add `{ level, seed }`.
 - New player-facing text: a row in `assets/lang/translations.csv` with every language (`menu.*`, `adv.desc_*`, `story.slot_*`).

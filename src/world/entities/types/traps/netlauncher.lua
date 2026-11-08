@@ -1,5 +1,6 @@
 -- LANZARREDES (solo niveles Flappy: docs/design/flappy-plan-5b-valley.md, tarea 2): una torreta de chatarra del Monstruo
--- Malvado posada en el suelo. Cada T.EVERY s (× el ritmo de `trapPace`) brilla T.AIM_T s (aviso: clawServo) y dispara UNA
+-- Malvado posada en su SOPORTE (el tile `mount`, un poste de hierro que sube desde el borde de abajo: las etapas Flappy no
+-- tienen suelo, Plan 5d; los generadores lo ponen debajo con flappy_lib.launcher). Cada T.EVERY s (× el ritmo de `trapPace`) brilla T.AIM_T s (aviso: clawServo) y dispara UNA
 -- red recta HACIA ARRIBA a T.NET_SPD px/s (netFire): la misma red del Redcóptero (traps/netshot.lua, `launch(..., up)`):
 -- −1 de vida y ctrlLock 0,4 s al jugador que toca, se engancha en los sólidos (pilares) y sale por arriba. Las saca de su
 -- reserva (def.summons + Entity:freeMinion), como el jefe. No dispara si ningún jugador está a más de T.RANGE casillas.
@@ -96,13 +97,13 @@ function NL:render(camX, camY)
     local x, y = math.floor(self.x - camX), math.floor(self.y - camY)
     local f = (self.state == 'aim') and 2 or (self.state == 'recoil') and 3 or 1
     love.graphics.setColor(1, 1, 1, 1)
-    love.graphics.draw(img, quads[f], x, y + TILE_PX / 2, 0, SCALE, SCALE, FW / 2, FW)     -- (apoyada en el suelo de su casilla)
+    love.graphics.draw(img, quads[f], x, y + TILE_PX / 2, 0, SCALE, SCALE, FW / 2, FW)     -- (apoyada en el fondo de su casilla: la placa del soporte)
 end
 
 return {
     name = 'netlauncher', label = 'Lanzarredes', category = 'Flappy', flappyOnly = true, pace = 'trapPace',
     diesToSpecial = true,
-    description = 'Solo niveles Flappy: torreta del Monstruo Malvado en el suelo; cada pocos segundos brilla y lanza una red recta hacia arriba (−1 y te enreda). La ráfaga del ataque especial la revienta.',
+    description = 'Solo niveles Flappy: torreta del Monstruo Malvado sobre su soporte (el tile Soporte, debajo hasta el borde); cada pocos segundos brilla y lanza una red recta hacia arriba (−1 y te enreda). La ráfaga del ataque especial la revienta.',
     class = NL,
     defaults = { movement = 'static' }, hide = 'all',
     props = {},

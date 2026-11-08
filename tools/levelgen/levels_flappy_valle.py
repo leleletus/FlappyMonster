@@ -5,15 +5,16 @@
 # nunca se renombran. Escribe SOLO valle_pilares_1/2/3.json (lo común: flappy_lib.py; el jefe, levels_flappy_valle_boss.py).
 #   1 la entrada suave: huecos anchos (4-5), alturas tranquilas, 5 cargas, 2 comidas, una jaula fácil, sin muros
 #   2 jaulas y muros: huecos de 3-4, una jaula a la vista y otra detrás de un muro agrietado (carga 2), 2 comidas
-#   3 la primera máquina del Malvado: huecos de 3-4, tres LANZARREDES en el suelo bajo la ruta (siempre con sitio a los
-#     lados para esperar la red), una jaula muy arriba, 2 comidas y un ATAJO: un túnel arriba tras un muro agrietado que
-#     pasa por encima del segundo lanzarredes (su suelo para las redes)
+#   3 la primera máquina del Malvado: huecos de 3-4, tres LANZARREDES en sus soportes bajo la ruta (siempre con sitio a
+#     los lados para esperar la red), una jaula muy arriba, 2 comidas y un ATAJO: un túnel arriba tras un muro agrietado
+#     que pasa por encima del segundo lanzarredes (su suelo para las redes)
+# Sin suelo (Plan 5d): los pilares de abajo llegan al borde de abajo; los lanzarredes, en su soporte (flappy_lib.launcher).
 # La ruta principal (los huecos) nunca necesita romper un muro: el piloto sin carga de flappy_flight `etapa` las pasa.
 #   python3 tools/levelgen/levels_flappy_valle.py
 import os, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import flappy_lib
-from flappy_lib import ent, at_gaps
+from flappy_lib import ent, at_gaps, launcher
 
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..')
 BG = 'valley'
@@ -47,19 +48,20 @@ e2 = (at_gaps('flapcharge', g2, [0, 2, 3, 5, 8, 10]) + at_gaps('apple', g2, [4, 
 flappy_lib.write(out('valle_pilares_2'), "Valle de los Pilares 2", "Valley of the Pillars 2", g2[-1][0] + 14, g2,
                  entities=e2, solids=s2, background=BG)
 
-# 3: huecos de 3-4 cada 7 columnas. Lanzarredes en el suelo (fila 9) entre dos pilares, a 3 columnas de cada uno, con
-#    la ruta pasando por ENCIMA (huecos que acaban en la fila 7 o antes). El túnel va de la columna 58 a la 80 (filas
+# 3: huecos de 3-4 cada 7 columnas. Lanzarredes en la fila 9, sobre su soporte (filas 10-11), entre dos pilares, a 3
+#    columnas de cada uno, con la ruta pasando por ENCIMA (huecos que acaban en la fila 7 o antes). El túnel va de la columna 58 a la 80 (filas
 #    1-2, muro en la 58): por debajo, los huecos empiezan en la fila 5 y el 2º lanzarredes dispara contra su suelo.
 g3 = pillars(20, 7, [(4, 4), (3, 4), (2, 4), (4, 3), (3, 4), (4, 4), (5, 3), (6, 3), (5, 4), (2, 4), (5, 3), (4, 4),
                      (5, 3), (3, 4), (5, 3), (3, 4)])
 T0, T1 = g3[5][0] + 3, g3[8][0] + 4                     # el túnel: 58 → 80
 e3t, s3, a3 = flappy_lib.tunnel(T0, T1, g3, min_charge=2)
+l3 = [launcher(g3[1][0] + 3, 9),                         # entre huecos altos: la ruta pasa 3-5 filas por encima
+      launcher(g3[7][0] + 3, 9),                         # bajo el túnel: su red se queda en el suelo del túnel
+      launcher(g3[11][0] + 3, 9)]
 e3 = (at_gaps('flapcharge', g3, [0, 2, 4, 9, 11, 13]) + at_gaps('apple', g3, [3, 12]) + e3t
       + [ent('flapcharge', T0 + 6, 2), ent('flapcharge', T0 + 15, 1)]          # el premio del atajo
-      + [ent('netlauncher', g3[1][0] + 3, 9),            # entre huecos altos: la ruta pasa 3-5 filas por encima
-         ent('netlauncher', g3[7][0] + 3, 9),            # bajo el túnel: su red se queda en el suelo del túnel
-         ent('netlauncher', g3[11][0] + 3, 9)]
+      + [e for e, _ in l3]
       # la jaula muy arriba (carga 3), en la fila 1 entre dos pilares
       + [ent('cage', g3[10][0] + 3, 1, minCharge=3, gift='strength')])
 flappy_lib.write(out('valle_pilares_3'), "Valle de los Pilares 3", "Valley of the Pillars 3", g3[-1][0] + 14, g3,
-                 entities=e3, solids=s3, air=a3, background=BG)
+                 entities=e3, solids=s3, air=a3, mounts=[m for _, m in l3], background=BG)

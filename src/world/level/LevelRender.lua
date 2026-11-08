@@ -113,6 +113,24 @@ function Level:render(camX, camY, noPlane)
         end
     end
 
+    -- Sin suelo (`openBottom`, los niveles Flappy): la pantalla ve por debajo del nivel (11 filas no llenan el alto), así
+    -- que la última fila SIGUE una casilla más (los pilares y los soportes llegan al borde de la pantalla). Se dibuja
+    -- como la casilla de debajo (fila tileH + 1): un pilar o un soporte ven el suyo encima y ponen el cuerpo
+    if self.openBottom and camY + WINDOW_H > self.heightPx then
+        local row, py = self.tileH, self.heightPx - camY
+        local tilesRow = self.tiles[row]
+        for col = sc2, ec2 do
+            local raw = tilesRow[col] or 0
+            if raw ~= 0 then
+                local def = TileTypes.get(tileBaseId(raw))
+                if not (def.trigger and self.hiddenTriggers and self.hiddenTriggers[def.trigger]) then
+                    ctx.x, ctx.y, ctx.col, ctx.row, ctx.raw = (col - 1) * TILE_PX - camX, py, col, row + 1, raw
+                    TileTypes.drawTile(def, ctx)
+                end
+            end
+        end
+    end
+
     -- Zonas de puntos (detrás de entidades y jugadores)
     PointAreas.render(self, camX, camY)
     love.graphics.setColor(1, 1, 1, 1)

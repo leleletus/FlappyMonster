@@ -250,6 +250,22 @@ function MenuScene.bricks(which)
     require('src/story/Stage').flappyBg(bricksT * 14, { c[1] * BRICK_DARK, c[2] * BRICK_DARK, c[3] * BRICK_DARK }, 1, bricksT * 5)
 end
 
+-- El fondo del Flappy ANTIGUO (el del modo infinito, src/states/flappy/PlayState.lua) para las pantallas del Flappy
+-- (menú FLAPPY, partidas de la campaña, tienda): Background.png a ×15, teñido con la paleta `normal` del infinito
+-- que va cambiando de color, y de lado a 220 × 0.4 px/s como allí. Es un solo dibujo compartido; el mapa de zonas
+-- conserva su arte del Valle y la Aventura sigue con el fondo vivo / los ladrillos.
+local FLAPPY_PAL = { { 0.50, 0.80, 1.00 }, { 0.40, 0.65, 1.00 }, { 0.60, 0.90, 1.00 }, { 0.35, 0.75, 0.95 }, { 0.55, 0.85, 0.98 } }
+local FLAPPY_DARK = 0.85
+function MenuScene.flappyBg()
+    local t = love.timer.getTime() * 0.5                -- (COLOR_LERP_SPD del infinito)
+    local i = math.floor(t) % #FLAPPY_PAL
+    local k = t - math.floor(t)
+    local a, b = FLAPPY_PAL[i + 1], FLAPPY_PAL[(i + 1) % #FLAPPY_PAL + 1]
+    local col = { (a[1] + (b[1] - a[1]) * k) * FLAPPY_DARK, (a[2] + (b[2] - a[2]) * k) * FLAPPY_DARK,
+                  (a[3] + (b[3] - a[3]) * k) * FLAPPY_DARK }
+    require('src/story/Stage').flappyBg(love.timer.getTime() * PIPE_SPEED * 0.4, col, 1, 0)
+end
+
 MenuScene.MARGIN = 24        -- px de fondo que deja ver el panel de MenuScene.backdrop
 -- (which = color de los ladrillos; sin él, el fondo vivo)
 function MenuScene.backdrop(which)

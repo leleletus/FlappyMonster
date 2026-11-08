@@ -17,8 +17,8 @@ Try it: `love . --editor tools/levelgen/arenas/NetcopterArena.json`, then play f
 | `src/world/entities/types/traps/netshot.lua` | its net (`netshot`, a reserve minion) |
 | `src/world/entities/types/traps/glowbomb.lua` | its glowing bomb (`glowbomb`, a reserve minion; the `reflectable` trait) |
 | `tools/art/bosses/make_netcopter.py` | art (`--apply` → `assets/images/bosses/netcopter/`, all ×6) |
-| `tools/levelgen/arenas/NetcopterArena.json` | test arena: 40x11 Flappy, zone columns 17-36 (full height), music `tuffi`; floor = the last row only (grass, rows 1-10 air); hand-made, no generator |
-| `assets/levels/valle_redcoptero.json` | its campaign stage (zone 1's `boss`), by `tools/levelgen/levels_flappy_valle_boss.py` ([flappy-campaign § Boss stages](../gameplay/flappy-campaign.md#boss-stages-plan-5)); floor on the last row (`floor=H`), one row lower than the other Valley stages |
+| `tools/levelgen/arenas/NetcopterArena.json` | test arena: 40x11 Flappy, zone columns 17-36 (full height), music `tuffi`, Valley sky; no floor (Plan 5d: a pillar hangs at column 9, rows 1-3, another rises from the bottom edge at column 13, rows 8-11); by `tools/levelgen/arenas/make_netcopter_arena.py` (hand-made before Plan 5d) |
+| `assets/levels/valle_redcoptero.json` | its campaign stage (zone 1's `boss`), by `tools/levelgen/levels_flappy_valle_boss.py` ([flappy-campaign § Boss stages](../gameplay/flappy-campaign.md#boss-stages-plan-5)); no floor and the Valley sky, like the other Valley stages (Plan 5d) |
 
 Art lives in `assets/images/bosses/netcopter/` (all drawn at ×6, the player's pixel). Sheets (frame size, frames):
 
@@ -72,8 +72,9 @@ Hp 12 + 4 per extra player (`bossHp` scales it: 11 at Normal, 14 at Extreme). Ph
 - **Glowing bomb:** on its own clock (every 6 s ± 1, 5 s in phase 2; never while crossing). It is LOBBED (`bombLob`)
   from the top of the gondola in a ballistic arc (`BOMB_G` 900 px/s²) to where the player was at the throw, the apex
   2.5 tiles above the player's head; a blinking MARK shows the landing spot from the throw. It explodes (−1 within a
-  tile; the blast also breaks breakable blocks within a tile) when it touches a player who is not rising, the floor, a
-  pillar or a solid. A player flying RISING into it sends it back (`reflectable`, `owner` = the boss) in a straight line
+  tile; the blast also breaks breakable blocks within a tile) when it touches a player who is not rising, a pillar or a
+  solid, or reaches the BOTTOM: its boss zone's bottom edge or the level's, whichever is higher (`GlowBomb:bottomY`;
+  Flappy levels have no floor since Plan 5d). A player flying RISING into it sends it back (`reflectable`, `owner` = the boss) in a straight line
   at 700 px/s: **2 damage** to the boss, with sparks. Pillars are `enemySolid`: they STOP both nets and bombs (so the
   short pillars in the arena are real cover). On defeat, falling bombs and nets are spent without damage. See
   `glowbomb.lua`.
@@ -112,7 +113,7 @@ Hp 12 + 4 per extra player (`bossHp` scales it: 11 at Normal, 14 at Extreme). Ph
   it (`Boss:fleeOver`). Nets in the air vanish at the defeat.
 - `rollStart`: the first net (1.2-2.8 s), the first bomb (2.5-5 s), how long it holds the first side (`HOLD_FIRST`,
   5-8 s), a start height offset (±1.5 tiles, released over 2 s) and which attack comes first in phase 2.
-- **Respawn** (dying in the fight): in the AIR (the floor hurts in flight) at a third of the zone, on the side AWAY
+- **Respawn** (dying in the fight): in the AIR (falling out of the bottom edge hurts in flight) at a third of the zone, on the side AWAY
   from the boss: `BossZones.flightX` picks the third farther from `Boss:respawnAvoidX()`, which the Net-Copter
   overrides with its side's x, or while crossing its destination (`crossX1`). If it respawns while the machine is
   crossing over that third, the body passes overhead within the respawn invulnerability (`SPAWN_INV` 2.5 s >

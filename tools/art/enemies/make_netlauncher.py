@@ -5,9 +5,14 @@
 # objetos pequeños: cabe en una casilla): formas planas, 2-3 tonos por pieza.
 #
 #   python3 tools/art/enemies/make_netlauncher.py           → vista previa en FlappyMonster_pruebas/valle/
-#   python3 tools/art/enemies/make_netlauncher.py --apply [--force]   → assets/images/enemies/netlauncher/netlauncher-Sheet.png
+#   python3 tools/art/enemies/make_netlauncher.py --apply [--force]   → los archivos de abajo (sin --force no pisa los que
+#                                                                      ya existen)
 #
 # netlauncher-Sheet.png: 3 cuadros de 14x14 — 1 reposo, 2 apunta (la boca brilla), 3 retroceso (el tubo se hunde y sale humo).
+# Y su SOPORTE (Plan 5d: las etapas Flappy no tienen suelo; el lanzarredes se posa en un poste de hierro que sube desde el
+# borde de abajo), el tile `mount` (src/world/tiles/types/mount.lua), 16x16 a x4 como los pilares:
+#   assets/images/world/tiles/mount_top.png  la placa de arriba (oxidada, dos tornillos) sobre el poste
+#   assets/images/world/tiles/mount.png      el poste (se repite en vertical: remaches y una junta)
 import os, sys
 from PIL import Image, ImageDraw
 
@@ -15,6 +20,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.normpath(os.path.join(HERE, '..', '..', '..'))
 OUT = os.path.join(os.environ.get('FM_PRUEBAS', '/home/mtvemo/FlappyMonster_pruebas'), 'valle')
 DEST = os.path.join(ROOT, 'assets', 'images', 'enemies', 'netlauncher')
+TILES = os.path.join(ROOT, 'assets', 'images', 'world', 'tiles')
 K = 4
 FW = 14
 
@@ -69,22 +75,57 @@ def frame(kind):
     return im
 
 
+# El SOPORTE: mapa de caracteres de 16x16 (o contorno, d hierro oscuro, m hierro, h luz/remache, R/u/U óxido)
+MOUNT_PAL = {'.': (0, 0, 0, 0), 'o': IRON[0], 'd': IRON[1], 'm': IRON[2], 'h': IRON[3],
+             'R': RUST[0], 'u': RUST[1], 'U': RUST[2]}
+POST = '..ohmmmmmmmmdo..'
+RIVET = '..ohmhmmmmhmdo..'
+SEAM = '..oddddddddddo..'
+MOUNT_BODY = [POST, POST, POST, RIVET, POST, POST, POST, SEAM,
+              POST, POST, POST, RIVET, POST, POST, POST, SEAM]
+MOUNT_TOP = ['oooooooooooooooo',
+             'oUUUUUUUUUUUUUUo',
+             'ouhuuuuuuuuuuhuo',
+             'oRRRRRRRRRRRRRRo',
+             'oooooooooooooooo'] + MOUNT_BODY[5:]
+
+
+def tile(rows):
+    assert len(rows) == 16 and all(len(r) == 16 for r in rows)
+    im = Image.new('RGBA', (16, 16), (0, 0, 0, 0))
+    for y, r in enumerate(rows):
+        for x, ch in enumerate(r):
+            im.putpixel((x, y), MOUNT_PAL[ch])
+    return im.resize((64, 64), Image.NEAREST)
+
+
+def save(im, dest):
+    if os.path.exists(dest) and '--force' not in sys.argv:
+        print('%s ya existe: no se toca (--force para pisarlo)' % dest)
+        return
+    os.makedirs(os.path.dirname(dest), exist_ok=True)
+    im.save(dest)
+    print('escrito', dest)
+
+
 def main():
     files = Image.new('RGBA', (FW * 3, FW), (0, 0, 0, 0))
     for i, k in enumerate(('idle', 'aim', 'recoil')):
         files.alpha_composite(frame(k), (i * FW, 0))
+    top, body = tile(MOUNT_TOP), tile(MOUNT_BODY)
     if '--apply' in sys.argv:
-        os.makedirs(DEST, exist_ok=True)
-        dest = os.path.join(DEST, 'netlauncher-Sheet.png')
-        if os.path.exists(dest) and '--force' not in sys.argv:
-            print('%s ya existe: no se toca (--force para pisarlo)' % dest)
-            return
-        files.save(dest)
-        print('escrito', DEST)
+        save(files, os.path.join(DEST, 'netlauncher-Sheet.png'))
+        save(top, os.path.join(TILES, 'mount_top.png'))
+        save(body, os.path.join(TILES, 'mount.png'))
         return
     os.makedirs(OUT, exist_ok=True)
-    pv = Image.new('RGBA', (FW * 3 * K + 40, FW * K + 20), (150, 205, 240, 255))
+    # (la tira de cuadros y, al lado, el lanzarredes de pie en su soporte de dos casillas, a la escala del juego)
+    pv = Image.new('RGBA', (FW * 3 * K + 40 + 64 + 20, 64 * 3 + 20), (150, 205, 240, 255))
     pv.alpha_composite(files.resize((files.width * K, files.height * K), Image.NEAREST), (20, 10))
+    x0 = FW * 3 * K + 40
+    pv.alpha_composite(top, (x0, 10 + 64))
+    pv.alpha_composite(body, (x0, 10 + 128))
+    pv.alpha_composite(frame('idle').resize((FW * K, FW * K), Image.NEAREST), (x0 + 32 - FW * K // 2, 10 + 64 - FW * K))
     pv.save(os.path.join(OUT, 'netlauncher_vista_previa.png'))
     print('vista previa en', OUT)
 

@@ -19,7 +19,9 @@ end
 local function closed(ctx, dr)
     local lv = ctx.level
     if not (lv and ctx.col and ctx.row) then return dr > 0 end   -- (miniatura del editor: boca arriba)
-    local n = lv:getDef(ctx.col, ctx.row + dr)
+    local r = ctx.row + dr
+    if r < 1 or r > lv.tileH then return true end                -- (el borde: también sin suelo debajo, openBottom)
+    local n = lv:getDef(ctx.col, r)
     return n == nil or n.name == 'pillar' or n.collision == 'solid'
 end
 

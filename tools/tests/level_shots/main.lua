@@ -11,6 +11,7 @@
 --           bajo tierra con SECS=1, sobre el agua fija con SECS=8)
 --   FIXED=1  foto REPETIBLE (azar con semilla fija y reloj parado): dos ejecuciones dan el mismo PNG, para
 --            comparar antes / después de mover o rehacer algo que no debe cambiar el dibujo
+-- Sin suelo (niveles Flappy, `openBottom`): la foto lleva también la franja que el juego ve por debajo del nivel.
 -- Salida: <save>/shot_<nivel>.png  (~/.local/share/love/fm_test_levelshots/)
 io.stdout:setvbuf('no')
 love.filesystem.setSymlinksEnabled(true)
@@ -62,6 +63,9 @@ local function shot(path)
         x0, y0 = (c0 - 1) * TILE_PX, (r0 - 1) * TILE_PX
         W, H = (c1 - c0 + 1) * TILE_PX, (r1 - r0 + 1) * TILE_PX
     end
+    -- (sin suelo —`openBottom`, los niveles Flappy—: también la franja que el juego ve por debajo del nivel, a 720 de
+    --  alto; la última fila sigue en ella: Level:render)
+    if level.openBottom and y0 + H >= level.heightPx then H = H + math.max(0, 720 - level.heightPx) end
     local out = love.graphics.newCanvas(math.ceil(W * k), math.ceil(H * k))
     WINDOW_W, WINDOW_H = 1280, 720
     local view = love.graphics.newCanvas(WINDOW_W, WINDOW_H)

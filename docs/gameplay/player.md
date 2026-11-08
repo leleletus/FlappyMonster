@@ -178,8 +178,11 @@ ground pound):
   the window's (AutoScroll arena); the left edge carries it along (if a block is in the way, AutoScroll's usual rule —
   left behind = dies — applies).
 - PILLARS (tile `pillar`) are not solid: touching one costs 1 HP and the hit's invulnerability lets it fly through.
-- The FLOOR (anything solid it lands on) costs 1 HP (not while invulnerable) and bounces it up (`FLOOR_HOP` -560).
-  Ceiling and walls only stop it.
+- NO FLOOR (Plan 5d): a Flappy level has nothing solid below it (`Level.openBottom` = `flappy`: `getRaw` returns air
+  under the last row). Falling through the level's BOTTOM EDGE (the centre reaches `heightPx`; it is held there, so it
+  never sinks further and stays inside a boss zone that reaches the bottom) costs 1 HP through the normal `hurt` (then
+  invulnerable: never a chain) and bounces it back up into the level (`EDGE_HOP` -560). Landing on anything SOLID (a
+  net-launcher's `mount`, a tunnel's floor) does the same. Ceiling and walls only stop it.
 - Respawn: `AutoScroll.respawnPoint` in a Flappy level = in the air at a third of the window, the free cell closest to
   mid-height (never inside a pillar): `Level:flightSpot(x, minRow, maxRow)`. In a Flappy boss fight
   `BossZones.respawnPoint` uses the same rule at a third of the zone (never standing on the floor, which hurts).

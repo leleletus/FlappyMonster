@@ -29,6 +29,7 @@ import make_frozen_coast_sky as FC                # sky_base con degradado propi
 sys.argv = _argv
 
 APPLY = '--apply' in sys.argv
+FORCE = '--force' in sys.argv                     # con --apply, rehace SOLO valley_near.png (lo demás no se pisa)
 PREV = '/home/mtvemo/FlappyMonster_pruebas/valle'
 SKY = os.path.join(REPO, 'assets/images/world/sky')
 W, S = J.W, J.S
@@ -47,7 +48,7 @@ MID = (rgb('aea0a2'), rgb('968c9c'), rgb('7c7690'))
 NEAR = (rgb('8a7e86'), rgb('70687a'), rgb('5a5468'))
 HOLE_M = rgb('5a5268')                     # agujero de nido (medio)
 TWIG = (rgb('b89c74'), rgb('94785a'))      # ramitas del nido
-GRASS = (rgb('9ab866'), rgb('7a9c50'), rgb('5e8040'))
+HAZE = (rgb('9c94ac'), rgb('6e6684'), rgb('4a4460'))   # bruma / sombra del fondo del valle (violeta de los pilares)
 # flappies lejanos: (cuerpo, cara) — apagados por la bruma, más oscuros que las columnas para leerse
 KINDS = {
     'a': (rgb('5e5674'), rgb('f6f0e6')),   # como el monstruo: antenas en V
@@ -182,23 +183,24 @@ def mid():
 def near():
     lay = L(64)
     B = 64
-    G = 34                                     # la hierba (lo de debajo lo tapa el suelo del nivel)
+    G = 34                                     # donde empieza la bruma del fondo
     r = random.Random(31)
     for (x, w, h) in ((8, 22, 16), (32, 16, 26), (96, 28, 12), (140, 18, 30), (162, 24, 20), (228, 20, 14),
                       (252, 26, 24), (300, 14, 10)):
         column(lay, x, w, G - h, B, NEAR, lip=False, joints=2, seed=x)
-        top = G - h                            # cara de arriba rota: dientes de luz y alguna mata encima
+        top = G - h                            # cara de arriba rota: dientes de luz
         for xx in range(x, x + w):
             if r.random() < 0.35: lay.put(xx, top - 1, NEAR[0])
-        for xx in range(x + 2, x + w - 2, 5):
-            if r.random() < 0.5: lay.put(xx, top - 1, GRASS[1]); lay.put(xx + 1, top - 2, GRASS[0])
-    for x in range(W):                          # hierba con matas
-        for y in range(G, B): lay.put(x, y, GRASS[1] if y < G + 3 else GRASS[2])
-        lay.put(x, G, GRASS[0])
-        if (x * 7) % 11 < 3: lay.put(x, G - 1, GRASS[1])
-        if (x * 13) % 29 == 0: lay.put(x, G - 2, GRASS[0]); lay.put(x, G - 1, GRASS[0])
-    for x in range(0, W, 9):                    # rayas de hierba más oscura abajo
-        for k in range(3): lay.put(x + k + (x // 9) % 3, G + 6 + (x % 4), GRASS[1])
+    # el fondo del valle: sin hierba (el suelo de los niveles Flappy ya no es de pradera); las bases de las columnas
+    # se hunden en bruma violeta que espesa hacia abajo (tramado ordenado, rectángulos duros) hasta una sombra sólida
+    BAY = ((0, 8, 2, 10), (12, 4, 14, 6), (3, 11, 1, 9), (15, 7, 13, 5))     # Bayer 4x4 (0..15)
+    for x in range(W):
+        for y in range(G - 8, B):
+            t = (y - (G - 8)) / float(B - 1 - (G - 8))                        # 0 arriba → 1 abajo
+            if t >= 0.92: lay.put(x, y, HAZE[2]); continue
+            thr = (BAY[y % 4][x % 4] + 0.5) / 16.0
+            if t * 1.15 > thr:
+                lay.put(x, y, HAZE[0] if t < 0.4 else (HAZE[1] if t < 0.7 else HAZE[2]))
     return lay.im
 
 
@@ -219,7 +221,7 @@ def background(time, grads, layers, camX=900):
     return cv
 
 
-# ── La escena: pilares de verdad (tile pillar) desde arriba y abajo, suelo de hierba y el monstruo ────────────────
+# ── La escena: pilares de verdad (tile pillar) desde arriba y abajo y el monstruo ────────────────
 TIL = os.path.join(REPO, 'assets/images/world/tiles')
 
 
@@ -236,9 +238,6 @@ def scene(cv):
             if gap0 <= r <= gap1: continue
             im = capd if r == gap0 - 1 else (cap if r == gap1 + 1 else body)
             cv.alpha_composite(im, (c * k, oy + r * k))
-    g, d = tile('grass'), tile('dirt')
-    for c in range(20):
-        cv.alpha_composite(g, (c * k, oy + floor * k))
     p = J.up(Image.open(os.path.join(REPO, 'assets/images/player/monstrito1.png')).convert('RGBA'), 6)
     cv.alpha_composite(p, (5 * 64 + 20, oy + 5 * 64))
     return cv
@@ -279,7 +278,7 @@ def main():
 def apply(grads, layers):
     """escribe las capas en assets/ (no pisa nada que exista) y añade los 3 degradados (cuadros 18..20)"""
     def put(path, im):
-        if os.path.exists(path): print('  %s ya existe: no se toca' % path); return
+        if os.path.exists(path) and not (FORCE and path.endswith('valley_near.png')): print('  %s ya existe: no se toca' % path); return
         im.save(path); print('  %-52s %dx%d' % (os.path.relpath(path, REPO), im.width, im.height))
     for n, im in layers.items(): put(os.path.join(SKY, '%s_%s.png' % (ID, n)), im)
     gp = os.path.join(SKY, 'gradients.png')

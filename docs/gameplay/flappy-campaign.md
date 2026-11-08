@@ -48,6 +48,7 @@ and BACK returns to the map with the shop selected.
 
 `flappy_map` draws the zone instead of the menu background. Art (`tools/art/ui/make_flappy_map.py`, ×4 like the sky and
 the story map; prefix `Zones.LIST[z].map.art`, files `assets/images/flappy/map/<art>_*.png`):
+(The map plays `Zones.LIST[z].map.music`, a track id of `assets/music/index.json` — the Valley: `map_flappy` "Cielo abierto", [music-history](../audio/music-history.md); without it, `menus`.)
 - `_bg` (320x180 = 1280x720): the `valley` sky's day gradient, sun, clouds and its three layers (reused from
   `make_valley_sky.py`). Tiled across the width, centred (the layers wrap at 320 art px), so any logical width works.
 - `_pillar` (18x160): a basalt pillar in front, darker and outlined; the game draws from the node's point down to the
@@ -71,7 +72,7 @@ never see it; it is always open. **Input:** ← → move through ALL spots in le
 ENTER / flap plays the stage or opens the shop (`flappy_shop { zone }`); BACK → slots. Touch: tap a spot to select it,
 tap the selected one to play / enter. The state keeps `sel` (stage index) and `onShop`.
 
-**To add a zone's map:** give the zone `map = { art, at, shop }` and make its art (add the zone's drawing to
+**To add a zone's map:** give the zone `map = { art, music, at, shop }` and make its art (add the zone's drawing to
 `make_flappy_map.py`; the five files with that prefix). `flappy_campaign CASE=zonas` checks the art exists and every
 node (and the shop, if the zone sells something) has a position on screen that does not overlap another.
 Not judged by the user yet: the look of the map, the merchant and the machine icon (art applied provisionally).
@@ -113,7 +114,11 @@ while Adventure is locked, its saves do not count.
 - Stage objects come from `tools/levelgen/flappy_lib.py`: `at_gaps` (charges / food at the centre of chosen pillar
   gaps), `cubby` (a cracked wall at rows 1-2 with one thing — a charge, a cage — shut in behind it), `tunnel` (a
   shortcut: rows 1-2 behind a cracked wall over a floor of solid blocks at row 3; the pillars inside lose rows 1-2 —
-  `build(..., air=)` —; the gaps below start at row 5 or lower). `write(..., background=)` sets the level's sky biome.
+  `build(..., air=)` —; the gaps below start at row 5 or lower), `launcher(col, row)` (a net-launcher and its `mount`
+  from row + 1 to the bottom edge: `write(..., mounts=)`). `write(..., background=)` sets the level's sky biome. NO
+  FLOOR (Plan 5d): every pillar column runs from row 1 to the last row except its gap, so the bottom pillars reach the
+  bottom edge; `flappy_campaign zonas` checks there is no grass / dirt, no pillar floats and every launcher has its
+  mount.
   `flappy_campaign zonas` checks every wall SHUTS something: the cell behind its top row cannot be reached from in
   front of it without breaking it (a search through non-solid cells, pillars passable, up to two columns behind).
 
@@ -153,10 +158,10 @@ the zone's last column, so the window stops exactly over the zone (`AutoScroll` 
 the camera; once the boss is beaten the zone opens and the player flies on to the finish (`onFinish` as in any stage).
 Inside the fight the boss director (`bossdrops`) hands out charges / food. Dying in the fight respawns IN THE AIR in
 the zone's left third (`BossZones.respawnPoint` → `Level:flightSpot`, the same rule as the auto-scroll's Flappy respawn):
-standing on the floor would cost 1 HP. `valle_redcoptero`: pillars at columns 18-60 (3 charges, 1 food), zone 66-85
-with the `netcopter` at (81, 5) and music `tuffi`, finish at column 93. Its floor is the level's LAST row (grass only:
-`write(..., floor=H)`, 10 air rows instead of 9; the user, 2026-11-08: the floor was too high for the fight); the
-other stages keep `FLOOR` 10 (grass + dirt). 11 rows is the most the fixed 720-px camera shows whole.
+falling out of the bottom edge would cost 1 HP. `valle_redcoptero`: pillars at columns 18-60 (3 charges, 1 food), zone
+66-85 with the `netcopter` at (81, 5) and music `tuffi`, finish at column 93, the Valley sky (`background: valley`).
+No floor, like every Flappy stage since Plan 5d (before: grass on the last row, `floor=H`, after the user's "too high"
+of 2026-11-08). 11 rows is the most the fixed 720-px camera shows whole.
 
 **Return to sender** (Plan 5): a trait `reflectable` on an entity (+ optional `canReflect()`) makes a player who FLIES
 and is RISING (`pa.vy < 0`) when touching it get the interaction `'reflect'` (`Interactions.check`) instead of being

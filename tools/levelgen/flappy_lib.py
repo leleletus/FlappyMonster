@@ -1,12 +1,13 @@
 # tools/levelgen/flappy_lib.py
-# Lo común de los generadores de etapas FLAPPY (levels_flappy_test.py, levels_flappy_valle.py): un nivel "flappy": true
-# de 11 filas con suelo (césped sobre tierra), PILARES (tile 59) con su hueco, la meta al final y la cámara automática.
-# `floor` = la fila del césped (FLOOR por defecto; H = solo césped en la última fila, sin tierra: una fila más de aire,
-# la etapa del jefe — el usuario, 2026-11-08: "bajar el suelo"). Solo escribe el archivo que se le pide.
+# Lo común de los generadores de etapas FLAPPY (levels_flappy_test.py, levels_flappy_valle.py,
+# levels_flappy_valle_boss.py): un nivel "flappy": true de 11 filas SIN SUELO (Plan 5d, el usuario tras jugar 0.5.179:
+# mejor sin suelo, que los pilares salgan también desde abajo de la pantalla, como salen de arriba), PILARES (tile 59) de
+# arriba abajo con su hueco (los de abajo llegan al borde de abajo del nivel), la meta al final y la cámara automática. Caer por
+# el borde de abajo quita 1 y bota (src/player/PlayerFlight.lua). Lo que antes se apoyaba en el suelo va en un SOPORTE
+# (tile 60 `mount`, hasta el borde: launcher()). Solo escribe el archivo que se le pide.
 import json
 
 H = 11
-FLOOR = 10                       # fila del césped (la 11, tierra)
 
 
 def raw(tile_id):
@@ -14,46 +15,46 @@ def raw(tile_id):
     return tile_id % 16 + (tile_id // 16) * 2 ** 17
 
 
-AIR, DIRT, GRASS, FINISH, PILLAR = raw(0), raw(16), raw(17), raw(11), raw(59)
+AIR, FINISH, PILLAR, MOUNT = raw(0), raw(11), raw(59), raw(60)
 
 
 SOLID = raw(1)
 
 
-def build(width, gaps, solids=None, floor=FLOOR, air=None):
-    """gaps = [(columna, fila de arriba del hueco, alto del hueco), ...]; solids = [(columna, fila), ...] bloques
-    sólidos sueltos (el escondite de detrás de un muro agrietado, el suelo de un túnel); floor = la fila del césped
-    (debajo, tierra); air = [(columna, fila), ...] casillas que quedan VACÍAS aunque sean de un pilar (un túnel) → filas
-    de tiles"""
+def build(width, gaps, solids=None, air=None, mounts=None):
+    """gaps = [(columna, fila de arriba del hueco, alto del hueco), ...] (el pilar ocupa el resto de la columna, de la
+    fila 1 a la H); solids = [(columna, fila), ...] bloques sólidos sueltos (el escondite de detrás de un muro agrietado,
+    el suelo de un túnel); air = [(columna, fila), ...] casillas que quedan VACÍAS aunque sean de un pilar (un túnel);
+    mounts = [(columna, fila de arriba), ...] SOPORTES (de esa fila al borde de abajo) → filas de tiles"""
     tiles = [[AIR] * width for _ in range(H)]
-    for c in range(width):
-        tiles[floor - 1][c] = GRASS
-        for r in range(floor + 1, H + 1):
-            tiles[r - 1][c] = DIRT
     for c, top, h in gaps:
         assert 1 <= c <= width - 6, c
-        for r in range(1, floor):        # filas 1..floor-1 (la del césped es el suelo)
+        for r in range(1, H + 1):
             if not (top <= r < top + h):
                 tiles[r - 1][c - 1] = PILLAR
     for c, r in air or []:
         tiles[r - 1][c - 1] = AIR
-    for r in range(1, floor):
+    for r in range(1, H + 1):
         tiles[r - 1][width - 3] = FINISH
     for c, r in solids or []:
         tiles[r - 1][c - 1] = SOLID
+    for c, top in mounts or []:
+        for r in range(top, H + 1):
+            assert tiles[r - 1][c - 1] == AIR, ('soporte encima de algo', c, r)
+            tiles[r - 1][c - 1] = MOUNT
     return tiles
 
 
 def write(out, name, name_en, width, gaps, speed=200, music='flappy', entities=None, solids=None, arena=None,
-          floor=FLOOR, air=None, background=None):
+          air=None, mounts=None, background=None):
     """arena = lo que devuelve boss_arena(): la cámara automática se para en ella y el nivel lleva su zona de jefe;
-    floor, solids, air = los de build(); background = el fondo del nivel (un bioma de src/fx/Sky.lua, p. ej. 'valley')"""
+    solids, air, mounts = los de build(); background = el fondo del nivel (un bioma de src/fx/Sky.lua, p. ej. 'valley')"""
     lvl = {
         "name": name,
         "name_en": name_en,
         "width": width, "height": H,
         "playerStart": [4, 5],
-        "tiles": build(width, gaps, solids, floor, air),
+        "tiles": build(width, gaps, solids, air, mounts),
         "entities": entities or [],
         "autoScroll": {"startCol": 1, "endCol": 0, "speed": speed, "width": 20, "margin": 0.6, "countdown": 0},
         "music": music,
@@ -64,7 +65,7 @@ def write(out, name, name_en, width, gaps, speed=200, music='flappy', entities=N
         lvl["bossZones"] = [arena["zone"]]
         lvl["entities"] = lvl["entities"] + arena["entities"]
         gaps = gaps + arena["gaps"]
-        lvl["tiles"] = build(width, gaps, solids, floor, air)
+        lvl["tiles"] = build(width, gaps, solids, air, mounts)
     if background:
         lvl["background"] = background
     with open(out, 'w') as f:
@@ -100,6 +101,12 @@ def at_gaps(kind, gaps, idx, **props):
         c, top, h = gaps[i]
         out.append(ent(kind, c, top + (h - 1) // 2, **props))
     return out
+
+
+def launcher(col, row, **props):
+    """Un LANZARREDES en (col, row) sobre su SOPORTE (de la fila row + 1 al borde de abajo: las etapas no tienen suelo)
+    → entidad, soporte para build(mounts=...)"""
+    return ent('netlauncher', col, row, **props), (col, row + 1)
 
 
 def cubby(wc, inside, min_charge=2, **props):

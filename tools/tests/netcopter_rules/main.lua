@@ -5,6 +5,8 @@
 --   de_lado  sin subir (vy = 0) la bomba explota y el jugador pierde 1 de vida
 --   falla    el jefe se aparta del camino: la bomba acaba en un bloque sólido, el jugador sigue igual y ella desaparece;
 --            y una bomba lanzada en arco a un jugador que se aparta sigue hasta el suelo y explota allí sin herir a nadie
+--   bomba_fondo  sin suelo: una lanzada que no toca nada explota en el borde de abajo de la ZONA de su jefe (aunque el
+--            nivel siga), y con la zona de toda la altura en el borde de abajo del nivel (sin nada sólido debajo)
 --   mecha    la mecha es solo un respaldo: una lanzada que no toca nada explota a su `fuse` (0,6 s aquí, en el aire);
 --            con la de siempre (4 s) una lanzada de punta a punta de la sala llega antes al suelo
 -- Y la ayuda del jefe en salas Flappy (director bossdrops, docs/design/flappy-plan-5-netcopter.md):
@@ -30,8 +32,10 @@
 -- Y su etapa de la campaña (assets/levels/valle_redcoptero.json, el nivel de verdad):
 --   etapa_jefe       un piloto sencillo llega a la arena sin morir: la cámara automática 'stop' y la zona 'fight';
 --                    el jefe vencido a la fuerza → sin paredes, vuela a la derecha y toca la meta (→ onFinish)
---   muerte_en_pelea  morir en la pelea → reaparece EN EL AIRE dentro de la zona con toda la vida (el suelo, que en
---                    vuelo hace daño, no le toca), el jefe con la misma vida y como mucho una carga a la vez
+--   muerte_en_pelea  morir en la pelea → reaparece EN EL AIRE dentro de la zona con toda la vida (lejos del borde de
+--                    abajo, que en vuelo hace daño), el jefe con la misma vida y como mucho una carga a la vez
+--   fondo_pelea      sin suelo, en la pelea: caer por el borde de abajo quita exactamente 1, lo devuelve a la zona y la
+--                    pelea sigue; recién reaparecido (invulnerable) no quita nada y también lo devuelve
 --   pilar            los pilares (enemySolid) paran la red (se engancha y se deshace, con netSnag) y la bomba
 --   red_repetida     una red lanzada dos veces llega exacta a su altura la segunda
 --   derrota_bombas   vencido el jefe no queda ninguna bomba cayendo ni hace daño
@@ -168,6 +172,45 @@ function cases.falla()
     end
     check('falla', b2.state == 'exploding' and b2.y >= (FLOOR - 1) * T - b2.outerH / 2 - 12 and b2.x < 8 * T and pb.hp == php2,
         ('lanzada sin nadie en la marca: explota en el suelo (%.0f, %.0f) y nadie sale herido (%d -> %d)'):format(b2.x, b2.y, php2, pb.hp))
+end
+
+-- Sin suelo (Plan 5d): una bomba lanzada en arco que no toca nada explota al llegar al BORDE DE ABAJO DE LA ZONA de su
+-- jefe (aunque el nivel siga más abajo), y en una zona de toda la altura, en el borde de abajo del nivel (que en un nivel
+-- Flappy no tiene nada sólido debajo: no cae para siempre)
+function cases.bomba_fondo()
+    local function sala(zh)
+        local LH = 14
+        local tiles = {}
+        for r = 1, LH do tiles[r] = {}; for c = 1, W do tiles[r][c] = 0 end end
+        local level = Level.fromData({ name = 'fondo', width = W, height = LH, playerStart = { 3, 5 }, tiles = tiles,
+            flappy = true, bossZones = { { id = 1, col = 1, row = 1, w = W, h = zh } },
+            entities = { { type = 'glowbomb', col = 1, row = 1 }, { type = 'miniboss1', col = 1, row = 1, props = { hp = 3 } } } })
+        local es = {}
+        for _, pl in ipairs(level.entities) do es[#es + 1] = Entities.create(pl) end
+        local bomb, boss = es[1], es[2]
+        bomb.x, bomb.y = 20 * T, 3 * T
+        boss.x, boss.y, boss.zone, boss.levelRef = 22 * T, 3 * T, level.bossZones[1], level
+        bomb.owner = boss
+        level.liveEntities, level.players = { bomb }, {}
+        local pa = player(level, 3 * T, 2 * T, 0)
+        bomb:lob(8 * T, 9 * T, 2 * T, 900)           -- (a la marca no hay nadie)
+        local hp0 = pa.hp
+        for _ = 1, 60 * 5 do
+            step(level, bomb, pa)
+            if bomb.state ~= 'falling' then break end
+        end
+        return bomb, level.bossZones[1], level, pa.hp == hp0
+    end
+    local b, z, _, safe = sala(11)
+    local bottom = b.y + b.outerH / 2
+    check('bomba_fondo', b.state == 'exploding' and bottom >= z.y1 - 1 and bottom <= z.y1 + 16 and safe,
+        ('zona de 11 filas en un nivel de 14: explota en el borde de abajo de la zona (abajo de la bomba %.0f, zona %d)=%s'):format(
+        bottom, z.y1, tostring(b.state)))
+    local b2, _, lv2 = sala(14)
+    local bottom2 = b2.y + b2.outerH / 2
+    check('bomba_fondo', b2.state == 'exploding' and bottom2 >= lv2.heightPx - 1 and bottom2 <= lv2.heightPx + 16,
+        ('zona de toda la altura, nivel sin suelo: explota en el borde de abajo del nivel (%.0f, nivel %d)=%s'):format(
+        bottom2, lv2.heightPx, tostring(b2.state)))
 end
 
 function cases.mecha()
@@ -780,12 +823,14 @@ local function stageStep(level, es, ctrl, pa)
         return 'respawn'
     end
 end
--- El hueco del siguiente pilar por delante de x: centro en px (nil = no hay más)
+-- El hueco del siguiente pilar por delante de x: centro en px (nil = no hay más). Sin suelo: los pilares van de la fila
+-- 1 a la última
 local function nextGap(level, x, xMax)
+    local H = level.tileH
     for c = math.floor(x / T) + 1, math.floor(xMax / T) + 1 do
-        if level:getTile(c, 1) == PILLAR or level:getTile(c, 9) == PILLAR then
+        if level:getTile(c, 1) == PILLAR or level:getTile(c, H) == PILLAR then
             local top, bot
-            for r = 1, 9 do if level:getTile(c, r) ~= PILLAR then top = top or r; bot = r end end
+            for r = 1, H do if level:getTile(c, r) ~= PILLAR then top = top or r; bot = r end end
             if top then return ((top - 1) * T + bot * T) / 2 end
         end
     end
@@ -827,6 +872,53 @@ function cases.etapa_jefe()
     Difficulty.bind(nil)
 end
 
+-- Sin suelo, en plena pelea (Plan 5d): caer por el borde de abajo de la arena quita exactamente 1 (lo cuenta un espía de
+-- hurt: solo los golpes con el jugador en el borde), lo devuelve a la zona y la pelea sigue; y justo tras reaparecer
+-- (invulnerable) caer por el borde no quita nada y también lo devuelve
+function cases.fondo_pelea()
+    local level, es, boss, pa, ctrl, z = stageLevel()
+    local a = level.autoScroll
+    a.x, a.state = a.endX, 'stop'
+    for _ = 1, 8 * 60 do
+        pa.x, pa.y, pa.vy = z.x0 + 4 * T, 5 * T, 0
+        stageStep(level, es, ctrl, pa)
+        if z.state == 'fight' then break end
+    end
+    local edgeHits, realHurt = 0, pa.hurt
+    pa.hurt = function(self, n)
+        local hp0 = self.hp
+        local r = realHurt(self, n)
+        if self.hp < hp0 and self.y >= level.heightPx - 1 then edgeHits = edgeHits + 1 end
+        return r
+    end
+    local bottom = level.heightPx
+    local function fall(secs)
+        local back, deepest = false, 0
+        pa.x, pa.y, pa.vy = z.x0 + 4 * T, bottom - T, 300
+        for _ = 1, math.floor(secs * 60) do
+            for k in pairs(stub.state) do stub.state[k] = false end
+            stageStep(level, es, ctrl, pa)
+            deepest = math.max(deepest, pa.y)
+            if deepest >= bottom and pa.y + pa:getOuterBounds().h / 2 < bottom then back = true end
+        end
+        return back, deepest
+    end
+    pa.invT = 0
+    local back, deepest = fall(1.4)
+    check('fondo_pelea', z.state == 'fight' and edgeHits == 1 and back and not pa.dying and BossZones.contains(z, pa.x, pa.y),
+        ('en la pelea cae por el borde (y %d, llega a %.0f): golpes del borde %d, vuelve entero a la zona=%s, pelea %s'):format(
+        bottom, deepest, edgeHits, tostring(back), z.state))
+    pa:die(nil, true)
+    for _ = 1, 5 * 60 do if stageStep(level, es, ctrl, pa) == 'respawn' then break end end
+    local hpR, inv = pa.hp, pa:isInvulnerable()
+    edgeHits = 0
+    local back2 = fall(0.6)
+    check('fondo_pelea', inv and edgeHits == 0 and pa.hp == hpR and back2 and not pa.dying,
+        ('recién reaparecido (invulnerable=%s): cae por el borde, golpes %d (vida %d → %d), vuelve=%s'):format(
+        tostring(inv), edgeHits, hpR, pa.hp, tostring(back2)))
+    pa.hurt = nil
+end
+
 function cases.muerte_en_pelea()
     local level, es, boss, pa, ctrl, z = stageLevel()
     -- (directamente a la arena: el jugador en su tercio izquierdo, la ventana parada encima)
@@ -854,12 +946,13 @@ function cases.muerte_en_pelea()
     local def = level:getDef(math.floor(x / T) + 1, math.floor(y / T) + 1)
     check('muerte_en_pelea', back and BossZones.contains(z, x, y) and z.state == 'fight',
         ('reaparece dentro de la zona (%.0f, %.0f) con la pelea en marcha'):format(x, y))
-    check('muerte_en_pelea', def.collision == 'none' and not def.mat.contact and y < (FLOOR - 2) * T,
-        ('en el AIRE (casilla %s, %.1f casillas sobre el suelo), no de pie en el suelo'):format(def.name, ((FLOOR - 1) * T - y) / T))
-    -- (sin la invulnerabilidad de reaparecer y sin tocar nada: no toca el suelo)
+    -- (sin suelo: lejos del borde de abajo del nivel, que en vuelo quita vida)
+    check('muerte_en_pelea', def.collision == 'none' and not def.mat.contact and y < level.heightPx - 2 * T,
+        ('en el AIRE (casilla %s, %.1f casillas sobre el borde de abajo)'):format(def.name, (level.heightPx - y) / T))
+    -- (sin la invulnerabilidad de reaparecer y sin tocar nada: no cae por el borde de abajo)
     pa.invT = 0
     for _ = 1, 18 do stageStep(level, es, ctrl, pa) end
-    check('muerte_en_pelea', pa.hp == pa.hpMax, ('vida al reaparecer: %d/%d (sin golpe del suelo)'):format(pa.hp, pa.hpMax))
+    check('muerte_en_pelea', pa.hp == pa.hpMax, ('vida al reaparecer: %d/%d (sin golpe del borde de abajo)'):format(pa.hp, pa.hpMax))
     check('muerte_en_pelea', boss.hp == hp0, ('el jefe sigue con su vida: %d → %d'):format(hp0, boss.hp))
     -- (la ayuda del jefe sigue: nunca más de una carga a la vez en pantalla — la arena —; las de los pilares no cuentan)
     pa.charge = 0
@@ -1156,9 +1249,9 @@ function cases.reaparece_lejos()
     check('reaparece_lejos', x and x < mid and math.abs(x - (zx0 + w / 3)) < 1 and BossZones.contains(z, x, y), msg)
 end
 
-local ORDER = { 'rebote', 'de_lado', 'falla', 'mecha', 'cargas', 'lastima', 'aire', 'aventura', 'ultima_vida',
+local ORDER = { 'rebote', 'de_lado', 'falla', 'bomba_fondo', 'mecha', 'cargas', 'lastima', 'aire', 'aventura', 'ultima_vida',
                 'vida', 'fase2', 'especial', 'no_pisa', 'red', 'garra', 'huye', 'bomba', 'azar', 'paquete',
-                'etapa_jefe', 'muerte_en_pelea', 'pilar', 'red_repetida', 'derrota_bombas',
+                'etapa_jefe', 'muerte_en_pelea', 'fondo_pelea', 'pilar', 'red_repetida', 'derrota_bombas',
                 'lanzada', 'devuelta_arco', 'cruza', 'mira_izq', 'cruce_justo', 'risa', 'dibujo', 'ruido',
                 'reaparece_lejos', 'cabina', 'garra_anim' }
 function love.load()

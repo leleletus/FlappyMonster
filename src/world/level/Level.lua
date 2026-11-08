@@ -209,6 +209,9 @@ function Level.fromData(lvl, difficulty)
     -- Zonas de jefe (src/world/systems/BossZones.lua)
     self.bossZones = BossZones.build(lvl.bossZones, lvl.openTop == true)
     self.flappy    = lvl.flappy == true                -- (nivel FLAPPY: el jugador vuela — src/player/PlayerFlight.lua —)
+    -- (sin nada sólido DEBAJO del nivel: los niveles Flappy no tienen suelo —los pilares suben desde el borde de abajo—;
+    --  caer por ese borde lo resuelve el vuelo —PlayerFlight: 1 de vida y un bote— y lo que cae explota o se va)
+    self.openBottom = self.flappy
     self.event     = lvl.event == true                 -- (nivel de EVENTO: el Mega Mashup; Juego Libre lo destaca; la ayuda)
     -- Ayuda en las peleas de jefe (Extremo / Xtra extremo: modificadores bossFood / bossLives): un director y su
     -- reserva de comidas y vidas, AL FINAL de la lista (mismos índices en servidor y clientes)
@@ -368,8 +371,10 @@ end
 local OUTSIDE_RAW = TILE_SOLID
 
 function Level:getRaw(col, row)
-    -- (fuera del nivel es sólido: paredes, suelo y techo; con `openTop`, encima no hay techo)
+    -- (fuera del nivel es sólido: paredes, suelo y techo; con `openTop`, encima no hay techo; con `openBottom`, debajo
+    --  no hay suelo)
     if row < 1 and self.openTop then return 0 end
+    if row > self.tileH and self.openBottom then return 0 end
     if row<1 or row>self.tileH or col<1 or col>self.tileW then return OUTSIDE_RAW end
     return self.tiles[row][col] or 0
 end
