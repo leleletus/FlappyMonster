@@ -1,6 +1,8 @@
 -- src/states/story/StorySlotState.lua
--- MODO HISTORIA: elegir PARTIDA. Tres huecos (src/story/Save.lua); uno vacío empieza una
--- aventura nueva, uno usado continúa donde iba (mundo, progreso, vidas). BORRAR pide confirmar.
+-- Elegir PARTIDA de una campaña: la historia de Aventura (src/story/Save.lua) o la campaña Flappy
+-- (src/flappy/FlappySave.lua) — `args.campaign` ('story' por defecto); lo propio de cada una sale de su descriptor
+-- (src/story/Campaigns.lua) —. Tres huecos; uno vacío empieza una partida nueva, uno usado continúa donde iba (mundo,
+-- progreso, vidas). BORRAR pide confirmar.
 -- Cada partida es un CARTUCHO (assets/images/ui/menus/cartridge.png, tools/art/ui/make_menu_ui.py; docs/architecture/
 -- menus.md): en fila, con su etiqueta — la isla donde va (cart_labels.png), el mundo, el progreso, la dificultad, las
 -- vidas y el tiempo — y el número arriba; el elegido sube y bota. Al jugar, el cartucho "se mete" (baja) y se pasa
@@ -15,10 +17,8 @@ local MenuButton    = require 'src/ui/menu/MenuButton'
 local Transition    = require 'src/ui/menu/Transition'
 local CornerButtons = require 'src/ui/CornerButtons'
 local PixelFont     = require 'src/ui/PixelFont'
-local Save          = require 'src/story/Save'
-local Run           = require 'src/story/Run'
-local Worlds        = require 'src/story/Worlds'
-local Shards        = require 'src/story/Shards'
+local Campaigns     = require 'src/story/Campaigns'
+local SLOTS         = 3                  -- (huecos de cada campaña: SLOTS = FlappySLOTS)
 local Difficulty    = require 'src/core/Difficulty'
 local json          = require 'libs/json'
 local L = require 'src/core/Lang'
@@ -55,8 +55,8 @@ local function cartRect(i)
     local w, h = a.m.w * CART_S, a.m.h * CART_S
     local s = CART_S
     -- (en pantallas estrechas, una escala menos)
-    if Save.SLOTS * w + (Save.SLOTS - 1) * GAP > WINDOW_W - 40 then s = CART_S - 1; w, h = a.m.w * s, a.m.h * s end
-    local total = Save.SLOTS * w + (Save.SLOTS - 1) * GAP
+    if SLOTS * w + (SLOTS - 1) * GAP > WINDOW_W - 40 then s = CART_S - 1; w, h = a.m.w * s, a.m.h * s end
+    local total = SLOTS * w + (SLOTS - 1) * GAP
     local x0 = math.floor((WINDOW_W - total) / 2)
     return x0 + (i - 1) * (w + GAP), math.floor(WINDOW_H * 0.24), w, h, s
 end
@@ -79,8 +79,9 @@ local function pickRect(k)
     return math.floor((WINDOW_W - w) / 2), math.floor(WINDOW_H * 0.27) + (k - 1) * (h + gap), w, h
 end
 
-function StorySlotState:enter()
-    Run.close()
+function StorySlotState:enter(args)
+    self.c = Campaigns.get(args and args.campaign)
+    self.c.run.close()
     self.sel = self.sel or 1
     self.confirm = nil                       -- hueco que se está a punto de borrar
     self.t = 0
@@ -91,15 +92,17 @@ end
 
 function StorySlotState:reload()
     self.slots = {}
-    for i = 1, Save.SLOTS do
-        local d = Save.load(i)
+    for i = 1, SLOTS do
+        local R = self.c.run
+        local d = self.c.saves.load(i)
         if d then
-            local saved, run = Run.slot, Run.data
-            Run.slot, Run.data = i, d
-            local done, total = Run.progress()
-            local w = Run.frontier()
-            Run.slot, Run.data = saved, run
-            local sh, shT = Shards.count(d)
+            local saved, run = R.slot, R.data
+            R.slot, R.data = i, d
+            local done, total = R.progress()
+            local w = R.frontier()
+            R.slot, R.data = saved, run
+            local sh, shT
+            if self.c.shards then sh, shT = self.c.shards(d) end
             self.slots[i] = { data = d, done = done, total = total, world = w, shards = sh, shardsTotal = shT }
         else
             self.slots[i] = false
@@ -113,12 +116,12 @@ function StorySlotState:_open(i)
     if self.inserting then return end
     Sound.play('select', 1.2)
     if not self.slots[i] and not self.pick then
-        self.unlocked = Save.global().unlocked
+        self.unlocked = self.c.unlocked()
         self.pick = { slot = i, sel = 2, t = 0 }
         return
     end
     local new = not self.slots[i]
-    Run.open(i, self.pick and Difficulty.ORDER[self.pick.sel] or nil)
+    self.c.run.open(i, self.pick and self.c.difficulties[self.pick.sel] or nil)
     self.pick = nil
     -- el cartucho se mete (baja) y se pasa con el iris; una partida NUEVA empieza con la intro de la historia
     -- (se puede saltar manteniendo pulsado)
@@ -127,10 +130,11 @@ end
 
 function StorySlotState:_go()
     local cx, cy = self:_cartCenter(self.inserting.slot)
-    if self.inserting.new then
-        Transition.go('story_film', { film = 'intro', onDone = function() gStateMachine:change('story_map') end }, cx, cy)
+    local map = self.c.map
+    if self.inserting.new and self.c.introFilm then
+        Transition.go('story_film', { film = self.c.introFilm, onDone = function() gStateMachine:change(map) end }, cx, cy)
     else
-        Transition.go('story_map', nil, cx, cy)
+        Transition.go(map, nil, cx, cy)
     end
 end
 
@@ -140,7 +144,7 @@ function StorySlotState:_cartCenter(i)
 end
 
 function StorySlotState:_diffOpen(k)
-    local id = Difficulty.ORDER[k]
+    local id = self.c.difficulties[k]
     return Difficulty.START[id] == true or (self.unlocked and self.unlocked[id] == true)
 end
 
@@ -153,7 +157,7 @@ end
 function StorySlotState:_delete(i)
     if not self.slots[i] then return end
     if self.confirm ~= i then self.confirm = i; Sound.play('select'); return end
-    Save.delete(i)
+    self.c.saves.delete(i)
     self.confirm = nil
     Sound.play('select')
     self:reload()
@@ -164,7 +168,7 @@ end
 function StorySlotState:_copyStart(i)
     if not self.slots[i] then return end
     local empty
-    for k = 1, Save.SLOTS do if not self.slots[k] then empty = empty or k end end
+    for k = 1, SLOTS do if not self.slots[k] then empty = empty or k end end
     if not empty then Notify.toast(L('story.copy_none'), 'error'); Sound.play('headBump'); return end
     self.copyFrom, self.confirm, self.btnRow = i, nil, nil
     self.sel = empty
@@ -172,7 +176,7 @@ function StorySlotState:_copyStart(i)
 end
 function StorySlotState:_copyTo(k)
     if not self.copyFrom or self.slots[k] then Sound.play('headBump'); return end
-    Save.write(k, self.slots[self.copyFrom].data)
+    self.c.saves.write(k, self.slots[self.copyFrom].data)
     self.copyFrom = nil
     self.sel = k
     Sound.play('checkpoint')
@@ -182,7 +186,8 @@ end
 function StorySlotState:_back()
     if self.anim:busy() then return end
     Sound.play('select', 0.85)
-    self.anim:leave(function() gStateMachine:change('adv_mode_select', { selected = 1 }) end)
+    local b = self.c.back
+    self.anim:leave(function() gStateMachine:change(b[1], b[2]) end)
 end
 
 function StorySlotState:update(dt)
@@ -197,7 +202,7 @@ function StorySlotState:update(dt)
     if self.anim:busy() then return end
     if self.pick then
         self.pick.t = self.pick.t + dt
-        local n = #Difficulty.ORDER
+        local n = #self.c.difficulties
         if Input.pressed('nav_up') then self.pick.sel = (self.pick.sel - 2) % n + 1; Sound.play('select', 0.94) end
         if Input.pressed('nav_down') then self.pick.sel = self.pick.sel % n + 1; Sound.play('select', 1.08) end
         if Input.pressed('confirm') or Input.pressed('flap') then self:_pickConfirm(); return end
@@ -207,8 +212,8 @@ function StorySlotState:update(dt)
     -- (copiando: el cursor solo va por los huecos vacíos; confirmar copia, ATRÁS cancela)
     if self.copyFrom then
         local function moveEmpty(d)
-            for step = 1, Save.SLOTS do
-                local k = (self.sel - 1 + d * step) % Save.SLOTS + 1
+            for step = 1, SLOTS do
+                local k = (self.sel - 1 + d * step) % SLOTS + 1
                 if not self.slots[k] then self.sel = k; Sound.play('select', d > 0 and 1.08 or 0.94); return end
             end
         end
@@ -228,7 +233,7 @@ function StorySlotState:update(dt)
         return
     end
     if Input.pressed('nav_down') and self.slots[self.sel] then self.btnRow = 1; Sound.play('select'); return end
-    local function move(d) self.sel = (self.sel - 1 + d) % Save.SLOTS + 1; self.confirm = nil; self.selT = 0; Sound.play('select', d > 0 and 1.08 or 0.94) end
+    local function move(d) self.sel = (self.sel - 1 + d) % SLOTS + 1; self.confirm = nil; self.selT = 0; Sound.play('select', d > 0 and 1.08 or 0.94) end
     if Input.pressed('nav_left') or Input.pressed('nav_up') then move(-1) end
     if Input.pressed('nav_right') or (Input.pressed('nav_down') and not self.slots[self.sel]) then move(1) end
     if Input.pressed('confirm') or Input.pressed('flap') then
@@ -252,10 +257,10 @@ function StorySlotState:mousemoved(x, y)
     self.backHover = CornerButtons.hitBack(x, y)
     if self.inserting then return end
     if self.pick then
-        for k = 1, #Difficulty.ORDER do if inside(x, y, pickRect(k)) then self.pick.sel = k end end
+        for k = 1, #self.c.difficulties do if inside(x, y, pickRect(k)) then self.pick.sel = k end end
         return
     end
-    for i = 1, Save.SLOTS do
+    for i = 1, SLOTS do
         if inside(x, y, cartRect(i)) and self.sel ~= i then self.sel = i; self.confirm = nil; self.selT = 0; Sound.play('select') end
     end
 end
@@ -264,13 +269,13 @@ function StorySlotState:touchpressed(id, x, y)
     if self.inserting or self.anim:busy() then return end
     if self.pick then
         if CornerButtons.hitBack(x, y) then self.pick = nil; Sound.play('select'); return end
-        for k = 1, #Difficulty.ORDER do
+        for k = 1, #self.c.difficulties do
             if inside(x, y, pickRect(k)) then self.pick.sel = k; self:_pickConfirm(); return end
         end
         return
     end
     if CornerButtons.hitBack(x, y) then return self:_back() end
-    for i = 1, Save.SLOTS do
+    for i = 1, SLOTS do
         if self.copyFrom then
             if inside(x, y, cartRect(i)) then self.sel = i; self:_copyTo(i) end
         else
@@ -309,7 +314,7 @@ function StorySlotState:_drawCart(i, x, y, s, sel, a)
     -- la ventanita: la isla donde va (o la de la partida nueva)
     local win = m.window
     local scene = 'new'
-    if slot then local W = Worlds.get(slot.world); scene = W and W.id or 'pradera' end
+    if slot then local W = self.c.worlds.get(slot.world); scene = W and self.c.scene(W) or 'new' end
     love.graphics.setColor(1, 1, 1, a)
     love.graphics.draw(A.labels, A.scenes[scene] or A.scenes.new, x + win[1] * s, y + win[2] * s, 0, s, s)
     -- el texto de la etiqueta (debajo de la ventanita)
@@ -325,12 +330,12 @@ function StorySlotState:_drawCart(i, x, y, s, sel, a)
         local ts = MenuButton.textScale(t, tw, 3)
         PixelFont.draw(t, math.floor(tx + (tw - PixelFont.width(t, ts)) / 2), ty + 2 * s, ts, a, ink)
         love.graphics.setColor(ink[1], ink[2], ink[3], 0.75 * a)
-        love.graphics.printf(L('story.slot_new_hint'), tx, ty + 2 * s + PixelFont.height(ts) + 10, tw, 'center')
+        love.graphics.printf(L(self.c.newHint), tx, ty + 2 * s + PixelFont.height(ts) + 10, tw, 'center')
         return
     end
     local d = slot.data
-    local W = Worlds.get(slot.world)
-    local name = W and L('story.world.' .. W.id) or ''
+    local W = self.c.worlds.get(slot.world)
+    local name = W and self.c.worldName(W) or ''
     local ns = MenuButton.textScale(name, tw, 3)
     PixelFont.draw(name, math.floor(tx + (tw - PixelFont.width(name, ns)) / 2), ty, ns, a, ink)
     local ly = ty + PixelFont.height(ns) + 8
@@ -356,8 +361,8 @@ end
 function StorySlotState:render()
     MenuScene.bricks('story')                    -- (ladrillos del Flappy, no el fondo vivo: src/ui/menu/MenuScene)
     local A = self.anim
-    if not self.pick then MenuList.header(L('story.title'), 'yellow', A, 1) end
-    for i = 1, Save.SLOTS do
+    if not self.pick then MenuList.header(L(self.c.title), self.c.id == 'flappy' and 'orange' or 'yellow', A, 1) end
+    for i = 1, SLOTS do
         local x, y, w, h, s = cartRect(i)
         local sel = i == self.sel and not self.pick
         local ox, oy, a = A:slide(i + 1, 0, 300)
@@ -389,7 +394,7 @@ function StorySlotState:render()
     if self.pick then
         MenuScene.dim(0.55)
         MenuList.header(L('difficulty.title'), 'orange')
-        for k, id in ipairs(Difficulty.ORDER) do
+        for k, id in ipairs(self.c.difficulties) do
             local x, y, w, h = pickRect(k)
             local sel, open = k == self.pick.sel, self:_diffOpen(k)
             local kin = math.min(1, math.max(0, (self.pick.t - (k - 1) * 0.05) / 0.25))
@@ -402,19 +407,19 @@ function StorySlotState:render()
                 PixelIcons.draw('lock', x + w - 48, y + oy + h / 2 - 18, 3)
             end
         end
-        local id = Difficulty.ORDER[self.pick.sel]
+        local id = self.c.difficulties[self.pick.sel]
         MenuList.footer(self:_diffOpen(self.pick.sel) and L('difficulty.desc.' .. id) or L('difficulty.locked.' .. id), nil, nil,
                         L('difficulty.hint'))
     else
         local s = self.slots[self.sel]
         if self.copyFrom then
-            MenuList.footer(L('story.copy_pick', { n = self.copyFrom }), A, Save.SLOTS + 2, L('story.copy_hint'))
+            MenuList.footer(L('story.copy_pick', { n = self.copyFrom }), A, SLOTS + 2, L('story.copy_hint'))
             love.graphics.setColor(1, 1, 1, 1)
             CornerButtons.drawBack(self.backHover)
             return
         end
-        MenuList.footer(s and L('story.slot_desc', { world = s.world, shards = s.shards, total = s.shardsTotal }) or L('story.slot_empty'),
-                        A, Save.SLOTS + 2, L('story.slot_hint'))
+        MenuList.footer(s and self.c.slotDesc(s) or L(self.c.emptyDesc),
+                        A, SLOTS + 2, L('story.slot_hint'))
     end
     love.graphics.setColor(1, 1, 1, 1)
     CornerButtons.drawBack(self.backHover)

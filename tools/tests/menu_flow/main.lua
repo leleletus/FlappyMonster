@@ -268,6 +268,35 @@ local function run()
              tostring(lockedOk), tostring(stays), tostring(noEndless), tostring(dbgOpen), tostring(unlocked)))
         gStateMachine:change('main_menu', { select = 'classic' }); wait(0.6)
     end
+    -- ── 2b2. las PARTIDAS de la campaña Flappy: FLAPPY → CAMPAÑA → 3 cartuchos vacíos; uno vacío ofrece SOLO Fácil,
+    --         Normal y Difícil; Normal crea flappy<n>.sav (no story<n>.sav) y lleva al mapa de zonas; ATRÁS vuelve a la
+    --         pantalla de FLAPPY con CAMPAÑA elegida ──
+    do
+        local FlappySave = require 'src/flappy/FlappySave'
+        local Save = require 'src/story/Save'
+        for i = 1, 3 do FlappySave.delete(i); Save.delete(i) end
+        gStateMachine:change('flappy_campaign'); wait(0.6)
+        press('confirm', 1.4)                                   -- (CAMPAÑA, el primero)
+        local sl = top()
+        local inSlots = name(sl) == 'StorySlotState' and sl.c and sl.c.id == 'flappy'
+        local empty = inSlots and not sl.slots[1] and not sl.slots[2] and not sl.slots[3]
+        if inSlots then for _, w in ipairs({ 960, 1600, 1280 }) do resize(w, 720); wait(0.3); shot('flappy_slots_' .. w) end end
+        press('confirm', 0.4)                                   -- (el 1, vacío: pide la dificultad)
+        local diffs = inSlots and sl.pick and #sl.c.difficulties or 0
+        if inSlots and sl.pick then shot('flappy_pick') end
+        press('confirm', 1.4)                                   -- (Normal, la elegida al abrir)
+        local toMap = name(top()) == 'FlappyMapState'
+        local files = love.filesystem.getInfo('flappy1.sav') ~= nil and love.filesystem.getInfo('story1.sav') == nil
+        local nd = FlappySave.load(1)
+        gStateMachine:change('story_slots', { campaign = 'flappy' }); wait(0.6)
+        press('back', 0.8)
+        local backOk = name(top()) == 'FlappyCampaignState' and selId(top()) == 'campaign'
+        check('flappy_slots', inSlots and empty and diffs == 3 and toMap and files and nd and nd.difficulty == 'normal' and backOk,
+            ('CAMPAÑA → partidas Flappy=%s, vacías=%s; dificultades %d; Normal → mapa=%s; flappy1.sav y no story1.sav=%s (%s); atrás → FLAPPY con CAMPAÑA=%s'):format(
+             tostring(inSlots), tostring(empty), diffs, tostring(toMap), tostring(files), nd and nd.difficulty or '-', tostring(backOk)))
+        require('src/flappy/FlappyRun').close()
+        for i = 1, 3 do FlappySave.delete(i) end
+    end
     -- ── 2c. el MAPA DE ZONAS de la campaña Flappy: nodos, jugar una etapa (nivel Flappy, vuelve al mapa), terminarla
     --        (resultados → el mapa con la siguiente abierta) y salir a medias (vidas perdidas sí, nada ganado) ──
     do

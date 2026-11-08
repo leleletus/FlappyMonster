@@ -241,7 +241,11 @@ flappy.map_locked,Supera la etapa anterior para abrirla,Clear the previous stage
 flappy.map_new,Sin jugar todavía,Not played yet,
 flappy.map_best,"Mejor nota: {grade}    Mejor tiempo: {t} s","Best grade: {grade}    Best time: {t} s",
 fc.campaign,CAMPAÑA,CAMPAIGN,"CLÁSICO (src/states/flappy/FlappyCampaignState.lua): la campaña Flappy, aún sin hacer"
-fc.desc_soon,"Próximamente: cómo llegó el monstruo a las islas","Coming soon: how the monster reached the islands",
+fc.desc_campaign,"La precuela: cómo llegó el monstruo a las islas","The prequel: how the monster reached the islands",
+flappy.slots_title,CAMPAÑA FLAPPY,FLAPPY CAMPAIGN,
+flappy.slot_desc,Zona {zone},Zone {zone},
+flappy.slot_new_hint,Empezar la campaña,Start the campaign,
+flappy.slot_empty,Vacío  ·  empezar la campaña,Empty  ·  start the campaign,
 fc.endless,INFINITO,ENDLESS,
 fc.desc_endless,El Flappy de siempre: pasa entre las tuberías,The original Flappy: get through the pipes,
 dbg.title,DEPURACIÓN,DEBUG,"Menú secreto (src/states/menu/DebugMenuState.lua): ↑↑↓↓←→←→ o 7 toques en la versión"
