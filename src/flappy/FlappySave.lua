@@ -6,7 +6,8 @@ local SaveFile = require 'src/core/SaveFile'
 local Difficulty = require 'src/core/Difficulty'
 
 -- VERSION 2 (Plan 4): `rescued[etapa] = { [colocación] = true }`, los flappies enjaulados liberados (al terminar la etapa)
-local FlappySave = { SLOTS = 3, VERSION = 2, DIFFICULTIES = { 'easy', 'normal', 'hard' } }
+-- VERSION 3 (Plan 4b): `inventory = { [power-up] = cuántos }`, los POWER-UPS de la partida (src/flappy/FlappyRun.lua)
+local FlappySave = { SLOTS = 3, VERSION = 3, DIFFICULTIES = { 'easy', 'normal', 'hard' } }
 
 function FlappySave.file(i) return 'flappy' .. i .. '.sav' end
 
@@ -15,7 +16,7 @@ function FlappySave.new(difficulty)
     difficulty = difficulty or 'normal'
     return { version = FlappySave.VERSION, difficulty = difficulty, world = 1, node = 1,
              lives = Difficulty.of(difficulty, 'livesStart', 3),
-             done = {}, best = {}, playTime = 0, points = 0, gameOvers = 0, rescued = {} }
+             done = {}, best = {}, playTime = 0, points = 0, gameOvers = 0, rescued = {}, inventory = {} }
 end
 
 function FlappySave.load(i)
@@ -29,6 +30,7 @@ function FlappySave.load(i)
     d.points = tonumber(d.points) or 0
     d.gameOvers = tonumber(d.gameOvers) or 0
     d.rescued = type(d.rescued) == 'table' and d.rescued or {}     -- (versión 1: sin jaulas todavía)
+    d.inventory = type(d.inventory) == 'table' and d.inventory or {} -- (versión 2: sin power-ups todavía)
     d.version = FlappySave.VERSION
     return d
 end

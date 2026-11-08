@@ -185,12 +185,42 @@ function cases.jaulas()
     local saved = d.rescued and d.rescued.valle_pilares_1 and d.rescued.valle_pilares_1[1] == true
     local freed, total = FlappyRun.rescuedCount('valle_pilares_1')
     FlappyRun.close(); FlappySave.delete(3)
-    check('jaulas', none and saved and freed == 1 and FlappySave.VERSION == 2,
+    check('jaulas', none and saved and freed == 1 and FlappySave.VERSION >= 2,
           ('salir a medias no guarda nada=%s; terminar guarda la 1=%s; cuenta %s/%s; versión de las partidas %d'):format(
            tostring(none), tostring(saved), tostring(freed), tostring(total), FlappySave.VERSION))
 end
 
-local ORDER = { 'archivo', 'progreso', 'zonas', 'partida', 'premio', 'jaulas' }
+-- Inventario de POWER-UPS por partida (docs/design/powerups.md): 6 en total, 3 por tipo; gastar escribe ya la partida
+function cases.inventario()
+    local FlappyRun, FlappySave = require 'src/flappy/FlappyRun', require 'src/flappy/FlappySave'
+    local Powerups = require 'src/world/powerups/Powerups'
+    FlappySave.delete(3)
+    FlappyRun.open(3, 'normal')
+    local r = {}
+    for i = 1, 4 do r[#r + 1] = FlappyRun.addPowerup('shield') end
+    for i = 1, 3 do r[#r + 1] = FlappyRun.addPowerup('heart') end
+    r[#r + 1] = FlappyRun.addPowerup('strength')
+    local codes = table.concat(r, ',')
+    local spent = FlappyRun.spendPowerup('shield')
+    local inFile = (FlappySave.load(3).inventory or {}).shield
+    local missing = FlappyRun.spendPowerup('ghost')
+    local total = FlappyRun.inventoryCount()
+    FlappyRun.close(); FlappySave.delete(3)
+    -- una partida de la versión 2 (sin inventario) carga con el inventario vacío
+    local SaveFile = require 'src/core/SaveFile'
+    SaveFile.write('flappy3.sav', { version = 2, difficulty = 'normal', world = 1, node = 1, lives = 3, done = {}, best = {} })
+    local old = FlappySave.load(3)
+    FlappySave.delete(3)
+    local ids = {}
+    for _, p in ipairs(Powerups.forMode('flappy')) do ids[#ids + 1] = p.id end
+    check('inventario', codes == 'ok,ok,ok,type_full,ok,ok,ok,full' and spent and inFile == 2 and not missing and total == 5
+          and old and type(old.inventory) == 'table' and next(old.inventory) == nil and FlappySave.VERSION == 3
+          and table.concat(ids, ',') == 'shield,heart,strength,magnet_points,magnet_items,magnet_all,small,ghost',
+          ('añadir: %s; gastar un escudo=%s (en el archivo: %s); gastar uno que no hay=%s; total %d; v2 → inventario vacío=%s; catálogo Flappy: %s'):format(
+           codes, tostring(spent), tostring(inFile), tostring(missing), total, tostring(old and old.inventory and next(old.inventory) == nil), table.concat(ids, ',')))
+end
+
+local ORDER = { 'archivo', 'progreso', 'zonas', 'partida', 'premio', 'jaulas', 'inventario' }
 function love.load()
     local only = os.getenv('CASE')
     for _, name in ipairs(ORDER) do

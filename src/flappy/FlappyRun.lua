@@ -44,6 +44,37 @@ function FlappyRun.rescuedCount(id)
     return freed, cageCount[id]
 end
 
+-- ── POWER-UPS (docs/design/powerups.md): inventario de la partida, 6 en total y 3 de cada tipo ───────────────────────
+FlappyRun.MAX_TOTAL, FlappyRun.MAX_TYPE = 6, 3
+
+function FlappyRun.inventoryCount()
+    local n = 0
+    for _, c in pairs((FlappyRun.data and FlappyRun.data.inventory) or {}) do n = n + c end
+    return n
+end
+
+-- Añade uno (ganado AL TERMINAR una etapa: golden rule 7) → 'ok' | 'full' (6 en total) | 'type_full' (3 de ese tipo).
+-- No guarda: quien lo llama guarda una vez
+function FlappyRun.addPowerup(id)
+    local d = FlappyRun.data
+    if not d then return 'full' end
+    d.inventory = d.inventory or {}
+    if FlappyRun.inventoryCount() >= FlappyRun.MAX_TOTAL then return 'full' end
+    if (d.inventory[id] or 0) >= FlappyRun.MAX_TYPE then return 'type_full' end
+    d.inventory[id] = (d.inventory[id] or 0) + 1
+    return 'ok'
+end
+
+-- Gasta uno: se GUARDA YA, pase lo que pase después (el usuario: "en el momento justo en que lo usas ya se gasta")
+function FlappyRun.spendPowerup(id)
+    local d = FlappyRun.data
+    if not (d and d.inventory and (d.inventory[id] or 0) > 0) then return false end
+    d.inventory[id] = d.inventory[id] - 1
+    if d.inventory[id] <= 0 then d.inventory[id] = nil end
+    FlappyRun.save()
+    return true
+end
+
 function FlappyRun.gameOver()
     return FlappyRun.restartWorld((FlappyRun.frontier()))
 end
