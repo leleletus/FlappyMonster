@@ -38,6 +38,67 @@ local function windowSpeed(level)
     return (a and a.state == 'run') and a.speed or 0
 end
 
+-- ── ATAQUE ESPECIAL ────────────────────────────────────────────────────────────
+-- ESPECIAL con carga: una RÁFAGA de magia de aleteo sale por delante con potencia = la carga (que se gasta entera) y
+-- avanza BURST_SPD px/s hasta BURST_RANGE casillas. La para un bloque SÓLIDO (los pilares no lo son) o una entidad que
+-- la absorba (`onSpecialHit(potencia, jugador)` → true: base/Entity.lua — los enemigos mueren —, base/Boss.lua — daño
+-- = potencia —, la jaula, el muro agrietado). A cada entidad le da una vez. Estado del jugador (`bursts`), simulado
+-- igual en todas partes; se dibuja en renderBursts.
+local BURST_SPD, BURST_RANGE, BURST_R = 900, 8, 22
+PlayerAdventure.BURST_SPD, PlayerAdventure.BURST_RANGE = BURST_SPD, BURST_RANGE
+
+function PlayerAdventure:fireSpecial()
+    if (self.charge or 0) <= 0 then return false end
+    self.bursts = self.bursts or {}
+    self.bursts[#self.bursts + 1] = { x = self.x + OUTER_W / 2, y = self.y, power = self.charge, dist = 0, hit = {} }
+    self.charge = 0
+    self.puff = PUFF_SCALE
+    Sound.play('gpStart', 1.3)
+    return true
+end
+
+function PlayerAdventure:updateBursts(dt, level)
+    local list = self.bursts
+    if not list or #list == 0 then return end
+    local range = BURST_RANGE * TILE_PX
+    for i = #list, 1, -1 do
+        local b = list[i]
+        local dx = BURST_SPD * dt
+        b.x, b.dist = b.x + dx, b.dist + dx
+        local done = b.dist >= range or (level and level:collisionAt(b.x + BURST_R / 2, b.y) ~= nil)
+        if not done and level then
+            for _, e in ipairs(level.liveEntities or {}) do
+                if e.alive and not b.hit[e] and e.onSpecialHit then
+                    local o = e:getOuterBounds()
+                    if b.x + BURST_R > o.x and b.x - BURST_R < o.x + o.w and b.y + BURST_R > o.y and b.y - BURST_R < o.y + o.h then
+                        b.hit[e] = true
+                        if e:onSpecialHit(b.power, self) then done = true; break end
+                    end
+                end
+            end
+        end
+        if done then table.remove(list, i) end
+    end
+end
+
+-- (solo dibujo) assets/images/fx/flapburst-Sheet.png: 4 cuadros de 16x16 (tools/art/items/make_flappy_items.py)
+local burstImg, burstQuads
+function PlayerAdventure:renderBursts(camX, camY)
+    if not self.bursts or #self.bursts == 0 then return end
+    if not burstImg then
+        burstImg = love.graphics.newImage('assets/images/fx/flapburst-Sheet.png')
+        burstImg:setFilter('nearest', 'nearest')
+        burstQuads = {}
+        for i = 1, 4 do burstQuads[i] = love.graphics.newQuad((i - 1) * 16, 0, 16, 16, burstImg:getDimensions()) end
+    end
+    for _, b in ipairs(self.bursts) do
+        local f = math.floor(b.dist / 40) % 4 + 1
+        local s = 3 + math.min(2, b.power * 0.4)                 -- (más grande cuanta más potencia)
+        love.graphics.setColor(1, 1, 1, 1)
+        love.graphics.draw(burstImg, burstQuads[f], math.floor(b.x - camX), math.floor(b.y - camY), 0, s, s, 8, 8)
+    end
+end
+
 function PlayerAdventure:updateFlight(dt, level, pJump, inX)
     self.crouching, self.gpPhase, self.dropping, self.jumpBufT = false, nil, false, 0
     if self.hurtT > 0 then self.hurtT = math.max(0, self.hurtT - dt) end
@@ -50,6 +111,8 @@ function PlayerAdventure:updateFlight(dt, level, pJump, inX)
         self.puff = PUFF_SCALE
         Sound.play('jump')
     end
+    if Input.pressed('special') and not stunned then self:fireSpecial() end
+    self:updateBursts(dt, level)
     -- A los lados: con la ventana, más lo que pida el jugador (hacia atrás, además, lo que avanza la ventana)
     local ws = windowSpeed(level)
     local want = ws + (inX > 0 and FLY_SPD or (inX < 0 and -(FLY_SPD + ws) or 0))

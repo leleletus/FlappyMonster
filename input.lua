@@ -29,6 +29,9 @@ local controls = {
     crouch     = {'key:down', 'key:s', 'button:dpdown', 'axis:lefty+'},
     -- Linterna (niveles a oscuras): encender / apagar
     light      = {'key:f', 'key:lshift', 'button:x', 'button:y'},
+    -- Ataque ESPECIAL (niveles Flappy: gasta la carga de aleteo — src/player/PlayerFlight.lua —; el hombro izquierdo queda
+    -- para la rueda rápida de los power-ups)
+    special    = {'key:x', 'key:k', 'button:rightshoulder'},
     -- El duelo de ritmo (src/ui/RhythmDuel.lua): cruceta o botones; en teclado, flechas, WASD o DFJK. Sin la repetición de los menús
     rhythm_left  = {'key:left',  'key:a', 'key:d', 'button:dpleft',  'button:x', 'axis:leftx-'},
     rhythm_down  = {'key:down',  'key:s', 'key:f', 'button:dpdown',  'button:a', 'axis:lefty+'},
@@ -43,6 +46,7 @@ local labelsConsole = {
     nav_left   = "[<]",    nav_right = "[>]",     confirm   = "[A]",
     move_left  = "[<]",    move_right= "[>]",     jump      = "[A]",
     crouch     = "[v]",    light     = "[Y]",    grab      = "[^]",
+    special    = "[R]",
 }
 local labelsPC = {
     flap       = "[Space]", pause  = "[Esc]",   resume = "[Enter]",
@@ -50,6 +54,7 @@ local labelsPC = {
     nav_left   = "[<]",     nav_right= "[>]",   confirm   = "[Enter]",
     move_left  = "[<]",     move_right= "[>]",  jump      = "[Space]",
     crouch     = "[Down]",  light = "[F]",      grab      = "[Up]",
+    special    = "[X]",
 }
 
 -- ¿Se está usando un mando? (el último aparato tocado; en la Switch, siempre que no sea el táctil)

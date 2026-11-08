@@ -609,6 +609,16 @@ function Entity:onStomp() end
 function Entity:canBeStomped() return true end
 function Entity:isBodyDisabled() return false end
 function Entity:getHazardBoxes() return nil end
+-- La RÁFAGA del ataque especial (niveles Flappy: src/player/PlayerFlight.lua) toca a esta entidad con `power` (la carga
+-- gastada). true = la absorbe (se para). Por defecto: los enemigos (no jefes) mueren despedidos; lo demás no la nota.
+-- Los tipos que reaccionan de otra manera lo sobrescriben (Boss: daño; la jaula, el muro agrietado).
+function Entity:onSpecialHit(power, pa)
+    if self.def and self.def.category == 'Enemigos' and not self.def.boss and self.state ~= 'dead' and self.dieFling then
+        self:dieFling(1)
+        return true
+    end
+    return false
+end
 function Entity:netPack() return nil end
 function Entity:netApply(a, b, f) end
 -- Red: una entidad "en reposo" (quieta en su estado de siempre, p. ej. un

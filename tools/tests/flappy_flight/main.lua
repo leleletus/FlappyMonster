@@ -10,6 +10,8 @@
 --   reaparece   en un nivel Flappy se reaparece en el aire, en una casilla libre (no dentro de un pilar)
 --   exclusivo   un pilar en un nivel normal es un error del editor (validate); en un nivel Flappy, no
 --   carga       las cargas de aleteo suben el medidor hasta CHARGE_MAX (5); morir y reaparecer la conserva
+--   ataque      ESPECIAL sin carga: nada; con carga: una ráfaga con esa potencia que gasta toda la carga, atraviesa
+--               pilares, mata a un enemigo y la para un bloque sólido
 --   normal      en un nivel normal el jugador NO vuela (salto de plataformas de siempre)
 --   etapa       la etapa de prueba (assets/levels/_flappy_vuelo.json) se puede pasar: un piloto sencillo (aletea
 --               cuando está por debajo del centro del hueco siguiente) llega a la meta sin morir
@@ -294,7 +296,49 @@ function cases.carga()
            tostring(c0), tostring(got), tostring(PlayerAdventure.CHARGE_MAX), tostring(pa.charge)))
 end
 
-local ORDER = { 'aleteo', 'ventana', 'pilar', 'suelo', 'reaparece', 'exclusivo', 'normal', 'carga', 'etapa' }
+function cases.ataque()
+    -- sin carga: nada
+    local level = stage(40, nil, nil, true)
+    local pa = player(level, 8 * T, 4.5 * T)
+    step(level, 0.1, function() hover(pa, 4.5 * T) end)
+    stub.state.special_pressed = true
+    step(level, DT)
+    local none = #(pa.bursts or {}) == 0 and pa.charge == 0
+    -- con carga 3: una ráfaga, la carga a 0, un Gummy volando 4 casillas delante muere; un pilar en medio no la para
+    local lv2 = stage(40, { { 10, 10, 0 } }, nil, true,
+        { { type = 'gummy', col = 13, row = 5, props = { movement = 'fly', speed = 0 } } })
+    local pa2 = player(lv2, 7 * T, 4.5 * T)
+    pa2.charge = 3
+    local g = lv2.liveEntities[1]
+    step(lv2, 0.1, function() hover(pa2, 4.5 * T) end)
+    stub.state.special_pressed = true
+    step(lv2, DT)
+    local fired = #(pa2.bursts or {}) == 1 and pa2.charge == 0 and pa2.bursts[1].power == 3
+    step(lv2, 1, function() hover(pa2, 4.5 * T) end)
+    local killed = tostring(g.state):find('dead') ~= nil or not g.alive
+    -- un bloque sólido 3 casillas delante la para
+    local lv3 = stage(40, nil, nil, true)
+    for r = 1, 9 do lv3.tiles[r][12] = require('src/world/tiles/TileCodec').encode(1) end
+    local pa3 = player(lv3, 8 * T, 4.5 * T)
+    pa3.charge = 2
+    step(lv3, 0.1, function() hover(pa3, 4.5 * T) end)
+    stub.state.special_pressed = true
+    step(lv3, DT)
+    local b = pa3.bursts and pa3.bursts[1]
+    local maxX = 0
+    step(lv3, 1, function()
+        hover(pa3, 4.5 * T)
+        local bb = pa3.bursts and pa3.bursts[1]
+        if bb then maxX = math.max(maxX, bb.x) end
+    end)
+    local stopped = b ~= nil and maxX <= 11 * T + 1 and #pa3.bursts == 0
+    clearInput()
+    check('ataque', none and fired and killed and stopped,
+          ('sin carga no pasa nada=%s; con 3: una ráfaga de 3 y carga a 0=%s; el Gummy tras el pilar muere=%s; el bloque la para (llega a %.0f, bloque en %d)=%s'):format(
+           tostring(none), tostring(fired), tostring(killed), maxX, 11 * T, tostring(stopped)))
+end
+
+local ORDER = { 'aleteo', 'ventana', 'pilar', 'suelo', 'reaparece', 'exclusivo', 'normal', 'carga', 'ataque', 'etapa' }
 function love.load()
     local only = os.getenv('CASE')
     for _, name in ipairs(ORDER) do

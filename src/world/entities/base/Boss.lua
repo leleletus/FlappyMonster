@@ -245,6 +245,12 @@ end
 
 -- Interactions: pisotón (1) y ground pound (2)
 function Boss:stomp() self:damage(1, 'stomp') end
+-- La ráfaga del ataque especial (niveles Flappy): daño = la carga gastada (las máquinas del Evil Monster, Plan 5)
+function Boss:onSpecialHit(power)
+    if not self:isVulnerable() then return false end
+    self:damage(power, 'special')
+    return true
+end
 function Boss:pound(pa)
     local wasStunned = self:isStunned()
     -- Solo aturde si no lo estaba ya (el golpe estando aturdido lo despierta)

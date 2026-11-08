@@ -14,6 +14,7 @@ local PS = require 'src/player/PlayerSprite'       -- (el sprite del monstruo: a
 local function loadSprites() end
 
 function PlayerAdventure:render(camX, camY)
+    self:renderBursts(camX, camY)                    -- (las ráfagas del ataque especial: niveles Flappy — PlayerFlight.lua —)
     if self.gulped and not self.dying and (self.gulpKind or 0) == 0 then return end      -- (tragado por una planta: no se ve — PlayerGulp.lua —)
     -- (acaba de subir un escalón bajo andando: se dibuja lo que le falta por "subir" — stepVis, PlayerCollision —)
     local vis = (not self.dying and self.stepVis) or 0

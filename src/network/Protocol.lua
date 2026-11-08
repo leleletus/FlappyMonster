@@ -91,7 +91,8 @@ end
 -- input del tick en vez del teclado real.
 function P.newInputStub()
     local inp = { left=false, right=false, jump=false, crouch=false,
-                  jump_pressed=false, crouch_pressed=false, light_pressed=false, grab_pressed=false }
+                  jump_pressed=false, crouch_pressed=false, light_pressed=false, grab_pressed=false,
+                  special_pressed=false }      -- (special: niveles Flappy; aún no viaja por la red — no hay Flappy en línea —)
     local stub = {}
     stub.state = inp
     function stub.pressed(action)
@@ -106,6 +107,9 @@ function P.newInputStub()
         end
         if action == 'grab' then
             local v = inp.grab_pressed; inp.grab_pressed = false; return v
+        end
+        if action == 'special' then
+            local v = inp.special_pressed; inp.special_pressed = false; return v
         end
         return false
     end
