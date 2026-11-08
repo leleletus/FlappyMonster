@@ -32,6 +32,10 @@ local controls = {
     -- Ataque ESPECIAL (niveles Flappy: gasta la carga de aleteo — src/player/PlayerFlight.lua —; el hombro izquierdo queda
     -- para la rueda rápida de los power-ups)
     special    = {'key:x', 'key:k', 'button:rightshoulder'},
+    -- La RUEDA RÁPIDA de los power-ups (src/states/adventure/WheelState.lua): mantener, apuntar y soltar; 1–6 = el tipo de
+    -- esa posición de la rueda directamente
+    wheel      = {'key:q', 'key:tab', 'button:leftshoulder'},
+    wheel_1 = {'key:1'}, wheel_2 = {'key:2'}, wheel_3 = {'key:3'}, wheel_4 = {'key:4'}, wheel_5 = {'key:5'}, wheel_6 = {'key:6'},
     -- El duelo de ritmo (src/ui/RhythmDuel.lua): cruceta o botones; en teclado, flechas, WASD o DFJK. Sin la repetición de los menús
     rhythm_left  = {'key:left',  'key:a', 'key:d', 'button:dpleft',  'button:x', 'axis:leftx-'},
     rhythm_down  = {'key:down',  'key:s', 'key:f', 'button:dpdown',  'button:a', 'axis:lefty+'},
@@ -46,7 +50,7 @@ local labelsConsole = {
     nav_left   = "[<]",    nav_right = "[>]",     confirm   = "[A]",
     move_left  = "[<]",    move_right= "[>]",     jump      = "[A]",
     crouch     = "[v]",    light     = "[Y]",    grab      = "[^]",
-    special    = "[R]",
+    special    = "[R]",      wheel     = "[L]",
 }
 local labelsPC = {
     flap       = "[Space]", pause  = "[Esc]",   resume = "[Enter]",
@@ -54,7 +58,7 @@ local labelsPC = {
     nav_left   = "[<]",     nav_right= "[>]",   confirm   = "[Enter]",
     move_left  = "[<]",     move_right= "[>]",  jump      = "[Space]",
     crouch     = "[Down]",  light = "[F]",      grab      = "[Up]",
-    special    = "[X]",
+    special    = "[X]",     wheel  = "[Q]",
 }
 
 -- ¿Se está usando un mando? (el último aparato tocado; en la Switch, siempre que no sea el táctil)
@@ -197,6 +201,15 @@ end
 
 function Input.down(action)
     return Input.VirtualPad.down[action] or player:down(action)
+end
+
+-- La palanca del mando que se está usando (la izquierda; si está quieta, la derecha) → x, y en -1..1 (0, 0 sin mando)
+function Input.stick()
+    local js = player and player.joystick
+    if not (js and js.isConnected and js:isConnected() and js:isGamepad()) then return 0, 0 end
+    local x, y = js:getGamepadAxis('leftx'), js:getGamepadAxis('lefty')
+    if x * x + y * y < 0.09 then x, y = js:getGamepadAxis('rightx'), js:getGamepadAxis('righty') end
+    return x, y
 end
 
 return Input

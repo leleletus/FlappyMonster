@@ -23,6 +23,23 @@ function FlappyHud.layout()
     return { hearts = { x = X0, y = Y0, step = 8 * S }, cells = { x = X0, y = Y0 + 9 * S, step = 7 * S } }
 end
 
+-- La BOLSA de los power-ups (táctil: abre la rueda; AdventureState:touchpressed): a la derecha de los corazones, en la
+-- franja de arriba donde no hay controles táctiles (src/ui/TouchControls.lua TOP_FRAC)
+function FlappyHud.bagRect() return { x = X0 + 6 * 8 * S, y = Y0 - 4, w = 16 * S, h = 16 * S } end
+
+local bagImg
+function FlappyHud.drawBag(n)
+    if not bagImg then
+        bagImg = love.graphics.newImage('assets/images/ui/powerups/bag.png')
+        bagImg:setFilter('nearest', 'nearest')
+    end
+    local b = FlappyHud.bagRect()
+    love.graphics.setColor(1, 1, 1, n > 0 and 1 or 0.45)
+    love.graphics.draw(bagImg, b.x, b.y, 0, S, S)
+    if n > 0 then require('src/ui/PixelFont').shadow(tostring(n), b.x + b.w - 10, b.y + b.h - 18, 3, 1) end
+    love.graphics.setColor(1, 1, 1, 1)
+end
+
 function FlappyHud.draw(pa)
     if not pa then return end
     load()

@@ -241,6 +241,11 @@ flappy.map_locked,Supera la etapa anterior para abrirla,Clear the previous stage
 flappy.map_new,Sin jugar todavía,Not played yet,
 flappy.map_cages,Flappies liberados: {n}/{m},Flappies freed: {n}/{m},
 flappy.map_best,"Mejor nota: {grade}    Mejor tiempo: {t} s","Best grade: {grade}    Best time: {t} s",
+settings.wheel_hold,RUEDA DE POWER-UPS: MANTENER,POWER-UP WHEEL: HOLD,
+settings.wheel_toggle,RUEDA DE POWER-UPS: PULSAR,POWER-UP WHEEL: PRESS,
+wheel.hint,Apunta y suelta,Point and release,La rueda de los power-ups (src/states/adventure/WheelState.lua)
+wheel.empty,Sin power-ups,No power-ups,
+wheel.cant,No se puede usar ahora,Can't use it now,
 powerup.shield,ESCUDO,SHIELD,"Power-ups (src/world/powerups/)"
 powerup.shield.desc,Para el siguiente golpe (no las caídas),Stops the next hit (not falls),
 powerup.heart,CORAZÓN EXTRA,EXTRA HEART,

@@ -75,6 +75,21 @@ function FlappyRun.spendPowerup(id)
     return true
 end
 
+-- El inventario para el nivel (AdventureState `args.powerups`, la rueda): los tipos que se tienen en el orden del
+-- catálogo (los de Flappy) y gastar uno
+function FlappyRun.powerupInventory()
+    return {
+        items = function()
+            local out, inv = {}, (FlappyRun.data and FlappyRun.data.inventory) or {}
+            for _, p in ipairs(require('src/world/powerups/Powerups').forMode('flappy')) do
+                if (inv[p.id] or 0) > 0 then out[#out + 1] = { id = p.id, count = inv[p.id] } end
+            end
+            return out
+        end,
+        spend = function(id) return FlappyRun.spendPowerup(id) end,
+    }
+end
+
 function FlappyRun.gameOver()
     return FlappyRun.restartWorld((FlappyRun.frontier()))
 end

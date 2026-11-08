@@ -41,6 +41,8 @@ local ROWS = {
     vol('sfxVol', 'settings.sfx'),
     flag('muted', 'settings.mute_on', 'settings.mute_off', 'green'),
     flag('swapAB', 'settings.swap_on', 'settings.swap_off', 'blue'),
+    -- (la rueda de los power-ups: mantener y soltar, o pulsar para abrir y otra vez para elegir — accesibilidad —)
+    flag('wheelToggle', 'settings.wheel_toggle', 'settings.wheel_hold', 'yellow'),
     -- (el retardo del audio en el duelo de ritmo del Cangrejo Groove: depende del aparato)
     { color = 'pink', text = function() return L('settings.rhythm_offset', { ms = tostring(Settings.rhythmOffset or 0) }) end,
       step = function(self, d) self:_offset(d * 10) end },

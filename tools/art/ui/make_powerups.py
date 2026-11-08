@@ -71,3 +71,16 @@ def bubble():
         rows.append(r)
     return rows
 save(bubble(), 'assets/images/fx/shield.png')
+
+# La BOLSA de los power-ups (assets/images/ui/powerups/bag.png): el botón táctil del HUD de Flappy que abre la rueda
+# (16x16 ×4, unos 10 px de arte como los objetos)
+BAG = [
+    '................', '................', '......kkkk......', '.....k.oo.k.....', '......kook.......'[:16],
+    '....kkkkkkkk....', '...kyyyyyyyyk...', '...kyYyyyyyyk...', '...kyyyyyyyyk...', '...kyyyrryyyk...',
+    '...kyyyrryyyk...', '...kyyyyyyyyk...', '....kkkkkkkk....', '................', '................', '................',
+]
+PAL['k'] = (110, 70, 30, 255)
+PAL['y'] = (215, 160, 80, 255)
+PAL['Y'] = (245, 205, 130, 255)
+BAG[4] = '.....kkook......'
+save(BAG, 'assets/images/ui/powerups/bag.png')

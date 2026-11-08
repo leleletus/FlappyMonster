@@ -95,6 +95,9 @@ function AdventureState:enter(args)
     -- "reintentar": se vuelve al principio del mundo). `gameOverNote` = la frase que lo explica.
     self.startLives = args.lives
     self.onLeave, self.onGameOver, self.gameOverNote = args.onLeave, args.onGameOver, args.gameOverNote
+    -- POWER-UPS (docs/design/powerups.md): `args.powerups` = el inventario de la partida { items(), spend(id) } (la
+    -- campaña Flappy: FlappyMapState); con él, la RUEDA RÁPIDA (WheelState) y los atajos 1–6
+    self.powerups = args.powerups
     self.won, self.wonT = false, 0
     self.finished = false
 
@@ -264,6 +267,24 @@ function AdventureState:pause()  end
 -- Al volver de la pausa la música sigue donde estaba (no se reinicia)
 function AdventureState:resume()
     if not Sound.resumeAll() then Sound.playMusic('level') end
+end
+
+-- ¿Se pueden usar power-ups ahora? (vivo, en marcha: ni muriendo, ni ganado, ni en la cuenta atrás, ni en una escena)
+function AdventureState:canUsePowerups()
+    local pa = self.player
+    return pa and not pa.dying and pa.alive ~= false and not self.dead and not self.won and not self.endingT
+           and not self.startCd and not (self.runOut and self.runOut.active)
+end
+
+function AdventureState:openWheel(mode)
+    gStateMachine:push('powerup_wheel', { pa = self.player, inv = self.powerups, mode = mode })
+end
+
+-- Atajo n (teclas 1–6): el n-ésimo tipo que se tiene (el orden de la rueda); si no se puede usar ahora, nada se gasta
+function AdventureState:usePowerupAt(n)
+    local it = self.powerups.items()[n]
+    if not it then return end
+    if self.player:canUse(it.id) and self.powerups.spend(it.id) then self.player:usePowerup(it.id) else Sound.play('headBump') end
 end
 
 function AdventureState:pauseGame()
@@ -573,6 +594,13 @@ function AdventureState:update(dt)
         gStateMachine:push('pause')
         return
     end
+    -- La RUEDA de los power-ups (mantener) y los atajos 1–6 (el tipo de esa posición, directamente)
+    if self.powerups and self:canUsePowerups() then
+        if Input.pressed('wheel') then return self:openWheel('hold') end
+        for n = 1, 6 do
+            if Input.pressed('wheel_' .. n) then self:usePowerupAt(n); break end
+        end
+    end
 
     -- ── Cuenta atrás del principio: el mundo congelado y sin control ──────────
     if self.startCd then
@@ -776,7 +804,15 @@ end
 function AdventureState:renderBossHud()
     local z = BossZones.fighting(self.level)
     -- (nivel FLAPPY: su HUD propio — vida siempre a la vista y la carga del ataque especial: src/ui/FlappyHud.lua —)
-    if self.level.flappy then require('src/ui/FlappyHud').draw(self.player) end
+    if self.level.flappy then
+        local FlappyHud = require 'src/ui/FlappyHud'
+        FlappyHud.draw(self.player)
+        if self.powerups then                                       -- (la bolsa: cuántos power-ups quedan; tocarla, la rueda)
+            local n = 0
+            for _, it in ipairs(self.powerups.items()) do n = n + it.count end
+            FlappyHud.drawBag(n)
+        end
+    end
     if z and self.level.flappy then
         BossHud.drawZone(z, 18, math.min(1, self.bossFightT / 0.8))
     elseif z then
@@ -1076,6 +1112,11 @@ function AdventureState:touchpressed(id, tx, ty, dx, dy, pressure)
         return
     end
 
+    -- La BOLSA de los power-ups (HUD de Flappy): abre la rueda para tocar
+    if self.powerups and self.level.flappy and self:canUsePowerups() then
+        local b = require('src/ui/FlappyHud').bagRect()
+        if tx >= b.x and tx <= b.x + b.w and ty >= b.y and ty <= b.y + b.h then return self:openWheel('tap') end
+    end
     -- Botón de pausa (ratón y táctil)
     if CornerButtons.hitPause(tx, ty) then
         Input.VirtualPad._pressedThisFrame['pause'] = true

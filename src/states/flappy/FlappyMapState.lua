@@ -77,6 +77,7 @@ function FlappyMapState:_play()
         lives = FlappyRun.data.lives,
         taken = FlappyRun.data.taken and FlappyRun.data.taken[id] or nil,   -- (vidas extra ya cogidas aquí: solo dan puntos)
         rescued = FlappyRun.data.rescued and FlappyRun.data.rescued[id] or nil,   -- (flappies ya liberados: jaulas vacías)
+        powerups = FlappyRun.powerupInventory(),                            -- (la rueda rápida: docs/design/powerups.md)
         onLeave = function(lives) FlappyRun.setLives(lives) end,
         gameOverNote = L('flappy.go_zone'),
         onGameOver = function()
