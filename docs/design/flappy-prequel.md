@@ -224,9 +224,9 @@ and judged, so it builds on what really exists. Each must leave the game playabl
 | 1 | Debug menu, Adventure lock (off), FLAPPY placeholder | done (0.5.163, menu changes 0.5.166) |
 | 2 | Flight (`PlayerFlight`), pillar tile, test stage | built (0.5.164–0.5.165), feel being judged by the user |
 | 3 | **Campaign frame:** shared save / run core, Flappy saves (3 slots, Easy / Normal / Hard), zone map (placeholder look), stages with lives / Game Over / results, CONTINUE = last mode | **done (0.5.167):** [flappy-plan-3-campaign-frame](flappy-plan-3-campaign-frame.md), system page [flappy-campaign](../gameplay/flappy-campaign.md) |
-| 4 | Flappy HUD (HP, lives, charge); special attack + charge items + return-to-sender; special obstacles; caged flappies (saved on finish); zone food | to write after 3 |
+| 4 | Flappy HUD (HP, lives, charge); special attack + charge items; special obstacles; caged flappies (saved on finish); zone food (return-to-sender and boss charge drops moved to 5: they need the machines) | **written:** [flappy-plan-4-attack-and-cages](flappy-plan-4-attack-and-cages.md) |
 | 4b | Power-ups ([powerups](powerups.md)): inventory per slot (6 / 3 per type), the quick wheel (touch, pad, PC), `shield` + `heart` first, then the catalog; cages give power-ups | to write after 4 |
-| 5 | Zone 1 complete: Valley background, real stages (same ids as the placeholders), first machine boss, the Evil Monster's look, the zone map's art; map shops + the points wallet | to write after 4b |
+| 5 | Zone 1 complete: Valley background, real stages (same ids as the placeholders), first machine boss (with return-to-sender shots and controlled charge drops), the Evil Monster's look, the zone map's art; map shops + the points wallet | to write after 4b |
 | 6 | Zones 2–6, one sub-plan each (background, music — verified by numbers only —, obstacles, stages, boss); the final over the quarry; **`Campaign.READY = true`** (the Adventure lock goes on) | after 5 |
 | 7 | Films: the campaign's opening and ending; Adventure intro (quarry → volcano) and ending changes; lore fix in [story](../story/story.md) | after 6 |
 | — | Projects 2 (online unlock rules) and 3 (online Flappy) | after 7 |

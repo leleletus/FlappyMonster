@@ -12,6 +12,7 @@ and describe the real thing in the system's page.
 
 | What | Page |
 |---|---|
+| **Flappy Plan 4 (2026-11-08):** charge, special attack, caged flappies, cracked walls, zone food, Flappy HUD | [flappy-plan-4-attack-and-cages](flappy-plan-4-attack-and-cages.md) |
 | **Flappy Plan 3, the campaign frame (2026-11-07):** step-by-step implementation plan (shared save core, Flappy slots, zone map, CONTINUE by mode); roadmap of all plans in the prequel page | [flappy-plan-3-campaign-frame](flappy-plan-3-campaign-frame.md) |
 | **The Flappy prequel campaign (2026-11-04):** 6 zones, the Evil Monster's machines, special attack, caged flappies, Adventure locked behind it, debug menu; online rules | [flappy-prequel](flappy-prequel.md) |
 | **Power-ups and the quick wheel (2026-11-07):** inventory per mode (6 max, 3 per type), shield, strength, extra heart, three magnets, small (Flappy) / big (Adventure), from cages and map shops; wheel for touch, pad and PC | [powerups](powerups.md) |
