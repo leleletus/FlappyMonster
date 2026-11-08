@@ -81,7 +81,8 @@ function PlayerAdventure:updateBursts(dt, level)
     end
 end
 
--- (solo dibujo) assets/images/fx/flapburst-Sheet.png: 4 cuadros de 16x16 (tools/art/items/make_flappy_items.py)
+-- (solo dibujo) assets/images/fx/flapburst-Sheet.png: 4 cuadros de 12x12, siempre ×4 (la densidad de los objetos;
+-- tools/art/items/make_flappy_items.py)
 local burstImg, burstQuads
 function PlayerAdventure:renderBursts(camX, camY)
     if not self.bursts or #self.bursts == 0 then return end
@@ -89,13 +90,12 @@ function PlayerAdventure:renderBursts(camX, camY)
         burstImg = love.graphics.newImage('assets/images/fx/flapburst-Sheet.png')
         burstImg:setFilter('nearest', 'nearest')
         burstQuads = {}
-        for i = 1, 4 do burstQuads[i] = love.graphics.newQuad((i - 1) * 16, 0, 16, 16, burstImg:getDimensions()) end
+        for i = 1, 4 do burstQuads[i] = love.graphics.newQuad((i - 1) * 12, 0, 12, 12, burstImg:getDimensions()) end
     end
     for _, b in ipairs(self.bursts) do
         local f = math.floor(b.dist / 40) % 4 + 1
-        local s = 3 + math.min(2, b.power * 0.4)                 -- (más grande cuanta más potencia)
         love.graphics.setColor(1, 1, 1, 1)
-        love.graphics.draw(burstImg, burstQuads[f], math.floor(b.x - camX), math.floor(b.y - camY), 0, s, s, 8, 8)
+        love.graphics.draw(burstImg, burstQuads[f], math.floor(b.x - camX), math.floor(b.y - camY), 0, 4, 4, 6, 6)
     end
 end
 

@@ -14,7 +14,7 @@ from PIL import Image
 
 PAL = {
     '.': (0, 0, 0, 0),
-    'o': (20, 26, 60, 255),        # contorno
+    'o': (28, 46, 110, 255),       # contorno (el azul más oscuro del propio objeto)
     'b': (60, 110, 210, 255),      # azul
     'c': (110, 210, 255, 255),     # celeste
     'w': (240, 252, 255, 255),     # brillo
@@ -31,25 +31,20 @@ PAL = {
     'x': (40, 32, 30, 255),        # grieta
 }
 
+# (DENSIDAD: la de la manzana del usuario — unos 8 píxeles de arte de ancho en un lienzo de 16, dibujada ×4 —;
+#  docs/art/style-rules.md "One pixel density"; el usuario, 2026-11-08: los primeros tenían demasiada resolución)
 CHARGE = [
-    '................',
-    '.....oooooo.....',
-    '...oobbbbbboo...',
-    '..obbccccccbbo..',
-    '..obcccwwcccbo..',
-    '.obccwwccccccbo.',
-    '.obcwcc.ooccccbo',
-    '.obcwc.ob..ccbo.',
-    '.obcwc.oy..cwbo.',
-    '.obccc..oowwcbo.',
-    '.obbccc....ccbo.',
-    '..obbcccwwccbo..',
-    '..oobbccccbboo..',
-    '....oobbbboo....',
+    '................', '................', '................', '................',
     '......oooo......',
-    '................',
+    '.....owccbo.....',
+    '....owccccbo....',
+    '....occbycbo....',
+    '....ocbccbbo....',
+    '....obccccbo....',
+    '.....obbbbo.....',
+    '......oooo......',
+    '................', '................', '................', '................',
 ]
-
 
 def save(rows, path):
     h, w = len(rows), len(rows[0])
@@ -65,89 +60,67 @@ def save(rows, path):
 
 save(CHARGE, 'assets/images/items/flapcharge.png')
 
-# La ráfaga: una media luna que mira a la derecha, con su estela; los 4 cuadros cambian el brillo y la estela
+# La ráfaga: una media luna que mira a la derecha con su estela (12x12, se dibuja ×4); los 4 cuadros mueven la estela
 BURST = [
     [
-        '................',
-        '.......oooo.....',
-        '........occo....',
-        '.........ocwo...',
-        '..........ocwo..',
-        '..b...b...ocwwo.',
-        '...........cwwo.',
-        '.b.c..c....cwwo.',
-        '.b.c..c....cwwo.',
-        '...........cwwo.',
-        '..b...b...ocwwo.',
-        '..........ocwo..',
-        '.........ocwo...',
-        '........occo....',
-        '.......oooo.....',
-        '................',
+        '............',
+        '......oo....',
+        '.......oco..',
+        '........owo.',
+        '..b.....owo.',
+        '.c.c....owo.',
+        '..b.....owo.',
+        '........owo.',
+        '.......oco..',
+        '......oo....',
+        '............',
+        '............',
     ],
 ]
 def shift_trail(rows, k):
-    # (la estela son las 7 primeras columnas: se desplazan k a la derecha, dando la vuelta; la media luna no se mueve)
-    return [(r[:7][-k:] + r[:7][:-k] if k else r[:7]) + r[7:] for r in rows]
+    # (la estela son las 5 primeras columnas: se desplazan k a la derecha, dando la vuelta; la media luna no se mueve)
+    return [(r[:5][-k:] + r[:5][:-k] if k else r[:5]) + r[5:] for r in rows]
 frames = [BURST[0], shift_trail(BURST[0], 1), shift_trail(BURST[0], 2), shift_trail(BURST[0], 3)]
-sheet = [''.join(f[y] for f in frames) for y in range(16)]
+sheet = [''.join(f[y] for f in frames) for y in range(12)]
 save(sheet, 'assets/images/fx/flapburst-Sheet.png')
 
 # El flappy enjaulado: jaula de barrotes con cúpula y un flappy rosa dentro · la misma abierta (puerta a un lado) · el
 # flappy suelto (sale volando por magia hacia arriba)
 CAGE_CLOSED = [
+    '................', '................', '................',
     '......dddd......',
-    '....ddGGGGdd....',
-    '...dG.g..g.Gd...',
-    '..dg..g..g..gd..',
-    '..dg.pPPpp..gd..',
-    '..dgpPkppkp.gd..',
-    '..dgpppppppggd..',
-    '..dg.pp..pp.gd..',
-    '..dg..g..g..gd..',
-    '..dg..g..g..gd..',
-    '..dg..g..g..gd..',
-    '..dg..g..g..gd..',
-    '.ddGGGGGGGGGGdd.',
-    '.dggggggggggggd.',
-    '.dddddddddddddd.',
-    '................',
+    '.....dGGGGd.....',
+    '....dg.gg.gd....',
+    '....dgpppp.d....',
+    '....dgpkpkgd....',
+    '....dgppppgd....',
+    '....dg.gg.gd....',
+    '...dGGGGGGGGd...',
+    '...dddddddddd...',
+    '................', '................', '................', '................',
 ]
 CAGE_OPEN = [
+    '................', '................', '................',
     '......dddd......',
-    '....ddGGGGdd....',
-    '...dG.g..g.Gd...',
-    '..dg..g..g...d..',
-    '..dg..g..g......',
-    '..dg..g..g......',
-    '..dg..g..g...dG.',
-    '..dg..g..g...dg.',
-    '..dg..g..g...dg.',
-    '..dg..g..g...dg.',
-    '..dg..g..g...dg.',
-    '..dg..g..g...dg.',
-    '.ddGGGGGGGGGGdd.',
-    '.dggggggggggggd.',
-    '.dddddddddddddd.',
-    '................',
+    '.....dGGGGd.....',
+    '....dg.gg..d....',
+    '....dg.gg.......',
+    '....dg.gg...d...',
+    '....dg.gg...g...',
+    '....dg.gg...g...',
+    '...dGGGGGGGGd...',
+    '...dddddddddd...',
+    '................', '................', '................', '................',
 ]
 FREED = [
-    '................',
-    '................',
-    '................',
-    '.....p....p.....',
-    '.....pp..pp.....',
-    '....pPPPPPPp....',
-    '...pPPkPPkPPp...',
-    '...pPPkPPkPPp...',
-    '...pPPPPPPPPp...',
-    '...ppPPPPPPpp...',
-    '....pppppppp....',
-    '.....pp..pp.....',
-    '................',
-    '................',
-    '................',
-    '................',
+    '................', '................', '................', '................',
+    '.....p..p.......',
+    '.....pppp.......',
+    '....pPkPkp......',
+    '....pPPPPp......',
+    '.....pppp.......',
+    '.....p..p.......',
+    '................', '................', '................', '................', '................', '................',
 ]
 save([CAGE_CLOSED[y] + CAGE_OPEN[y] + FREED[y] for y in range(16)], 'assets/images/items/cage-Sheet.png')
 

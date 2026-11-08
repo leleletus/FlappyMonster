@@ -3,10 +3,10 @@
 -- y el tiempo: la VIDA en corazones (siempre a la vista: en Flappy cada golpe cuenta) y el medidor de CARGA del ataque
 -- especial (PlayerAdventure.CHARGE_MAX celdas; parpadea lleno). Las vidas siguen arriba a la derecha (AdventureState).
 -- Solo dibujo; la geometría se calcula al dibujar. Arte: assets/images/ui/flappy/hud-Sheet.png
--- (tools/art/ui/make_flappy_hud.py): corazón lleno · vacío · celda llena · vacía (16x16).
+-- (tools/art/ui/make_flappy_hud.py): corazón lleno · vacío · celda llena · vacía (8x8, ×4).
 local FlappyHud = {}
 
-local S = 3                      -- escala del arte (16 px → 48)
+local S = 4                      -- escala del arte (8 px → 32: la de los objetos y el icono de las vidas)
 local X0, Y0 = 20, 108           -- (el sitio de la barra de vida de BossHud.drawPlayers)
 local img, quads
 
@@ -15,13 +15,12 @@ local function load()
     img = love.graphics.newImage('assets/images/ui/flappy/hud-Sheet.png')
     img:setFilter('nearest', 'nearest')
     quads = {}
-    for i = 1, 4 do quads[i] = love.graphics.newQuad((i - 1) * 16, 0, 16, 16, img:getDimensions()) end
+    for i = 1, 4 do quads[i] = love.graphics.newQuad((i - 1) * 8, 0, 8, 8, img:getDimensions()) end
 end
 
 -- Dónde va cada cosa (las pruebas lo miran): { hearts = {x, y, step}, cells = {x, y, step} }
 function FlappyHud.layout()
-    local step = 13 * S
-    return { hearts = { x = X0, y = Y0, step = step }, cells = { x = X0, y = Y0 + 14 * S, step = 11 * S } }
+    return { hearts = { x = X0, y = Y0, step = 8 * S }, cells = { x = X0, y = Y0 + 9 * S, step = 7 * S } }
 end
 
 function FlappyHud.draw(pa)

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # tools/art/ui/make_flappy_hud.py
 # La interfaz de los niveles FLAPPY (docs/design/flappy-plan-4-attack-and-cages.md), mapas de caracteres:
-#   assets/images/ui/flappy/hud-Sheet.png     HUD (16x16 cada uno): corazón lleno · corazón vacío · celda de carga llena ·
+#   assets/images/ui/flappy/hud-Sheet.png     HUD (8x8 cada uno, ×4): corazón lleno · corazón vacío · celda de carga llena ·
 #                                             celda de carga vacía (src/ui/FlappyHud.lua)
 #   assets/images/ui/touch/special-Sheet.png  botón táctil del ATAQUE ESPECIAL (24x24: suelto · pulsado), como el de la
 #                                             linterna (redondo, blanco / dorado) con el remolino de la carga dentro
@@ -11,7 +11,7 @@ from PIL import Image
 
 PAL = {
     '.': (0, 0, 0, 0),
-    'o': (20, 18, 34, 255),        # contorno
+    'o': (34, 32, 52, 255),        # contorno
     'R': (255, 110, 110, 255),     # corazón: brillo
     'r': (220, 50, 60, 255),       # corazón
     'd': (140, 26, 40, 255),       # corazón: sombra
@@ -26,14 +26,11 @@ PAL = {
     'y': (220, 170, 60, 255),      # botón pulsado: sombra
 }
 
-HEART = ['................', '................', '..oooo....oooo..', '.oRRrro..orrrdo.', '.oRrrrroorrrrdo.',
-         '.orrrrrrrrrrrdo.', '.orrrrrrrrrrrdo.', '.orrrrrrrrrrrdo.', '..orrrrrrrrrdo..', '...orrrrrrrdo...',
-         '....orrrrrdo....', '.....orrrdo.....', '......ordo......', '.......oo.......', '................', '................']
+# (DENSIDAD: 8x8 por cuadro y ×4 en pantalla, como los objetos y el icono de las vidas — docs/art/style-rules.md —)
+HEART = ['........', '.oo.oo..', 'oRroRro.', 'orrrrro.', 'orrrrro.', '.orrro..', '..oro...', '...o....']
 def recolor(rows, m): return [''.join(m.get(ch, ch) for ch in r) for r in rows]
-HEART_EMPTY = recolor(HEART, {'R': 'E', 'r': 'e', 'd': 'e'})
-CELL = ['................', '................', '...oooooooooo...', '..obbbbbbbbbbo..', '..obccccccccbo..', '..obcwwcccccbo..',
-        '..obcwccccccbo..', '..obccccccccbo..', '..obccccccccbo..', '..obccccccccbo..',
-        '..obccccccccbo..', '..obbbbbbbbbbo..', '...oooooooooo...', '................', '................', '................']
+HEART_EMPTY = recolor(HEART, {'R': 'E', 'r': 'e'})
+CELL = ['........', '.oooooo.', '.owccbo.', '.occcbo.', '.occcbo.', '.obbbbo.', '.oooooo.', '........']
 CELL_EMPTY = recolor(CELL, {'b': 'e', 'c': 'e', 'w': 'E'})
 
 def button(face, shade):
@@ -68,6 +65,6 @@ def save(rows, path):
     im.save(path)
     print('escrito', path)
 
-save([HEART[y] + HEART_EMPTY[y] + CELL[y] + CELL_EMPTY[y] for y in range(16)], 'assets/images/ui/flappy/hud-Sheet.png')
+save([HEART[y] + HEART_EMPTY[y] + CELL[y] + CELL_EMPTY[y] for y in range(8)], 'assets/images/ui/flappy/hud-Sheet.png')
 up, down = button('W', 'g'), button('Y', 'y')
 save([up[y] + down[y] for y in range(24)], 'assets/images/ui/touch/special-Sheet.png')

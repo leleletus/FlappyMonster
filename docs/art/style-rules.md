@@ -8,7 +8,10 @@
   integer (player ×6, small enemies ×4, Megas ×9-10, decorations ×4).
 - **One pixel density.** Sprites share almost the same pixel size, with few exceptions. A big boss is drawn with
   FEWER art pixels at a bigger scale, never with fine detail at a small scale: the user found Tifón's first round at ×5
-  "too dense, slightly out of place" (2026-11-04).
+  "too dense, slightly out of place" (2026-11-04). Small items and HUD icons: the user's apple is the reference — about 8 art px wide in a
+  16×16 canvas, drawn ×4. The user, 2026-11-08: the first Flappy items (peach, charge item) and the HUD hearts / cells
+  "have more resolution than they should"; redrawn at that size (HUD at ×4 like the lives icon, power-up icons 12×12 ×4,
+  the burst 12×12 always ×4).
 - **House style:** dark outline (the darkest tone of the object's OWN colour, never pure black), highlight
   top-left, soft shade bottom-right, 3-4 tones, no noise, 1-px transparent margin so nothing looks cut.
 - **A redesign keeps every pixel of the user's original shape** and only adds the style.
