@@ -253,7 +253,20 @@ function cases.aventura()
     check('aventura', any == 0 and charges == 0, 'ninguna carga en un jefe que no es Flappy')
 end
 
-local ORDER = { 'rebote', 'de_lado', 'falla', 'mecha', 'cargas', 'lastima', 'aire', 'aventura' }
+function cases.ultima_vida()
+    local level, dir, items = arena(true, 'normal')
+    local pa = player(level, 10 * T, 5 * T, 0)
+    pa.charge, pa.lives, pa.hpMax = 5, 1, 3
+    for hp = 3, 1, -1 do pa.hp = hp; dir:updateCustom(DT, level) end      -- (dos golpes seguidos: le cuesta)
+    local t
+    for i = 1, 15 * 60 do
+        dir:updateCustom(DT, level)
+        if alive(items, 'apple') > 0 then t = i * DT; break end
+    end
+    check('ultima_vida', t and t <= 2, 'en su última vida, herido y sufriendo: sale comida: ' .. tostring(t))
+end
+
+local ORDER = { 'rebote', 'de_lado', 'falla', 'mecha', 'cargas', 'lastima', 'aire', 'aventura', 'ultima_vida' }
 function love.load()
     local only = os.getenv('CASE')
     for _, name in ipairs(ORDER) do

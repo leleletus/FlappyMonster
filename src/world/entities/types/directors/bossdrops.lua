@@ -208,7 +208,8 @@ function Drops:needOf(level, pa)
     local died = self.diedAt[pa] and now - self.diedAt[pa] <= Drops.DEATH_T
     local hurt = (pa.hp or 0) < (pa.hpMax or 0)
     local struggling = recent >= 2 or died or (hurt and now - self.bossHitT >= Drops.NO_DAMAGE_T)
-    if (pa.lives or 9) <= 1 and struggling then return 'lives', true end
+    -- (en un nivel Flappy no hay vidas que dar: sigue a la comida, que es lo que le hace falta)
+    if (pa.lives or 9) <= 1 and struggling and not level.flappy then return 'lives', true end
     local low = (pa.hp or 0) <= math.max(1, math.floor((pa.hpMax or 3) / 3))
     if hurt and (low or struggling or level.helpHint) then return 'food' end
     return nil
