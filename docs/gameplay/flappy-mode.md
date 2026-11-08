@@ -3,9 +3,9 @@
 The original game: tap to flap between pipes. It shares nothing with Adventure except the monster's sprites, the
 sound module and the story's intro film, which pilots the REAL Flappy `Player` and `Pipe` objects.
 
-**Access (0.5.163):** the main menu's CLÁSICO opens `FlappyCampaignState` (state `flappy_campaign`), the placeholder of
-the coming campaign ([flappy-prequel](../design/flappy-prequel.md)): CAMPAÑA (grey, "coming soon") and, while
-`Campaign.READY` is false, INFINITO → this endless mode. Once the campaign is ready, the endless mode is only in the
+**Access (0.5.163; 0.5.167):** the main menu's FLAPPY opens `FlappyCampaignState` (state `flappy_campaign`): CAMPAÑA
+(the campaign: [flappy-campaign](flappy-campaign.md)) and, while `Campaign.READY` is false, INFINITO → this endless
+mode. Once the campaign is ready, the endless mode is only in the
 debug menu ([menus](../architecture/menus.md#debug-menu-secret)). `DifficultySelectionState` takes `args.from`
 (`flappy_campaign` / `debug_menu`) and BACK returns there.
 

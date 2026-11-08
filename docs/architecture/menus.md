@@ -20,7 +20,7 @@ save slots are **cartridges** (Sonic 3 style save select).
 | `src/states/menu/TitleState.lua` | title + main menu (`title` starts on the title, `main_menu` starts with the buttons; buttons CONTINUE (when a story save exists) · FLAPPY (id `classic`) · ADVENTURE · SETTINGS; `args.select` = the id of the button selected when coming back) |
 | `src/states/menu/AdventureModeSelectState.lua`, `SettingsState.lua`, `src/states/flappy/DifficultySelectionState.lua`, `src/states/flappy/FlappyCampaignState.lua` (CLÁSICO), `src/states/menu/DebugMenuState.lua` | the sub-menus, built with the pieces below |
 | `src/flappy/Campaign.lua` | the Adventure lock (below) |
-| `src/states/story/StorySlotState.lua` | the save slots as cartridges (see below) |
+| `src/states/story/StorySlotState.lua` | the save slots as cartridges (see below), for the story or the Flappy campaign (`args.campaign`, descriptors in `src/story/Campaigns.lua`) |
 | `src/states/story/StoryCollectionState.lua` | the story COLLECTION, pushed over the world map (see below) |
 | `src/ui/menu/MenuScene.lua` | the living background: `SCENES` (level + seed), `SCENE_MAX`, `STALL`, `CAM_X/CAM_Y` (where the monster sits on screen), iris timings; `update`, `draw`, `backdrop()` (background + big dark panel for content screens), `dim(a)` |
 | `src/states/adventure/AdventureState.lua` | `args.demo = { step, camX, camY }`: the demo mode MenuScene uses (no View lock, HUD, pause, music or recorder; endless lives; `step(dt, level)` moves the player instead of the pad); `rebindGlobals()` |
@@ -49,8 +49,9 @@ save slots are **cartridges** (Sonic 3 style save select).
   from the checkpoint, then moves on).
 - Button colours: `green orange blue pink purple yellow red teal grey` (the order of `button.json`). Adding one =
   a palette entry in the generator.
-- Continue: shown only when a story slot exists; it opens the most recently written slot file
-  (`story<n>.sav` modtime) and goes to the story map. No new saved data.
+- Continue: shown when any slot of any campaign exists; it opens the most recently written slot file of either
+  campaign (`story<n>.sav` / `flappy<n>.sav` modtime; the story's not while Adventure is locked) and goes to its map.
+  No new saved data.
 
 **The background race:** `MenuScene` creates an `AdventureState` with `args.demo` (the real level, its entities and
 rules) and a `Bot` driving `state.player` with `{ mortal, dodge, goal = the finish }`. Everything it does runs inside a

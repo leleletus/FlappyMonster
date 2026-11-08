@@ -11,7 +11,8 @@ the mirror shards (one per boss + the Mirror's: `assets/story/shards.json`). The
 | `Worlds.lua` | the story as data: ordered worlds `{ id, levels, boss, bonus, secrets, epilogue, films, outros }` (`secrets`: the optional secret levels, [below](#the-secrets-secret-exits-splinters-the-groove-and-the-mashup)). Reordering the game = editing this table |
 | `Collect.lua` | the COLLECTIBLES catalog (`assets/story/collectibles.json`: the splinter pieces and the disco ball), their state in the save, which boss drops which |
 | `Save.lua` | 3 slots + global unlocks (see [save-data](../architecture/save-data.md)) |
-| `Run.lua` | the open slot: node states, `complete(id, result)`, lives, Game Over, rewards, unlocks, bonus results, shards |
+| `Run.lua` | the open slot: `complete(id, result)` (world rewards, unlocks), Game Over, bonus results, shards, secrets; the generic rules (node states, frontier, lives, scoring) come from `RunCore.lua`, shared with the Flappy campaign ([flappy-campaign](../gameplay/flappy-campaign.md)) |
+| `src/story/Campaigns.lua` | the descriptors that let the slot screen and CONTINUE serve both campaigns |
 | `Score.lua` | scoring as data: weights, par time, grades, rewards |
 | `Shards.lua` | the shard catalog (`assets/story/shards.json`: which boss drops which shard, story order); the in-level drop and pickup |
 | `BonusMatch.lua` | the King-of-the-Hill match against the bot ([bonus-and-bot](bonus-and-bot.md)) |
