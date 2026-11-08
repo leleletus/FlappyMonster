@@ -359,7 +359,8 @@ function StorySlotState:_drawCart(i, x, y, s, sel, a)
 end
 
 function StorySlotState:render()
-    MenuScene.bricks('story')                    -- (ladrillos del Flappy, no el fondo vivo: src/ui/menu/MenuScene)
+    -- (Flappy: el fondo del infinito; Aventura: ladrillos dorados — src/ui/menu/MenuScene)
+    if self.c.id == 'flappy' then MenuScene.flappyBg() else MenuScene.bricks('story') end
     local A = self.anim
     if not self.pick then MenuList.header(L(self.c.title), self.c.id == 'flappy' and 'orange' or 'yellow', A, 1) end
     for i = 1, SLOTS do
