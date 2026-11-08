@@ -250,11 +250,10 @@ function MenuScene.bricks(which)
     require('src/story/Stage').flappyBg(bricksT * 14, { c[1] * BRICK_DARK, c[2] * BRICK_DARK, c[3] * BRICK_DARK }, 1, bricksT * 5)
 end
 
--- El fondo del Flappy ANTIGUO (el del modo infinito, src/states/flappy/PlayState.lua) para las pantallas del Flappy
--- (menú FLAPPY, partidas de la campaña, tienda): Background.png a ×15, teñido con la paleta `normal` del infinito
--- que va cambiando de color, y de lado a 220 × 0.4 px/s como allí. Es un solo dibujo compartido; el mapa de zonas
--- conserva su arte del Valle y la Aventura sigue con el fondo vivo / los ladrillos.
-local FLAPPY_PAL = { { 0.50, 0.80, 1.00 }, { 0.40, 0.65, 1.00 }, { 0.60, 0.90, 1.00 }, { 0.35, 0.75, 0.95 }, { 0.55, 0.85, 0.98 } }
+-- El fondo del Flappy ANTIGUO (el del modo infinito, src/states/flappy/PlayState.lua) para el MENÚ DEBUG
+-- (las pantallas del Flappy llevan la escena del bot como los demás menús): Background.png a ×15, teñido con la paleta `normal` del infinito
+-- que va cambiando de color, y de lado a 220 × 0.4 px/s como allí. Solo lo usa el menú debug.
+local FLAPPY_PAL = require('src/flappy/Palettes').normal      -- (la misma tabla que PlayState)
 local FLAPPY_DARK = 0.85
 function MenuScene.flappyBg()
     local t = love.timer.getTime() * 0.5                -- (COLOR_LERP_SPD del infinito)

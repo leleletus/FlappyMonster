@@ -67,7 +67,7 @@ function DebugMenuState:update(dt)
 end
 
 function DebugMenuState:render()
-    MenuScene.draw()
+    MenuScene.flappyBg()
     MenuList.header(L('dbg.title'), 'red', self.anim, 1)
     self.list:draw()
     MenuList.footer(self.list:desc(), self.anim, N)

@@ -12,6 +12,7 @@ and describe the real thing in the system's page.
 
 | What | Page |
 |---|---|
+| **Menu background:** when there are many Flappy levels, the menu bot should also play Flappy levels (the user, 2026-11-08) | [flappy-prequel](flappy-prequel.md) |
 | **Flappy Plan 4b (2026-11-08):** power-ups, inventory per slot, the quick wheel, cages give power-ups | [flappy-plan-4b-powerups](flappy-plan-4b-powerups.md) |
 | **Flappy Plan 4 (2026-11-08):** charge, special attack, caged flappies, cracked walls, zone food, Flappy HUD | [flappy-plan-4-attack-and-cages](flappy-plan-4-attack-and-cages.md) |
 | **Flappy Plan 3, the campaign frame (2026-11-07):** step-by-step implementation plan (shared save core, Flappy slots, zone map, CONTINUE by mode); roadmap of all plans in the prequel page | [flappy-plan-3-campaign-frame](flappy-plan-3-campaign-frame.md) |
