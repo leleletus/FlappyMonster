@@ -32,14 +32,14 @@ def build(width, gaps):
     return tiles
 
 
-def write(out, name, name_en, width, gaps, speed=200, music='flappy'):
+def write(out, name, name_en, width, gaps, speed=200, music='flappy', entities=None):
     lvl = {
         "name": name,
         "name_en": name_en,
         "width": width, "height": H,
         "playerStart": [4, 5],
         "tiles": build(width, gaps),
-        "entities": [],
+        "entities": entities or [],
         "autoScroll": {"startCol": 1, "endCol": 0, "speed": speed, "width": 20, "margin": 0.6, "countdown": 0},
         "music": music,
         "flappy": True,
@@ -50,7 +50,12 @@ def write(out, name, name_en, width, gaps, speed=200, music='flappy'):
         for i, k in enumerate(keys):
             v = lvl[k]
             last = i == len(keys) - 1
-            if k == 'tiles':
+            if k == 'entities' and v:
+                f.write('  "entities": [\n')
+                for j, e in enumerate(v):
+                    f.write('    ' + json.dumps(e, ensure_ascii=False, separators=(',', ':')) + (',' if j < len(v) - 1 else '') + '\n')
+                f.write('  ]' + ('' if last else ',') + '\n')
+            elif k == 'tiles':
                 f.write('  "tiles": [\n')
                 for j, row in enumerate(v):
                     f.write('    [' + ','.join(map(str, row)) + ']' + (',' if j < len(v) - 1 else '') + '\n')
@@ -58,4 +63,27 @@ def write(out, name, name_en, width, gaps, speed=200, music='flappy'):
             else:
                 f.write('  ' + json.dumps(k) + ': ' + json.dumps(v, ensure_ascii=False, separators=(',', ':')) + ('' if last else ',') + '\n')
         f.write('}\n')
-    print('escrito', out, len(gaps), 'pilares')
+    print('escrito', out, len(gaps), 'pilares', len(entities or []), 'entidades')
+
+
+def ent(kind, col, row, **props):
+    return {"type": kind, "col": col, "row": row, "props": props}
+
+
+def populate(gaps, charges, food, cage, wall):
+    """Objetos de una etapa (Plan 4): CARGAS en el centro del hueco de los pilares `charges` (índices de gaps), COMIDA
+    en el de `food`, la JAULA (índice, carga mínima) arriba entre dos pilares y el MURO (índice) arriba entre dos pilares
+    tapando una carga. La ruta principal (los huecos) nunca queda tapada."""
+    out = []
+    for i in charges:
+        c, top, h = gaps[i]
+        out.append(ent('flapcharge', c, top + (h - 1) // 2))
+    for i in food:
+        c, top, h = gaps[i]
+        out.append(ent('apple', c, top + (h - 1) // 2))
+    ci, cmin = cage
+    out.append(ent('cage', gaps[ci][0] + 3, 2, minCharge=cmin))
+    wc = gaps[wall][0] + 3
+    out.append(ent('crackwall', wc, 2, minCharge=2, rows=2))
+    out.append(ent('flapcharge', wc + 1, 1))
+    return out

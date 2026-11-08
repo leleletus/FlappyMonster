@@ -15,7 +15,8 @@
     {"image": "assets/images/items/food_volcan.png", "key": "food_volcan.png"},
     {"image": "assets/images/items/spikefall.png", "key": "spikefall.png"},
     {"image": "assets/images/items/star.png", "key": "star.png"},
-    {"image": "assets/images/items/flapcharge.png", "key": "flapcharge.png"}
+    {"image": "assets/images/items/flapcharge.png", "key": "flapcharge.png"},
+    {"image": "assets/images/items/food_valle.png", "key": "food_valle.png"}
   ],
   "anims": {
     "apple": {"fps": 4, "frames": [1], "loop": true},
@@ -29,6 +30,7 @@
     "food_volcan": {"fps": 4, "frames": [9], "loop": true},
     "spikefall": {"fps": 4, "frames": [10], "loop": true},
     "star": {"fps": 4, "frames": [11], "loop": true},
-    "flapcharge": {"fps": 4, "frames": [12], "loop": true}
+    "flapcharge": {"fps": 4, "frames": [12], "loop": true},
+    "food_valle": {"fps": 4, "frames": [13], "loop": true}
   }
 }

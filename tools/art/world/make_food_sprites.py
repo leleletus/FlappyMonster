@@ -4,7 +4,9 @@
 # azul oscuro de la manzana y la luz arriba a la izquierda.
 #   costa      piña              fortaleza  muslo asado        nieve   polo de hielo
 #   cueva      bayas luminosas   volcan     guindilla
-#   python3 tools/art/world/make_food_sprites.py [--apply]     (sin --apply: solo la vista previa en FlappyMonster_pruebas/comida/)
+#   valle      melocotón (la zona 1 de la campaña Flappy, el Valle de los Pilares: src/flappy/Zones.lua `food`)
+#   python3 tools/art/world/make_food_sprites.py [--apply] [--only <id>]   (sin --apply: solo la vista previa en
+#   FlappyMonster_pruebas/comida/; --only: escribe solo esa comida y no toca las demás)
 import os, sys
 from PIL import Image
 
@@ -33,6 +35,10 @@ FOODS = {
         "................", "................", "..........oo....", ".........oGo....", "........oogo....", ".......oRro.....",
         "......oRrro.....", ".....oRrrdo.....", "....oRrrdo......", "....orrdo.......", "....ordo........", ".....oo.........",
         "................", "................", "................", "................"]),
+    'valle': (dict(o=O, P='ffc8a0', p='f4945c', d='d0603c', G='99e550', g='37946e', w='fff0e0'), [
+        "................", "................", "........oo......", ".......oGgo.....", "......ogoo......", "....oooooooo....",
+        "...oPPwppppdo...", "...oPwppppppdo..", "..oPpppppppddo..", "..oppppppppddo..", "..opppppppdddo..", "...opppppdddo...",
+        "....oppddddo....", ".....oooooo.....", "................", "................"]),
 }
 
 
@@ -49,11 +55,14 @@ def img(pal, rows):
 
 if __name__ == '__main__':
     made = {k: img(*v) for k, v in FOODS.items()}
-    prev = os.path.join('/home/mtvemo/FlappyMonster_pruebas', 'comida')
+    only = sys.argv[sys.argv.index('--only') + 1] if '--only' in sys.argv else None
+    if only:
+        made = {only: made[only]}
+    prev = os.path.join(os.path.expanduser('~'), 'FlappyMonster_pruebas', 'comida')
     os.makedirs(prev, exist_ok=True)
-    sheet = Image.new('RGBA', (6 * 18 + 2, 20), (70, 100, 140, 255))
+    sheet = Image.new('RGBA', ((len(made) + 1) * 18 + 2, 20), (70, 100, 140, 255))
     sheet.alpha_composite(Image.open(os.path.join(OUT, 'apple.png')).convert('RGBA'), (2, 2))
-    for i, k in enumerate(FOODS):
+    for i, k in enumerate(made):
         sheet.alpha_composite(made[k], (2 + (i + 1) * 18, 2))
     sheet.resize((sheet.width * 10, sheet.height * 10), Image.NEAREST).save(os.path.join(prev, 'vista_previa.png'))
     print('  vista previa:', os.path.join(prev, 'vista_previa.png'))

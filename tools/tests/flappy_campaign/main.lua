@@ -2,7 +2,8 @@
 --   archivo    SaveFile: escribir y leer una tabla; un archivo roto se lee como nil + dañado y NO se sobrescribe
 --   progreso   RunCore con un catálogo de mentira (2 mundos x 2 nodos): orden de los nodos, el mundo siguiente tras el
 --              jefe, frontier, score (mejor nota, puntos), restartWorld (borra lo superado del mundo y guarda los récords)
---   zonas      cada etapa de src/flappy/Zones.lua existe, es un nivel Flappy con meta y sin errores del editor
+--   zonas      cada etapa de src/flappy/Zones.lua existe, es un nivel Flappy con meta y sin errores del editor, con al
+--              menos 1 jaula, 3 cargas y 1 comida (la de su zona)
 --   premio     el premio de la nota (S: +1 vida; A: +500 puntos) se DA y se guarda, no solo sale en los resultados
 --   partida    FlappyRun: abrir un hueco escribe flappy<n>.sav (no story<n>.sav), las etapas se abren en orden, vidas de
 --              Fácil al empezar, gameOver vuelve al principio de la zona
@@ -96,6 +97,20 @@ function cases.zonas()
                 if not lv.flappy then bad[#bad + 1] = node.id .. ' (no es Flappy)' end
                 if lv:countTrigger('finish') == 0 then bad[#bad + 1] = node.id .. ' (sin meta)' end
                 if errs > 0 then bad[#bad + 1] = node.id .. ' (' .. errs .. ' errores)' end
+                -- (contenido del Plan 4: al menos 1 jaula y 3 cargas; la comida es la de su zona)
+                local cages, charges, food = 0, 0, 0
+                for _, e in ipairs(lv.entities) do
+                    if e.type == 'cage' then cages = cages + 1 end
+                    if e.type == 'flapcharge' then charges = charges + 1 end
+                    if e.type == 'apple' then
+                        food = food + 1
+                        local skin = require('src/world/entities/types/items/apple').class.skinFor(e.props, lv)
+                        if skin ~= Zones.get(z).food then bad[#bad + 1] = node.id .. ' (comida ' .. tostring(skin) .. ')' end
+                    end
+                end
+                if cages < 1 or charges < 3 or food < 1 then
+                    bad[#bad + 1] = ('%s (%d jaulas, %d cargas, %d comidas)'):format(node.id, cages, charges, food)
+                end
             end
         end
     end

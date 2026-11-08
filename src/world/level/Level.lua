@@ -84,7 +84,9 @@ end
 function Level.new(path, difficulty)
     local data = love.filesystem.read(path)
     assert(data, "No se pudo leer: "..tostring(path))
-    return Level.fromData(json.decode(data), difficulty)
+    local lv = Level.fromData(json.decode(data), difficulty)
+    lv.id = path:match('([^/]+)%.json$')       -- (el id del nivel: su archivo sin .json — p. ej. la zona Flappy a la que pertenece —)
+    return lv
 end
 
 -- Construye el nivel desde la tabla ya decodificada (el editor la usa para

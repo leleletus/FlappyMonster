@@ -15,6 +15,7 @@ local FILES = {
     fortaleza = 'assets/images/items/food_fortaleza.png', nieve = 'assets/images/items/food_nieve.png',
     cueva = 'assets/images/items/food_cueva.png', volcan = 'assets/images/items/food_volcan.png',
     jungla = 'assets/images/items/food_jungla.png',
+    valle = 'assets/images/items/food_valle.png',          -- (la campaña Flappy: el Valle de los Pilares, un melocotón)
 }
 local GLOW = { cueva = { 0.4, 1, 0.9 } }             -- (las que brillan: color de su luz)
 local imgs
@@ -28,9 +29,17 @@ function Apple.loadAssets()
 end
 function Apple.sizePx() return 16 * SCALE, 16 * SCALE end
 
--- Qué comida toca en ese nivel (la isla: src/world/level/Isles.lua)
+-- Qué comida toca en ese nivel (la isla: src/world/level/Isles.lua). En un nivel FLAPPY, con 'auto', la de su ZONA
+-- (src/flappy/Zones.lua `food`; un nivel Flappy que no es de la campaña — las pruebas —: la de la primera zona)
 function Apple.skinFor(props, level)
-    local id = require('src/world/level/Isles').of(level, props and props.skin)
+    local skin = props and props.skin
+    if level and level.flappy and (skin == nil or skin == 'auto') then
+        local Zones = require 'src/flappy/Zones'
+        local z = level.id and Zones.find(level.id) or 1
+        local food = (Zones.get(z) or Zones.get(1)).food
+        if FILES[food] then return food end
+    end
+    local id = require('src/world/level/Isles').of(level, skin)
     return FILES[id] and id or 'pradera'
 end
 
@@ -70,7 +79,7 @@ end
 
 local skinOpts = { { value = 'auto', label = 'Auto' }, { value = 'pradera', label = 'Manzana' }, { value = 'costa', label = 'Piña' },
                    { value = 'fortaleza', label = 'Muslo' }, { value = 'nieve', label = 'Polo' }, { value = 'cueva', label = 'Bayas' },
-                   { value = 'volcan', label = 'Guindilla' }, { value = 'jungla', label = 'Plátanos' } }
+                   { value = 'volcan', label = 'Guindilla' }, { value = 'jungla', label = 'Plátanos' }, { value = 'valle', label = 'Melocotón (Flappy)' } }
 return {
     name = 'apple', label = 'Comida', category = 'Objetos',
     description = 'Coleccionable: devuelve 1 de vida (PS); con la vida llena, +20 puntos. Su aspecto sale de la isla del nivel '

@@ -260,9 +260,12 @@ local function nextGap(level, x)
     end
 end
 
-function cases.etapa()
-    local level = Level.new('assets/levels/_flappy_vuelo.json')
-    level.liveEntities, level.players = {}, {}
+local function runStage(path)
+    local level = Level.new(path)
+    local es = {}
+    for _, pl in ipairs(level.entities) do es[#es + 1] = Entities.create(pl) end
+    for _, e in ipairs(es) do if e.wantsLevel then e.levelRef = level end end
+    level.liveEntities, level.players = es, {}
     local sx, sy = level:getSpawnPx()
     local pa = player(level, sx, sy)
     local hp0, deaths, done, t = pa.hp, 0, false, 0
@@ -278,8 +281,15 @@ function cases.etapa()
     end)
     clearInput()
     check('etapa', level.flappy and level.autoScroll and done and deaths == 0,
-          ('nivel Flappy=%s con cámara=%s; llega a la meta=%s en %.1f s; vida %d → %d; muertes %d'):format(
-           tostring(level.flappy), tostring(level.autoScroll ~= nil), tostring(done), t, hp0, pa.hp, deaths))
+          ('%s: nivel Flappy=%s con cámara=%s; llega a la meta SIN CARGA=%s en %.1f s; vida %d → %d; muertes %d'):format(
+           path:match('[^/]+$'), tostring(level.flappy), tostring(level.autoScroll ~= nil), tostring(done), t, hp0, pa.hp, deaths))
+end
+
+-- La etapa de prueba y las del Valle: el piloto sencillo, SIN usar el ataque especial, llega a la meta sin morir (la ruta
+-- principal nunca depende de romper un muro)
+function cases.etapa()
+    runStage('assets/levels/_flappy_vuelo.json')
+    for _, id in ipairs(require('src/flappy/Zones').get(1).stages) do runStage('assets/levels/' .. id .. '.json') end
 end
 
 function cases.carga()
