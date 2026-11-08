@@ -335,6 +335,7 @@ function PlayerAdventure:respawn()
     self.frostT=0; self.stepVis=0; self.hardLaunch=nil; self.hardBy=nil
     self.gulped=false; self.gulpMash=0; self.gulpBiteT=0
     self.lightOn=false; self.lightBat=1; self.lightCd=0
+    self.bursts=nil          -- (las ráfagas del ataque especial en vuelo no siguen tras reaparecer)
     self:grantInvulnerability(SPAWN_INV * Difficulty.k('invuln'))
     Sound.stopTracked('drowning')
     Sound.playMusic('level')

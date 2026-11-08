@@ -395,6 +395,28 @@ function cases.muro()
     stub.state.right = true
     step(lv, 1.5, function() hover(pa, 5.5 * T) end)
     clearInput()
+    -- con la CÁMARA corriendo: aguantar contra un muro intacto que tapa todo el alto NO lo atraviesa (el borde de la
+    -- ventana no lo empuja a través: o se queda delante o se queda atrás y muere, como contra un bloque)
+    local lv4 = stage(80, nil, 200, true, { { type = 'crackwall', col = 20, row = 9, props = { minCharge = 3, rows = 9 } } })
+    local w4 = lv4.liveEntities[1]
+    local pa4 = player(lv4, 8 * T, 4.5 * T)
+    stub.state.right = true
+    local through = false
+    step(lv4, 8, function()
+        hover(pa4, 4.5 * T)
+        if not pa4.dying and pa4.x > w4.x1 then through = true end
+    end)
+    clearInput()
+    -- una ráfaga en vuelo al morir no sigue tras reaparecer
+    local lv5 = stage(40, nil, nil, true)
+    local pa5 = player(lv5, 8 * T, 4.5 * T)
+    pa5.charge = 2
+    stub.state.special_pressed = true
+    step(lv5, DT)
+    pa5:die(nil, true); step(lv5, 2); pa5:respawn()
+    local cleared = #(pa5.bursts or {}) == 0
+    clearInput()
+    check('muro', not through and cleared, ('con la cámara, aguantar contra el muro intacto lo atraviesa=%s; la ráfaga desaparece al reaparecer=%s'):format(tostring(through), tostring(cleared)))
     check('muro', blocked and held and broken and pa.x > 13 * T,
           ('intacto para al jugador (x %.0f)=%s; potencia 2 < 3: aguanta y para la ráfaga=%s; potencia 3: se rompe=%s; luego pasa (x %.0f)'):format(
            pa.x, tostring(blocked), tostring(held), tostring(broken), pa.x))

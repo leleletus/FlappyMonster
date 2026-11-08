@@ -122,12 +122,14 @@ function PlayerAdventure:updateFlight(dt, level, pJump, inX)
     self:moveSteps(level, self.vx * dt, self.vy * dt)
     if self.dying then return end
 
-    -- No se queda atrás: el borde izquierdo de la ventana lo lleva (si no hay un bloque en medio: entonces, la regla
-    -- de siempre de AutoScroll — quedarse atrás mata —)
+    -- No se queda atrás: el borde izquierdo de la ventana lo lleva (si no hay un bloque ni un CUERPO sólido en medio
+    -- — un muro agrietado intacto —: entonces, la regla de siempre de AutoScroll — quedarse atrás mata —; antes el borde
+    -- lo metía dentro del muro y salía por el otro lado sin romperlo: revisión del Plan 4)
     local a = level and level.autoScroll
     if a and a.state == 'run' then
         local minX = a.x + OUTER_W / 2
-        if self.x < minX and not level:collisionAt(minX + OUTER_W / 2, self.y) then self.x = minX end
+        local px = minX + OUTER_W / 2
+        if self.x < minX and not level:collisionAt(px, self.y) and not level:bodyAt(px, self.y, self) then self.x = minX end
     end
 
     -- El suelo: daño y bote hacia arriba

@@ -108,6 +108,14 @@ function cases.zonas()
                         if skin ~= Zones.get(z).food then bad[#bad + 1] = node.id .. ' (comida ' .. tostring(skin) .. ')' end
                     end
                 end
+                -- (el muro TAPA algo: la carga de detrás está encerrada — bloque sólido debajo y a su derecha —)
+                for _, e in ipairs(lv.entities) do
+                    if e.type == 'crackwall' then
+                        local c = e.col
+                        local closed = lv:getDef(c + 1, 2).collision == 'solid' and lv:getDef(c + 2, 1).collision == 'solid'
+                        if not closed then bad[#bad + 1] = node.id .. ' (el muro de la columna ' .. c .. ' no encierra nada)' end
+                    end
+                end
                 if cages < 1 or charges < 3 or food < 1 then
                     bad[#bad + 1] = ('%s (%d jaulas, %d cargas, %d comidas)'):format(node.id, cages, charges, food)
                 end

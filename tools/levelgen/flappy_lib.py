@@ -16,8 +16,12 @@ def raw(tile_id):
 AIR, DIRT, GRASS, FINISH, PILLAR = raw(0), raw(16), raw(17), raw(11), raw(59)
 
 
-def build(width, gaps):
-    """gaps = [(columna, fila de arriba del hueco, alto del hueco), ...] → filas de tiles"""
+SOLID = raw(1)
+
+
+def build(width, gaps, solids=None):
+    """gaps = [(columna, fila de arriba del hueco, alto del hueco), ...]; solids = [(columna, fila), ...] bloques
+    sólidos sueltos (el escondite de detrás de un muro agrietado) → filas de tiles"""
     tiles = [[AIR] * width for _ in range(H)]
     for c in range(width):
         tiles[FLOOR - 1][c] = GRASS
@@ -29,16 +33,18 @@ def build(width, gaps):
                 tiles[r - 1][c - 1] = PILLAR
     for r in range(1, FLOOR):
         tiles[r - 1][width - 3] = FINISH
+    for c, r in solids or []:
+        tiles[r - 1][c - 1] = SOLID
     return tiles
 
 
-def write(out, name, name_en, width, gaps, speed=200, music='flappy', entities=None):
+def write(out, name, name_en, width, gaps, speed=200, music='flappy', entities=None, solids=None):
     lvl = {
         "name": name,
         "name_en": name_en,
         "width": width, "height": H,
         "playerStart": [4, 5],
-        "tiles": build(width, gaps),
+        "tiles": build(width, gaps, solids),
         "entities": entities or [],
         "autoScroll": {"startCol": 1, "endCol": 0, "speed": speed, "width": 20, "margin": 0.6, "countdown": 0},
         "music": music,
@@ -73,7 +79,8 @@ def ent(kind, col, row, **props):
 def populate(gaps, charges, food, cage, wall):
     """Objetos de una etapa (Plan 4): CARGAS en el centro del hueco de los pilares `charges` (índices de gaps), COMIDA
     en el de `food`, la JAULA (índice, carga mínima) arriba entre dos pilares y el MURO (índice) arriba entre dos pilares
-    tapando una carga. La ruta principal (los huecos) nunca queda tapada."""
+    ENCERRANDO una carga (bloques sólidos debajo y a su derecha: solo se llega rompiéndolo). La ruta principal (los
+    huecos) nunca queda tapada. → entidades, bloques sólidos"""
     out = []
     for i in charges:
         c, top, h = gaps[i]
@@ -86,4 +93,5 @@ def populate(gaps, charges, food, cage, wall):
     wc = gaps[wall][0] + 3
     out.append(ent('crackwall', wc, 2, minCharge=2, rows=2))
     out.append(ent('flapcharge', wc + 1, 1))
-    return out
+    solids = [(wc + 1, 2), (wc + 2, 1), (wc + 2, 2)]
+    return out, solids

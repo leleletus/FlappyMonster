@@ -55,7 +55,9 @@ while Adventure is locked, its saves do not count.
   power-up (Plan 4b).
 - **Cracked walls** (`crackwall`, Flappy-only, props `minCharge`, `rows`): solid like the door until a burst with enough
   power breaks it. They hide shortcuts / prizes: the main route never needs them (the zero-charge bot clears every
-  Valley stage — `flappy_flight etapa`).
+  Valley stage — `flappy_flight etapa`). The camera's left edge never pushes the player through an intact wall (0.5.170, final review of
+  Plan 4): against a wall it is the usual AutoScroll rule. In the Valley stages each wall encloses a charge item (solid
+  blocks under and right of it: `flappy_lib.populate`).
 - **Food:** a Flappy level's `apple` with skin `auto` takes its zone's `food` (`Zones.LIST`, via `level.id`, the level's
   file name set by `Level.new`); the Valley's is a peach (`food_valle.png`).
 - **HUD:** `src/ui/FlappyHud.lua` — hearts (always visible) and the charge meter under score / time; lives stay top
