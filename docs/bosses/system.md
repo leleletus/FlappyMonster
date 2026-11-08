@@ -67,7 +67,7 @@ Files: `src/world/systems/BossZones.lua` (zones + fight controller),
   **Boss intro**: if a boss has `hasIntro()`, the zone goes `waiting → intro → fight`
   (state code 5, appended: codes are network ids). During 'intro' players inside are
   FROZEN (`Level:frozenAt` → `PlayerAdventure:update` feeds an all-false Input and
-  zeroes vx; gravity still acts; identical SP/server/prediction since the zone state
+  zeroes vx; gravity still acts, except for a FLIGHT player (Flappy levels, no floor): `PlayerFlight` hovers it at the height it was frozen at with small automatic flaps, no fall, no damage — `netcopter_rules intro_planea`; identical SP/server/prediction since the zone state
   is in snapshots) and `BossZones.music` returns `BossZones.SILENCE` (states call
   `Sound.stopMusic()`). The boss runs `startIntro(level, players, z)` and the fight
   starts when every boss says `introDone()`. Event `boss_intro`. Harness `boss_intro`

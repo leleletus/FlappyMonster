@@ -26,6 +26,7 @@ local FLY_ACC    = 12       -- lo rápido que llega a esa velocidad (1/s)
 local MAX_FALL   = 900      -- px/s cayendo como mucho
 local EDGE_HOP   = -560     -- px/s del bote al caer por el borde de abajo o posarse en algo sólido
 local GLIDE_FPS  = 6
+local HOVER_FLAP = -170     -- px/s del aleteo pequeño con que se queda en su sitio sin control (entrada de un jefe)
 PlayerAdventure.FLY_SPD, PlayerAdventure.EDGE_HOP = FLY_SPD, EDGE_HOP
 PlayerAdventure.FLY_GRAVITY, PlayerAdventure.FLY_FLAP = FLY_GRAVITY, FLY_FLAP
 
@@ -113,6 +114,18 @@ function PlayerAdventure:updateFlight(dt, level, pJump, inX)
     if self.hurtT > 0 then self.hurtT = math.max(0, self.hurtT - dt) end
     local stunned = (self.stunT or 0) > 0 or (self.ctrlLockT or 0) > 0
     if stunned then inX = 0 end
+
+    -- Sin control (entrada de un jefe, partida terminada): se queda flotando a la altura a la que estaba, con aleteos
+    -- pequeños automáticos (el dibujo sigue aleteando), sin caer al borde de abajo ni hacerse daño
+    if self.frozen then
+        if not self.hoverY then self.hoverY = math.min(self.y, level and level.heightPx and (level.heightPx - TILE_PX) or self.y) end
+        if self.y >= self.hoverY and self.vy >= 0 and not stunned then
+            self.vy = HOVER_FLAP
+            self.puff = PUFF_SCALE
+        end
+    else
+        self.hoverY = nil
+    end
 
     -- Aleteo: siempre se puede (no gasta saltos)
     if pJump and not stunned then

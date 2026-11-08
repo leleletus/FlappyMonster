@@ -919,6 +919,30 @@ function cases.fondo_pelea()
     pa.hurt = nil
 end
 
+-- Entrada del jefe (Plan 5d): sin control el monstruo se queda flotando a su altura (aleteos pequeños), sin caer al
+-- borde de abajo ni perder vida, y al empezar la pelea sigue dentro de la zona
+function cases.intro_planea()
+    local level, es, boss, pa, ctrl, z = stageLevel()
+    local a = level.autoScroll
+    a.x, a.state = a.endX, 'stop'
+    local y0 = 6 * T
+    pa.x, pa.y, pa.vy = z.x0 + 4 * T, y0, 0
+    local hp0, dev, sawIntro, flaps, lastVy = pa.hp, 0, false, 0, 0
+    for _ = 1, 20 * 60 do
+        for k in pairs(stub.state) do stub.state[k] = false end
+        stageStep(level, es, ctrl, pa)
+        if z.state == 'intro' then
+            sawIntro = true
+            dev = math.max(dev, math.abs(pa.y - y0))
+            if pa.vy < 0 and lastVy >= 0 then flaps = flaps + 1 end
+            lastVy = pa.vy
+        elseif z.state == 'fight' then break end
+    end
+    check('intro_planea', sawIntro and dev <= T / 2 and pa.hp == hp0 and z.state == 'fight' and BossZones.contains(z, pa.x, pa.y),
+        ('intro: desvio max %.0f px (<= %d), vida %d -> %d, aleteos %d, zona %s, dentro=%s'):format(
+        dev, T / 2, hp0, pa.hp, flaps, z.state, tostring(BossZones.contains(z, pa.x, pa.y))))
+end
+
 function cases.muerte_en_pelea()
     local level, es, boss, pa, ctrl, z = stageLevel()
     -- (directamente a la arena: el jugador en su tercio izquierdo, la ventana parada encima)
@@ -1251,7 +1275,7 @@ end
 
 local ORDER = { 'rebote', 'de_lado', 'falla', 'bomba_fondo', 'mecha', 'cargas', 'lastima', 'aire', 'aventura', 'ultima_vida',
                 'vida', 'fase2', 'especial', 'no_pisa', 'red', 'garra', 'huye', 'bomba', 'azar', 'paquete',
-                'etapa_jefe', 'muerte_en_pelea', 'fondo_pelea', 'pilar', 'red_repetida', 'derrota_bombas',
+                'etapa_jefe', 'muerte_en_pelea', 'fondo_pelea', 'intro_planea', 'pilar', 'red_repetida', 'derrota_bombas',
                 'lanzada', 'devuelta_arco', 'cruza', 'mira_izq', 'cruce_justo', 'risa', 'dibujo', 'ruido',
                 'reaparece_lejos', 'cabina', 'garra_anim' }
 function love.load()
