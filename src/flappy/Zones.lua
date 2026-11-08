@@ -6,7 +6,9 @@
 --   boss    la etapa del jefe (falta mientras no exista: la zona acaba en su última etapa)
 --   food    la COMIDA de la zona (types/items/apple.lua: el aspecto 'auto' en sus etapas)
 --   map     su MAPA (src/states/flappy/FlappyMapState.lua): `art` = prefijo del arte en assets/images/flappy/map/
---           `music` = su música (id de assets/music/index.json; sin él, 'menus'); (<art>_bg, _pillar, _nest-Sheet, _boss-Sheet, _shop-Sheet: tools/art/ui/make_flappy_map.py); `at[etapa]` =
+--           (<art>_bg, _pillar, _nest-Sheet, _boss-Sheet, _shop-Sheet, _sign: tools/art/ui/make_flappy_map.py)
+--           `music` = su música (id de assets/music/index.json; sin él, 'menus')
+--           `at[etapa]` =
 --           { x, y } de la boca del pilar de ese nodo (normalizados: x en el ancho del mapa —la pantalla, 1280 como
 --           mucho, centrado—, y en el alto); `shop` = el de la TIENDA (el nido del mercader: no es una etapa, no cuenta
 --           para el progreso). Un nodo sin sitio se reparte solo a lo ancho

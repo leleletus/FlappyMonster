@@ -47,7 +47,7 @@ def hx(s): return rgb(s)
 PL = (hx('8a7e8c'), hx('6a6278'), hx('504a62'))   # luz, cuerpo, sombra
 PO = hx('2c2838')                                 # contorno
 PJ = hx('403a50')                                 # juntas
-GR = getattr(V, 'GRASS', (hx('7fae4a'), hx('5a8a3a'), hx('3c6a30')))    # (el Valle ya no tiene franja de hierba: solo la usa el pilar)
+GR = (hx('7fae4a'), hx('5a8a3a'), hx('3c6a30'))    # hierba de la base del pilar (el cielo del Valle ya no tiene franja de hierba)
 TW = (hx('c8ac80'), hx('9c7e5c'), hx('6e5440'), hx('4a3828'))     # ramitas: luz, medio, oscuro, contorno
 GREY_TW = (hx('a8a4ac'), hx('84808c'), hx('64606c'), hx('3e3a46'))
 EGG = (hx('fff6e4'), hx('e6d8c0'))

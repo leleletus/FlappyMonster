@@ -982,8 +982,8 @@ The user's verdict is pending.
 - The user asked for an original map track for the Flappy campaign (until now `FlappyMapState` played `menus`).
   `tools/music/mapa_flappy.py`: D major (like `flappy` "Aleteo", the Valley's level theme, but its own piece), 108 BPM,
   A · B · A = 24 bars = 53.3 s, one seamless-loop file (no intro, like the world map). It opens with **la llamada in D**
-  (A–D–F♯–A, repeated higher in bar 5); the dark turn is G minor in B (as in Aleteo). Leitmotif where the melody rests
-  (bars 4, 8, 12, 20, 24): the flap, ta-ta-TA on chord tones.
+  (A–D–F♯–A, repeated higher in bar 5); the dark turn is G minor in B (as in Aleteo). Leitmotif at the end of bars 4, 8, 12, 20, 24
+  (steps 10-12; mostly where the melody rests, in bar 12 it overlaps the lead): the flap, ta-ta-TA on chord tones.
 - Two variants, **verified by numbers only, NOT listened to; the user chooses A or B**: **A** (installed provisionally)
   = house style (singing 25 % pulse, 12.5 % pulse an octave up in B, hopping triangle bass 1-5-8-5, offbeat chords, light
   drums); **B** = a more original take (N163 flute-bell lead with a sky echo, triangle half notes, an ascending bell

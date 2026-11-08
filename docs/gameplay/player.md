@@ -183,6 +183,10 @@ ground pound):
   never sinks further and stays inside a boss zone that reaches the bottom) costs 1 HP through the normal `hurt` (then
   invulnerable: never a chain) and bounces it back up into the level (`EDGE_HOP` -560). Landing on anything SOLID (a
   net-launcher's `mount`, a tunnel's floor) does the same. Ceiling and walls only stop it.
+- NO CONTROL (Plan 5d): while `frozen` (a boss intro, a finished game) a flying player AUTO-HOVERS: it keeps the height it
+  had (clamped to one tile above the bottom edge) with small automatic flaps (`HOVER_FLAP` -170, the sprite keeps
+  flapping), so it neither falls to the bottom edge nor takes damage. Generic in `updateFlight`, not the Net-Copter's.
+  Test: `netcopter_rules intro_planea`.
 - Respawn: `AutoScroll.respawnPoint` in a Flappy level = in the air at a third of the window, the free cell closest to
   mid-height (never inside a pillar): `Level:flightSpot(x, minRow, maxRow)`. In a Flappy boss fight
   `BossZones.respawnPoint` uses the same rule at a third of the zone (never standing on the floor, which hurts).

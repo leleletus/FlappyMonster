@@ -129,7 +129,7 @@ def build(var):
             seq = [notes[0], notes[1], notes[2], notes[0] + 12, notes[1] + 12, notes[2] + 12, notes[1] + 12, notes[0] + 12]
             for j, st in enumerate(range(0, 16, 2)):                   # la corriente de aire: sube en corcheas
                 play(Cn['arp'], tval(b, st), tval(b, st) + S16 * 2.5, seq[j], dict(I_AIR, duty=0.0), q=q_n163, vs=0.6, release=3)
-        if b in ANSWER:                                                # LEITMOTIV: el aleteo ta-ta-TA (notas del acorde)
+        if b in ANSWER:                                                # LEITMOTIV: el aleteo ta-ta-TA (notas del acorde) al final de los compases 4, 8, 12, 20 y 24 (en el 12 se solapa con la melodía)
             fl = [notes[2], notes[2], notes[0] + 12]
             for st, nn, ln in zip((10, 11, 12), fl, (1, 1, 3)):
                 if var == 'A':

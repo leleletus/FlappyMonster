@@ -226,5 +226,9 @@ fight in the `T` table of `netcopter.lua`. A new reflectable projectile: the `re
   claw open / snap animation and sounds, the floor one row lower. `boss_frames` now draws the whole level for its
   zoom (with `ZONE=1` the floor was cut off: the level culls its tiles to the game window). `project_check` no longer
   reads `server/published/` (the last published copy, which still names deleted assets until the next deploy).
+- 2026-11-08 (Plan 5d, the user's points 3-4): the Valley has no floor, so the bomb also bursts at the boss zone's bottom
+  edge (`GlowBomb:bottomY`), the arena `NetcopterArena.json` is made by `arenas/make_netcopter_arena.py`, and during the
+  intro the frozen monster auto-hovers instead of falling and bouncing ([player](../gameplay/player.md#flight-flappy-levels)).
+  The boss stage got the Valley background (the user's extra point).
 - `pilot-Sheet` frame 3 (the old laugh with an open mouth) is no longer drawn by the boss; it stays in the sheet
   because the hurt frame is read by index (4) by the game and the generator preview.

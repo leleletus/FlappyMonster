@@ -46,9 +46,10 @@ and BACK returns to the map with the shop selected.
 
 ## The zone map (Plan 5b)
 
-`flappy_map` draws the zone instead of the menu background. Art (`tools/art/ui/make_flappy_map.py`, ×4 like the sky and
-the story map; prefix `Zones.LIST[z].map.art`, files `assets/images/flappy/map/<art>_*.png`):
-(The map plays `Zones.LIST[z].map.music`, a track id of `assets/music/index.json` — the Valley: `map_flappy` "Cielo abierto", [music-history](../audio/music-history.md); without it, `menus`.)
+`flappy_map` draws the zone instead of the menu background. It plays `Zones.LIST[z].map.music`, a track id of
+`assets/music/index.json` (the Valley: `map_flappy` "Cielo abierto", [music-history](../audio/music-history.md);
+without it, `menus`). Art (`tools/art/ui/make_flappy_map.py`, ×4 like the sky and the story map; prefix
+`Zones.LIST[z].map.art`, files `assets/images/flappy/map/<art>_*.png`):
 - `_bg` (320x180 = 1280x720): the `valley` sky's day gradient, sun, clouds and its three layers (reused from
   `make_valley_sky.py`). Tiled across the width, centred (the layers wrap at 320 art px), so any logical width works.
 - `_pillar` (18x160): a basalt pillar in front, darker and outlined; the game draws from the node's point down to the
@@ -60,7 +61,8 @@ the story map; prefix `Zones.LIST[z].map.art`, files `assets/images/flappy/map/<
 - `_shop-Sheet` (30x24 ×2): the SHOP = the MERCHANT's nest: a flappy of the same race (round head, antennae, white
   face, NO wings) in a red cap and an apron, with a coin sack; frame 2 (waving) shows now and then.
 - `_sign` (34x49, `make_flappy_map.py`, new file only): the SHOP SIGN over the merchant: a post with an arm (still), a plank hanging
-  from two ropes that sways one art pixel (timer) with the translated word `shop.sign` (TIENDA / SHOP) in the pixel font, and a blinking gold spark.
+  from two ropes that sways one art pixel (timer) with the translated word `shop.sign` (TIENDA / SHOP) in the pixel font, and a blinking gold spark. A map with a `shop` MUST have its `<art>_sign.png` (a zone without it fails to draw its shop node;
+  `project_check` does not catch it).
 
 Positions are DATA: `map.at[stageId] = { x, y }` (normalised: x over the map width = the screen, at most 1280, centred;
 y over the height) is the point at the top of that node's pillar; `map.shop` is the merchant's. A node without a
@@ -194,6 +196,19 @@ the air inside the zone with full HP), `touch_layout` (`especial`), `menu_flow` 
 `continuar_flappy`, `candado`).
 
 **Decisions**
+- 2026-11-08, the user after playing 0.5.179 (Plan 5d, [flappy-plan-5d-valley-fixes](../design/flappy-plan-5d-valley-fixes.md)),
+  six points + one: (1) the merchant's place does not stand out -> the TIENDA / SHOP sign over its nest; (2) the stage
+  ground was still the meadow's and (3) better no ground at all: pillars rise from the bottom edge as they hang from the
+  top -> `Level.openBottom`, the bottom-edge rule (1 HP + bounce), tile `mount` under the net-launchers, the glowbomb
+  bursting at the zone's bottom; (4) the boss intro must not drop and bounce the monster -> auto-hover while frozen;
+  (5) music for the map -> `map_flappy` "Cielo abierto" (A installed, B a preview; the user chooses, NOT listened to by
+  the author); (6) the Flappy menus should have the old endless-mode blocks background; extra: the boss stage also gets
+  the Valley background (and the sky lost its grass band: a violet haze). CORRECTION by the user: the checkered
+  background belongs in the DEBUG menu only; the Flappy menus keep the bot scene (and the idea "the bot should play
+  Flappy levels when there are many" is saved in [flappy-prequel](../design/flappy-prequel.md#later-menu-background)).
+  Plan 5d decisions: no floor row in any Flappy level; one generic bottom-edge rule; mounts are solid tiles; the
+  bomb bursts at the zone bottom; the hover is generic in the flight code; the sign's text is translated and drawn with
+  the game's font. All art and the music are provisional until the user judges them.
 - 2026-11-08, the user: approved the Plan 5b proposal (Valley look, 3 stages, map, shop + wallet) unchanged.
 - Plan 5b: the grade-reward points also enter the wallet; replaying a finished stage adds its points again (farming
   is allowed, prices are high) - FLAGGED for the user to confirm. All 5b art (sky, map, merchant, net-launcher) is
