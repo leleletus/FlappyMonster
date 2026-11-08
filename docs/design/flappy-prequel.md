@@ -216,6 +216,8 @@ Projects 2 (online unlock rules) and 3 (online Flappy) come after.
 
 ## Plans
 
+**The user, 2026-11-08:** the first boss is the Net-Copter (Redcóptero) as proposed in [flappy-plan-5-netcopter](flappy-plan-5-netcopter.md). `tuffi` is the FINAL battle's theme (it may be reworked later with Evil Monster motifs); until Flappy bosses have music of their own, they all use it.
+
 One implementation plan per build step, each written (superpowers `writing-plans`) when the step before it is done
 and judged, so it builds on what really exists. Each must leave the game playable and the battery green.
 
@@ -226,7 +228,8 @@ and judged, so it builds on what really exists. Each must leave the game playabl
 | 3 | **Campaign frame:** shared save / run core, Flappy saves (3 slots, Easy / Normal / Hard), zone map (placeholder look), stages with lives / Game Over / results, CONTINUE = last mode | **done (0.5.167):** [flappy-plan-3-campaign-frame](flappy-plan-3-campaign-frame.md), system page [flappy-campaign](../gameplay/flappy-campaign.md) |
 | 4 | Flappy HUD (HP, lives, charge); special attack + charge items; special obstacles; caged flappies (saved on finish); zone food (return-to-sender and boss charge drops moved to 5: they need the machines) | **done (0.5.169):** [flappy-plan-4-attack-and-cages](flappy-plan-4-attack-and-cages.md) |
 | 4b | Power-ups ([powerups](powerups.md)): inventory per slot (6 / 3 per type), the quick wheel (touch, pad, PC), `shield` + `heart` first, then the catalog; cages give power-ups | **done (0.5.172):** [flappy-plan-4b-powerups](flappy-plan-4b-powerups.md), system page [powerups](../gameplay/powerups.md) |
-| 5 | Zone 1 complete: Valley background, real stages (same ids as the placeholders), first machine boss (with return-to-sender shots and controlled charge drops), the Evil Monster's look, the zone map's art; map shops + the points wallet | to write after 4b |
+| 5 | **The Net-Copter** (zone 1's boss): Evil Monster + machine art, return to sender (`reflectable`, `glowbomb`), controlled charge / food in Flappy boss fights (`bossdrops`), the boss, the stage `valle_redcoptero`; boss music `tuffi` | **written:** [flappy-plan-5-netcopter](flappy-plan-5-netcopter.md) |
+| 5b | Zone 1's look: Valley background (a `Sky` biome), the real stages (same ids as the placeholders), the zone map's art; map shops + the points wallet | to write after 5 |
 | 6 | Zones 2–6, one sub-plan each (background, music — verified by numbers only —, obstacles, stages, boss); the final over the quarry; **`Campaign.READY = true`** (the Adventure lock goes on) | after 5 |
 | 7 | Films: the campaign's opening and ending; Adventure intro (quarry → volcano) and ending changes; lore fix in [story](../story/story.md) | after 6 |
 | — | Projects 2 (online unlock rules) and 3 (online Flappy) | after 7 |
