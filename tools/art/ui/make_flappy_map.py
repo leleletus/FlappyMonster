@@ -47,7 +47,7 @@ def hx(s): return rgb(s)
 PL = (hx('8a7e8c'), hx('6a6278'), hx('504a62'))   # luz, cuerpo, sombra
 PO = hx('2c2838')                                 # contorno
 PJ = hx('403a50')                                 # juntas
-GR = V.GRASS                                      # hierba (luz, medio, oscuro)
+GR = getattr(V, 'GRASS', (hx('7fae4a'), hx('5a8a3a'), hx('3c6a30')))    # (el Valle ya no tiene franja de hierba: solo la usa el pilar)
 TW = (hx('c8ac80'), hx('9c7e5c'), hx('6e5440'), hx('4a3828'))     # ramitas: luz, medio, oscuro, contorno
 GREY_TW = (hx('a8a4ac'), hx('84808c'), hx('64606c'), hx('3e3a46'))
 EGG = (hx('fff6e4'), hx('e6d8c0'))
@@ -305,6 +305,50 @@ def shop(wave=False):
 def shops(): return [shop(False), shop(True)]
 
 
+# ── El cartel de la tienda: poste con brazo (se queda quieto), tablón colgado de dos cuerdas (se mece) y un destello ─
+# Hoja valle_sign.png 34x49: poste+brazo en (0,0) 34x31 · tablón en (0,32) 30x12 · destello 2 cuadros 5x5 en (0,44)/(5,44).
+# Respecto al cuadro de la tienda (30x24): el poste nace en la columna 2 (en el borde del nido) y el tablón queda sobre el
+# mercader sin tocarle el gorro (el gorro empieza en la fila 6; el tablón acaba en la fila 2).
+SIGN_POST_AT, SIGN_PLANK_AT = (0, -12), (3, -9)          # esquina de cada pieza respecto al cuadro de la tienda (filas)
+
+
+def sign_post():
+    im = new(34, 31)
+    for y in range(31):                                    # poste de dos columnas, hasta el nido (fila 18)
+        px(im, 2, y, WOOD[0]); px(im, 3, y, WOOD[2]); px(im, 4, y, WOOD[1])
+    for x in range(2, 32):                                 # brazo (fila 0) con refuerzo
+        px(im, x, 0, WOOD[0]); px(im, x, 1, WOOD[2]); px(im, x, 2, WOOD[1] if x > 5 else WOOD[2])
+    for i in range(1, 4): px(im, 4 + i, 2 + i, WOOD[1]); px(im, 4 + i, 3 + i, WOOD[0])      # puntal
+    return im
+
+
+def sign_plank():
+    im = new(30, 12)
+    for x in (4, 25):                                      # las cuerdas
+        px(im, x, 0, ROPE); px(im, x, 1, ROPE)
+    for y in range(2, 12):                                 # tablón: contorno, cara, luz arriba, sombra abajo
+        for x in range(30):
+            edge = y in (2, 11) or x in (0, 29)
+            c = WOOD[0] if edge else (WOOD[3] if y == 3 else (WOOD[1] if y == 10 else WOOD[2]))
+            px(im, x, y, c)
+    for (x, y) in ((3, 3), (26, 3), (3, 10), (26, 10)): px(im, x, y, IRON[2])               # clavos
+    return im
+
+
+def sign_spark(f):
+    im = new(5, 5)
+    on = [(2, 0), (0, 2), (1, 2), (2, 2), (3, 2), (4, 2), (2, 1), (2, 3), (2, 4)] if f == 0 else [(2, 2), (1, 1), (3, 1), (1, 3), (3, 3)]
+    for (x, y) in on: px(im, x, y, GOLD[0] if (x, y) == (2, 2) else GOLD[1])
+    return im
+
+
+def sign_sheet():
+    out = new(34, 49)
+    out.alpha_composite(sign_post(), (0, 0)); out.alpha_composite(sign_plank(), (0, 32))
+    out.alpha_composite(sign_spark(0), (0, 44)); out.alpha_composite(sign_spark(1), (5, 44))
+    return out
+
+
 # ── Vista previa: el mapa como lo dibuja FlappyMapState (sitios de ejemplo, como los de Zones.lua) ─────────────────
 EXAMPLE = [('shop', 0.08, 0.60), ('open', 0.27, 0.52), ('locked', 0.46, 0.38), ('locked', 0.66, 0.50),
            ('boss', 0.88, 0.44)]
@@ -376,6 +420,9 @@ def apply(art):
         path = os.path.join(OUT, name + '.png')
         if os.path.exists(path) and not FORCE: print('  %s ya existe: no se toca (--force)' % os.path.relpath(path, REPO)); continue
         im.save(path); print('  %-46s %dx%d' % (os.path.relpath(path, REPO), im.width, im.height))
+    path = os.path.join(OUT, 'valle_sign.png')          # el cartel es nuevo: se escribe solo si no existe (--force no hace falta)
+    if os.path.exists(path) and not FORCE: print('  valle_sign.png ya existe: no se toca (--force)')
+    else: sign_sheet().save(path); print('  valle_sign.png 34x49')
 
 
 if __name__ == '__main__':

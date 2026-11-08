@@ -241,6 +241,26 @@ local function drawPillar(art, p, ground, a)
     love.graphics.draw(im, quad(im, 0, PILLAR_H - BASE_H, PILLAR_W, BASE_H), x, p.y + top * S, 0, S, S)
 end
 
+-- El cartel "TIENDA" sobre el nido del mercader: el tablón se mece (un píxel de arte a un lado y a otro, en el compás
+-- del temporizador) y un destello dorado parpadea en su esquina para que se vea (x, y = esquina del cuadro de la tienda)
+function FlappyMapState:_drawSign(sg, x, y, a)
+    local sway = math.floor(math.sin(self.t * 1.6) * 1.4 + 0.5)         -- -1 / 0 / 1 píxeles de arte
+    local px_, py_ = x + (3 + sway) * S, y - 9 * S
+    love.graphics.setColor(1, 1, 1, a)
+    love.graphics.draw(sg, quad(sg, 0, 32, 30, 12), px_, py_, 0, S, S)
+    local word = L('shop.sign')
+    local sc = 3
+    while sc > 1 and PixelFont.width(word, sc) > 26 * S do sc = sc - 1 end
+    local tw = PixelFont.width(word, sc)
+    PixelFont.shadow(word, px_ + math.floor((30 * S - tw) / 2), py_ + 3 * S + math.floor((8 * S - PixelFont.height(sc)) / 2),
+                     sc, a, { 1, 0.93, 0.7 })
+    local f = math.floor(self.t * 2.5) % 4                                -- destello: apagado, grande, pequeño, grande
+    if f ~= 0 then
+        love.graphics.setColor(1, 1, 1, a)
+        love.graphics.draw(sg, quad(sg, (f == 2) and 5 or 0, 44, 5, 5), px_ + 27 * S, py_ - 2 * S, 0, S, S)
+    end
+end
+
 function FlappyMapState:_drawSpot(art, p, a)
     local s = p.spot
     local sp = SPRITE[s.kind]
@@ -250,7 +270,11 @@ function FlappyMapState:_drawSpot(art, p, a)
         -- el mercader saluda de vez en cuando
         local im = img(art .. '_shop-Sheet.png')
         local fr = (self.t % 3 > 2.4) and 2 or 1
+        local sg = img(art .. '_sign.png')
+        -- el poste del cartel va detrás del nido
+        love.graphics.draw(sg, quad(sg, 0, 0, 34, 31), x, y - 12 * S, 0, S, S)
         love.graphics.draw(im, quad(im, (fr - 1) * sp[1], 0, sp[1], sp[2]), x, y, 0, S, S)
+        self:_drawSign(sg, x, y, a)
         return
     end
     local st = self:_state(s.k)

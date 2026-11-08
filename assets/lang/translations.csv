@@ -665,3 +665,4 @@ shop.bought,¡Comprado: {name}!,Bought: {name}!,
 shop.poor,No tienes puntos suficientes,Not enough points,
 shop.full,Tu inventario está lleno ({m} power-ups),Your inventory is full ({m} power-ups),
 shop.type_full,Ya llevas {m} de {name},You already carry {m} of {name},
+shop.sign,TIENDA,SHOP,"Cartel sobre el nido del mercader en el mapa Flappy (FlappyMapState)"

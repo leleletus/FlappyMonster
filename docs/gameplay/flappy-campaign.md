@@ -59,6 +59,8 @@ the story map; prefix `Zones.LIST[z].map.art`, files `assets/images/flappy/map/<
   ropes, gondola, propeller, in `make_netcopter.py`'s colours): open (bobs), beaten (popped balloon, still), locked (grey).
 - `_shop-Sheet` (30x24 ×2): the SHOP = the MERCHANT's nest: a flappy of the same race (round head, antennae, white
   face, NO wings) in a red cap and an apron, with a coin sack; frame 2 (waving) shows now and then.
+- `_sign` (34x49, `make_flappy_map.py`, new file only): the SHOP SIGN over the merchant: a post with an arm (still), a plank hanging
+  from two ropes that sways one art pixel (timer) with the translated word `shop.sign` (TIENDA / SHOP) in the pixel font, and a blinking gold spark.
 
 Positions are DATA: `map.at[stageId] = { x, y }` (normalised: x over the map width = the screen, at most 1280, centred;
 y over the height) is the point at the top of that node's pillar; `map.shop` is the merchant's. A node without a
