@@ -8,6 +8,10 @@
 --   premio     el premio de la nota (S: +1 vida; A: +500 puntos) se DA y se guarda, no solo sale en los resultados
 --   partida    FlappyRun: abrir un hueco escribe flappy<n>.sav (no story<n>.sav), las etapas se abren en orden, vidas de
 --              Fácil al empezar, gameOver vuelve al principio de la zona
+--   monedero   el MONEDERO sube con los puntos de cada etapa TERMINADA; salir a medias y el game over no lo tocan;
+--              comprar no baja el récord de puntos
+--   tienda     FlappyRun.buy: ok / poor / full / type_full (solo ok gasta y guarda); los datos de src/flappy/Shops.lua
+--   migrar     una partida v3 carga con el monedero a 0 y lo demás igual
 --   (los casos de pantallas — mapa, partidas, CONTINUAR — van en menu_flow, que corre el juego de verdad)
 --
 --   tools/tests/run.sh flappy_campaign   (CASE=nombre: solo ese)
@@ -260,7 +264,7 @@ function cases.inventario()
     local ids = {}
     for _, p in ipairs(Powerups.forMode('flappy')) do ids[#ids + 1] = p.id end
     check('inventario', codes == 'ok,ok,ok,type_full,ok,ok,ok,full' and spent and inFile == 2 and not missing and total == 5
-          and old and type(old.inventory) == 'table' and next(old.inventory) == nil and FlappySave.VERSION == 3
+          and old and type(old.inventory) == 'table' and next(old.inventory) == nil and FlappySave.VERSION >= 3
           and table.concat(ids, ',') == 'shield,heart,strength,magnet_points,magnet_items,magnet_all,small,ghost',
           ('añadir: %s; gastar un escudo=%s (en el archivo: %s); gastar uno que no hay=%s; total %d; v2 → inventario vacío=%s; catálogo Flappy: %s'):format(
            codes, tostring(spent), tostring(inFile), tostring(missing), total, tostring(old and old.inventory and next(old.inventory) == nil), table.concat(ids, ',')))
@@ -291,7 +295,94 @@ function cases.regalos()
            tostring(cageIdx), tostring(gift), tostring(got), tostring(once), tostring(lost)))
 end
 
-local ORDER = { 'archivo', 'progreso', 'zonas', 'partida', 'premio', 'jaulas', 'inventario', 'regalos' }
+-- El MONEDERO (docs/design/powerups.md § Shops): se llena con los puntos de cada etapa TERMINADA (golden rule 7); salir
+-- a medias o el game over no lo tocan; comprar lo gasta pero el récord de puntos (`points`, `best`) no baja
+function cases.monedero()
+    local FlappyRun, FlappySave = require 'src/flappy/FlappyRun', require 'src/flappy/FlappySave'
+    FlappySave.delete(3)
+    FlappyRun.open(3, 'normal')
+    local w0 = FlappyRun.data.wallet
+    FlappyRun.setLives(FlappyRun.data.lives - 1)                         -- (salir a medias: solo las vidas)
+    local leftOk = FlappyRun.data.wallet == w0 and FlappySave.load(3).wallet == w0
+    local out = FlappyRun.complete('valle_pilares_1', { time = 20, width = 150, score = 200 })
+    local earned = (out and out.points or 0) + (out and out.reward and out.reward.points or 0)
+    local w1 = FlappyRun.data.wallet
+    local finOk = out and out.points > 0 and w1 == w0 + earned and FlappySave.load(3).wallet == w1
+    -- el game over de la zona no quita ni da nada al monedero
+    FlappyRun.gameOver()
+    local goOk = FlappyRun.data.wallet == w1 and FlappySave.load(3).wallet == w1
+    -- comprar: baja el monedero, NO el récord
+    local p0, b0 = FlappyRun.data.points, FlappyRun.data.best.valle_pilares_1.score
+    FlappyRun.data.wallet = 1000
+    local r = FlappyRun.buy('shield', 300)
+    local recOk = r == 'ok' and FlappyRun.data.wallet == 700 and FlappyRun.data.points == p0
+                  and FlappyRun.data.best.valle_pilares_1.score == b0 and FlappySave.load(3).points == p0
+    FlappyRun.close(); FlappySave.delete(3)
+    check('monedero', type(w0) == 'number' and w0 == 0 and leftOk and finOk and goOk and recOk,
+          ('al empezar %s; salir a medias no lo toca=%s; terminar la etapa +%d → %s (guardado)=%s; game over no lo toca=%s; comprar baja el monedero y no el récord=%s (%s)'):format(
+           tostring(w0), tostring(leftOk), earned, tostring(w1), tostring(finOk), tostring(goOk), tostring(recOk), tostring(r)))
+end
+
+-- La TIENDA: FlappyRun.buy(id, precio) → 'ok' | 'poor' | 'full' | 'type_full'; solo 'ok' gasta y guarda; los datos de
+-- la tienda del Valle (src/flappy/Shops.lua)
+function cases.tienda()
+    local FlappyRun, FlappySave = require 'src/flappy/FlappyRun', require 'src/flappy/FlappySave'
+    local Shops, Powerups = require 'src/flappy/Shops', require 'src/world/powerups/Powerups'
+    local list = Shops.LIST.valle or {}
+    local items = {}
+    for _, it in ipairs(list) do
+        local def = Powerups.get(it.id)
+        local flappy = false
+        for _, m in ipairs(def and def.modes or {}) do if m == 'flappy' then flappy = true end end
+        items[#items + 1] = it.id .. '=' .. tostring(it.price) .. (flappy and '' or '(?)')
+    end
+    local dataOk = table.concat(items, ',') == 'shield=300,heart=400,magnet_points=250'
+                   and Shops.forZone(1) == list
+    FlappySave.delete(3)
+    FlappyRun.open(3, 'normal')
+    local d = FlappyRun.data
+    d.wallet = 1000
+    local r1 = FlappyRun.buy('shield', 300)
+    local f1 = FlappySave.load(3)
+    local okBuy = r1 == 'ok' and d.wallet == 700 and d.inventory.shield == 1 and f1.wallet == 700 and f1.inventory.shield == 1
+    d.wallet = 100
+    local r2 = FlappyRun.buy('heart', 400)
+    local poor = r2 == 'poor' and d.wallet == 100 and d.inventory.heart == nil and FlappySave.load(3).wallet == 700
+    d.wallet = 5000
+    d.inventory = { shield = 3 }
+    local r3 = FlappyRun.buy('shield', 300)
+    local tfull = r3 == 'type_full' and d.wallet == 5000 and d.inventory.shield == 3
+    d.inventory = { heart = 3, strength = 3 }
+    local r4 = FlappyRun.buy('magnet_points', 250)
+    local full = r4 == 'full' and d.wallet == 5000 and d.inventory.magnet_points == nil and FlappyRun.inventoryCount() == 6
+    FlappyRun.close(); FlappySave.delete(3)
+    check('tienda', dataOk and okBuy and poor and tfull and full,
+          ('Valle: %s; comprar=%s (%s); sin puntos=%s (%s); 3 de ese tipo=%s (%s); inventario lleno=%s (%s)'):format(
+           table.concat(items, ','), tostring(okBuy), tostring(r1), tostring(poor), tostring(r2), tostring(tfull), tostring(r3),
+           tostring(full), tostring(r4)))
+end
+
+-- Una partida de la versión 3 (sin monedero) carga con el monedero a 0 y todo lo demás igual; una v4 conserva el suyo
+function cases.migrar()
+    local FlappySave = require 'src/flappy/FlappySave'
+    local SaveFile = require 'src/core/SaveFile'
+    SaveFile.write('flappy3.sav', { version = 3, difficulty = 'hard', world = 1, node = 2, lives = 4, done = { valle_pilares_1 = true },
+                                    best = { valle_pilares_1 = { score = 300, grade = 'A' } }, playTime = 50, points = 1234,
+                                    gameOvers = 1, rescued = { valle_pilares_1 = { [7] = true } }, inventory = { shield = 2 } })
+    local d = FlappySave.load(3)
+    local kept = d and d.wallet == 0 and d.version == FlappySave.VERSION and FlappySave.VERSION == 4 and d.difficulty == 'hard'
+                 and d.node == 2 and d.lives == 4 and d.done.valle_pilares_1 == true and d.best.valle_pilares_1.score == 300
+                 and d.points == 1234 and d.gameOvers == 1 and d.rescued.valle_pilares_1[7] == true and d.inventory.shield == 2
+    SaveFile.write('flappy3.sav', { version = 4, difficulty = 'normal', world = 1, node = 1, lives = 3, done = {}, best = {}, wallet = 55 })
+    local d4 = FlappySave.load(3)
+    local fresh = FlappySave.new('easy').wallet
+    FlappySave.delete(3)
+    check('migrar', kept and d4 and d4.wallet == 55 and fresh == 0,
+          ('v3 → monedero %s, versión %s, lo demás igual=%s; v4 conserva el suyo (%s); partida nueva %s'):format(
+           tostring(d and d.wallet), tostring(d and d.version), tostring(kept), tostring(d4 and d4.wallet), tostring(fresh)))
+end
+
+local ORDER = { 'archivo', 'progreso', 'zonas', 'partida', 'premio', 'jaulas', 'inventario', 'regalos', 'monedero', 'tienda', 'migrar' }
 function love.load()
     local only = os.getenv('CASE')
     for _, name in ipairs(ORDER) do

@@ -14,7 +14,9 @@ Plans 4–7 (roadmap: [flappy-prequel § Plans](../design/flappy-prequel.md#plan
 |---|---|
 | `src/flappy/Zones.lua` | the campaign as DATA: zones in order, each with its stages and its boss stage (`boss`) |
 | `src/flappy/FlappySave.lua` | slots `flappy1..3.sav` (separate from Adventure's `story<n>.sav`), `DIFFICULTIES` |
-| `src/flappy/FlappyRun.lua` | the open slot: RunCore + `complete` (score; the last stage of the last zone → `Campaign.finished`) and `gameOver` (back to the start of the zone) |
+| `src/flappy/FlappyRun.lua` | the open slot: RunCore + `complete` (score, the WALLET; the last stage of the last zone → `Campaign.finished`), `buy` (the shop) and `gameOver` (back to the start of the zone) |
+| `src/flappy/Shops.lua` | the zone SHOPS as data: `LIST[zoneId] = { { id, price }, ... }`, `forZone(z)` |
+| `src/states/flappy/FlappyShopState.lua` | a zone's shop (`flappy_shop { zone = z }`, back to `flappy_map`) |
 | `src/story/RunCore.lua` | progress rules SHARED with the story (`Run.lua`): open / save / state / frontier / setLives / score / restartWorld |
 | `src/core/SaveFile.lua` | save files as Lua tables with a `.bak` copy (shared with `Save.lua`) |
 | `src/story/Campaigns.lua` | per-campaign descriptors (`story`, `flappy`) read by the slot screen and CONTINUE |
@@ -29,7 +31,16 @@ Plans 4–7 (roadmap: [flappy-prequel § Plans](../design/flappy-prequel.md#plan
 
 **Data:** a zone = one entry in `Zones.LIST` (`id`, `stages`, `boss`, `food`) + a lang key `flappy.zone.<id>`. Stage ids are level
 file names and are stored in saves: never rename them. A slot: `{ version, difficulty, world, node, lives, done, best,
-playTime, points, gameOvers, rescued }` (version 2; [save-data](../architecture/save-data.md)).
+playTime, points, gameOvers, rescued, inventory, wallet }` (version 4; [save-data](../architecture/save-data.md)).
+
+**Wallet and shops (Plan 5b):** `wallet` is a points purse separate from the `points` record. `FlappyRun.complete` adds
+the finished stage's points (`summary.points`, with the difficulty's `scoreMult`) plus the grade reward's points to it;
+leaving halfway and Game Over never touch it (rule 7); buying lowers only the wallet, never `points` or `best`. Each
+zone's shop (`Shops.LIST`, keyed by zone id: the Valley sells `shield` 300, `heart` 400, `magnet_points` 250) is the
+`flappy_shop` screen: one card per item (icon, name, price, owned of 3), unaffordable ones greyed; ENTER / a tap on the
+selected card asks BUY / CANCEL; `FlappyRun.buy(id, price)` → `'ok'` (spends and saves at once) | `'poor'` | `'full'` |
+`'type_full'` (nothing spent, a notice). Refusals are noticed before the confirmation. The map opens it (Task 5 of
+[Plan 5b](../design/flappy-plan-5b-valley.md)).
 
 **Playing a stage:** the map calls `AdventureState` with the same contract as the story map: `lives`, `onLeave` (lives
 LOST are saved however the stage ends), `onGameOver` (`FlappyRun.gameOver()`: the zone starts again, lives back to the
@@ -134,10 +145,10 @@ No extra lives. What it gives is saved only when the stage is finished (rule 7).
 - A zone: an entry in `Zones.LIST` + `flappy.zone.<id>` in `assets/lang/translations.csv`.
 - Turn the Adventure lock on: `Campaign.READY = true` in the same commit that makes the campaign finishable (Plan 6).
 
-**Tests:** `flappy_campaign` (`archivo`, `progreso`, `zonas`, `partida`, `premio`, `jaulas`), `flappy_flight` (`carga`,
+**Tests:** `flappy_campaign` (`archivo`, `progreso`, `zonas`, `partida`, `premio`, `jaulas`, `monedero`, `tienda`, `migrar`), `flappy_flight` (`carga`,
 `ataque`, `jaula`, `lanzarredes`, `lanzarredes_techo`, `muro`, `etapa` on every Valley stage), `netcopter_rules` (`etapa_jefe`: the boss stage is passable
 — arena reached, camera stopped, zone fighting, walls down after the win, finish touched; `muerte_en_pelea`: respawn in
-the air inside the zone with full HP), `touch_layout` (`especial`), `menu_flow` (`flappy_slots`, `mapa`,
+the air inside the zone with full HP), `touch_layout` (`especial`), `menu_flow` (`flappy_slots`, `mapa`, `tienda`,
 `continuar_flappy`, `candado`).
 
 **Decisions**

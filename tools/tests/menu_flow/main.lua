@@ -357,6 +357,65 @@ local function run()
         for i = 1, FlappySave.SLOTS do FlappySave.delete(i) end
         gStateMachine:change('main_menu', { select = 'classic' }); wait(0.6)
     end
+    -- ── 2d. la TIENDA de una zona Flappy (src/states/flappy/FlappyShopState.lua): sus fichas, comprar con confirmación
+    --        (gasta el monedero y se guarda), cancelar, sin puntos / inventario lleno → aviso sin ventana ni gasto, con
+    --        el dedo (ficha, otra vez: confirmar, COMPRAR) y ATRÁS vuelve al mapa de la zona ──
+    do
+        local FlappyRun = require 'src/flappy/FlappyRun'
+        local FlappySave = require 'src/flappy/FlappySave'
+        for i = 1, FlappySave.SLOTS do FlappySave.delete(i) end
+        FlappyRun.open(1, 'normal')
+        local d = FlappyRun.data
+        d.wallet = 1000
+        gStateMachine:change('flappy_shop', { zone = 1 }); wait(0.8)
+        local sh = top()
+        local inShop = name(sh) == 'FlappyShopState' and #sh.items == 3
+        local buyOk, cancelOk, poorOk, fullOk, touchOk, backOk = false, false, false, false, false, false
+        if inShop then
+            for _, w in ipairs({ 960, 1600, 1280 }) do resize(w, 720); wait(0.3); shot('flappy_shop_' .. w) end
+            -- comprar el 1º (escudo, 300): confirmar y COMPRAR
+            press('confirm', 0.1)
+            local asked = sh.confirm ~= nil
+            if asked then shot('flappy_shop_confirm') end
+            press('confirm', 0.1)
+            buyOk = asked and sh.confirm == nil and d.wallet == 700 and d.inventory.shield == 1 and FlappySave.load(1).wallet == 700
+                    and sh.noticeOk == true
+            -- cancelar: ATRÁS cierra la ventana sin gastar y sigue en la tienda
+            press('confirm', 0.1); press('back', 0.3)
+            cancelOk = sh.confirm == nil and top() == sh and d.wallet == 700 and d.inventory.shield == 1
+            -- sin puntos (corazón, 400): apagada, ni ventana ni gasto
+            d.wallet = 100
+            press('nav_down', 0.1); press('confirm', 0.1)
+            poorOk = sh.sel == 2 and sh.confirm == nil and sh.noticeOk == false and d.wallet == 100 and d.inventory.heart == nil
+            shot('flappy_shop_poor')
+            -- inventario lleno (6): el imán no entra, ni ventana ni gasto
+            d.wallet, d.inventory = 5000, { heart = 3, strength = 3 }
+            press('nav_down', 0.1); press('confirm', 0.1)
+            fullOk = sh.sel == 3 and sh.confirm == nil and sh.noticeOk == false and d.wallet == 5000 and d.inventory.magnet_points == nil
+            -- con el dedo: tocar la 1ª la elige, otra vez abre la confirmación, fuera la cancela; luego COMPRAR
+            d.inventory = {}
+            local c1 = sh:_layout().cards[1]
+            local cx, cy = c1.x + 40, c1.y + 20
+            sh:touchpressed('d', cx, cy); wait(0.05)
+            local picked = sh.sel == 1 and sh.confirm == nil
+            sh:touchpressed('d', cx, cy); wait(0.05)
+            local opened = sh.confirm ~= nil
+            sh:touchpressed('d', 4, 4); wait(0.05)
+            local outCancel = sh.confirm == nil and d.wallet == 5000
+            sh:touchpressed('d', cx, cy); wait(0.05)
+            local _, rects = require('src/ui/menu/MenuKit').optionsLayout(2, { note = true })
+            sh:touchpressed('d', rects[1].x + 20, rects[1].y + 20); wait(0.05)
+            touchOk = picked and opened and outCancel and d.wallet == 4700 and d.inventory.shield == 1
+            press('back', 0.9)
+            backOk = name(top()) == 'FlappyMapState' and top().world == 1
+        end
+        check('tienda', inShop and buyOk and cancelOk and poorOk and fullOk and touchOk and backOk,
+            ('tienda=%s; comprar con confirmación (monedero 1000 → 700, guardado)=%s; cancelar=%s; sin puntos: aviso sin gastar=%s; inventario lleno: aviso sin gastar=%s; con el dedo=%s; atrás → mapa=%s'):format(
+             tostring(inShop), tostring(buyOk), tostring(cancelOk), tostring(poorOk), tostring(fullOk), tostring(touchOk), tostring(backOk)))
+        FlappyRun.close()
+        for i = 1, FlappySave.SLOTS do FlappySave.delete(i) end
+        gStateMachine:change('main_menu', { select = 'classic' }); wait(0.6)
+    end
     go('settings', 'SettingsState', 'settings')
     local lang0 = L.current()
     press('nav_right', 0.3)

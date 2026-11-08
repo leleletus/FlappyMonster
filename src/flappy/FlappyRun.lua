@@ -1,8 +1,10 @@
 -- src/flappy/FlappyRun.lua
 -- La PARTIDA de la campaña Flappy en curso (como src/story/Run.lua para la historia): el hueco abierto, qué está
 -- superado y qué se puede jugar. Las reglas de progreso son las de src/story/RunCore.lua; aquí, lo propio:
---   FlappyRun.complete(id, result)  etapa superada: nota, récord, puntos y el premio de la nota; con la ÚLTIMA etapa de la última zona,
---                                   la campaña está terminada (Campaign.finished: desbloquea Aventura). Guarda.
+--   FlappyRun.complete(id, result)  etapa superada: nota, récord, puntos (también al MONEDERO) y el premio de la nota; con la
+--                                   ÚLTIMA etapa de la última zona, la campaña está terminada (Campaign.finished: desbloquea
+--                                   Aventura). Guarda.
+--   FlappyRun.buy(id, precio)       comprar un power-up en una tienda del mapa (src/flappy/Shops.lua) con el monedero
 --   FlappyRun.gameOver()            sin vidas: de vuelta al principio de la zona en la que va
 local FlappySave = require 'src/flappy/FlappySave'
 local Zones = require 'src/flappy/Zones'
@@ -15,11 +17,14 @@ function FlappyRun.complete(id, result)
     local out = FlappyRun.score(id, result)
     out.first = nil
     FlappyRun.giveReward(out.reward)          -- (el premio de la nota, la primera vez: S +1 vida, A +500 puntos)
+    -- el MONEDERO: los puntos de la etapa (y los del premio) entran SOLO aquí, al terminarla (golden rule 7). Aparte del
+    -- récord `points` (que solo sube con lo que mejora): comprar gasta el monedero y el récord no baja
+    local d = FlappyRun.data
+    d.wallet = (d.wallet or 0) + (out.points or 0) + ((out.reward and out.reward.points) or 0)
     -- los FLAPPIES ENJAULADOS liberados en la etapa (types/items/cage.lua): solo ahora, al terminarla (golden rule 7).
     -- Cada uno liberado POR PRIMERA VEZ en esta partida regala su power-up (`gift`); con el inventario lleno se pierde
     -- (`lostGifts`, para el aviso de los resultados) y la jaula cuenta igual como liberada
     if result and result.rescued and #result.rescued > 0 then
-        local d = FlappyRun.data
         d.rescued = d.rescued or {}
         local t = d.rescued[id] or {}
         for _, i in ipairs(result.rescued) do
@@ -103,6 +108,20 @@ function FlappyRun.spendPowerup(id)
     if d.inventory[id] <= 0 then d.inventory[id] = nil end
     FlappyRun.save()
     return true
+end
+
+-- COMPRAR en una tienda (src/flappy/Shops.lua): → 'ok' | 'poor' (no llega el monedero) | 'full' | 'type_full'
+-- (addPowerup). Solo 'ok' gasta y se GUARDA ya; lo demás no toca nada. El récord de puntos no baja
+function FlappyRun.buy(id, price)
+    local d = FlappyRun.data
+    if not d then return 'poor' end
+    price = math.max(0, math.floor(price or 0))
+    if (d.wallet or 0) < price then return 'poor' end
+    local r = FlappyRun.addPowerup(id)
+    if r ~= 'ok' then return r end
+    d.wallet = (d.wallet or 0) - price
+    FlappyRun.save()
+    return 'ok'
 end
 
 -- El inventario para el nivel (AdventureState `args.powerups`, la rueda): los tipos que se tienen en el orden del

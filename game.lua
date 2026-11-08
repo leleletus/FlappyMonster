@@ -100,6 +100,7 @@ function love.load()
         debug_menu         = function() return require('src/states/menu/DebugMenuState'):new() end,   -- (secreto: ver TitleState)
         flappy_campaign    = function() return require('src/states/flappy/FlappyCampaignState'):new() end, -- FLAPPY: la campaña
         flappy_map         = function() return require('src/states/flappy/FlappyMapState'):new() end,      -- FLAPPY: el mapa de zonas
+        flappy_shop        = function() return require('src/states/flappy/FlappyShopState'):new() end,     -- FLAPPY: la tienda de una zona
         powerup_wheel      = function() return require('src/states/adventure/WheelState'):new() end,      -- la rueda de los power-ups (encima del nivel)
         sound_test         = function() return SoundTestState:new() end,   -- (desde el menú de depuración)
         film_test          = function() return FilmTestState:new() end,    -- (desde el menú de depuración)

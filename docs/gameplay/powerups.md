@@ -2,8 +2,8 @@
 
 **What:** consumable POWER-UPS kept in an inventory per save slot and spent in any stage through the QUICK WHEEL (the
 game freezes while it is open). Built in Plan 4b ([flappy-plan-4b-powerups](../design/flappy-plan-4b-powerups.md),
-0.5.172) for the Flappy campaign; the design and the user's rules are in [powerups](../design/powerups.md). Adventure's
-inventory, the map shops and the `big` power-up come later.
+0.5.172) for the Flappy campaign; the design and the user's rules are in [powerups](../design/powerups.md). The Flappy
+zone SHOPS came with Plan 5b; Adventure's inventory and shops and the `big` power-up come later.
 
 **Files**
 
@@ -12,7 +12,8 @@ inventory, the map shops and the `big` power-up come later.
 | `src/world/powerups/Powerups.lua` + one file per power-up | the catalog as data: `LIST` (the wheel's order and the icon frame), `get`, `forMode` |
 | `src/player/PlayerPowerups.lua` | the EFFECTS in the player base: `usePowerup`, `canUse`, `hasEffect`, `damageMult`, `breakShield`, `tickEffects` (timers, size, ghost's end, magnets), `ghostPasses` |
 | `src/states/adventure/WheelState.lua` | the quick wheel (state `powerup_wheel`, pushed over the level) |
-| `src/flappy/FlappyRun.lua` | the inventory: `addPowerup`, `spendPowerup`, `inventoryCount`, `powerupInventory` (what the level gets), `cageGift` |
+| `src/flappy/FlappyRun.lua` | the inventory: `addPowerup`, `spendPowerup`, `inventoryCount`, `powerupInventory` (what the level gets), `cageGift`, `buy` (the shop, with the `wallet`) |
+| `src/flappy/Shops.lua`, `src/states/flappy/FlappyShopState.lua` | what each zone's shop sells and its screen ([flappy-campaign](flappy-campaign.md)) |
 | `src/ui/FlappyHud.lua` | the BAG (touch: opens the wheel) and the active effects |
 | `tools/art/ui/make_powerups.py` | icons (12×12, ×4), the bag, the shield bubble |
 
@@ -31,7 +32,8 @@ per type (`FlappyRun.MAX_TOTAL`, `MAX_TYPE`).
 
 **Getting and spending:** a CAGE gives its `gift` (a prop) when the stage is FINISHED, once per slot (rule 7); with a
 full inventory it is lost with a line on the results screen (the design proposed offering a swap: simplified, for the
-user to revisit). SPENDING writes the save at once, whatever happens next (the user). `AdventureState` gets
+user to revisit). A zone's SHOP sells them for wallet points (`FlappyRun.buy`: refused with `'poor'` / `'full'` /
+`'type_full'` without spending; a purchase writes the save at once). SPENDING writes the save at once, whatever happens next (the user). `AdventureState` gets
 `args.powerups` (`{ items(), spend(id) }`) from the map.
 
 **The wheel:** hold `Q` / `Tab` / pad `L`, point with the mouse, arrows / WASD or a stick, release to use; release with
@@ -46,7 +48,7 @@ it can go online later (the shield and size would travel in the own state; `Prot
 `make_powerups.py` (same order), lang keys `powerup.<id>` / `.desc`, and its effect in `PlayerPowerups.lua`
 (`usePowerup` / `tickEffects`); a test in `flappy_flight powerups`.
 
-**Tests:** `flappy_campaign` (`inventario`, `regalos`), `flappy_flight` (`powerups`), `powerup_wheel`.
+**Tests:** `flappy_campaign` (`inventario`, `regalos`, `tienda`), `menu_flow` (`tienda`), `flappy_flight` (`powerups`), `powerup_wheel`.
 
 **Decisions:** the user's rules (2026-11-07) are in [powerups](../design/powerups.md). Final review of Plan 4b (fixed in 0.5.173): tapping the
 bag and lifting the same finger no longer closes the wheel; a mouse click on a cell uses it (`game.lua` sends clicks as
