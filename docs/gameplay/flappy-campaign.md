@@ -48,6 +48,7 @@ and BACK returns to the map with the shop selected.
 
 `flappy_map` draws the zone instead of the menu background. Art (`tools/art/ui/make_flappy_map.py`, ×4 like the sky and
 the story map; prefix `Zones.LIST[z].map.art`, files `assets/images/flappy/map/<art>_*.png`):
+(The map plays `Zones.LIST[z].map.music`, a track id of `assets/music/index.json` — the Valley: `map_flappy` "Cielo abierto", [music-history](../audio/music-history.md); without it, `menus`.)
 - `_bg` (320x180 = 1280x720): the `valley` sky's day gradient, sun, clouds and its three layers (reused from
   `make_valley_sky.py`). Tiled across the width, centred (the layers wrap at 320 art px), so any logical width works.
 - `_pillar` (18x160): a basalt pillar in front, darker and outlined; the game draws from the node's point down to the
@@ -71,7 +72,7 @@ never see it; it is always open. **Input:** ← → move through ALL spots in le
 ENTER / flap plays the stage or opens the shop (`flappy_shop { zone }`); BACK → slots. Touch: tap a spot to select it,
 tap the selected one to play / enter. The state keeps `sel` (stage index) and `onShop`.
 
-**To add a zone's map:** give the zone `map = { art, at, shop }` and make its art (add the zone's drawing to
+**To add a zone's map:** give the zone `map = { art, music, at, shop }` and make its art (add the zone's drawing to
 `make_flappy_map.py`; the five files with that prefix). `flappy_campaign CASE=zonas` checks the art exists and every
 node (and the shop, if the zone sells something) has a position on screen that does not overlap another.
 Not judged by the user yet: the look of the map, the merchant and the machine icon (art applied provisionally).

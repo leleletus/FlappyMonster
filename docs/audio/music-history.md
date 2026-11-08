@@ -976,3 +976,19 @@ The user's verdict is pending.
   of the six rising bells spread over the same span. With 6 bosses it reproduces the old notes exactly.
 - Regenerated `story_intro` (51.8 → 53.4 s), `story_ending` (52.5 → 54.8 s), `story_chase`, `story_lair` (same
   lengths). Verified by numbers only (length = film, −13 LUFS, energy per scene): **NOT listened to**.
+
+### `map_flappy` "Cielo abierto" (2026-11-08, Plan 5d task 5): the Flappy zone-map theme
+
+- The user asked for an original map track for the Flappy campaign (until now `FlappyMapState` played `menus`).
+  `tools/music/mapa_flappy.py`: D major (like `flappy` "Aleteo", the Valley's level theme, but its own piece), 108 BPM,
+  A · B · A = 24 bars = 53.3 s, one seamless-loop file (no intro, like the world map). It opens with **la llamada in D**
+  (A–D–F♯–A, repeated higher in bar 5); the dark turn is G minor in B (as in Aleteo). Leitmotif where the melody rests
+  (bars 4, 8, 12, 20, 24): the flap, ta-ta-TA on chord tones.
+- Two variants, **verified by numbers only, NOT listened to; the user chooses A or B**: **A** (installed provisionally)
+  = house style (singing 25 % pulse, 12.5 % pulse an octave up in B, hopping triangle bass 1-5-8-5, offbeat chords, light
+  drums); **B** = a more original take (N163 flute-bell lead with a sky echo, triangle half notes, an ascending bell
+  arpeggio "updraft", no snare, only a soft kick and long quiet noise as wind). Numbers: both −11.5 LUFS master
+  (−14.5 in game, volume 0.71), peak 0.80; energy A: lead 32 % (+ octave pulse 4 %), bass 20, kick 16, motif 13; B: lead
+  40, bass 25, arp 25. Only 25 % of the melody notes are off the beat (calmer than the 56-76 % of the level tracks:
+  deliberate for a map). Previews with the loop twice + `LEEME.txt`: `FlappyMonster_pruebas/musica/mapa_flappy/`.
+  Install the other with `INSTALL=1 MAPA_FLAPPY=B python3 tools/music/mapa_flappy.py`.

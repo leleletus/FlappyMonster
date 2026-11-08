@@ -68,7 +68,8 @@ function FlappyMapState:enter(args)
     if args.replay then self.sel, self.onShop, self.playOnArrive = args.cleared or self.sel, false, true end
     self.anim = MenuAnim.new({ n = 4 })
     self.t = 0
-    Sound.playMusic('menus')
+    local Z = Zones.get(self.world)
+    Sound.playMusic((Z and Z.map and Z.map.music) or 'menus')    -- la música del mapa de la zona (Zones `map.music`)
 end
 
 -- Los SITIOS del mapa (normalizados, de Zones `map`): uno por nodo { k } y la tienda { shop = true } si la zona tiene;
