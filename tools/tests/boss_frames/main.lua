@@ -8,6 +8,9 @@
 --    rayos, humo...); RAGE=1: el jefe empieza con poca vida = enfadado)
 --   Redcóptero: LEVEL=tools/levelgen/arenas/NetcopterArena.json FX=1 ZONE=1
 --     STATES=intro,hover,aim_net,sweep_warn,sweep,dying_hold,fleeing
+--     HOVER=1: el jugador quieto en el aire en medio de la zona (niveles Flappy: si no, cae al suelo, que hace daño);
+--     ENTSTATE=netshot:wrap: captura cuando una entidad de ese tipo está en ese estado (aquí, la red envolviendo
+--     al jugador), centrada en ella; los planos como en el juego (Entity:drawsInFront: por delante del jugador)
 --   Rey Gummy: LEVEL=tools/levelgen/arenas/jefe_gummy.json FX=1 ZONE=1
 --     STATES=intro,chase,flop_wind,flop_air,flop_land,dazed,phase_up,split,parts,dying_daze
 io.stdout:setvbuf('no')
@@ -58,6 +61,7 @@ function love.load()
         if FX then Particles.update(dt) end
         if os.getenv('RAGE') and boss.hpMax and boss.hp > boss.hpMax * 0.4 then boss.hp = math.floor(boss.hpMax * 0.4) end
         pa:update(dt, level)
+        if os.getenv('HOVER') then pa.x, pa.y, pa.vx, pa.vy = z.x0 + 3 * TILE_PX, (z.y0 + z.y1) / 2, 0, 0 end
         level.solidBodies = Entities.solidBodies(ents)
         ctrl:update(dt)
         Floods.advance(level, dt)                -- (las inundaciones: la marea del Pez Globo Gigante)
@@ -171,6 +175,14 @@ function love.load()
         end
         -- (FROM=s: no captura antes de esos s — p. ej. El Groove, su pista de baile a los 77 s —)
         local shotState = (os.getenv('FOCUS') == 'small' and boss.focusSmall) and boss.focusSmall.state or boss.state
+        -- (ENTSTATE=tipo:estado: captura cuando una entidad de ese tipo está en ese estado, centrada en ella)
+        local focusE
+        if os.getenv('ENTSTATE') then
+            local et, es = os.getenv('ENTSTATE'):match('([^:]+):(.+)')
+            for _, e in ipairs(ents) do if e.alive and e.def.name == et and e.state == es then focusE = e end end
+            shotState = focusE and es or '-'
+            want[es] = true
+        end
         if want[shotState] and t >= (tonumber(os.getenv('FROM')) or 0) and t - lastShot >= every and (boss.alive or boss.def.name == 'megagummy') then
             lastShot = t
             local col, row = n % COLS, math.floor(n / COLS)
@@ -182,6 +194,7 @@ function love.load()
             local cx, cy = boss.x, boss.y
             if os.getenv('FOCUS') == 'small' and boss.focusSmall then cx, cy = boss.focusSmall.x + 60, boss.focusSmall.y - 40; zoom = 0.75 end
             if os.getenv('ZONE') then cx, cy = (z.x0 + z.x1) / 2, (z.y0 + z.y1) / 2 end
+            if focusE then cx, cy = focusE.x, focusE.y end
             local camX = math.floor(cx - CW / 2 * zoom)
             local camY = math.floor(cy - CH / 2 * zoom)
             love.graphics.translate(col * CW, row * CH)
@@ -196,8 +209,10 @@ function love.load()
                 love.graphics.rectangle('fill', f.x0 - camX, f.surf - camY, f.x1 - f.x0, f.y1 - f.surf)
             end
             love.graphics.setColor(1, 1, 1, 1)
+            -- (los planos como en el juego: detrás del jugador, él, y lo que va por delante — Entity:drawsInFront —)
+            for _, e in ipairs(ents) do if e.alive and not e:drawsInFront() then e:render(camX, camY) end end
             pa:render(camX, camY)
-            for _, e in ipairs(ents) do if e.alive then e:render(camX, camY) end end
+            for _, e in ipairs(ents) do if e.alive and e:drawsInFront() then e:render(camX, camY) end end
             if FX then Particles.render(camX, camY) end
             if os.getenv('BOXES') then       -- cajas reales: cuerpo (azul), contacto (amarillo), mata (rojo)
                 local function box(b, r, g, bl)

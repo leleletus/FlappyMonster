@@ -8,7 +8,7 @@
 --            sólido (los pilares también: enemySolid) → 'snag'. Sale de la zona (`boundPx`, por delante) o del nivel →
 --            desaparece.
 --   'wrap'   le dio a un jugador: la red abierta le envuelve mientras dura su ctrlLock (WRAP_T s, sigue su x, y) y no
---            vuelve a herir; luego 'spent'
+--            vuelve a herir; luego 'spent'. Se dibuja por DELANTE del jugador (drawsInFront)
 --   'snag'   se enganchó en un sólido (un pilar): se deshace en hebras SNAG_T s en ese sitio, sin herir; luego 'spent'
 --   'spent'  ya no está (alive = false: vuelve a la reserva del jefe)
 -- Arte: assets/images/bosses/netcopter/net-Sheet.png (5 cuadros 24x24, ×6: ovillo, a medias, abierta, abierta girada
@@ -76,6 +76,9 @@ local overlap = Boss.overlap
 function Net:spend()
     self.state, self.alive = 'spent', false
 end
+
+-- Envolviendo a un jugador se dibuja POR DELANTE de él (sale del estado: el cliente online lo ve igual)
+function Net:drawsInFront() return self.state == 'wrap' end
 
 -- Le dio a `pa`: le envuelve (sin volver a herir) mientras dura su ctrlLock
 function Net:wrap(pa)

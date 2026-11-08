@@ -628,6 +628,10 @@ function Entity:onSpecialHit(power, pa)
     end
     return false
 end
+-- ¿Se dibuja en el plano por DELANTE de los jugadores? Por defecto, el rasgo `renderFront` (pez globo, Espejo…); un tipo
+-- que cambia de plano según lo que hace lo sobrescribe, mirando solo lo que viaja en el snapshot (state, deadTimer…)
+-- para que el cliente online lo dibuje igual (AdventureState, OnlineAdventureRender)
+function Entity:drawsInFront() return self.renderFront == true end
 function Entity:netPack() return nil end
 function Entity:netApply(a, b, f) end
 -- Red: una entidad "en reposo" (quieta en su estado de siempre, p. ej. un

@@ -77,8 +77,8 @@ local function shot(path)
             level:render(cx, cy)
             level:renderFoliageBack(cx, cy)
             require('src/fx/Silhouette').level = level        -- (filo de los enemigos oscuros: `darkEdge`)
-            for _, e in ipairs(es) do if e.alive and not e.renderFront then e:render(cx, cy) end end
-            for _, e in ipairs(es) do if e.alive and e.renderFront then e:render(cx, cy) end end
+            for _, e in ipairs(es) do if e.alive and not e:drawsInFront() then e:render(cx, cy) end end
+            for _, e in ipairs(es) do if e.alive and e:drawsInFront() then e:render(cx, cy) end end
             level:renderFoliage(cx, cy)
             -- el AGUA (tinte, olas, distorsión): se dibuja la escena ya hecha en OTRO lienzo con el agua encima (antes
             -- se le pedía dibujar `view` sobre sí mismo: el error se tragaba con pcall y el agua no salía en las fotos)

@@ -41,7 +41,9 @@ Objetos, Directores.
 **Flexibility rule (user's priority): base behaviours live in the BASE and a type only switches them on** — never
 copy another entity's code. Guide: `docs/entities/how-to-add-an-enemy.md` (every def field, trait and hook).
 Switches on the type def: `traits = { needsPound, stompProof, diesWithBlock, solidFull, renderFront, wantsLevel, freezeFloats }`
-(copied onto each instance by `Entity.create`; `reflectable` is NOT one of them but a CLASS field (`GlowBomb.reflectable = true`): when set, a RISING flying player sends it back instead of being hurt, `Interactions.check` -> `'reflect'`, hook `canReflect`; see [flappy-campaign](../gameplay/flappy-campaign.md#boss-stages-plan-5)), `noises = { sound = tiles }` / `noise` (see Noise), `summons`,
+(copied onto each instance by `Entity.create`; the renderers ask `Entity:drawsInFront()`, which by default returns
+`renderFront` and a type that changes plane overrides from what travels in snapshots — the Net-Copter's net while it
+wraps a player —; `reflectable` is NOT one of them but a CLASS field (`GlowBomb.reflectable = true`): when set, a RISING flying player sends it back instead of being hurt, `Interactions.check` -> `'reflect'`, hook `canReflect`; see [flappy-campaign](../gameplay/flappy-campaign.md#boss-stages-plan-5)), `noises = { sound = tiles }` / `noise` (see Noise), `summons`,
 `activatable`. In the base: RESERVE minions for ANY entity (`Entity:makeReserve` + default `netAtRest/netRest`; hook
 `onMakeReserve`), APPEAR IN PLACE for any reserve entity (`Entity:appearAt(x, y)`: it goes back into play at that spot in its usual state, a flier stays floating; used by the Flappy boss help and the Net-Copter's net / bomb), FALL FROM THE SKY for any entity (`Entity:dropFromSky(x, y, lift)`: back in play in the common state 'skyfall', slow gravity, rests on the ground, then its usual state; used by the boss-fight help, `docs/gameplay/difficulty.md`), stock crawler (`Crawler.mixin(Class)`: rotated boxes, surface normal, release, no fall while
 attached; `Crawler.entityAhead`), block-break deaths (`Level:forStanders`, crawlers included), and for bosses

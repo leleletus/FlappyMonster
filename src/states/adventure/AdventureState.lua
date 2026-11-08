@@ -917,7 +917,7 @@ function AdventureState:_renderScene()
     require('src/fx/Silhouette').level = self.level      -- (filo de los enemigos oscuros en lo oscuro: `darkEdge`)
     -- Renderizar enemigos (entre tiles y jugador)
     for _, g in ipairs(self.enemies) do
-        if g.alive and not g.renderFront then (g.renderLive or g.render)(g, self.camX, self.camY) end      -- (reservas: no)
+        if g.alive and not g:drawsInFront() then (g.renderLive or g.render)(g, self.camX, self.camY) end      -- (reservas: no)
     end
 
     PlayerAdventure.lightLevel = self.level          -- (en lo oscuro, filo blanco: cada monstruo según SU sitio)
@@ -929,9 +929,9 @@ function AdventureState:_renderScene()
     PointAreas.drawProgress(self.level, self.player, self.player.x - self.camX, self.player.y - self.camY)
     Particles.render(self.camX, self.camY)
 
-    -- Entidades en un plano por delante del jugador (renderFront: pez globo)
+    -- Entidades en un plano por delante del jugador (Entity:drawsInFront: pez globo, la red que envuelve…)
     for _, g in ipairs(self.enemies) do
-        if g.alive and g.renderFront then (g.renderLive or g.render)(g, self.camX, self.camY) end
+        if g.alive and g:drawsInFront() then (g.renderLive or g.render)(g, self.camX, self.camY) end
     end
 
     -- Decoraciones (por encima de enemigos y player)

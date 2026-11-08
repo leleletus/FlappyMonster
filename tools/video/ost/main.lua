@@ -488,9 +488,9 @@ local function render()
     LavaFx.render(level, camX, camY)
     level:renderVents(camX, camY)
     level:renderFoliageBack(camX, camY)
-    for _, e in ipairs(es) do if e.alive and not e.renderFront then e:render(camX, camY) end end
+    for _, e in ipairs(es) do if e.alive and not e:drawsInFront() then e:render(camX, camY) end end
     Particles.render(camX, camY)
-    for _, e in ipairs(es) do if e.alive and e.renderFront then e:render(camX, camY) end end
+    for _, e in ipairs(es) do if e.alive and e:drawsInFront() then e:render(camX, camY) end end
     level:renderFoliage(camX, camY)
     level:renderBubbles(camX, camY)
     Snowfall.render(level, camX, camY)

@@ -167,6 +167,10 @@ function Boss:title()
     return Lang.bossName(self.def.name, self.props) or (self.def.boss and self.def.boss.title) or self.def.label
 end
 
+-- De qué x se aleja quien reaparece VOLANDO en su zona (niveles Flappy: BossZones.flightX). Por defecto, donde está;
+-- un jefe que se mueve de un lado a otro devuelve adónde va
+function Boss:respawnAvoidX() return self.x end
+
 function Boss:isDying()
     local s = self.state
     return s == 'dying_hold' or s == 'dying_fall' or s == 'dead' or not self.alive

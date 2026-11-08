@@ -17,7 +17,8 @@
 --   fase2    con la mitad de vida pasa a la fase 2 y se dibuja con el globo reventado (machine_popped)
 --   especial una ráfaga de potencia 3 le quita 3; otra dentro de su INV_TIME, nada
 --   no_pisa  un jugador que vuela y le cae encima nunca le pisa: el jefe sigue igual y el jugador pierde 1
---   red      la red sale a la altura del jugador y, si le da, −1 y ctrlLock 0,4 s; le envuelve ese rato y desaparece
+--   red      la red sale a la altura del jugador y, si le da, −1 y ctrlLock 0,4 s; le envuelve ese rato (dibujada
+--            por delante de él: drawsInFront, también en el cliente) y desaparece; suena netSnare
 --   garra    la garra (fase 2) solo hace daño en la franja marcada: dentro −2, fuera nada
 --   huye     a 0 de vida: explosiones, sin sprite de muerte, se va por la derecha fuera de la zona y la zona queda
 --            superada ('cleared')
@@ -30,7 +31,7 @@
 --                    el jefe vencido a la fuerza → sin paredes, vuela a la derecha y toca la meta (→ onFinish)
 --   muerte_en_pelea  morir en la pelea → reaparece EN EL AIRE dentro de la zona con toda la vida (el suelo, que en
 --                    vuelo hace daño, no le toca), el jefe con la misma vida y como mucho una carga a la vez
---   pilar            los pilares (enemySolid) paran la red (se engancha y se deshace) y la bomba
+--   pilar            los pilares (enemySolid) paran la red (se engancha y se deshace, con netSnag) y la bomba
 --   red_repetida     una red lanzada dos veces llega exacta a su altura la segunda
 --   derrota_bombas   vencido el jefe no queda ninguna bomba cayendo ni hace daño
 -- Y la pelea pulida (docs/design/flappy-plan-5c-netcopter-polish.md):
@@ -42,9 +43,13 @@
 --   cruce_justo  un jugador en la franja de arriba cuando cruza pierde exactamente 1 (nunca una cadena)
 --   risa         muere un jugador: se ríe (cabeza en blanco, ojos de risa, dos cuadros) y la pelea sigue
 --   dibujo       la mecha de una bomba devuelta sigue corriendo; empezando la pelea a la izquierda mira a la derecha;
+--                al final del cruce se gira de golpe a mitad de TURN_T (sin estrecharse; el cliente igual);
 --                la risa y el disparo (retroceso, humo) viajan en netPackExtra
 --   ruido         5 s de pelea en su sitio: el chirrido del pedal y el tic de la hélice suenan (pero <= 12 veces cada
---                 uno: nunca cada cuadro), y la red, la bomba y el golpe usan sus sonidos propios
+--                 uno: nunca cada cuadro), y la red, la bomba y el golpe usan sus sonidos propios; el globo revienta
+--                 con balloonPop (+ bossExplode) al pasar a la fase 2
+--   reaparece_lejos  muere un jugador: reaparece volando en el tercio LEJOS del jefe (guardando la izquierda o cruzando
+--                 hacia ella → a la derecha; guardando la derecha → en el tercio izquierdo)
 --
 --   tools/tests/run.sh netcopter_rules   (CASE=nombre: solo ese)
 io.stdout:setvbuf('no')
@@ -371,6 +376,15 @@ local function run(level, es, secs, stop, ctrl, hold)
     end
     return false
 end
+-- Espía Sound.play mientras corre fn(): → cuántas veces sonó cada nombre
+local function heard(fn)
+    local counts, real = {}, Sound.play
+    Sound.play = function(name) counts[name] = (counts[name] or 0) + 1 end
+    local ok, err = pcall(fn)
+    Sound.play = real
+    if not ok then error(err) end
+    return counts
+end
 local function liveOf(es, name)
     local out = {}
     for _, e in ipairs(es) do if e.def.name == name and e.alive then out[#out + 1] = e end end
@@ -439,11 +453,21 @@ function cases.red()
     if not net then return end
     local php = pa.hp
     local hitX = net.x
-    run(level, es, 3, function() return pa.hp < php or net.state ~= 'fly' end)
+    local snd = heard(function() run(level, es, 3, function() return pa.hp < php or net.state ~= 'fly' end) end)
+    check('red', (snd.netSnare or 0) == 1, ('al envolverle suena netSnare: %d'):format(snd.netSnare or 0))
     check('red', pa.hp == php - 1 and (pa.ctrlLockT or 0) >= 0.39,
         ('le da (desde x=%.0f): vida %d → %d, ctrlLock %.2f'):format(hitX, php, pa.hp, pa.ctrlLockT or 0))
     -- (le envuelve mientras dura su ctrlLock, pegada a él y sin volver a herir; luego desaparece)
     local wrapped = net.state == 'wrap'
+    -- (envolviendo se dibuja por DELANTE del jugador; volando, no. Sale del estado: el cliente, que solo recibe el
+    -- estado en el snapshot, también)
+    local cl = Entities.create({ type = 'netshot', col = 1, row = 1, props = {} })
+    cl.state = 'wrap'
+    local front = net:drawsInFront() and cl:drawsInFront()
+    cl.state = 'fly'
+    check('red', wrapped and front and not cl:drawsInFront(),
+        ('envolviendo, por delante del jugador: %s (cliente %s, volando %s)'):format(tostring(net:drawsInFront()),
+        tostring(front), tostring(cl:drawsInFront())))
     pa.x = pa.x + 30
     run(level, es, 0.2)
     local onHim = net.alive and net.x == pa.x and net.y == pa.y
@@ -522,11 +546,14 @@ function cases.pilar()
     -- la red vuela a la izquierda por la fila 5: el pilar (columna 10) la para
     net.alive, net.x, net.y = true, 16 * T, 4.5 * T
     net:launch(4.5 * T, 0, -math.huge)
-    for _ = 1, 120 do
-        net:update(DT, level)
-        if net.state ~= 'fly' then break end
-    end
+    local snd = heard(function()
+        for _ = 1, 120 do
+            net:update(DT, level)
+            if net.state ~= 'fly' then break end
+        end
+    end)
     local snag = net.state == 'snag'
+    check('pilar', snag and (snd.netSnag or 0) == 1, ('al engancharse suena netSnag: %d'):format(snd.netSnag or 0))
     for _ = 1, math.ceil(net.SNAG_T / DT) + 1 do net:update(DT, level) end
     check('pilar', snag and not net.alive and net.x > 9 * T, ('la red se engancha en el pilar (x=%.0f, %s) y se deshace'):format(
         net.x, snag and 'enganchada' or net.state))
@@ -945,6 +972,23 @@ function cases.dibujo()
     boss.x = zx0 + (zx1 - zx0) / 6
     boss:onFightStart(1)
     check('dibujo', boss.side == -1 and boss.facing == 1, ('empieza a la izquierda: lado %d, mira %d'):format(boss.side, boss.facing))
+    -- al final del cruce se gira DE GOLPE a mitad de TURN_T (drawFace: sin estrecharse), y el cliente igual (solo con
+    -- state, deadTimer y facing, lo que viaja)
+    boss:startCross()
+    local CT, TT = boss.T.CROSS_T, boss.T.TURN_T
+    local f0 = boss.facing
+    local faces, cfaces = {}, {}
+    local _, _, cl0 = fight(nil)
+    for i, tt in ipairs({ 0.1, CT - TT * 0.75, CT - TT * 0.25 }) do
+        boss.deadTimer = tt
+        faces[i] = boss:drawFace()
+        cl0.state, cl0.deadTimer, cl0.facing, cl0.side = 'cross', tt, boss.facing, 1
+        cfaces[i] = cl0:drawFace()
+    end
+    check('dibujo', f0 == 1 and boss.side == 1 and faces[1] == 1 and faces[2] == 1 and faces[3] == -1
+        and cfaces[1] == faces[1] and cfaces[2] == faces[2] and cfaces[3] == faces[3],
+        ('cruzando de la izquierda a la derecha: mira %d, %d y, pasada la mitad del giro, %d (cliente %d, %d, %d)'):format(
+        faces[1], faces[2], faces[3], cfaces[1], cfaces[2], cfaces[3]))
     local _, _, cl = fight(nil)
     boss.laughT, boss.shotT = 0.7, 0.05
     local pk = boss:netPack()
@@ -971,8 +1015,10 @@ function cases.ruido()
     check('ruido', (counts.netFire or 0) + (counts.bombLob or 0) >= 1 and (counts.cannonWhoosh or 0) == 0,
         ('sonidos propios: netFire %d, bombLob %d, sin cannonWhoosh'):format(counts.netFire or 0, counts.bombLob or 0))
     -- el globo revienta con su sonido y, roto, la fuga sisea sin pasarse
-    boss:damage(boss.hp - math.floor(boss.hpMax * 0.4), 'stomp')
-    check('ruido', boss.popped, 'el golpe que pasa de la mitad revienta el globo')
+    local pop = heard(function() boss:damage(boss.hp - math.floor(boss.hpMax * 0.4), 'stomp') end)
+    check('ruido', boss.popped and (pop.balloonPop or 0) == 1 and (pop.bossExplode or 0) >= 1,
+        ('el golpe que pasa de la mitad revienta el globo: balloonPop %d, bossExplode %d'):format(pop.balloonPop or 0,
+        pop.bossExplode or 0))
     counts = {}
     Sound.play = function(name) counts[name] = (counts[name] or 0) + 1 end
     boss.inv = 0
@@ -983,10 +1029,43 @@ function cases.ruido()
     check('ruido', boss.popped and h >= 1 and h <= 5, ('fase 2: globo reventado %s, leakHiss %d en 5 s (1..5)'):format(tostring(boss.popped), h))
 end
 
+-- Muere un jugador en la pelea: reaparece volando en el tercio del lado LEJOS del jefe (BossZones.flightX con
+-- Boss:respawnAvoidX): guardando la izquierda → a la derecha del centro; cruzando hacia la izquierda → igual (cuenta
+-- adónde va, no dónde está); guardando la derecha → en el tercio izquierdo
+function cases.reaparece_lejos()
+    local level, es, boss, pa = fight(nil)
+    local z = boss.zone
+    local zx0, zx1 = boss:zb()
+    local mid, w = (zx0 + zx1) / 2, zx1 - zx0
+    pa.x, pa.y = mid, 5 * T
+    pa.spawnX, pa.spawnY = pa.x, pa.y
+    local function at(label, setup)
+        setup()
+        local x, y = BossZones.respawnPoint(level, pa)
+        return x, y, ('%s: jefe x=%.0f (%s, va a %.0f), reaparece x=%s'):format(label, boss.x, boss.state, boss:respawnAvoidX(),
+            x and ('%.0f'):format(x) or 'nil')
+    end
+    local x, y, msg = at('guarda la izquierda', function()
+        boss:enter('hover'); boss.side, boss.facing = -1, 1; boss.x = boss:sideX()
+    end)
+    check('reaparece_lejos', x and x > mid and math.abs(x - (zx1 - w / 3)) < 1 and BossZones.contains(z, x, y), msg)
+    x, y, msg = at('cruza hacia la izquierda', function()
+        boss:enter('hover'); boss.side, boss.facing = 1, -1; boss.x = boss:sideX()
+        boss:startCross()
+        run(level, es, 0.2)
+    end)
+    check('reaparece_lejos', boss.state == 'cross' and boss.x > mid and x and x > mid, msg)
+    x, y, msg = at('guarda la derecha', function()
+        boss:enter('hover'); boss.side, boss.facing = 1, -1; boss.x = boss:sideX()
+    end)
+    check('reaparece_lejos', x and x < mid and math.abs(x - (zx0 + w / 3)) < 1 and BossZones.contains(z, x, y), msg)
+end
+
 local ORDER = { 'rebote', 'de_lado', 'falla', 'mecha', 'cargas', 'lastima', 'aire', 'aventura', 'ultima_vida',
                 'vida', 'fase2', 'especial', 'no_pisa', 'red', 'garra', 'huye', 'bomba', 'azar', 'paquete',
                 'etapa_jefe', 'muerte_en_pelea', 'pilar', 'red_repetida', 'derrota_bombas',
-                'lanzada', 'devuelta_arco', 'cruza', 'mira_izq', 'cruce_justo', 'risa', 'dibujo', 'ruido' }
+                'lanzada', 'devuelta_arco', 'cruza', 'mira_izq', 'cruce_justo', 'risa', 'dibujo', 'ruido',
+                'reaparece_lejos' }
 function love.load()
     local only = os.getenv('CASE')
     for _, name in ipairs(ORDER) do

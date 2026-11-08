@@ -23,10 +23,10 @@
 --   9. rollStart(r): al azar la primera red, la primera bomba, cuánto guarda el primer lado y la altura con la que empieza.
 --  10. Daño a los jugadores: red 1, bomba 1, garra 2, cuerpo 1.
 -- Vivo (Plan 5c): la hélice gira (4 cuadros, más deprisa cruzando), el globo se mece (±1 px de arte), las piernas
--- pedalean a su ritmo; al cruzar se GIRA en TURN_T s (la máquina a media anchura, primero mirando a un lado y luego al
--- otro); el cañón cuelga de su BRAZO de hierro atornillado a la góndola y retrocede 1 px al disparar (humo y hebras en
--- la boca: `shotT`); tras un golpe, chispas, le duele HURT_T s y luego se ENFADA (puño en alto) ANGRY_T s; se RÍE como
--- el Espejo (cabeza en blanco + ojos de risa, la cabeza sube y baja cada LAUGH_F s) en la entrada y cuando cae un
+-- pedalean a su ritmo; al final del cruce se GIRA de golpe a mitad de TURN_T (drawFace: sin estrecharse); el cañón
+-- cuelga de su BRAZO de hierro atornillado a la góndola y retrocede 1 px al disparar (humo y hebras en la boca:
+-- `shotT`); tras un golpe, chispas, le duele HURT_T s y luego se ENFADA (puño en alto) ANGRY_T s; se RÍE como el
+-- Espejo (cabeza en blanco + ojos de risa, la cabeza sube y baja cada LAUGH_F s) en la entrada y cuando cae un
 -- jugador, sin parar la pelea; fase 2: humo saliendo del globo roto.
 -- Estados: dormant → intro → ready → hover ↔ aim_net (la bomba sale con su reloj) → [fase 2] sweep_warn → sweep → … ↔
 -- cross (cambia de lado) … → dying_hold → fleeing → dead. Todo lo que se dibuja sale de state + deadTimer + x, y +
@@ -212,6 +212,12 @@ function NC:sideX(side)
     local zx0, zx1 = self:zb()
     local w = zx1 - zx0
     return (side or self.side or 1) > 0 and (zx1 - w * T.X_FRAC) or (zx0 + w * T.X_FRAC)
+end
+
+-- Quien reaparece volando se aleja de su lado (Boss:respawnAvoidX); cruzando, del lado al que va
+function NC:respawnAvoidX()
+    if self.state == 'cross' and self.crossX1 then return self.crossX1 end
+    return self:sideX()
 end
 
 -- La altura de la franja de arriba (por donde cruza): la más alta a la que flota
@@ -650,6 +656,15 @@ function NC:drawLeak(ox, oy, now)
     end
 end
 
+-- Hacia dónde se DIBUJA mirando (−1 izquierda, 1 derecha): `facing`, salvo al final del cruce, que se gira de golpe a
+-- mitad de TURN_T (sin estrecharse: un píxel de arte es siempre del mismo tamaño). Cruzando mira hacia donde va, así que
+-- girado mira al revés. Sale de state + deadTimer + facing, que viajan: el cliente lo dibuja igual
+function NC:drawFace()
+    local face = self.facing or -1
+    if self.state == 'cross' and T.CROSS_T - (self.deadTimer or 0) < T.TURN_T / 2 then face = -face end
+    return face
+end
+
 -- El Monstruo Malvado de pie en la góndola: pedalea, se ríe (cabeza en blanco + ojos de risa), le duele o se enfada
 function NC:drawPilot(ox, oy, now, fast)
     local pose = self:pilotPose()
@@ -685,22 +700,12 @@ function NC:render(camX, camY)
         y = y + math.floor((math.random() * 2 - 1) * 3)
         ox, oy = x - CX * S, y - CY * S
     end
-    -- mirando a la derecha: toda la máquina (garra, aviso, cañón, piloto) en espejo alrededor de x. Al final del cruce
-    -- se gira: TURN_T s a media anchura (la mitad mirando aún al lado de antes, la otra mitad ya al nuevo)
-    local face, sx = self.facing or -1, 1
-    if st == 'cross' then
-        local left = T.CROSS_T - self.deadTimer
-        if left < T.TURN_T then
-            sx = 0.5
-            if left < T.TURN_T / 2 then face = -(self.side or 1) end
-        end
-    end
-    local flip = face > 0
-    local xf = flip or sx ~= 1
+    -- mirando a la derecha: toda la máquina (garra, aviso, cañón, piloto) en espejo alrededor de x (drawFace)
+    local xf = self:drawFace() > 0
     if xf then
         love.graphics.push()
         love.graphics.translate(x, 0)
-        love.graphics.scale((flip and -1 or 1) * sx, 1)
+        love.graphics.scale(-1, 1)
         love.graphics.translate(-x, 0)
     end
     self:drawWarn(camX, camY)

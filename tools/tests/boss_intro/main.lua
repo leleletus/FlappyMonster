@@ -16,7 +16,10 @@
 --   reaparece   muriendo en plena pelea (uno cada 6 s) se reaparece con
 --               BossZones.respawnPoint (como el servidor y un jugador): siempre
 --               dentro de la zona, de pie en suelo seguro, sin la cabeza en el
---               agua y lejos del jefe (≥ 2 casillas de su cuerpo)
+--               agua y lejos del jefe (≥ 2 casillas de su cuerpo); en un nivel Flappy, en
+--               el aire (BossZones.flightX: el tercio del lado contrario al jefe) y
+--               también a ≥ 2 casillas de él y de donde se queda (cruzando, de su
+--               destino: Boss:respawnAvoidX)
 --
 --   gp_subditos el segundo jugador hace ground pounds justo al lado de súbditos
 --               vivos (empujón + aturdido): ningún súbdito se mueve más de lo
@@ -184,8 +187,17 @@ function love.load()
                         stand = level:isStandable(c, r), wet = level:liquidAt(pa.spawnX, pa.spawnY - 30) ~= nil, d = d,
                         air = level.flappy and true or false }
                     local sp = spawns[#spawns]
-                    print(('%6.2fs reaparece en (%d,%d), a %.1f casillas del jefe (%s)%s%s%s'):format(t, c, r, d / T, boss.state,
-                        sp.inZone and '' or ' FUERA DE LA ZONA', sp.stand and '' or ' SIN SUELO', sp.wet and ' EN EL AGUA' or ''))
+                    if sp.air then
+                        -- (en el aire cuenta también DÓNDE se queda el jefe — Boss:respawnAvoidX —: cruzando, el cuerpo
+                        -- pasa por encima mientras dura la invulnerabilidad de reaparecer, y la distancia que importa es
+                        -- a su destino)
+                        sp.crossing = boss.state == 'cross'
+                        sp.dHold = math.max(0, math.abs(pa.spawnX - boss:respawnAvoidX()) - boss.outerW / 2)
+                        sp.d = sp.crossing and sp.dHold or math.min(d, sp.dHold)
+                    end
+                    print(('%6.2fs reaparece en (%d,%d), a %.1f casillas del jefe (%s)%s%s%s%s'):format(t, c, r, d / T, boss.state,
+                        sp.dHold and (', a %.1f de donde se queda'):format(sp.dHold / T) or '',
+                        sp.inZone and '' or ' FUERA DE LA ZONA', (sp.stand or sp.air) and '' or ' SIN SUELO', sp.wet and ' EN EL AGUA' or ''))
                 end
             end
         end
@@ -291,17 +303,17 @@ function love.load()
     local okR = #rests >= 3
     for i, k in ipairs(rests) do if k ~= ks[i] then okR = false end end
     if mega then check('emotes', okR, 'descansos: ' .. table.concat(rests, ', ')) end
-    local okS, minD = #spawns >= 3, math.huge
+    local okS, minD = #spawns >= 3, nil
     for _, sp in ipairs(spawns) do
-        -- (en un nivel Flappy se reaparece EN EL AIRE dentro de la zona: no hay suelo que pisar; en Aventura, de pie)
+        -- (en un nivel Flappy se reaparece EN EL AIRE dentro de la zona: no hay suelo que pisar; en Aventura, de pie.
+        -- Lejos del jefe en los dos: en Flappy, en el tercio del lado contrario al suyo — BossZones.flightX —; si está
+        -- CRUZANDO, de su destino: su cuerpo pasa por encima en menos que la invulnerabilidad de reaparecer)
         okS = okS and sp.inZone and (sp.stand or sp.air) and not sp.wet
-        -- (la distancia al jefe solo se exige en Aventura: en Flappy el punto de aire está fijo en el tercio izquierdo
-        -- de la zona y el Redcóptero patrulla también por ese lado)
-        if not sp.air then minD = math.min(minD, sp.d) end
+        minD = math.min(minD or math.huge, sp.d)
     end
-    check('reaparece', okS and minD >= 2 * T,
-        ('%d reapariciones; todas en la zona, de pie (en Flappy, en el aire) y secas=%s; la más cercana al jefe a %.1f casillas'):format(#spawns,
-            tostring(okS), minD / T))
+    check('reaparece', okS and minD ~= nil and minD >= 2 * T,
+        ('%d reapariciones; todas en la zona, de pie (en Flappy, en el aire) y secas=%s; la más cercana al jefe a %s casillas'):format(#spawns,
+            tostring(okS), minD and ('%.1f'):format(minD / T) or '—'))
     if mega then
         check('gp_subditos', gps >= 10 and #jumps == 0,
             ('%d ground pounds junto a súbditos; mayor salto en un paso %.0f px; saltos imposibles %d%s'):format(

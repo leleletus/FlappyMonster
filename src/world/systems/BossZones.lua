@@ -383,12 +383,27 @@ function BossZones.safeSpawn(level, z)
     return bx, by, best
 end
 
+-- La x donde reaparece VOLANDO en una zona Flappy: a un tercio de un borde o del otro, el más lejos de donde está (o va)
+-- cada jefe vivo de la zona (Boss:respawnAvoidX; los mismos que mira safeSpawn). Sin jefes: el tercio izquierdo
+function BossZones.flightX(z)
+    local w = z.x1 - z.x0
+    local bestX, bestD
+    for _, cx in ipairs({ z.x0 + w / 3, z.x1 - w / 3 }) do
+        local d = math.huge
+        for _, b in ipairs(z.bosses or {}) do
+            if b.alive and not (b.isDying and b:isDying()) then d = math.min(d, math.abs(cx - b:respawnAvoidX())) end
+        end
+        if not bestD or d > bestD then bestX, bestD = cx, d end
+    end
+    return bestX
+end
+
 function BossZones.respawnPoint(level, pa)
     for _, z in ipairs(level.bossZones or {}) do
         if z.state == 'fight' and (contains(z, pa.spawnX, pa.spawnY) or contains(z, pa.x, pa.y)) then
-            -- (nivel FLAPPY: se vuela y el suelo hace daño → en el aire, a un tercio de la zona, como con la cámara
-            --  automática; el jefe Flappy se queda en el tercio derecho)
-            if level.flappy then return level:flightSpot(z.x0 + (z.x1 - z.x0) / 3, z.row, z.row + z.h - 1) end
+            -- (nivel FLAPPY: se vuela y el suelo hace daño → en el aire, a un tercio de la zona: el del lado más lejos
+            --  del jefe, que patrulla de un lado a otro — Boss:respawnAvoidX —)
+            if level.flappy then return level:flightSpot(BossZones.flightX(z), z.row, z.row + z.h - 1) end
             local x, y = BossZones.safeSpawn(level, z)
             if x then return x, y end
             -- (sin sitio bueno: el de siempre si aún tiene suelo)
