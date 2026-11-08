@@ -5,7 +5,8 @@
 local SaveFile = require 'src/core/SaveFile'
 local Difficulty = require 'src/core/Difficulty'
 
-local FlappySave = { SLOTS = 3, VERSION = 1, DIFFICULTIES = { 'easy', 'normal', 'hard' } }
+-- VERSION 2 (Plan 4): `rescued[etapa] = { [colocación] = true }`, los flappies enjaulados liberados (al terminar la etapa)
+local FlappySave = { SLOTS = 3, VERSION = 2, DIFFICULTIES = { 'easy', 'normal', 'hard' } }
 
 function FlappySave.file(i) return 'flappy' .. i .. '.sav' end
 
@@ -14,7 +15,7 @@ function FlappySave.new(difficulty)
     difficulty = difficulty or 'normal'
     return { version = FlappySave.VERSION, difficulty = difficulty, world = 1, node = 1,
              lives = Difficulty.of(difficulty, 'livesStart', 3),
-             done = {}, best = {}, playTime = 0, points = 0, gameOvers = 0 }
+             done = {}, best = {}, playTime = 0, points = 0, gameOvers = 0, rescued = {} }
 end
 
 function FlappySave.load(i)
@@ -27,6 +28,8 @@ function FlappySave.load(i)
     d.playTime = tonumber(d.playTime) or 0
     d.points = tonumber(d.points) or 0
     d.gameOvers = tonumber(d.gameOvers) or 0
+    d.rescued = type(d.rescued) == 'table' and d.rescued or {}     -- (versión 1: sin jaulas todavía)
+    d.version = FlappySave.VERSION
     return d
 end
 

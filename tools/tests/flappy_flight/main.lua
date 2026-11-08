@@ -12,6 +12,8 @@
 --   carga       las cargas de aleteo suben el medidor hasta CHARGE_MAX (5); morir y reaparecer la conserva
 --   ataque      ESPECIAL sin carga: nada; con carga: una ráfaga con esa potencia que gasta toda la carga, atraviesa
 --               pilares, mata a un enemigo y la para un bloque sólido
+--   jaula       flappy enjaulado: una ráfaga con menos potencia que su mínimo no la abre (y se para); con más, la abre;
+--               una ya liberada en una partida terminada sale vacía
 --   normal      en un nivel normal el jugador NO vuela (salto de plataformas de siempre)
 --   etapa       la etapa de prueba (assets/levels/_flappy_vuelo.json) se puede pasar: un piloto sencillo (aletea
 --               cuando está por debajo del centro del hueco siguiente) llega a la meta sin morir
@@ -338,7 +340,34 @@ function cases.ataque()
            tostring(none), tostring(fired), tostring(killed), maxX, 11 * T, tostring(stopped)))
 end
 
-local ORDER = { 'aleteo', 'ventana', 'pilar', 'suelo', 'reaparece', 'exclusivo', 'normal', 'carga', 'ataque', 'etapa' }
+-- Dispara con `power` contra lo que haya delante (a la altura y) y deja volar la ráfaga 1 s
+local function shoot(level, pa, power, y)
+    pa.charge = power
+    step(level, 0.1, function() hover(pa, y) end)
+    stub.state.special_pressed = true
+    step(level, 1, function() hover(pa, y) end)
+    clearInput()
+end
+
+function cases.jaula()
+    local lv = stage(40, nil, nil, true, { { type = 'cage', col = 13, row = 5, props = { minCharge = 2 } } })
+    local c = lv.liveEntities[1]
+    local pa = player(lv, 7 * T, 4.5 * T)
+    shoot(lv, pa, 1, 4.5 * T)
+    local weak = c.state == 'closed' and not c.rescuedNow and #(pa.bursts or {}) == 0
+    shoot(lv, pa, 3, 4.5 * T)
+    local opened = c.state == 'open' and c.rescuedNow == true
+    -- una jaula ya liberada en una partida TERMINADA (`freed`) sale vacía
+    local lv2 = stage(40, nil, nil, true, { { type = 'cage', col = 13, row = 5, props = {} } })
+    lv2.liveEntities[1].freed = true
+    step(lv2, 0.1)
+    local empty = lv2.liveEntities[1].state == 'empty'
+    check('jaula', weak and opened and empty,
+          ('mínimo 2 con potencia 1: cerrada y para la ráfaga=%s; con 3: abierta=%s; ya liberada: vacía=%s'):format(
+           tostring(weak), tostring(opened), tostring(empty)))
+end
+
+local ORDER = { 'aleteo', 'ventana', 'pilar', 'suelo', 'reaparece', 'exclusivo', 'normal', 'carga', 'ataque', 'jaula', 'etapa' }
 function love.load()
     local only = os.getenv('CASE')
     for _, name in ipairs(ORDER) do

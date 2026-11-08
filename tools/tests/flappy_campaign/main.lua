@@ -150,7 +150,24 @@ function cases.premio()
            l0, FlappyRun.data and FlappyRun.data.lives or -1, p0, FlappyRun.data and FlappyRun.data.points or -1, tostring(kept)))
 end
 
-local ORDER = { 'archivo', 'progreso', 'zonas', 'partida', 'premio' }
+-- Los flappies liberados se guardan SOLO al terminar la etapa (golden rule 7): con `result.rescued`
+function cases.jaulas()
+    local FlappyRun, FlappySave = require 'src/flappy/FlappyRun', require 'src/flappy/FlappySave'
+    FlappySave.delete(3)
+    FlappyRun.open(3, 'normal')
+    FlappyRun.setLives(FlappyRun.data.lives - 1)                         -- (salir a medias: solo vidas)
+    local none = next(FlappySave.load(3).rescued or {}) == nil
+    FlappyRun.complete('valle_pilares_1', { time = 20, width = 120, rescued = { 1 } })
+    local d = FlappySave.load(3)
+    local saved = d.rescued and d.rescued.valle_pilares_1 and d.rescued.valle_pilares_1[1] == true
+    local freed, total = FlappyRun.rescuedCount('valle_pilares_1')
+    FlappyRun.close(); FlappySave.delete(3)
+    check('jaulas', none and saved and freed == 1 and FlappySave.VERSION == 2,
+          ('salir a medias no guarda nada=%s; terminar guarda la 1=%s; cuenta %s/%s; versión de las partidas %d'):format(
+           tostring(none), tostring(saved), tostring(freed), tostring(total), FlappySave.VERSION))
+end
+
+local ORDER = { 'archivo', 'progreso', 'zonas', 'partida', 'premio', 'jaulas' }
 function love.load()
     local only = os.getenv('CASE')
     for _, name in ipairs(ORDER) do

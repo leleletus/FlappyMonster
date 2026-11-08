@@ -169,12 +169,15 @@ function AdventureState:enter(args)
     -- (`args.taken` = { [nº de la colocación] = true }: vidas extra ya cogidas en este nivel en partidas TERMINADAS:
     -- salen transparentes y solo dan puntos. Las que se cogen ahora se apuntan en `self.takenNow` y la historia las
     -- guarda al terminar el nivel — Run.complete —, como todo lo demás)
-    self.enemies, self.takenNow, self.takenArg = {}, {}, args.taken
+    -- (`args.rescued` = { [colocación] = true }: FLAPPIES ENJAULADOS ya liberados en partidas terminadas — campaña Flappy,
+    -- types/items/cage.lua —: salen vacíos; los liberados ahora van en `result.rescued` al terminar)
+    self.enemies, self.takenNow, self.takenArg, self.rescuedArg = {}, {}, args.taken, args.rescued
     for i, placement in ipairs(self.level.entities) do
         local e = Entities.create(placement)
         if e then
             e.placeIdx = i
             if args.taken and args.taken[i] then e.taken = true end
+            if args.rescued and args.rescued[i] then e.freed = true end
             table.insert(self.enemies, e)
         end
     end
@@ -430,7 +433,7 @@ end
 -- Reintentar (tras perder todas las vidas): el mismo nivel con lo mismo que traía
 function AdventureState:retryArgs()
     return { level = self.levelPath, returnTo = self.returnTo, onFinish = self.onFinish, difficulty = self.level.difficulty,
-             shards = self.shardArgs, outro = self.outroArgs, taken = self.takenArg,
+             shards = self.shardArgs, outro = self.outroArgs, taken = self.takenArg, rescued = self.rescuedArg,
              eventCheckpoint = self.level.eventCheckpointNow }      -- (Mega Mashup: se reintenta en el cangrejo en que estabas)
 end
 
@@ -451,7 +454,9 @@ function AdventureState:result()
     local st = self.stats
     local taken = {}
     for i in pairs(self.takenNow or {}) do taken[#taken + 1] = i end
-    return { score = self.score, time = self.levelTime, lives = self.player.lives, width = self.level.tileW, par = self.level.parTime, taken = taken,
+    local rescued = {}
+    for _, e in ipairs(self.enemies or {}) do if e.rescuedNow and e.placeIdx then rescued[#rescued + 1] = e.placeIdx end end
+    return { score = self.score, time = self.levelTime, lives = self.player.lives, width = self.level.tileW, par = self.level.parTime, taken = taken, rescued = rescued,
              kills = st.kills, killable = st.killable, stars = st.stars, starsTotal = st.starsTotal,
              deaths = st.deaths, hits = st.hits, secretExit = self.secretExit or nil }
 end

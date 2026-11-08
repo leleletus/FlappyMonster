@@ -239,6 +239,7 @@ flappy.go_notice,GAME OVER: DE VUELTA AL INICIO DE LA ZONA,GAME OVER: BACK TO TH
 flappy.map_hint,{lr} elegir    {ok} jugar    {back} partidas,{lr} choose    {ok} play    {back} saves,
 flappy.map_locked,Supera la etapa anterior para abrirla,Clear the previous stage to open it,
 flappy.map_new,Sin jugar todavía,Not played yet,
+flappy.map_cages,Flappies liberados: {n}/{m},Flappies freed: {n}/{m},
 flappy.map_best,"Mejor nota: {grade}    Mejor tiempo: {t} s","Best grade: {grade}    Best time: {t} s",
 fc.campaign,CAMPAÑA,CAMPAIGN,"CLÁSICO (src/states/flappy/FlappyCampaignState.lua): la campaña Flappy, aún sin hacer"
 fc.desc_campaign,"La precuela: cómo llegó el monstruo a las islas","The prequel: how the monster reached the islands",

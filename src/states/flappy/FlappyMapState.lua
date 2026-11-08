@@ -76,6 +76,7 @@ function FlappyMapState:_play()
         level = Zones.path(id), returnTo = 'flappy_map', difficulty = FlappyRun.data.difficulty,
         lives = FlappyRun.data.lives,
         taken = FlappyRun.data.taken and FlappyRun.data.taken[id] or nil,   -- (vidas extra ya cogidas aquí: solo dan puntos)
+        rescued = FlappyRun.data.rescued and FlappyRun.data.rescued[id] or nil,   -- (flappies ya liberados: jaulas vacías)
         onLeave = function(lives) FlappyRun.setLives(lives) end,
         gameOverNote = L('flappy.go_zone'),
         onGameOver = function()
@@ -153,6 +154,10 @@ function FlappyMapState:render()
                      or (b and b.grade) and L('flappy.map_best', { grade = b.grade, t = string.format('%.1f', b.time or 0) })
                      or L('flappy.map_new')
         MenuKit.text(FONT_SMALL, line, C.x + 20, C.y + 60, C.w - 40, 'left', { 0.85, 0.88, 1 }, a)
+        local freed, cages = FlappyRun.rescuedCount(n.id)
+        if cages > 0 then
+            MenuKit.text(FONT_SMALL, L('flappy.map_cages', { n = freed, m = cages }), C.x + 20, C.y + 82, C.w - 40, 'left', { 1, 0.75, 0.85 }, a)
+        end
     end
     -- vidas y aviso
     -- (debajo del rótulo, a la derecha: en pantallas estrechas el rótulo llega al borde)
