@@ -28,7 +28,7 @@ Adventure/OnlineAdventure states (`Sky.render(level, camX, camY)`; `Background.p
 for the Flappy mode now). Pixel-banded gradient per time (cave/underwater have their own,
 tinted by the time), sun (day; low + orange at dusk) or moon + twinkling stars (night),
 drifting clouds, then the biome's silhouette layers (`Sky.BIOMES`: meadow, coast, mountain,
-snow, forest, fortress, volcano, jungle, frozen_coast, cave, underwater…) repeated horizontally with parallax; ground layers
+snow, forest, fortress, volcano, jungle, frozen_coast, valley, cave, underwater…) repeated horizontally with parallax; ground layers
 rest on the level bottom (tall levels show more sky as you climb), `top` layers hang from the
 level top (cave ceiling), `add` = additive (underwater rays), `time` = only at that time of day (the frozen coast's night aurora); outside a layer, its edge row
 colour fills the screen. Dusk/night tint layers and clouds. The EDITOR draws the same sky under the map (`drawCanvas`:
@@ -80,6 +80,25 @@ never overwrites; APPENDS 3 frames to `gradients.png`: 15-17 `frozen_coast_day/d
   congelado" (turquoise sea, frozen breaking waves, faceted icebergs with reflections, a shipwreck). The user chose
   **A, with B's faceted icebergs / ice walls, and liked the auroras** ("Las auroras son una muy buena idea"). B's art
   stays in the generator.
+
+## Valley biome (Plan 5b, 2026-11-08)
+
+The VALLEY OF THE PILLARS (zone 1 of the Flappy campaign, [flappy-campaign](../gameplay/flappy-campaign.md)) gets its
+own surface sky, **`valley`** ("Valle" in the editor): the flappies' homeland, tall HOLLOW basalt columns like giant
+organ pipes (the classic Flappy pipes come from them), nests in the holes. Art from
+`tools/art/world/make_valley_sky.py` (preview by default in `FlappyMonster_pruebas/valle/`: `vista_previa.png` = the
+three times with real `pillar` tiles and the monster in front, `capas.png`; `--apply` never overwrites and APPENDS 3
+frames to `gradients.png`: 18-20 `valley_day/dusk/night` — after `make_sky.py`, `make_jungle_sky.py --apply` and
+`make_frozen_coast_sky.py --apply A`, run it again). Own gradients per time (`grads`): warm day (blue → cream horizon).
+- `valley_far` (0.08): organ-pipe groups of columns with a pipe-mouth lip, in pale cool haze; OTHER FLAPPIES (same race
+  as the monster: visor face, antennae or horns, dark body; NO wings) perched on the tops and flying with their arms up
+  (they flap by magic). Three kinds, 7x7 art px: V antennae (plum), one curled horn (teal), two straight horns (rust).
+- `valley_mid` (0.2): bigger columns with basalt joints and NEST HOLES (dark oval, twig rim), some with a flappy peeking.
+- `valley_near` (0.38): thick broken column bases in the grass (mostly behind the level floor).
+- Everything is light and desaturated so the playfield's near-black `pillar` tiles (tile 59) always read in front.
+- Island for the art that changes by island: not listed in `Isles.BY_BACKGROUND`, so `pradera` (the default).
+- Capture: a copy of a Valley stage with `"background": "valley"` through `run.sh level_shots` (Flappy stages adopt
+  it in Plan 5b task 3). Applied provisionally: the user judges it in play.
 
 ## Volcano and meadow biome art
 

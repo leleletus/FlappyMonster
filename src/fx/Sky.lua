@@ -29,7 +29,8 @@ local S = 4                              -- escala del arte
 -- Degradados (cuadros de gradients.png)
 local GRAD = { day = 1, dusk = 2, night = 3, cave = 4, water = 5, abyss = 6, icecave = 7, underground = 8, volcano = 9, magma = 10,
                jungle_day = 11, jungle_dusk = 12, jungle_night = 13, temple = 14,
-               frozen_coast_day = 15, frozen_coast_dusk = 16, frozen_coast_night = 17 }
+               frozen_coast_day = 15, frozen_coast_dusk = 16, frozen_coast_night = 17,
+               valley_day = 18, valley_dusk = 19, valley_night = 20 }
 
 Sky.TIMES = {
     { id = 'day',   label = 'Día',       tint = { 1, 1, 1 } },
@@ -60,6 +61,10 @@ Sky.BIOMES = {
       grads = { day = 'frozen_coast_day', dusk = 'frozen_coast_dusk', night = 'frozen_coast_night' },
       layers = { { 'frozen_coast_aurora', 0.03, add = true, time = 'night' }, { 'frozen_coast_far', 0.08 },
                  { 'frozen_coast_mid', 0.2 }, { 'frozen_coast_near', 0.38 } } },
+    -- (el VALLE DE LOS PILARES, zona 1 de la campaña Flappy: columnas huecas de basalto con nidos y flappies posados o
+    -- volando, sin alas — tools/art/world/make_valley_sky.py —; claro y apagado: los pilares del nivel se leen delante)
+    { id = 'valley',   label = 'Valle',     sky = true, grads = { day = 'valley_day', dusk = 'valley_dusk', night = 'valley_night' },
+      layers = { { 'valley_far', 0.08 }, { 'valley_mid', 0.2 }, { 'valley_near', 0.38 } } },
     { id = 'cave',     label = 'Cueva',     grad = 'cave', depth = true,
       wall = 'cave_wall', layers = { { 'cave_far', 0.12 }, { 'cave_mid', 0.28 }, { 'cave_top', 0.2, top = true } } },
     { id = 'underwater', label = 'Submarino', grad = 'water', depth = true, wall = 'underwater_wall',
