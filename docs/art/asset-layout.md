@@ -23,7 +23,7 @@ assets/
     mechanisms/     trampoline/
     items/          star, extra life, checkpoint, food per island
     world/          tiles/ sky/ decorations/<theme>/ (+ foliage/, fx/) bubbles/ crack.png
-    flappy/         pipe.png, Background.png (the Flappy mode only)
+    flappy/         pipe.png, Background.png (the Flappy mode only); map/ (the campaign's zone maps: <zone>_bg, _pillar, _nest/_boss/_shop-Sheet)
     story/          world-map sprites, features/, mirror/ (frame, glass, shards), fx/
     ui/             touch/ ping/ icons/ menus/ flashlight
     fx/             ice block, ice drop, lava fx, noise mark, snowflakes

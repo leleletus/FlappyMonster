@@ -5,31 +5,33 @@
 player flies: [player](player.md#flight-flappy-levels)) played on Adventure's engine with lives, Game Over and the
 results screen. Built in Plan 3 ([flappy-plan-3-campaign-frame](../design/flappy-plan-3-campaign-frame.md), 0.5.167).
 Today: zone 1 (Valley of the Pillars) with three stages (Plan 5b, [§ The Valley's stages](#the-valleys-stages-plan-5b)),
-its boss stage `valle_redcoptero` (Plan 5) and a placeholder map look; the real content comes in
+its boss stage `valle_redcoptero` (Plan 5), the drawn zone map with the merchant's shop ([§ The zone map](#the-zone-map-plan-5b));
+the rest comes in
 Plans 4–7 (roadmap: [flappy-prequel § Plans](../design/flappy-prequel.md#plans)).
 
 **Files**
 
 | File | Role |
 |---|---|
-| `src/flappy/Zones.lua` | the campaign as DATA: zones in order, each with its stages and its boss stage (`boss`) |
+| `src/flappy/Zones.lua` | the campaign as DATA: zones in order, each with its stages, its boss stage (`boss`) and its map (`map`) |
 | `src/flappy/FlappySave.lua` | slots `flappy1..3.sav` (separate from Adventure's `story<n>.sav`), `DIFFICULTIES` |
 | `src/flappy/FlappyRun.lua` | the open slot: RunCore + `complete` (score, the WALLET; the last stage of the last zone → `Campaign.finished`), `buy` (the shop) and `gameOver` (back to the start of the zone) |
 | `src/flappy/Shops.lua` | the zone SHOPS as data: `LIST[zoneId] = { { id, price }, ... }`, `forZone(z)` |
-| `src/states/flappy/FlappyShopState.lua` | a zone's shop (`flappy_shop { zone = z }`, back to `flappy_map`) |
+| `src/states/flappy/FlappyShopState.lua` | a zone's shop (`flappy_shop { zone = z }`, back to `flappy_map { shop = true }`) |
 | `src/story/RunCore.lua` | progress rules SHARED with the story (`Run.lua`): open / save / state / frontier / setLives / score / restartWorld |
 | `src/core/SaveFile.lua` | save files as Lua tables with a `.bak` copy (shared with `Save.lua`) |
 | `src/story/Campaigns.lua` | per-campaign descriptors (`story`, `flappy`) read by the slot screen and CONTINUE |
 | `src/states/flappy/FlappyCampaignState.lua` | FLAPPY: CAMPAÑA (→ slots) and, while `Campaign.READY` is false, INFINITO (the old endless mode) |
 | `src/states/story/StorySlotState.lua` | the cartridge slot screen, for either campaign (`story_slots { campaign = 'flappy' }`) |
-| `src/states/flappy/FlappyMapState.lua` | the zone map (`flappy_map`), placeholder look |
+| `src/states/flappy/FlappyMapState.lua` | the zone map (`flappy_map`): the zone drawn, nests, boss icon, the shop node |
+| `tools/art/ui/make_flappy_map.py` | the map art `assets/images/flappy/map/valle_*.png` (preview / `--apply [--force]`) |
 | `src/flappy/Campaign.lua` | `READY`, the Adventure lock, `finished()` |
 | `src/world/entities/types/items/flapcharge.lua`, `items/cage.lua`, `mechanisms/crackwall.lua` | the Flappy-only entities (category Flappy) |
 | `src/ui/FlappyHud.lua` | hearts + charge meter |
 | `tools/levelgen/levels_flappy_valle.py`, `flappy_lib.py` | the three Valley stages `valle_pilares_1/2/3` (writes only those files) |
 | `tools/levelgen/levels_flappy_valle_boss.py` | the Valley's boss stage `valle_redcoptero` (writes only that file) |
 
-**Data:** a zone = one entry in `Zones.LIST` (`id`, `stages`, `boss`, `food`) + a lang key `flappy.zone.<id>`. Stage ids are level
+**Data:** a zone = one entry in `Zones.LIST` (`id`, `stages`, `boss`, `food`, `map`) + a lang key `flappy.zone.<id>`. Stage ids are level
 file names and are stored in saves: never rename them. A slot: `{ version, difficulty, world, node, lives, done, best,
 playTime, points, gameOvers, rescued, inventory, wallet }` (version 4; [save-data](../architecture/save-data.md)).
 
@@ -39,8 +41,40 @@ leaving halfway and Game Over never touch it (rule 7); buying lowers only the wa
 zone's shop (`Shops.LIST`, keyed by zone id: the Valley sells `shield` 300, `heart` 400, `magnet_points` 250) is the
 `flappy_shop` screen: one card per item (icon, name, price, owned of 3), unaffordable ones greyed; ENTER / a tap on the
 selected card asks BUY / CANCEL; `FlappyRun.buy(id, price)` → `'ok'` (spends and saves at once) | `'poor'` | `'full'` |
-`'type_full'` (nothing spent, a notice). Refusals are noticed before the confirmation. The map opens it (Task 5 of
-[Plan 5b](../design/flappy-plan-5b-valley.md)).
+`'type_full'` (nothing spent, a notice). Refusals are noticed before the confirmation. The map's merchant nest opens it
+and BACK returns to the map with the shop selected.
+
+## The zone map (Plan 5b)
+
+`flappy_map` draws the zone instead of the menu background. Art (`tools/art/ui/make_flappy_map.py`, ×4 like the sky and
+the story map; prefix `Zones.LIST[z].map.art`, files `assets/images/flappy/map/<art>_*.png`):
+- `_bg` (320x180 = 1280x720): the `valley` sky's day gradient, sun, clouds and its three layers (reused from
+  `make_valley_sky.py`). Tiled across the width, centred (the layers wrap at 320 art px), so any logical width works.
+- `_pillar` (18x160): a basalt pillar in front, darker and outlined; the game draws from the node's point down to the
+  grass (`WINDOW_H - 30×4`) and adds its last 10 rows (the base in the grass).
+- `_nest-Sheet` (24x22 ×3): a stage = a NEST on its pillar: open (red pennant, egg), done (gold pennant and egg, the
+  grade above), locked (grey twigs + the shared `PixelIcons` `lock`). The stage number is written on the pillar.
+- `_boss-Sheet` (24x26 ×3): the boss = its MACHINE's icon hovering over its pillar (the Net-Copter: patched balloon,
+  ropes, gondola, propeller, in `make_netcopter.py`'s colours): open (bobs), beaten (popped balloon, still), locked (grey).
+- `_shop-Sheet` (30x24 ×2): the SHOP = the MERCHANT's nest: a flappy of the same race (round head, antennae, white
+  face, NO wings) in a red cap and an apron, with a coin sack; frame 2 (waving) shows now and then.
+
+Positions are DATA: `map.at[stageId] = { x, y }` (normalised: x over the map width = the screen, at most 1280, centred;
+y over the height) is the point at the top of that node's pillar; `map.shop` is the merchant's. A node without a
+position is spread across the width. Dotted ARCS (the story map's `path.png` dot) join each stage to the next (lit when
+the next is open) and the shop to the nearest stage. The cursor is the shared menu cursor (`MenuKit.marker`; every
+node box is `MenuKit.occupy`'d so it never covers one). The card shows the stage (name, best / new / locked, cages) or,
+on the shop, its name, line and the wallet. Lives top right with the player icon.
+
+**The shop node is not a stage:** it is not in `Zones.nodes`, so progress, the frontier, CONTINUE and the campaign's end
+never see it; it is always open. **Input:** ← → move through ALL spots in left-to-right order (the shop included);
+ENTER / flap plays the stage or opens the shop (`flappy_shop { zone }`); BACK → slots. Touch: tap a spot to select it,
+tap the selected one to play / enter. The state keeps `sel` (stage index) and `onShop`.
+
+**To add a zone's map:** give the zone `map = { art, at, shop }` and make its art (add the zone's drawing to
+`make_flappy_map.py`; the five files with that prefix). `flappy_campaign CASE=zonas` checks the art exists and every
+node (and the shop, if the zone sells something) has a position on screen that does not overlap another.
+Not judged by the user yet: the look of the map, the merchant and the machine icon (art applied provisionally).
 
 **Playing a stage:** the map calls `AdventureState` with the same contract as the story map: `lives`, `onLeave` (lives
 LOST are saved however the stage ends), `onGameOver` (`FlappyRun.gameOver()`: the zone starts again, lives back to the
@@ -142,7 +176,8 @@ No extra lives. What it gives is saved only when the stage is finished (rule 7).
 - A stage: a Flappy level file (editor: Nivel → "Nivel Flappy (se vuela)", plus the auto-scroll) and its id in
   `Zones.LIST`; `run.sh flappy_campaign CASE=zonas` checks it (a boss stage needs a boss zone with a boss inside, no cage).
 - A boss stage: a generator like `levels_flappy_valle_boss.py` (`flappy_lib.boss_arena`) and the id as the zone's `boss`.
-- A zone: an entry in `Zones.LIST` + `flappy.zone.<id>` in `assets/lang/translations.csv`.
+- A zone: an entry in `Zones.LIST` (with its `map`: [§ The zone map](#the-zone-map-plan-5b)) + `flappy.zone.<id>` in
+  `assets/lang/translations.csv`.
 - Turn the Adventure lock on: `Campaign.READY = true` in the same commit that makes the campaign finishable (Plan 6).
 
 **Tests:** `flappy_campaign` (`archivo`, `progreso`, `zonas`, `partida`, `premio`, `jaulas`, `monedero`, `tienda`, `migrar`), `flappy_flight` (`carga`,

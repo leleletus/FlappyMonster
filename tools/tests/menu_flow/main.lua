@@ -310,6 +310,25 @@ local function run()
         local inMap = name(m) == 'FlappyMapState'
         local nodesOk = inMap and #m.nodes == #require('src/flappy/Zones').nodes(1) and FlappyRun.state(1, 1) == 'open' and FlappyRun.state(1, 2) == 'locked'
         for _, w in ipairs({ 960, 1600, 1280 }) do resize(w, 720); wait(0.3); shot('flappy_map_' .. w) end
+        -- la TIENDA en el mapa (el nido del mercader): un sitio más, no un nodo; ← desde la etapa 1 la elige y → vuelve;
+        -- con el dedo, tocarla la elige y tocar la etapa 1 vuelve a ella
+        local shopOk = false
+        if inMap then
+            local nSpots = #m.spots
+            press('nav_left', 0.1)
+            local toShop = m.onShop == true
+            if toShop then shot('flappy_map_shop') end
+            press('nav_right', 0.1)
+            local back1 = not m.onShop and m.sel == 1
+            local Ly = m:_layout()
+            m:touchpressed('d', Ly.shop.x, Ly.shop.y - 20); wait(0.05)
+            local tShop = m.onShop == true and name(top()) == 'FlappyMapState'
+            m:touchpressed('d', Ly.nodes[1].x, Ly.nodes[1].y - 20); wait(0.05)
+            local t1 = not m.onShop and m.sel == 1 and name(top()) == 'FlappyMapState'
+            shopOk = nSpots == #m.nodes + 1 and toShop and back1 and tShop and t1
+            if not shopOk then print(('   tienda en el mapa: sitios %d (nodos %d), ← %s, → %s, tocar %s / %s'):format(
+                nSpots, #m.nodes, tostring(toShop), tostring(back1), tostring(tShop), tostring(t1))) end
+        end
         press('confirm', 1.6)
         local adv = top()
         local plays = name(adv) == 'AdventureState' and adv.level.flappy == true and adv.returnTo == 'flappy_map'
@@ -350,16 +369,24 @@ local function run()
             end
         end
         fin = fin and retry
-        check('mapa', inMap and nodesOk and plays and left and fin,
-            ('mapa=%s; nodos abierto/cerrado=%s; jugar → nivel Flappy que vuelve al mapa=%s; salir a medias guarda la vida perdida y nada más=%s; terminar → resultados → mapa con la 2 abierta y REINTENTAR → la misma, con sus vidas cogidas=%s'):format(
-             tostring(inMap), tostring(nodesOk), tostring(plays), tostring(left), tostring(fin)))
+        -- (captura del mapa avanzado: la 1 a la 3 superadas —nidos dorados con su nota— y el jefe abierto)
+        local zn = require('src/flappy/Zones').nodes(1)
+        for k = 2, #zn - 1 do
+            FlappyRun.complete(zn[k].id, { time = 40, width = 114, score = 300, lives = FlappyRun.data.lives, deaths = 0, hits = 0 })
+        end
+        gStateMachine:change('flappy_map', { world = 1, node = #zn }); wait(0.6)
+        shot('flappy_map_done')
+        check('mapa', inMap and nodesOk and shopOk and plays and left and fin,
+            ('mapa=%s; nodos abierto/cerrado=%s; la tienda, un sitio más (← →, con el dedo)=%s; jugar → nivel Flappy que vuelve al mapa=%s; salir a medias guarda la vida perdida y nada más=%s; terminar → resultados → mapa con la 2 abierta y REINTENTAR → la misma, con sus vidas cogidas=%s'):format(
+             tostring(inMap), tostring(nodesOk), tostring(shopOk), tostring(plays), tostring(left), tostring(fin)))
         FlappyRun.close()
         for i = 1, FlappySave.SLOTS do FlappySave.delete(i) end
         gStateMachine:change('main_menu', { select = 'classic' }); wait(0.6)
     end
-    -- ── 2d. la TIENDA de una zona Flappy (src/states/flappy/FlappyShopState.lua): sus fichas, comprar con confirmación
+    -- ── 2d. la TIENDA de una zona Flappy (src/states/flappy/FlappyShopState.lua), desde el nido del mercader del mapa (←,
+    --        ENTER): sus fichas, comprar con confirmación
     --        (gasta el monedero y se guarda), cancelar, sin puntos / inventario lleno → aviso sin ventana ni gasto, con
-    --        el dedo (ficha, otra vez: confirmar, COMPRAR) y ATRÁS vuelve al mapa de la zona ──
+    --        el dedo (ficha, otra vez: confirmar, COMPRAR) y ATRÁS vuelve al mapa de la zona con la tienda elegida ──
     do
         local FlappyRun = require 'src/flappy/FlappyRun'
         local FlappySave = require 'src/flappy/FlappySave'
@@ -367,9 +394,11 @@ local function run()
         FlappyRun.open(1, 'normal')
         local d = FlappyRun.data
         d.wallet = 1000
-        gStateMachine:change('flappy_shop', { zone = 1 }); wait(0.8)
+        -- se entra desde el MAPA: ← (de la etapa 1 al nido del mercader) y ENTER
+        gStateMachine:change('flappy_map', { world = 1, node = 1 }); wait(0.6)
+        press('nav_left', 0.1); press('confirm', 0.9)
         local sh = top()
-        local inShop = name(sh) == 'FlappyShopState' and #sh.items == 3
+        local inShop = name(sh) == 'FlappyShopState' and #sh.items == 3 and sh.zone == 1
         local buyOk, cancelOk, poorOk, fullOk, touchOk, backOk = false, false, false, false, false, false
         if inShop then
             for _, w in ipairs({ 960, 1600, 1280 }) do resize(w, 720); wait(0.3); shot('flappy_shop_' .. w) end
@@ -407,10 +436,10 @@ local function run()
             sh:touchpressed('d', rects[1].x + 20, rects[1].y + 20); wait(0.05)
             touchOk = picked and opened and outCancel and d.wallet == 4700 and d.inventory.shield == 1
             press('back', 0.9)
-            backOk = name(top()) == 'FlappyMapState' and top().world == 1
+            backOk = name(top()) == 'FlappyMapState' and top().world == 1 and top().onShop == true
         end
         check('tienda', inShop and buyOk and cancelOk and poorOk and fullOk and touchOk and backOk,
-            ('tienda=%s; comprar con confirmación (monedero 1000 → 700, guardado)=%s; cancelar=%s; sin puntos: aviso sin gastar=%s; inventario lleno: aviso sin gastar=%s; con el dedo=%s; atrás → mapa=%s'):format(
+            ('mapa → ← → ENTER → tienda=%s; comprar con confirmación (monedero 1000 → 700, guardado)=%s; cancelar=%s; sin puntos: aviso sin gastar=%s; inventario lleno: aviso sin gastar=%s; con el dedo=%s; atrás → mapa con la tienda elegida=%s'):format(
              tostring(inShop), tostring(buyOk), tostring(cancelOk), tostring(poorOk), tostring(fullOk), tostring(touchOk), tostring(backOk)))
         FlappyRun.close()
         for i = 1, FlappySave.SLOTS do FlappySave.delete(i) end

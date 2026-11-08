@@ -4,7 +4,8 @@
 --              jefe, frontier, score (mejor nota, puntos), restartWorld (borra lo superado del mundo y guarda los récords)
 --   zonas      cada etapa de src/flappy/Zones.lua existe, es un nivel Flappy con meta y sin errores del editor, con al
 --              menos 1 jaula, 3 cargas y 1 comida (la de su zona); cada muro agrietado TAPA algo (lo de detrás no se
---              alcanza desde delante sin romperlo); la etapa del JEFE, sin jaula pero con su zona de jefe y un jefe dentro
+--              alcanza desde delante sin romperlo); la etapa del JEFE, sin jaula pero con su zona de jefe y un jefe dentro;
+--              el MAPA de cada zona: su arte existe, cada nodo (y la tienda, si vende algo) tiene su sitio y no se pisan
 --   premio     el premio de la nota (S: +1 vida; A: +500 puntos) se DA y se guarda, no solo sale en los resultados
 --   partida    FlappyRun: abrir un hueco escribe flappy<n>.sav (no story<n>.sav), las etapas se abren en orden, vidas de
 --              Fácil al empezar, gameOver vuelve al principio de la zona
@@ -163,6 +164,33 @@ function cases.zonas()
                 end
                 if cages < 1 or charges < 3 or food < 1 then
                     bad[#bad + 1] = ('%s (%d jaulas, %d cargas, %d comidas)'):format(node.id, cages, charges, food)
+                end
+            end
+        end
+    end
+    -- (el MAPA de cada zona: su arte existe, cada nodo tiene su sitio dentro de la pantalla y, si la zona vende algo,
+    --  el nido del mercader también; ningún par de sitios se pisa —a 1280 de ancho, cajas de 96 px—)
+    for z = 1, Zones.count() do
+        local M, Z = Zones.get(z).map, Zones.get(z)
+        if not M then bad[#bad + 1] = Z.id .. ' (sin mapa)'
+        else
+            for _, f in ipairs({ '_bg', '_pillar', '_nest-Sheet', '_boss-Sheet', '_shop-Sheet' }) do
+                local path = 'assets/images/flappy/map/' .. M.art .. f .. '.png'
+                if not love.filesystem.getInfo(path) then bad[#bad + 1] = path .. ' (no existe)' end
+            end
+            local pts = {}
+            local function at(name, p)
+                if not p or p[1] < 0.03 or p[1] > 0.97 or p[2] < 0.25 or p[2] > 0.7 then
+                    bad[#bad + 1] = ('%s: el sitio de %s (%s)'):format(Z.id, name, p and (p[1] .. ',' .. p[2]) or 'falta')
+                else pts[#pts + 1] = { name, p } end
+            end
+            for _, node in ipairs(Zones.nodes(z)) do at(node.id, M.at and M.at[node.id]) end
+            if #require('src/flappy/Shops').forZone(z) > 0 then at('la tienda', M.shop) end
+            for i = 1, #pts do
+                for j = i + 1, #pts do
+                    if math.abs(pts[i][2][1] - pts[j][2][1]) * 1280 < 96 then
+                        bad[#bad + 1] = ('%s: %s y %s se pisan'):format(Z.id, pts[i][1], pts[j][1])
+                    end
                 end
             end
         end

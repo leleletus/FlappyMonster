@@ -237,10 +237,13 @@ flappy.zone.valle,Valle de los Pilares,Valley of the Pillars,"Zona 1 de la campa
 flappy.go_zone,Te quedaste sin vidas: vuelves al inicio de esta zona,Out of lives: you'll go back to the start of this zone,"Campaña Flappy (src/states/flappy/FlappyMapState.lua)"
 flappy.go_notice,GAME OVER: DE VUELTA AL INICIO DE LA ZONA,GAME OVER: BACK TO THE START OF THE ZONE,
 flappy.map_hint,{lr} elegir    {ok} jugar    {back} partidas,{lr} choose    {ok} play    {back} saves,
+flappy.map_hint_shop,{lr} elegir    {ok} entrar    {back} partidas,{lr} choose    {ok} enter    {back} saves,"La ayuda del mapa de zona Flappy con la tienda elegida"
 flappy.map_locked,Supera la etapa anterior para abrirla,Clear the previous stage to open it,
 flappy.map_new,Sin jugar todavía,Not played yet,
 flappy.map_cages,Flappies liberados: {n}/{m},Flappies freed: {n}/{m},
 flappy.map_best,"Mejor nota: {grade}    Mejor tiempo: {t} s","Best grade: {grade}    Best time: {t} s",
+flappy.map_shop,La tienda del mercader,The merchant's shop,"Mapa de zona Flappy: el nido del mercader (src/states/flappy/FlappyMapState.lua)"
+flappy.map_shop_line,Power-ups a cambio de los puntos del monedero,Power-ups for your wallet points,
 settings.wheel_hold,RUEDA DE POWER-UPS: MANTENER,POWER-UP WHEEL: HOLD,
 settings.wheel_toggle,RUEDA DE POWER-UPS: PULSAR,POWER-UP WHEEL: PRESS,
 flappy.results.gift,Un flappy liberado te regala: {name},A freed flappy gives you: {name},

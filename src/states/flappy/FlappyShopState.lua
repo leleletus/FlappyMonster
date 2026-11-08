@@ -5,7 +5,7 @@
 -- monedero con FlappyRun.buy (se guarda ya); inventario lleno o 3 de ese tipo: se rechaza con un aviso y no se gasta.
 --   ↑ ↓ elegir · ENTER comprar · ATRÁS al mapa · tocar una ficha: elegirla (la elegida: comprar) · el botón VOLVER
 --   args = { zone = índice de la zona (src/flappy/Zones.lua), selected = ficha elegida al entrar }
--- Se abre desde el mapa de la zona (FlappyMapState) y vuelve a él.
+-- Se abre desde el mapa de la zona (FlappyMapState: el nido del mercader) y vuelve a él, con la tienda elegida.
 local BaseState     = require 'src/core/BaseState'
 local CornerButtons = require 'src/ui/CornerButtons'
 local MenuScene     = require 'src/ui/menu/MenuScene'
@@ -104,7 +104,7 @@ end
 
 function FlappyShopState:_back()
     Sound.play('select', 0.85)
-    self.anim:leave(function() gStateMachine:change('flappy_map', { world = self.zone }) end, self.N)
+    self.anim:leave(function() gStateMachine:change('flappy_map', { world = self.zone, shop = true }) end, self.N)   -- (con la tienda elegida)
 end
 
 function FlappyShopState:update(dt)

@@ -61,6 +61,10 @@ the diff before committing anything they write.
   `tools/art/ui/make_flappy_hud.py`: the Flappy HUD (`ui/flappy/hud-Sheet.png`) and the touch special button
   (`ui/touch/special-Sheet.png`). `make_food_sprites.py --apply --only valle` writes only the Valley peach. Safe to
   re-run (nothing hand-edited yet).
+- `tools/art/ui/make_flappy_map.py` (Plan 5b): the Flappy ZONE MAP art in `assets/images/flappy/map/` (`valle_bg`,
+  `valle_pillar`, `valle_nest-Sheet`, `valle_boss-Sheet`, `valle_shop-Sheet`; it imports `make_valley_sky.py` for the
+  background). Preview in `FlappyMonster_pruebas/valle/mapa_*.png`; `--apply` skips existing files, `--apply --force`
+  rewrites them. Safe to re-run (nothing hand-edited yet: if the user retouches one, drop `--force`).
 - `tools/art/world/make_flappy_pillars.py` (0.5.164): the Flappy PILLAR tile (`pillar.png` body, `pillar_cap.png` cap
   facing up), 16x16 ×4 in the old pipe's colours. Safe to re-run (nothing hand-edited yet).
 - `tools/art/world/make_secret_exit.py`: the SECRET EXIT tile (`assets/images/world/tiles/secret_exit.png`, a red plate

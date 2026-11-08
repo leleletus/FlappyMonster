@@ -5,6 +5,11 @@
 --   stages  etapas (nombre del archivo de assets/levels sin .json; niveles con "flappy": true), en orden
 --   boss    la etapa del jefe (falta mientras no exista: la zona acaba en su última etapa)
 --   food    la COMIDA de la zona (types/items/apple.lua: el aspecto 'auto' en sus etapas)
+--   map     su MAPA (src/states/flappy/FlappyMapState.lua): `art` = prefijo del arte en assets/images/flappy/map/
+--           (<art>_bg, _pillar, _nest-Sheet, _boss-Sheet, _shop-Sheet: tools/art/ui/make_flappy_map.py); `at[etapa]` =
+--           { x, y } de la boca del pilar de ese nodo (normalizados: x en el ancho del mapa —la pantalla, 1280 como
+--           mucho, centrado—, y en el alto); `shop` = el de la TIENDA (el nido del mercader: no es una etapa, no cuenta
+--           para el progreso). Un nodo sin sitio se reparte solo a lo ancho
 -- Los ids de las etapas van en las partidas: nunca se renombran.
 local Zones = {}
 
@@ -13,7 +18,10 @@ Zones.LIST = {
     --   tools/levelgen/levels_flappy_valle.py: 1 aletear, cargas y comida; 2 jaulas y muros; 3 el lanzarredes) y su
     --   jefe, el Redcóptero (Plan 5: types/bosses/netcopter.lua)
     { id = 'valle', stages = { 'valle_pilares_1', 'valle_pilares_2', 'valle_pilares_3' }, boss = 'valle_redcoptero',
-      food = 'valle' },
+      food = 'valle',
+      map = { art = 'valle', shop = { 0.08, 0.60 },
+              at = { valle_pilares_1 = { 0.27, 0.52 }, valle_pilares_2 = { 0.46, 0.38 }, valle_pilares_3 = { 0.66, 0.50 },
+                     valle_redcoptero = { 0.88, 0.44 } } } },
 }
 
 function Zones.count() return #Zones.LIST end
