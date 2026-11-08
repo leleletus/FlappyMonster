@@ -81,5 +81,7 @@ while Adventure is locked, its saves do not count.
 - 2026-11-07, the user: FLAPPY first in the main menu, CONTINUE = the last mode played, Free Play only in the debug menu.
 - Final review of Plan 3 (fixed in 0.5.168): the grade reward was shown but not given; RETRY did nothing; `taken`
   was not passed (extra lives could be farmed once stages have them).
+- 2026-11-08, the user, after Plan 4 (0.5.170): "por lo demás, diría que está bien" — the charge, attack, cages,
+  walls, food and HUD stand as built.
 - Plan 3 rulings: finishing the placeholder zone does not unlock Adventure (`Campaign.finished` only counts with
   `READY`); the slot screen is shared with the story through descriptors instead of a copy.
