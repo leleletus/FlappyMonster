@@ -108,7 +108,7 @@ def boss_arena(col, boss, w=20, music='tuffi', boss_at=(15, 5), stubs=()):
     """La ARENA del jefe de una etapa Flappy: una zona de jefe de `w` columnas (una pantalla, toda la altura) que empieza en
     la columna `col`, con el jefe `boss` en (col + boss_at[0], boss_at[1]); la cámara automática se PARA justo en ella
     (endCol = su última columna: la ventana queda encima de la zona, AutoScroll 'stop' y la zona se queda la cámara).
-    `stubs` = pilares cortos de dentro para cubrirse, como huecos de build() [(columna relativa, fila de arriba, alto)].
+    `stubs` = pilares cortos de dentro (paran la red y la bomba del Redcóptero, enemySolid: sirven para cubrirse), como huecos de build() [(columna relativa, fila de arriba, alto)].
     Vencido el jefe, la zona se abre y se sigue volando a la meta (la de build(), al final del nivel). → dict para write()"""
     return {
         "zone": {"id": 1, "col": col, "row": 1, "w": w, "h": H, "music": music},

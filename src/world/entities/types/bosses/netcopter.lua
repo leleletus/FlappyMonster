@@ -255,9 +255,7 @@ function NC:clawBox()
     return { x = tip, y = self.bandY - CLAW_H * S / 2, w = gl - tip, h = CLAW_H * S }
 end
 
-local function overlap(a, b)
-    return a.x < b.x + b.w and a.x + a.w > b.x and a.y < b.y + b.h and a.y + a.h > b.y
-end
+local overlap = Boss.overlap
 
 function NC:hurtPlayers(level)
     local claw, inner = self:clawBox(), self:getInnerBounds()
@@ -381,7 +379,8 @@ function NC:onDefeat()
     local level = self.levelRef
     if level then
         for _, e in ipairs(self:minions(level)) do
-            if e.alive and e.def.name == 'netshot' then e:spend() end
+            if e.alive and e.def.name == 'netshot' then e:spend()
+            elseif e.alive and e.def.name == 'glowbomb' and e.state == 'falling' then e:spend() end   -- (sin daño: se gasta)
         end
     end
 end

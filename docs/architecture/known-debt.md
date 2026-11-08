@@ -43,6 +43,12 @@ from `FlappyMonster_originals`.
   carry their own retired `main`; extracting the shared helpers into a module was avoided because it could alter
   approved tracks and cannot be verified by ear here.
 
+## Fixed (history)
+
+- 0.5.175: `bossdrops` built its food / lives reserves with `pairs(...)` over a table, so server and clients could
+  create the Extreme / Xtra reserves in a different order (online nondeterminism); placements now walk an ordered
+  `ipairs(KINDS)` list.
+
 ## Failing tests
 
 - `run.sh bot_nav`, level `cascada_dorada`: fails its water check (0.1 jumps/s in 30 s in the water). Already failing

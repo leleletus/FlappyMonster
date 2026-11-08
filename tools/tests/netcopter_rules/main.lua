@@ -27,6 +27,9 @@
 --                    el jefe vencido a la fuerza → sin paredes, vuela a la derecha y toca la meta (→ onFinish)
 --   muerte_en_pelea  morir en la pelea → reaparece EN EL AIRE dentro de la zona con toda la vida (el suelo, que en
 --                    vuelo hace daño, no le toca), el jefe con la misma vida y como mucho una carga a la vez
+--   pilar            los pilares (enemySolid) paran la red y la bomba
+--   red_repetida     una red lanzada dos veces llega exacta a su altura la segunda
+--   derrota_bombas   vencido el jefe no queda ninguna bomba cayendo ni hace daño
 --
 --   tools/tests/run.sh netcopter_rules   (CASE=nombre: solo ese)
 io.stdout:setvbuf('no')
@@ -403,6 +406,23 @@ function cases.red()
     check('red', not net.alive, 'la red desaparece al dar')
 end
 
+-- Una red disparada dos veces llega EXACTO a `ty` la segunda vez (settled se reinicia al lanzarla)
+function cases.red_repetida()
+    local level, es, boss, pa = fight(nil)
+    local net = Entities.create({ type = 'netshot', col = 20, row = 3, props = {} })
+    level.liveEntities = { net }
+    local function shot(ty)
+        net.alive, net.x, net.y = true, 24 * T, 3 * T
+        net:launch(ty, 0, -math.huge)
+        for _ = 1, 60 do net:update(DT, level) end
+        return net.y
+    end
+    local y1 = shot(6 * T)
+    net:spend()
+    local y2 = shot(2 * T + 17)
+    check('red_repetida', y1 == 6 * T and y2 == 2 * T + 17, ('primera y=%.2f (ty %.0f), segunda y=%.2f (ty %.0f)'):format(y1, 6 * T, y2, 2 * T + 17))
+end
+
 local function sweep(dodge)
     local level, es, boss, pa = fight(nil)
     boss.inv = 0
@@ -431,6 +451,37 @@ function cases.garra()
     check('garra', hp2 == php2, ('fuera de la franja: %d → %d'):format(php2, hp2))
 end
 
+-- Pilares (tile 59, enemySolid): ¿paran la red y la bomba? Sí: las entidades los tratan como un bloque
+function cases.pilar()
+    local PIL = 59 % 16 + math.floor(59 / 16) * 2 ^ 17
+    local tiles = {}
+    for r = 1, H do
+        tiles[r] = {}
+        for c = 1, W do tiles[r][c] = (r >= FLOOR) and SOLID or ((c == 10 and r >= 3 and r <= 7) and PIL or 0) end
+    end
+    local level = Level.fromData({ name = 'pilar', width = W, height = H, playerStart = { 3, 5 }, tiles = tiles, flappy = true,
+        entities = { { type = 'glowbomb', col = 1, row = 1 }, { type = 'netshot', col = 1, row = 1 } } })
+    local es = {}
+    for _, pl in ipairs(level.entities) do es[#es + 1] = Entities.create(pl) end
+    local bomb, net = es[1], es[2]
+    level.liveEntities, level.players = es, {}
+    -- la bomba cae sobre el pilar (columna 10, fila 3): explota encima, lejos del suelo
+    bomb.x, bomb.y = 9.5 * T, 1 * T
+    for _ = 1, 120 do
+        bomb:update(DT, level)
+        if bomb.state ~= 'falling' then break end
+    end
+    check('pilar', bomb.state == 'exploding' and bomb.y < 3 * T, ('la bomba explota sobre el pilar (y=%.0f)'):format(bomb.y))
+    -- la red vuela a la izquierda por la fila 5: el pilar (columna 10) la para
+    net.alive, net.x, net.y = true, 16 * T, 4.5 * T
+    net:launch(4.5 * T, 0, -math.huge)
+    for _ = 1, 120 do
+        net:update(DT, level)
+        if not net.alive then break end
+    end
+    check('pilar', not net.alive and net.x > 9 * T, ('la red se para en el pilar (x=%.0f)'):format(net.x))
+end
+
 function cases.huye()
     local level, es, boss, pa, ctrl, z = fight(nil)
     pa.invT = 999
@@ -448,6 +499,24 @@ function cases.huye()
     check('huye', looks.pilot_flee and not looks.dead, 'sin sprite de muerte, huye en su tabla')
     check('huye', boss.x - boss.sprW / 2 > z.x1, ('fuera de la zona por la derecha: x=%.0f, borde %.0f'):format(boss.x, z.x1))
     check('huye', z.state == 'cleared', 'zona: ' .. z.state)
+end
+
+-- Tras la derrota (onDefeat) no queda ninguna bomba cayendo y nadie recibe daño de las bombas
+function cases.derrota_bombas()
+    local level, es, boss, pa, ctrl, z = fight(nil)
+    pa.invT = 0
+    boss.inv, boss.netT, boss.bombT = 0, 99, 0
+    local bomb
+    run(level, es, 1, function() bomb = liveOf(es, 'glowbomb')[1]; return bomb ~= nil end, ctrl)
+    check('derrota_bombas', bomb ~= nil, 'hay una bomba cayendo antes de la derrota')
+    if not bomb then return end
+    bomb.x, bomb.y = pa.x, pa.y - 40                      -- justo sobre el jugador: explotaría en un paso
+    boss:damage(boss.hp)
+    local falling, php = 0, pa.hp
+    for _, e in ipairs(liveOf(es, 'glowbomb')) do if e.state == 'falling' then falling = falling + 1 end end
+    check('derrota_bombas', falling == 0, 'sin bombas en estado falling tras la derrota: ' .. falling)
+    run(level, es, 4, nil, ctrl, function() pa.x, pa.y, pa.vy = bomb.x, bomb.y, 0 end)
+    check('derrota_bombas', pa.hp == php, ('el jugador no recibe daño de bombas tras la derrota: %d → %d'):format(php, pa.hp))
 end
 
 function cases.bomba()
@@ -595,7 +664,9 @@ function cases.muerte_en_pelea()
     pa.invT = 0
     pa:die(nil, true)
     local back
-    local maxCharges = 0
+    local maxCharges, maxBombs = 0, 0
+    local function pool() local n = 0 for _, e in ipairs(es) do if e.def.name == 'glowbomb' then n = n + 1 end end return n end
+    local poolStart = pool()
     for _ = 1, 5 * 60 do
         if stageStep(level, es, ctrl, pa) == 'respawn' then back = true; break end
     end
@@ -621,14 +692,22 @@ function cases.muerte_en_pelea()
             if e.def.name == 'flapcharge' and e.alive and e.state ~= 'reserve' and BossZones.contains(z, e.x, e.y) then n = n + 1 end
         end
         maxCharges = math.max(maxCharges, n)
+        local nb = 0
+        for _, e in ipairs(es) do
+            if e.def.name == 'glowbomb' and e.alive and e.state ~= 'reserve' then nb = nb + 1 end
+        end
+        maxBombs = math.max(maxBombs, nb)
     end
+    local poolEnd = pool()
+    check('muerte_en_pelea', poolEnd == poolStart and maxBombs <= poolStart,
+        ('bombas sin duplicarse tras morir: reserva %d → %d, como mucho %d vivas'):format(poolStart, poolEnd, maxBombs))
     check('muerte_en_pelea', maxCharges == 1, 'sale alguna carga y nunca dos a la vez: como mucho ' .. maxCharges)
     Difficulty.bind(nil)
 end
 
 local ORDER = { 'rebote', 'de_lado', 'falla', 'mecha', 'cargas', 'lastima', 'aire', 'aventura', 'ultima_vida',
                 'vida', 'fase2', 'especial', 'no_pisa', 'red', 'garra', 'huye', 'bomba', 'azar', 'paquete',
-                'etapa_jefe', 'muerte_en_pelea' }
+                'etapa_jefe', 'muerte_en_pelea', 'pilar', 'red_repetida', 'derrota_bombas' }
 function love.load()
     local only = os.getenv('CASE')
     for _, name in ipairs(ORDER) do

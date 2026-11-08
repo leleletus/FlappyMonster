@@ -38,7 +38,9 @@ Hp 12 + 4 per extra player (`bossHp` scales it: 11 at Normal, 14 at Extreme). Ph
   net vanishes. Phase 2: a spread of 3 (the side ones drift ±150 px/s). Next net after 2.2-3.2 s (1.5-2.3 in phase 2).
 - **Glowing bomb:** on its own clock (every 6 s ± 1, 5 s in phase 2), also while attacking: dropped from the gondola
   with `owner` = the boss. Hit while RISING in flight → it flies back: **2 damage** to the boss; otherwise it explodes
-  (−1 within a tile). See `glowbomb.lua`.
+  (−1 within a tile; the blast also breaks breakable blocks within a tile). Pillars are `enemySolid`: they STOP both
+  nets and bombs (so the short pillars in the arena are real cover). On defeat, falling bombs and nets are spent
+  without damage. See `glowbomb.lua`.
 - **Claw** (phase 2, every second attack): `sweep_warn` 0.8 s — the band (the claw's height, 84 px) is fixed at the
   player's height when it starts and marked by blinking target marks; the machine moves so the gondola lines up. Then
   `sweep`: the claw goes out to the zone's left edge in 1.0 s and back in 0.6 s; −2 inside the band (arm included),
@@ -62,7 +64,7 @@ are not online: no `Protocol.VERSION` change (ruling R2 of the plan).
 ## Tests
 
 `tools/tests/run.sh netcopter_rules` (cases `vida`, `fase2`, `especial`, `no_pisa`, `red`, `garra`, `huye`, `bomba`,
-`azar`, `paquete`, `etapa_jefe`, `muerte_en_pelea`, besides the bomb and drop cases); `boss_intro LEVEL=tools/levelgen/arenas/NetcopterArena.json`;
+`azar`, `paquete`, `etapa_jefe`, `muerte_en_pelea`, `pilar`, `red_repetida`, `derrota_bombas`, besides the bomb and drop cases); `boss_intro LEVEL=tools/levelgen/arenas/NetcopterArena.json`;
 `boss_frames LEVEL=tools/levelgen/arenas/NetcopterArena.json FX=1 ZONE=1
 STATES=intro,hover,aim_net,sweep_warn,sweep,dying_hold,fleeing` (a special hit every 3 s to see it all).
 

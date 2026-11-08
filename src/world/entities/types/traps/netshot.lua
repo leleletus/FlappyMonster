@@ -4,7 +4,7 @@
 --   'fly'    vuela a la izquierda a `speed` px/s; en los primeros NET_SETTLE s baja / sube hasta `ty` (la altura del
 --            jugador al disparar) y luego sigue recta con su deriva `drift` (px/s; el abanico de 3 de la fase 2). Al
 --            tocar a un jugador: −1 de vida y ctrlLock 0,4 s (Boss.strike, la red le enreda) y desaparece. Sale de la
---            zona (`leftBoundPx`), toca un bloque sólido o el borde del nivel → desaparece. Los pilares no la paran.
+--            zona (`leftBoundPx`), toca un bloque sólido (los pilares también: enemySolid) o el borde del nivel → desaparece.
 --   'spent'  ya no está (alive = false: vuelve a la reserva del jefe)
 -- Arte: assets/images/bosses/netcopter/net.png (16x16, ×6; tools/art/bosses/make_netcopter.py). Todo lo que se dibuja
 -- sale de x, y.
@@ -32,11 +32,12 @@ function Net:init()
     self.vx, self.vy = 0, 0
     self.state = 'fly'
     self.ty, self.y0, self.drift = nil, nil, 0
+    self.settled = nil
 end
 
 -- La lanza el jefe (ya en su sitio con appearAt): hacia la izquierda, a la altura `ty`, con deriva `drift`
 function Net:launch(ty, drift, leftPx)
-    self.state, self.deadTimer = 'fly', 0
+    self.state, self.deadTimer, self.settled = 'fly', 0, nil
     self.y0, self.ty, self.drift = self.y, ty or self.y, drift or 0
     self.leftBoundPx = leftPx or -math.huge
 end
@@ -46,9 +47,7 @@ function Net:canBeKnocked() return false end
 function Net:isObstacle() return false end
 function Net:interact(pa) return nil end          -- (el golpe lo da updateCustom: lleva ctrlLock, Boss.strike)
 
-local function overlap(a, b)
-    return a.x < b.x + b.w and a.x + a.w > b.x and a.y < b.y + b.h and a.y + a.h > b.y
-end
+local overlap = Boss.overlap
 
 function Net:spend()
     self.state, self.alive = 'spent', false

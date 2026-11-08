@@ -1,6 +1,6 @@
 -- BOMBA LUMINOSA (solo niveles Flappy: la suelta el Redcóptero, docs/design/flappy-plan-5-netcopter.md): cae despacio
 -- con la mecha encendida. Estados:
---   'falling'    cae `fall` px/s; explota si toca un jugador (de lado, por encima, quieto), un tile sólido o se le acaba la
+--   'falling'    cae `fall` px/s; explota si toca un jugador (de lado, por encima, quieto), un tile sólido (los pilares también) o se le acaba la
 --                mecha (`fuse` s): la explosión (Explosions.blast, 1 casilla) quita 1 de vida al que esté cerca
 --   'returning'  DEVUELTA AL REMITENTE (rasgo `reflectable`: un jugador que vuela SUBIENDO la toca — Interactions): sale
 --                hacia donde estaba el centro de su `owner` al devolverla, en línea recta a 700 px/s. Si le da, el jefe
@@ -8,6 +8,7 @@
 --   'exploding'  fogonazo breve y desaparece. Una bomba devuelta NO hace daño a ningún jugador al explotar
 -- Arte: assets/images/bosses/netcopter/bomb-Sheet.png (2 cuadros 14x18: la mecha; tools/art/bosses/make_netcopter.py).
 local Entity     = require 'src/world/entities/base/Entity'
+local Boss       = require 'src/world/entities/base/Boss'
 local Explosions = require 'src/world/systems/Explosions'
 
 local GlowBomb = Entity.extend(Entity, { debugColor = { 1, 0.7, 0.2 },
@@ -62,12 +63,17 @@ function GlowBomb:onReflect(pa)
     Entity.emitFx('collect', self.x, self.y)
 end
 
+-- Gastada sin explotar (el jefe cae): vuelve a su reserva sin hacer daño
+function GlowBomb:spend()
+    self.state, self.alive = 'spent', false
+end
+
 function GlowBomb:explode(level, harmless)
     if self.state == 'exploding' then return end
     self.state, self.deadTimer, self.vx, self.vy = 'exploding', 0, 0, 0
     Sound.play('bombBlast')
     Entity.emitFx('bomb_blast', self.x, self.y)
-    -- (devuelta: no daña a nadie; si no, 1 de vida a quien esté a una casilla — sin matar de golpe ni romper bloques)
+    -- (devuelta: no daña a nadie; si no, 1 de vida a quien esté a una casilla — sin matar de golpe; Explosions.blast rompe los bloques rompibles a 1 casilla)
     if not harmless then
         Explosions.blast(level, self.x, self.y, { kill = -1, hurt = BLAST_R, push = BLAST_R }, self)
     end
@@ -76,9 +82,7 @@ end
 local function solidAt(level, x, y)
     return level:isEnemySolidAt(x, y) or y >= level.heightPx
 end
-local function overlap(a, b)
-    return a.x < b.x + b.w and a.x + a.w > b.x and a.y < b.y + b.h and a.y + a.h > b.y
-end
+local overlap = Boss.overlap
 
 function GlowBomb:updateCustom(dt, level)
     local st = self.state
