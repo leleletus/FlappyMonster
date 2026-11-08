@@ -239,6 +239,7 @@ local function run()
         local Campaign = require 'src/flappy/Campaign'
         local Save = require 'src/story/Save'
         local g0 = love.filesystem.read('story.sav')
+        for i = 1, require('src/flappy/FlappySave').SLOTS do require('src/flappy/FlappySave').delete(i) end -- que una ejecución caída no deje partidas
         local g = Save.global(); g.adventure = nil; Save.writeGlobal(g)
         Save.write(1, Save.new('normal'))
         Campaign.READY = true

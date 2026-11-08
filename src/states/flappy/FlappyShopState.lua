@@ -75,8 +75,8 @@ function FlappyShopState:_try()
     if not it then return end
     local name = L('powerup.' .. it.id)
     if not self:_affordable(self.sel) then Sound.play('headBump'); return self:_say('shop.poor', false) end
-    if FlappyRun.inventoryCount() >= FlappyRun.MAX_TOTAL then Sound.play('headBump'); return self:_say('shop.full', false) end
-    if self:_owned(it.id) >= FlappyRun.MAX_TYPE then Sound.play('headBump'); return self:_say('shop.type_full', false, { name = name }) end
+    if FlappyRun.inventoryCount() >= FlappyRun.MAX_TOTAL then Sound.play('headBump'); return self:_say('shop.full', false, { m = FlappyRun.MAX_TOTAL }) end
+    if self:_owned(it.id) >= FlappyRun.MAX_TYPE then Sound.play('headBump'); return self:_say('shop.type_full', false, { name = name, m = FlappyRun.MAX_TYPE }) end
     Sound.play('select')
     self.confirm = { sel = 1 }
 end
@@ -92,7 +92,7 @@ function FlappyShopState:_buy()
         self:_say('shop.bought', true, { name = name })
     else
         Sound.play('headBump')
-        self:_say('shop.' .. r, false, { name = name })
+        self:_say('shop.' .. r, false, { name = name, m = (r == 'full') and FlappyRun.MAX_TOTAL or FlappyRun.MAX_TYPE })
     end
 end
 

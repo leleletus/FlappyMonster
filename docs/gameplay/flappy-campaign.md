@@ -137,7 +137,7 @@ past during the 0.6 s glow. Feel judged by the user in play.
 ## Evil Monster machines (Plan 5b)
 
 - **`netlauncher`** (`types/traps/netlauncher.lua`, Flappy-only, `pace = 'trapPace'`): a ground turret. Every `T.EVERY`
-  (3.5 s) it glows `T.AIM_T` (0.6 s, `clawServo`) and fires one net straight up at 520 px/s (`netFire`). The net is the
+  (3.5 s) it glows `T.AIM_T` (0.6 s, `clawServo`) and fires one net straight up at 520 px/s (`netFire`; the net is a `netshot`, whose pace is `bossPace`, so its speed is scaled: Easy x0.7, Normal x0.85, Hard x1; the launcher's own clock follows `trapPace`: Easy x0.8, Normal x1, Hard x1.1). The net is the
   Net-Copter's `netshot` (`launch(ty, drift, boundPx, dir, up)`: `up` = vertical flight): 1 HP + `ctrlLock` 0.4 s, snags
   on solids / pillars, leaves through the top. Its 2 nets are reserve minions (`def.summons`, `Entity:freeMinion`, as
   the boss's). It never fires while no player is within `T.RANGE` (20 tiles); a player arriving always has at least `T.FIRST` (1.5 s) before the first shot. An upward net only probes solids inside the level, so it leaves through the top cleanly. The special burst destroys it: the generic
@@ -194,6 +194,7 @@ the air inside the zone with full HP), `touch_layout` (`especial`), `menu_flow` 
 - 2026-11-08, the user: the first boss is the Net-Copter as proposed; `tuffi` music for all Flappy bosses for now
   (details in [netcopter](../bosses/netcopter.md#history)).
 - 2026-11-07, the user: FLAPPY first in the main menu, CONTINUE = the last mode played, Free Play only in the debug menu.
+- Plan 5b: inserting `valle_pilares_3` before the boss means an old slot with stages 1-2 done must clear stage 3 before the boss; no data is lost and a beaten boss stays done.
 - Final review of Plan 3 (fixed in 0.5.168): the grade reward was shown but not given; RETRY did nothing; `taken`
   was not passed (extra lives could be farmed once stages have them).
 - 2026-11-08, the user, after Plan 4 (0.5.170): "por lo demás, diría que está bien" — the charge, attack, cages,

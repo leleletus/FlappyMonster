@@ -5,7 +5,7 @@
 # objetos pequeños: cabe en una casilla): formas planas, 2-3 tonos por pieza.
 #
 #   python3 tools/art/enemies/make_netlauncher.py           → vista previa en FlappyMonster_pruebas/valle/
-#   python3 tools/art/enemies/make_netlauncher.py --apply   → assets/images/enemies/netlauncher/netlauncher-Sheet.png
+#   python3 tools/art/enemies/make_netlauncher.py --apply [--force]   → assets/images/enemies/netlauncher/netlauncher-Sheet.png
 #
 # netlauncher-Sheet.png: 3 cuadros de 14x14 — 1 reposo, 2 apunta (la boca brilla), 3 retroceso (el tubo se hunde y sale humo).
 import os, sys
@@ -75,7 +75,11 @@ def main():
         files.alpha_composite(frame(k), (i * FW, 0))
     if '--apply' in sys.argv:
         os.makedirs(DEST, exist_ok=True)
-        files.save(os.path.join(DEST, 'netlauncher-Sheet.png'))
+        dest = os.path.join(DEST, 'netlauncher-Sheet.png')
+        if os.path.exists(dest) and '--force' not in sys.argv:
+            print('%s ya existe: no se toca (--force para pisarlo)' % dest)
+            return
+        files.save(dest)
         print('escrito', DEST)
         return
     os.makedirs(OUT, exist_ok=True)
