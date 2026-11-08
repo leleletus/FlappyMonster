@@ -30,7 +30,7 @@ each step (through `Difficulty.dt`) and `Interactions.run` against each player �
 `x, y, facing, state, frame, alive, deadTimer, …netPack()` into snapshots → clients apply them to their own instances
 and only call `render`. Entities see players through `level.players` and each other through `level.liveEntities`.
 
-**Editor categories** (the def's `category`, in Spanish because the editor is): Enemigos, Jefes, Trampas, Mecanismos,
+**Editor categories** (the def's `category`, in Spanish because the editor is): Enemigos, Jefes, Trampas, Mecanismos, Flappy (Flappy-only types, `flappyOnly`),
 Objetos, Directores.
 
 **Harnesses:** `mechanics` (dozens of cases), `flyers`, `crawler_drop`, `icecrabby_rules`, `gloomy_rules`,
@@ -79,6 +79,11 @@ landing mark; sprites in `assets/images/bosses/common/`). Asset layout: enemies 
   when the entity is selected (mortar detection radius).
 
 ## Player ↔ entity interactions
+
+**The special attack's burst** (Flappy levels, 0.5.169): `Entity:onSpecialHit(power, pa)` → true absorbs the burst.
+Base: enemies (not bosses) die flung; `Boss`: `damage(power, 'special')`; `cage` and `crackwall` open / break at
+`minCharge`. Types that should react differently override it ([flappy-campaign](../gameplay/flappy-campaign.md)).
+
 
 - `Interactions.check` returns kill/hurt/stomp/pickup/checkpoint; `run()` also
   applies the ground-pound impact (`poundZone` kills, radius knockbacks).

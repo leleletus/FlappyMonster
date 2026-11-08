@@ -21,11 +21,13 @@ Plans 4–7 (roadmap: [flappy-prequel § Plans](../design/flappy-prequel.md#plan
 | `src/states/story/StorySlotState.lua` | the cartridge slot screen, for either campaign (`story_slots { campaign = 'flappy' }`) |
 | `src/states/flappy/FlappyMapState.lua` | the zone map (`flappy_map`), placeholder look |
 | `src/flappy/Campaign.lua` | `READY`, the Adventure lock, `finished()` |
+| `src/world/entities/types/items/flapcharge.lua`, `items/cage.lua`, `mechanisms/crackwall.lua` | the Flappy-only entities (category Flappy) |
+| `src/ui/FlappyHud.lua` | hearts + charge meter |
 | `tools/levelgen/levels_flappy_valle.py`, `flappy_lib.py` | the two placeholder stages `valle_pilares_1/2` |
 
-**Data:** a zone = one entry in `Zones.LIST` (`id`, `stages`, `boss`) + a lang key `flappy.zone.<id>`. Stage ids are level
+**Data:** a zone = one entry in `Zones.LIST` (`id`, `stages`, `boss`, `food`) + a lang key `flappy.zone.<id>`. Stage ids are level
 file names and are stored in saves: never rename them. A slot: `{ version, difficulty, world, node, lives, done, best,
-playTime, points, gameOvers }` ([save-data](../architecture/save-data.md)).
+playTime, points, gameOvers, rescued }` (version 2; [save-data](../architecture/save-data.md)).
 
 **Playing a stage:** the map calls `AdventureState` with the same contract as the story map: `lives`, `onLeave` (lives
 LOST are saved however the stage ends), `onGameOver` (`FlappyRun.gameOver()`: the zone starts again, lives back to the
@@ -37,6 +39,30 @@ in a stage is saved before it is finished (golden rule 7).
 **CONTINUE** (main menu): the most recently written save of ANY campaign (`TitleState` `lastSave`), Flappy or Adventure;
 while Adventure is locked, its saves do not count.
 
+## Charge, special attack, cages, walls, food, HUD (Plan 4, 0.5.169)
+
+- **Charge:** `flapcharge` items (Flappy-only, `pickup = { charge = 1 }`) add 1 to `pa.charge`, up to
+  `PlayerAdventure.CHARGE_MAX` = 5, applied in the shared pickup path (`Interactions.run` → `pa:addCharge`). Dying keeps
+  it; each stage starts at 0.
+- **Special attack** (action `special`: X / K, pad R shoulder, touch: the extra button above the jump button): with
+  charge, a BURST leaves the monster's front with `power` = the whole charge (spent), at 900 px/s for up to 8 tiles. A
+  solid tile stops it (pillars do not); each entity it overlaps gets `onSpecialHit(power, pa)` once — the base: enemies
+  (not bosses) die flung, `Boss` takes `power` damage; returning true absorbs the burst ([player](player.md#flight-flappy-levels)).
+- **Caged flappies** (`cage`, Flappy-only, prop `minCharge` 1–5, shown as dots over it): a burst with enough power frees
+  it (`rescuedNow`), less is absorbed. `AdventureState` returns `result.rescued` (placement indices) only when the stage
+  is FINISHED; `FlappyRun.complete` stores `rescued[stage]`; replays pass `rescued` and those cages are empty. The map
+  card shows "Flappies freed n/m". What freeing ALL of them gives is still PENDING (the user); each one will give a
+  power-up (Plan 4b).
+- **Cracked walls** (`crackwall`, Flappy-only, props `minCharge`, `rows`): solid like the door until a burst with enough
+  power breaks it. They hide shortcuts / prizes: the main route never needs them (the zero-charge bot clears every
+  Valley stage — `flappy_flight etapa`).
+- **Food:** a Flappy level's `apple` with skin `auto` takes its zone's `food` (`Zones.LIST`, via `level.id`, the level's
+  file name set by `Level.new`); the Valley's is a peach (`food_valle.png`).
+- **HUD:** `src/ui/FlappyHud.lua` — hearts (always visible) and the charge meter under score / time; lives stay top
+  right.
+- Stage objects come from `tools/levelgen/flappy_lib.py` `populate` (charges in the gaps, food, a cage up high, a wall
+  over a hidden charge).
+
 **SP / server / client:** single player only. Flappy levels are listed in no online mode yet (project 3).
 
 **How to extend**
@@ -45,7 +71,8 @@ while Adventure is locked, its saves do not count.
 - A zone: an entry in `Zones.LIST` + `flappy.zone.<id>` in `assets/lang/translations.csv`.
 - Turn the Adventure lock on: `Campaign.READY = true` in the same commit that makes the campaign finishable (Plan 6).
 
-**Tests:** `flappy_campaign` (`archivo`, `progreso`, `zonas`, `partida`), `menu_flow` (`flappy_slots`, `mapa`,
+**Tests:** `flappy_campaign` (`archivo`, `progreso`, `zonas`, `partida`, `premio`, `jaulas`), `flappy_flight` (`carga`,
+`ataque`, `jaula`, `muro`, `etapa` on every Valley stage), `touch_layout` (`especial`), `menu_flow` (`flappy_slots`, `mapa`,
 `continuar_flappy`, `candado`).
 
 **Decisions**

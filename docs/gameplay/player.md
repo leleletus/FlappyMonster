@@ -184,6 +184,9 @@ ground pound):
   mid-height (never inside a pillar).
 - Shared simulation (golden rule 1): nothing new travels online yet (Flappy levels are listed in no online mode).
 
+- CHARGE and the SPECIAL ATTACK (0.5.169): `pa.charge` (0..`CHARGE_MAX` 5, `addCharge`), `fireSpecial` /
+  `updateBursts` / `renderBursts`, `pa.bursts` — see [flappy-campaign](flappy-campaign.md#charge-special-attack-cages-walls-food-hud-plan-4-05169).
+
 **Feel: not judged yet** — waiting for the user (debug menu → FLAPPY FLIGHT (TEST)). Harness `flappy_flight`.
 
 History: 0.5.164 used the old Flappy's `GRAVITY` 1800 / `FLAP_VELOCITY` -480 and 330 px/s both ways on screen. The
