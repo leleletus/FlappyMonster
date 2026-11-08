@@ -694,6 +694,12 @@ function Model:validate()
         if bad > 0 then
             w[#w+1] = { 'error', ('%s (%d,%d) y %d casillas más son exclusivas de Flappy: este nivel no es Flappy (Nivel → Nivel Flappy)'):format(first[3], first[1], first[2], bad - 1) }
         end
+        for _, e in ipairs(self.entities) do
+            local t = ET.get(e.type)
+            if t and t.flappyOnly then
+                w[#w+1] = { 'error', ('%s (%d,%d) es exclusiva de Flappy: este nivel no es Flappy (Nivel → Nivel Flappy)'):format(t.label or e.type, e.col, e.row), e }
+            end
+        end
     end
     -- Conexiones ON/OFF → objetos activables
     local linked = {}

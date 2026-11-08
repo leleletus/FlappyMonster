@@ -91,7 +91,8 @@ local function paletteItems(L)
         local seen = {}
         for _, t in ipairs(ET.list) do
             local v = t.variant
-            if not (v and seen[v.group]) and not t.editorHide then      -- (editorHide: automáticos, no se colocan)
+            -- (editorHide: automáticos, no se colocan; lo exclusivo de Flappy — flappyOnly —, solo en los niveles Flappy)
+            if not (v and seen[v.group]) and not t.editorHide and (not t.flappyOnly or E.model.flappy) then
                 local it = { key = t.name, label = t.label, cat = t.category, ord = ET.categoryOrder(t.category), ent = t,
                              tip = t.label .. (t.description and ('\n' .. t.description) or '') }
                 if v then

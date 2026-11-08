@@ -204,7 +204,24 @@ function cases.exclusivo()
         return n
     end
     local normal, flappy = warns(false), warns(true)
-    check('exclusivo', normal == 1 and flappy == 0, ('error en un nivel normal=%d; en uno Flappy=%d'):format(normal, flappy))
+    check('exclusivo', normal == 1 and flappy == 0, ('pilar: error en un nivel normal=%d; en uno Flappy=%d'):format(normal, flappy))
+    -- (una ENTIDAD exclusiva de Flappy: un tipo de usar y tirar registrado aquí)
+    local ET = require 'src/world/entities/base/EntityTypes'
+    local Entity = require 'src/world/entities/base/Entity'
+    if not ET.get('_t_flappy') then
+        ET.register({ name = '_t_flappy', label = 'prueba', category = 'Flappy', flappyOnly = true,
+                      class = Entity.extend(Entity, {}) })
+    end
+    local function entWarns(fl)
+        local m = Model.new(20, 11)
+        m.entities[#m.entities + 1] = { type = '_t_flappy', col = 10, row = 5, props = {} }
+        m.flappy = fl or nil
+        local n = 0
+        for _, w in ipairs(m:validate()) do if w[1] == 'error' and w[2]:find('exclusiv', 1, true) then n = n + 1 end end
+        return n
+    end
+    local en, ef = entWarns(false), entWarns(true)
+    check('exclusivo', en == 1 and ef == 0, ('entidad: error en un nivel normal=%d; en uno Flappy=%d'):format(en, ef))
 end
 
 function cases.normal()

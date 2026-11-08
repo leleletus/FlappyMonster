@@ -30,6 +30,8 @@
 --               inundación pasa a moverse con bloques ON/OFF). Ver flood.lua.
 --   needsLink   (con activatable) true o function(props): sin ningún Activador conectado es un aviso del editor
 --               (la Puerta: types/mechanisms/door.lua)
+--   flappyOnly  true: solo en niveles Flappy ("flappy": true; docs/design/flappy-prequel.md): el editor no lo ofrece en
+--               los demás y Model:validate da un error si un nivel normal lo usa (como los tiles con flappyOnly)
 --
 -- En el nivel, cada colocación es:
 --   { type='crabby', col=10, row=2, props={ attach='ceiling', ... } }
@@ -51,6 +53,7 @@ EntityTypes.CATEGORIES = {
     { id = 'Mecanismos', description = 'Objetos que cambian el nivel: trampolines, agua...' },
     { id = 'Objetos',    description = 'Coleccionables y puntos de control.' },
     { id = 'Directores', description = 'Invisibles en la partida: controlan a otros objetos.' },
+    { id = 'Flappy',     description = 'Solo en niveles Flappy: carga de aleteo, flappies enjaulados, muros agrietados.' },
 }
 
 -- Orden de los grupos de propiedades COMUNES en el inspector. Los grupos
