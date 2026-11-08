@@ -227,7 +227,7 @@ menu.adventure,AVENTURA,ADVENTURE,
 menu.classic,FLAPPY,FLAPPY,"El modo Flappy (antes CLÁSICO; el id no cambia)"
 menu.settings,CONFIGURACIÓN,SETTINGS,
 menu.continue,CONTINUAR,CONTINUE,
-menu.desc_continue,Continúa tu última aventura (partida {n}),Continue your last adventure (save {n}),
+menu.desc_continue,Sigue con lo último que jugaste: {mode} (partida {n}),Pick up where you left off: {mode} (save {n}),
 menu.desc_adventure,"Aventura de plataformas: historia, juego libre y en línea","A platforming adventure: story, free play and online",
 menu.desc_adventure_locked,Termina la campaña de FLAPPY para desbloquear la aventura,Finish the FLAPPY campaign to unlock the adventure,"Aventura bloqueada (src/flappy/Campaign.lua)"
 menu.desc_classic,"La precuela: cómo llegó el monstruo a las islas","The prequel: how the monster reached the islands",

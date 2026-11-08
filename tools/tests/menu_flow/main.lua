@@ -426,6 +426,37 @@ local function run()
     local Run = require 'src/story/Run'
     check('continuar', name(top()) == 'StoryMapState' and Run.slot == 2, ('CONTINUAR → %s (partida %s)'):format(name(top()), tostring(Run.slot)))
     Run.close()
+    -- CONTINUAR sigue el ÚLTIMO MODO jugado: la partida escrita más tarde, Flappy o Aventura (las fechas de los archivos
+    -- van por segundos: se espera de verdad entre una escritura y otra); con Aventura bloqueada no cuenta la suya
+    do
+        local FlappySave, FlappyRun = require 'src/flappy/FlappySave', require 'src/flappy/FlappyRun'
+        local Campaign = require 'src/flappy/Campaign'
+        for i = 1, 3 do FlappySave.delete(i) end
+        love.timer.sleep(1.1)
+        FlappySave.write(1, FlappySave.new('hard'))
+        gStateMachine:change('main_menu'); wait(0.6)
+        local m = top()
+        local pickF = m.contCampaign == 'flappy' and m.slot == 1 and selId(m) == 'continue'
+        press('confirm', 1.2)
+        local toF = name(top()) == 'FlappyMapState' and FlappyRun.slot == 1
+        FlappyRun.close()
+        love.timer.sleep(1.1)
+        Save.write(2, Save.new('normal'))
+        gStateMachine:change('main_menu'); wait(0.1)
+        local pickS = top().contCampaign == 'story' and top().slot == 2
+        -- (Aventura bloqueada: aunque la suya sea la más reciente, CONTINUAR va a Flappy)
+        local g0 = love.filesystem.read('story.sav')
+        local g = Save.global(); g.adventure = nil; Save.writeGlobal(g)
+        Campaign.READY = true
+        gStateMachine:change('main_menu'); wait(0.1)
+        local lockedF = top().contCampaign == 'flappy' and top().slot == 1
+        Campaign.READY = false
+        if g0 then love.filesystem.write('story.sav', g0) else love.filesystem.remove('story.sav') end
+        check('continuar_flappy', pickF and toF and pickS and lockedF,
+            ('Flappy la más reciente → CONTINUAR=%s y lleva a su mapa=%s; luego Aventura más reciente → la suya=%s; con Aventura bloqueada → Flappy=%s'):format(
+             tostring(pickF), tostring(toF), tostring(pickS), tostring(lockedF)))
+        for i = 1, 3 do FlappySave.delete(i) end
+    end
     for i = 1, Save.SLOTS do Save.delete(i) end
 
     -- ── 5. el fondo vivo ─────────────────────────────────────────────────

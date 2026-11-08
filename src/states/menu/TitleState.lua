@@ -17,7 +17,6 @@ local MenuScene  = require 'src/ui/menu/MenuScene'
 local MenuAnim   = require 'src/ui/menu/MenuAnim'
 local MenuList   = require 'src/ui/menu/MenuList'
 local Transition = require 'src/ui/menu/Transition'
-local Save       = require 'src/story/Save'
 local TitleLogo  = require 'src/ui/menu/TitleLogo'
 local Campaign   = require 'src/flappy/Campaign'
 local TitleState = BaseState:new()
@@ -25,14 +24,23 @@ local TitleState = BaseState:new()
 local LOGO_S = math.floor(LOGO_SCALE / 2)      -- el logo remasterizado está a 2x: a media escala ocupa lo de siempre
 local RISE_T = 0.38                             -- s que tarda el logo en subir al abrir el menú
 
--- La última partida de la historia que se jugó (el archivo más reciente), o nil
-local function lastSlot()
-    local best, when = nil, -1
-    for i = 1, Save.SLOTS do
-        local info = love.filesystem.getInfo('story' .. i .. '.sav')
-        if info and (info.modtime or 0) > when and Save.load(i) then best, when = i, info.modtime or 0 end
+-- La última partida que se jugó, de CUALQUIER campaña (src/story/Campaigns.lua: Flappy o la historia de Aventura): el
+-- archivo escrito más tarde → id de la campaña, hueco (nil si no hay ninguna). Con Aventura bloqueada, la suya no cuenta
+-- (sus partidas siguen en el disco y vuelven al desbloquearla). En un empate de segundo, gana la primera de
+-- Campaigns.IDS.
+local function lastSave()
+    local Campaigns = require 'src/story/Campaigns'
+    local bestC, bestI, when = nil, nil, -1
+    for _, id in ipairs(Campaigns.IDS) do
+        if not (id == 'story' and Campaign.adventureLocked()) then
+            local c = Campaigns.get(id)
+            for i = 1, c.saves.SLOTS do
+                local t = c.saves.modtime(i)
+                if t and t > when and c.saves.load(i) then bestC, bestI, when = id, i, t end
+            end
+        end
     end
-    return best
+    return bestC, bestI
 end
 
 local function ease(k) k = math.max(0, math.min(1, k)); return 1 - (1 - k) * (1 - k) * (1 - k) end
@@ -50,14 +58,14 @@ function TitleState:enter(args)
 end
 
 function TitleState:_buildList(select)
-    -- Aventura bloqueada (hasta terminar la campaña Flappy: src/flappy/Campaign.lua): botón gris con su aviso y sin
-    -- CONTINUAR (las partidas siguen en el disco y vuelven al desbloquear)
+    -- Aventura bloqueada (hasta terminar la campaña Flappy: src/flappy/Campaign.lua): botón gris con su aviso
     local locked = Campaign.adventureLocked()
-    local slot = not locked and lastSlot() or nil
-    self.slot = slot
+    -- CONTINUAR: la última partida jugada, sea del modo que sea (el usuario, 2026-11-07)
+    local camp, slot = lastSave()
+    self.slot, self.contCampaign = slot, camp
     local items = {}
     if slot then
-        items[#items + 1] = { text = 'menu.continue', color = 'pink', desc = 'menu.desc_continue', descArgs = { n = slot },
+        items[#items + 1] = { text = 'menu.continue', color = 'pink', desc = 'menu.desc_continue', descArgs = { n = slot, mode = L(camp == 'flappy' and 'menu.classic' or 'menu.adventure') },
                               id = 'continue', go = function() self:_continue() end }
     end
     -- FLAPPY primero (el usuario, 2026-11-07), luego AVENTURA (id 'classic': el de siempre, no cambia)
@@ -104,11 +112,11 @@ function TitleState:_leave(state, args)
 end
 
 function TitleState:_continue()
-    local Run = require 'src/story/Run'
-    self.leavingTo = 'story_map'
+    local c = require('src/story/Campaigns').get(self.contCampaign)
+    self.leavingTo = c.map
     self.anim:leave(function() end, #self.list.items + 1)
-    Run.open(self.slot)
-    Transition.go('story_map')
+    c.run.open(self.slot)
+    Transition.go(c.map)
 end
 
 -- MENÚ DE DEPURACIÓN secreto (src/states/menu/DebugMenuState.lua: clásico infinito, Aventura sin candado, juego libre,

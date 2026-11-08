@@ -113,6 +113,7 @@ end
 
 function Save.write(i, data) return write(file(i), data) end
 function Save.delete(i) SaveFile.remove(file(i)) end
+function Save.modtime(i) return SaveFile.modtime(file(i)) end
 
 -- Lo global (desbloqueos): { unlocked = { extreme = true, ... } }
 function Save.global()
