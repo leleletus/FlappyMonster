@@ -19,11 +19,31 @@ Try it: `love . --editor tools/levelgen/arenas/NetcopterArena.json`, then play f
 | `tools/levelgen/arenas/NetcopterArena.json` | test arena: 40x11 Flappy, zone columns 17-36 (full height), music `tuffi` |
 | `assets/levels/valle_redcoptero.json` | its campaign stage (zone 1's `boss`), by `tools/levelgen/levels_flappy_valle_boss.py` ([flappy-campaign § Boss stages](../gameplay/flappy-campaign.md#boss-stages-plan-5)) |
 
+Art lives in `assets/images/bosses/netcopter/` (all drawn at ×6, the player's pixel). Sheets (frame size, frames):
+
+| Sheet | Frame | What |
+|---|---|---|
+| `machine-Sheet` / `machine_popped-Sheet` | 44x54 ×3 | balloon + gondola; the 3 frames sway the balloon 0 / +1 / -1 px; `popped` is phase 2 (burst balloon) |
+| `propeller-Sheet` | 12x18 ×4 | the pedal propeller (spins; faster while crossing) |
+| `cannon-Sheet` | 18x12 ×2 | the cannon (frame 2 = glowing before firing) |
+| `cannon_arm-Sheet` | 3x12 ×4 | the iron arm bolted to the gondola: clamp (12 px from the cannon corner), bar (1 column, repeated), plate at x 9..11 |
+| `claw` | 54x14 | claw head on the left; the arm is lengthened by repeating its 9-px slice from x 36 |
+| `pilot-Sheet` | 9x16 ×4 | pedal1, pedal2, (3 = an old laugh frame, no longer drawn, see History), hurt |
+| `pilot_laugh-Sheet` | 9x16 ×2 | blank head, hands up (A) / head 1 px lower, hands down (B) |
+| `joy_eyes` | 5x2 | the «^ ^» laughing eyes painted over the blank head (see below) |
+| `pilot_angry` | 11x16 | fist raised, 2 columns wider to the left |
+| `pilot_flee-Sheet` | 36x30 ×2 | the escape on the plank with a broken propeller |
+| `net-Sheet` | 24x24 ×5 | ball, half-open, open, open turned 30° and 60° |
+| `bomb-Sheet` / `mark-Sheet` | 14x18 ×2 / 12x12 ×2 | the bomb (fuse) and its landing mark (four pulsing corners) |
+| `puff-Sheet` / `spark-Sheet` | 8x8 ×6 / 7x7 ×3 | smoke (1-3) and net threads (4-6) / hit sparks |
+| `parts` | 14x14 ×4 | balloon, plank, blade, cannon: the pieces that fall apart on defeat |
+
 Anchors in the 44x54 machine frame (its centre = the entity's x, y): balloon y 0..25; gondola x 12..32, y 43..52, with
 an iron handlebar at y 39; pilot (9x16: the player's body, `player/monstrito1.png`, with the antennae and head of
 `miniboss1/monster/Idle1.png`) top-left at (18, 27), standing on the gondola rim with its hands on the handlebar;
-cannon (18x12) top-left at (-6, 42) unfolded, folded behind the gondola at (12, 42); the claw (54x14, head on the left) comes out of the gondola at its middle height; the arm is
-lengthened by repeating its 9-px slice from x 36.
+propeller top-left at (32, 37); cannon (18x12) top-left at (-12, 42) unfolded, folded behind the gondola at (14, 42),
+hanging from its arm; the claw comes out of the gondola at its middle height. The art faces LEFT; facing right the
+whole machine is drawn mirrored around x.
 
 ## The fight
 
@@ -31,26 +51,47 @@ Hp 12 + 4 per extra player (`bossHp` scales it: 11 at Normal, 14 at Extreme). Ph
 (`machine_popped`, `gustPop`). States: `dormant → intro → ready → hover ↔ aim_net → [phase 2] sweep_warn → sweep → …
 → dying_hold → fleeing → dead`.
 
-- **Hover:** in the right third of the zone (x = right edge − 1/6 of the width, swaying ±0.5 tiles), its cannon mouth
-  following the nearest player's height with a 0.8 s lag (0.5 s in phase 2, and 0.75 tiles lower), never leaving the
-  zone (balloon below the top, gondola above the floor).
-- **Net** (`aim_net`): the cannon glows 0.6 s (`cannonFuse`), then fires (`cannonWhoosh`) a net left at 520 px/s that
-  settles in 0.3 s to the player's height at the moment of firing. Hit: −1 and `ctrlLock` 0.4 s (`Boss.strike`), the
-  net vanishes. Phase 2: a spread of 3 (the side ones drift ±150 px/s). Next net after 2.2-3.2 s (1.5-2.3 in phase 2).
-- **Glowing bomb:** on its own clock (every 6 s ± 1, 5 s in phase 2), also while attacking: dropped from the gondola
-  with `owner` = the boss. Hit while RISING in flight → it flies back: **2 damage** to the boss; otherwise it explodes
-  (−1 within a tile; the blast also breaks breakable blocks within a tile). Pillars are `enemySolid`: they STOP both
-  nets and bombs (so the short pillars in the arena are real cover). On defeat, falling bombs and nets are spent
-  without damage. See `glowbomb.lua`.
-- **Claw** (phase 2, every second attack): `sweep_warn` 0.8 s — the band (the claw's height, 84 px) is fixed at the
-  player's height when it starts and marked by blinking target marks; the machine moves so the gondola lines up. Then
-  `sweep`: the claw goes out to the zone's left edge in 1.0 s and back in 0.6 s; −2 inside the band (arm included),
-  nothing outside it.
+- **Patrol** (`hover` ↔ `cross`): it keeps a SIDE (the right or the left third of the zone, starting on the right)
+  attacking for `HOLD` s (7 s, 5 s in phase 2; the first side 5-8 s by `rollStart`), its cannon mouth following the
+  nearest player's height with a 0.8 s lag (0.5 s in phase 2, and 0.75 tiles lower), swaying ±0.5 tiles, never leaving
+  the zone (balloon below the top, gondola above the floor). Then it CROSSES to the other side (`cross`, 1.8 s, along the
+  top strip, no attacks; its body still hurts: −1 and a push downwards, away from it) and TURNS in 0.2 s (the machine at
+  half width, first one way then the other): `facing` is always towards the middle of the zone, and the cannon, the net,
+  the bomb throw, the claw and the body push all follow it. At least 0.6 s after crossing until the next net.
+- **Net** (`aim_net`): the cannon (on its arm, 12 px out from the gondola) glows 0.6 s (`cannonFuse`), then fires
+  (`netFire`, a 0.12 s recoil of 1 px, smoke and threads at the mouth for 0.3 s) a net in the direction it faces at
+  520 px/s that settles in 0.3 s to the player's height at the moment of firing. In flight it UNFURLS (ball → open) and
+  then SPINS (frames 3-4-5, reversed when it goes right). Hit: −1 and `ctrlLock` 0.4 s (`Boss.strike`), the open net
+  WRAPS the player while the lock lasts (`netSnare`), then it is spent. Caught on a pillar or solid it comes apart in
+  threads (`netSnag`). Phase 2: a spread of 3 (the side ones drift ±150 px/s). Next net after 2.2-3.2 s (1.5-2.3 in
+  phase 2).
+- **Glowing bomb:** on its own clock (every 6 s ± 1, 5 s in phase 2; never while crossing). It is LOBBED (`bombLob`)
+  from the top of the gondola in a ballistic arc (`BOMB_G` 900 px/s²) to where the player was at the throw, the apex
+  2.5 tiles above the player's head; a blinking MARK shows the landing spot from the throw. It explodes (−1 within a
+  tile; the blast also breaks breakable blocks within a tile) when it touches a player who is not rising, the floor, a
+  pillar or a solid. A player flying RISING into it sends it back (`reflectable`, `owner` = the boss) in a straight line
+  at 700 px/s: **2 damage** to the boss, with sparks. Pillars are `enemySolid`: they STOP both nets and bombs (so the
+  short pillars in the arena are real cover). On defeat, falling bombs and nets are spent without damage. See
+  `glowbomb.lua`.
+- **Claw** (phase 2, every second attack): `sweep_warn` 0.8 s (`clawServo`) — the band (the claw's height, 84 px) is
+  fixed at the player's height when it starts and marked by blinking target marks; the machine moves so the gondola
+  lines up. Then `sweep`: the claw goes out across the zone, towards where it faces, to the far edge in 1.0 s and back
+  in 0.6 s; −2 inside the band (arm included), nothing outside it.
+- **Alive** (all derived from `state`, `deadTimer`, x, y, `facing`, `netPackExtra`): the propeller spins (4 frames,
+  faster crossing), the balloon sways, the legs pedal at their own rate; after a hit: sparks, hurt 0.2 s then ANGRY
+  (raised fist) 0.6 s; phase 2: smoke leaves the burst balloon; each hit shakes the screen (fx `shake_tick`, 0.15 s).
+- **Laugh** (intro, and 1.2 s whenever a player dies, without stopping the fight): like the Mirror's — the head
+  turns blank (`pilot_laugh-Sheet`) and `joy_eyes` «^ ^» are drawn over it; the head goes up and down every 1/6 s.
+  The eyes are drawn at the BOSS pixel size (×6, a 5x2 sprite), not the Mirror's half-size cell (pixel-density rule).
 - **Vulnerable always** while fighting (no stun windows): the special attack (damage = the charge spent) and returned
   bombs; `Boss.INV_TIME` after each hit. **Never stomped:** `interact` returns nil; touching its body costs 1 HP and a
   push to the left (`Boss.strike`, checked in `updateBoss`). Not a solid body.
 - **Entry** (3.5 s): pedals in from the right (2 s, `miniAppear`), laughs at 2.1 s (`mirrorLaugh`), unfolds the cannon
-  at 2.6 s (`cannonLoad`). It also laughs when a player dies.
+  at 2.6 s (`cannonLoad`).
+- **Sounds** (`tools/sounds/netcopter.py` → `assets/sounds/bosses/netcopter/`, [sound](../audio/sound.md)): `netFire`,
+  `netSnare`, `netSnag`, `bombLob`, `balloonPop` (phase 2), `clawServo`, plus the rate-limited ambience `pedalSqueak`
+  (0.7 s, 0.4 s crossing), `propWhir` (0.55 s / 0.35 s) and `leakHiss` (phase 2, 1.8 s). Still reused: `cannonFuse`,
+  `cannonLoad`, `miniAppear`, `mirrorLaugh`, `gustBlow`, `bossExplode`, `megaFlee`.
 - **Defeat:** the generic `dying_hold` (explosions, the pilot's hurt face) and then, instead of falling, `fleeing`
   (`onDeathFall`): the balloon, the plank, a blade and the cannon fall apart and the Evil Monster pedals away to the
   right on a plank with a broken propeller (`pilot_flee`, 240 px/s) — it does NOT die (it comes back at every zone).
@@ -64,13 +105,16 @@ are not online: no `Protocol.VERSION` change (ruling R2 of the plan).
 
 ## Tests
 
-`tools/tests/run.sh netcopter_rules` (cases `vida`, `fase2`, `especial`, `no_pisa`, `red`, `garra`, `huye`, `bomba`,
-`azar`, `paquete`, `etapa_jefe`, `muerte_en_pelea`, `pilar`, `red_repetida`, `derrota_bombas`, besides the bomb and drop cases); `boss_intro LEVEL=tools/levelgen/arenas/NetcopterArena.json`;
+`tools/tests/run.sh netcopter_rules` (32 cases: the bomb and drop cases `rebote`…`ultima_vida`; the fight `vida`,
+`fase2`, `especial`, `no_pisa`, `red`, `garra`, `huye`, `bomba`, `azar`, `paquete`, `etapa_jefe`, `muerte_en_pelea`,
+`pilar`, `red_repetida`, `derrota_bombas`; plan 5c: `lanzada`, `devuelta_arco`, `cruza`, `mira_izq`, `cruce_justo`,
+`risa`, `dibujo`, `ruido`); `boss_intro LEVEL=tools/levelgen/arenas/NetcopterArena.json` (its `reaparece` case accepts
+the air respawn of Flappy levels);
 `boss_frames LEVEL=tools/levelgen/arenas/NetcopterArena.json FX=1 ZONE=1
 STATES=intro,hover,aim_net,sweep_warn,sweep,dying_hold,fleeing` (a special hit every 3 s to see it all).
 
-**Not judged yet** (needs the user): the feel, the timings, the second art pass (stitched patches, full-body pilot)
-and the reused sounds.
+**Not judged yet** (needs the user): the feel and timings of the patrol, the lobbed bomb and the nets; the whole
+plan 5c art (arm, laugh, angry frame, smoke, sparks); the nine new sounds (verified by numbers only, never listened to).
 
 ## SP / server / client
 
@@ -100,6 +144,18 @@ fight in the `T` table of `netcopter.lua`. A new reflectable projectile: the `re
   `monstrito1` beside the pilot frames).
 - Hp prop 12 is the base; the difficulty's `bossHp` scales it (Normal 11, Extreme 14 with the extra-player bonus).
 - The Evil Monster flees instead of dying: he comes back in every zone.
+- 2026-11-08, the user after playing 0.5.176 (6 points): (1) the bomb is useless: it only falls to the floor, never
+  hits the monster and can almost never be returned; (2) the machine must not stay still: it moves from the left side
+  to the right side too, and turns; (3) the nets have no sound, no effect and no spin, they don't look like nets;
+  (4) the cannon is not really attached to the machine; (5) more sounds, effects and animations: it should feel alive,
+  a good boss fight; (6) the Evil Monster's laugh like the Mirror's (blank face + laughing-eye sprites).
+- Plan 5c decisions ([plan](../design/flappy-plan-5c-netcopter-polish.md)): the bomb is lobbed in an arc to the
+  player's position with a landing mark and an apex 2.5 tiles over the head (returnable by a rising player, 2 damage);
+  the machine patrols between the two thirds of the zone, crosses along the top strip and turns, everything follows
+  `facing`; nets unfurl, spin, wrap the player and snag on pillars; the cannon hangs from an iron arm and recoils;
+  alive = propeller, sway, pedal, sparks, angry frame, smoke in phase 2, hit shake; the laugh is the Mirror's, with
+  the eyes at the boss pixel size (×6) and not at the Mirror's half-size cell (pixel-density rule); nine own sounds
+  instead of the reused placeholders.
 - Ruling R2: no `Protocol.VERSION` change (Flappy is not online). R4: air respawn in Flappy boss fights.
 
 ## History
@@ -108,3 +164,10 @@ fight in the `T` table of `netcopter.lua`. A new reflectable projectile: the `re
 - 2026-11-08, second art pass after the user's verdict: stitched patches, full-body pilot, 44x54 frame.
 - 2026-11-08 (Plan 5, task 5): the campaign stage `valle_redcoptero`; ruling R4: dying in a Flappy boss fight respawns
   in the air (it respawned standing on the floor, which costs 1 HP in flight).
+- 2026-11-08 (Plan 5c, tasks 1-3): lobbed bomb + mark, patrol / cross / turn with facing, net unfurl / spin / wrap /
+  snag, cannon on an arm with recoil, alive animation, Mirror-style laugh, nine sounds, `shake_tick`.
+- 2026-11-08 (Plan 5c, task 4): docs; `boss_intro`'s `reaparece` case made Flappy-aware (Flappy levels respawn in
+  the air, `BossZones.respawnPoint` → `Level:flightSpot`; the ≥ 2 tiles from the boss rule applies to Adventure only,
+  since the air spot is fixed at the left third and the patrol also holds that side).
+- `pilot-Sheet` frame 3 (the old laugh with an open mouth) is no longer drawn by the boss; it stays in the sheet
+  because the hurt frame is read by index (4) by the game and the generator preview.

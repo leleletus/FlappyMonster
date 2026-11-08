@@ -181,7 +181,8 @@ function love.load()
                     local r = math.floor((pa.spawnY + 16 * PLAYER_SCALE / 2 - 2) / T) + 1   -- (celda donde está de pie)
                     local d = math.max(0, math.abs(pa.spawnX - boss.x) - boss.outerW / 2)
                     spawns[#spawns + 1] = { inZone = BossZones.contains(z, pa.spawnX, pa.spawnY),
-                        stand = level:isStandable(c, r), wet = level:liquidAt(pa.spawnX, pa.spawnY - 30) ~= nil, d = d }
+                        stand = level:isStandable(c, r), wet = level:liquidAt(pa.spawnX, pa.spawnY - 30) ~= nil, d = d,
+                        air = level.flappy and true or false }
                     local sp = spawns[#spawns]
                     print(('%6.2fs reaparece en (%d,%d), a %.1f casillas del jefe (%s)%s%s%s'):format(t, c, r, d / T, boss.state,
                         sp.inZone and '' or ' FUERA DE LA ZONA', sp.stand and '' or ' SIN SUELO', sp.wet and ' EN EL AGUA' or ''))
@@ -292,11 +293,14 @@ function love.load()
     if mega then check('emotes', okR, 'descansos: ' .. table.concat(rests, ', ')) end
     local okS, minD = #spawns >= 3, math.huge
     for _, sp in ipairs(spawns) do
-        okS = okS and sp.inZone and sp.stand and not sp.wet
-        minD = math.min(minD, sp.d)
+        -- (en un nivel Flappy se reaparece EN EL AIRE dentro de la zona: no hay suelo que pisar; en Aventura, de pie)
+        okS = okS and sp.inZone and (sp.stand or sp.air) and not sp.wet
+        -- (la distancia al jefe solo se exige en Aventura: en Flappy el punto de aire está fijo en el tercio izquierdo
+        -- de la zona y el Redcóptero patrulla también por ese lado)
+        if not sp.air then minD = math.min(minD, sp.d) end
     end
     check('reaparece', okS and minD >= 2 * T,
-        ('%d reapariciones; todas en la zona, de pie y secas=%s; la más cercana al jefe a %.1f casillas'):format(#spawns,
+        ('%d reapariciones; todas en la zona, de pie (en Flappy, en el aire) y secas=%s; la más cercana al jefe a %.1f casillas'):format(#spawns,
             tostring(okS), minD / T))
     if mega then
         check('gp_subditos', gps >= 10 and #jumps == 0,
