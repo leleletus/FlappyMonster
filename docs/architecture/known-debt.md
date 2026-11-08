@@ -43,6 +43,11 @@ from `FlappyMonster_originals`.
   carry their own retired `main`; extracting the shared helpers into a module was avoided because it could alter
   approved tracks and cannot be verified by ear here.
 
+## Failing tests
+
+- `run.sh bot_nav`, level `cascada_dorada`: fails its water check (0.1 jumps/s in 30 s in the water). Already failing
+  before 0.5.175 (identical output at `fe2fad5f~1`); not investigated.
+
 ## Product items still open
 
 - The Switch "overlay" update mode has never been verified on a real console (`update/boot.log` tells the mode).

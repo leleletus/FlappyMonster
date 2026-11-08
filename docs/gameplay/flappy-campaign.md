@@ -79,6 +79,18 @@ the zone's left third (`BossZones.respawnPoint` → `Level:flightSpot`, the same
 standing on the floor would cost 1 HP. `valle_redcoptero`: pillars at columns 18-60 (3 charges, 1 food), zone 66-85
 with the `netcopter` at (81, 5) and music `tuffi`, finish at column 93.
 
+**Return to sender** (Plan 5): a trait `reflectable` on an entity (+ optional `canReflect()`) makes a player who FLIES
+and is RISING (`pa.vy < 0`) when touching it get the interaction `'reflect'` (`Interactions.check`) instead of being
+hurt; the entity's `onReflect` sends it back. The `glowbomb` (the Net-Copter's bomb, `owner` = the boss) flies back to
+its owner and does 2 damage; hit any other way it explodes (-1 within a tile). Details: [netcopter](../bosses/netcopter.md).
+
+**Flappy boss drops** (`bossdrops`, every difficulty, `level.flappy`): there is no floor, so the help does not fall: it
+APPEARS where it will float (`Entity:appearAt`) in a free air tile of the zone, 4+ tiles from the boss and 2-6 from the
+player who needs it. Food: the usual "when it is needed" rules (own pace `FLAPPY_FOOD`; with the last life and while
+suffering, food, since there are no lives to give). Flap charge (`flapcharge`): controlled, at most ONE at a time, one
+every `FLAPPY_CHARGE` s to the player with least charge, and at once after `PITY_T` s if everyone in the zone has 0.
+No extra lives. What it gives is saved only when the stage is finished (rule 7).
+
 **SP / server / client:** single player only. Flappy levels are listed in no online mode yet (project 3).
 
 **How to extend**
@@ -95,6 +107,8 @@ the air inside the zone with full HP), `touch_layout` (`especial`), `menu_flow` 
 `continuar_flappy`, `candado`).
 
 **Decisions**
+- 2026-11-08, the user: the first boss is the Net-Copter as proposed; `tuffi` music for all Flappy bosses for now
+  (details in [netcopter](../bosses/netcopter.md#history)).
 - 2026-11-07, the user: FLAPPY first in the main menu, CONTINUE = the last mode played, Free Play only in the debug menu.
 - Final review of Plan 3 (fixed in 0.5.168): the grade reward was shown but not given; RETRY did nothing; `taken`
   was not passed (extra lives could be farmed once stages have them).

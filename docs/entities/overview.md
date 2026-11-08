@@ -40,10 +40,10 @@ Objetos, Directores.
 
 **Flexibility rule (user's priority): base behaviours live in the BASE and a type only switches them on** — never
 copy another entity's code. Guide: `docs/entities/how-to-add-an-enemy.md` (every def field, trait and hook).
-Switches on the type def: `traits = { needsPound, stompProof, diesWithBlock, solidFull, renderFront, wantsLevel, freezeFloats }`
-(copied onto each instance by `Entity.create`), `noises = { sound = tiles }` / `noise` (see Noise), `summons`,
+Switches on the type def: `traits = { needsPound, stompProof, diesWithBlock, solidFull, renderFront, wantsLevel, freezeFloats, reflectable }`
+(copied onto each instance by `Entity.create`; `reflectable` = a RISING flying player sends it back instead of being hurt, `Interactions.check` -> `'reflect'`, hook `canReflect`; see [flappy-campaign](../gameplay/flappy-campaign.md#boss-stages-plan-5)), `noises = { sound = tiles }` / `noise` (see Noise), `summons`,
 `activatable`. In the base: RESERVE minions for ANY entity (`Entity:makeReserve` + default `netAtRest/netRest`; hook
-`onMakeReserve`), FALL FROM THE SKY for any entity (`Entity:dropFromSky(x, y, lift)`: back in play in the common state 'skyfall', slow gravity, rests on the ground, then its usual state; used by the boss-fight help, `docs/gameplay/difficulty.md`), stock crawler (`Crawler.mixin(Class)`: rotated boxes, surface normal, release, no fall while
+`onMakeReserve`), APPEAR IN PLACE for any reserve entity (`Entity:appearAt(x, y)`: it goes back into play at that spot in its usual state, a flier stays floating; used by the Flappy boss help and the Net-Copter's net / bomb), FALL FROM THE SKY for any entity (`Entity:dropFromSky(x, y, lift)`: back in play in the common state 'skyfall', slow gravity, rests on the ground, then its usual state; used by the boss-fight help, `docs/gameplay/difficulty.md`), stock crawler (`Crawler.mixin(Class)`: rotated boxes, surface normal, release, no fall while
 attached; `Crawler.entityAhead`), block-break deaths (`Level:forStanders`, crawlers included), and for bosses
 `Boss:enter(st)`, `Boss:zoneBounds()`, `Boss:minions(level)`, `Boss:nearestPlayer(level)`, `Boss.strike(pa, hit, dir)`
 (the Snowball Boss's, now shared) and `src/fx/BossFx.lua` (`stars` = stun stars, `anger` = anger symbols, `target` =

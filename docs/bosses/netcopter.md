@@ -69,6 +69,30 @@ STATES=intro,hover,aim_net,sweep_warn,sweep,dying_hold,fleeing` (a special hit e
 **Not judged yet** (needs the user): the feel, the timings, the looks (the art is provisional: the pilot reads small on
 the wide machine) and the reused sounds.
 
+## SP / server / client
+
+Single player only: Flappy levels are not online yet (project 3), so nothing here is simulated by the server or sent
+in snapshots beyond the `netPackExtra` above, kept so the boss is already ready for it. The simulation never touches
+`love.graphics` outside render functions (rule 1).
+
+## How to extend
+
+Another Flappy boss: [how-to-add-a-boss](how-to-add-a-boss.md) with `flappyOnly`, a generator like
+`levels_flappy_valle_boss.py` (`flappy_lib.boss_arena`) and the id as the zone's `boss` in `Zones.LIST`. Retune the
+fight in the `T` table of `netcopter.lua`. A new reflectable projectile: the `reflectable` trait
+([entities/overview](../entities/overview.md)).
+
+## Decisions
+
+- 2026-11-08, the user approved the Net-Copter as proposed ([plan](../design/flappy-plan-5-netcopter.md)).
+- 2026-11-08, the user: `tuffi` is really the FINAL battle's theme and may later be reworked with Evil Monster motifs;
+  until the Flappy bosses have music of their own, all use it.
+- The art is PROVISIONAL, applied before the user's verdict (preview
+  `/home/mtvemo/FlappyMonster_pruebas/redcoptero/vista_previa.png`).
+- Hp prop 12 is the base; the difficulty's `bossHp` scales it (Normal 11, Extreme 14 with the extra-player bonus).
+- The Evil Monster flees instead of dying: he comes back in every zone.
+- Ruling R2: no `Protocol.VERSION` change (Flappy is not online). R4: air respawn in Flappy boss fights.
+
 ## History
 
 - 2026-11-08 (Plan 5, task 4): first version (provisional art, reused sounds).
