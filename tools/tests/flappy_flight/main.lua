@@ -23,8 +23,9 @@
 --   powerups    escudo (para un golpe; no una muerte forzada), corazón, fuerza (×2 a jefes, no abre jaulas de más), imanes,
 --               pequeño, fantasma (atraviesa pilares; acabarse dentro = invulnerable), lo que no se puede usar
 --   normal      en un nivel normal el jugador NO vuela (salto de plataformas de siempre)
---   etapa       la etapa de prueba (assets/levels/_flappy_vuelo.json) se puede pasar: un piloto sencillo (aletea
---               cuando está por debajo del centro del hueco siguiente) llega a la meta sin morir
+--   etapa       la etapa de prueba (assets/levels/_flappy_vuelo.json) y las del Valle (src/flappy/Zones.lua, con sus
+--               lanzarredes) se pueden pasar: un piloto sencillo (aletea cuando está por debajo del centro del hueco
+--               siguiente; no cura con la comida: eso lo hace AdventureState) llega a la meta sin morir
 --
 --   tools/tests/run.sh flappy_flight   (CASE=nombre: solo ese)
 io.stdout:setvbuf('no')
@@ -252,16 +253,23 @@ function cases.normal()
           ('vuela=%s; salta %.0f (ADV_JUMP_VEL %d)'):format(tostring(pa.flight), v1, ADV_JUMP_VEL))
 end
 
--- El hueco del siguiente pilar por delante de x: centro en px (nil = no hay más)
+-- El hueco del siguiente pilar por delante de x: arriba y abajo en px (nil = no hay más). El hueco es el tramo de filas
+-- libres (ni pilar ni sólido) que no toca un bloque sólido: un túnel de arriba (suelo de bloques: las etapas del Valle)
+-- no cuenta como hueco
 local function nextGap(level, x)
     local c0 = math.floor(x / T) + 1
+    local function solid(c, r) return r >= 1 and r <= 9 and level:getDef(c, r).collision == 'solid' end
     for c = c0, level.tileW do
         if level:getTile(c, 1) == PILLAR_ID or level:getTile(c, 9) == PILLAR_ID then
-            local top, bot
-            for r = 1, 9 do
-                if level:getTile(c, r) ~= PILLAR_ID then top = top or r; bot = r end
+            local r = 1
+            while r <= 9 do
+                if level:getTile(c, r) ~= PILLAR_ID and not solid(c, r) then
+                    local top = r
+                    while r + 1 <= 9 and level:getTile(c, r + 1) ~= PILLAR_ID and not solid(c, r + 1) do r = r + 1 end
+                    if not solid(c, top - 1) and not solid(c, r + 1) then return (top - 1) * T, r * T, c end
+                end
+                r = r + 1
             end
-            if top then return (top - 1) * T, bot * T, c end
         end
     end
 end

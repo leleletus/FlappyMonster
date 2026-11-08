@@ -3,8 +3,8 @@
 --   progreso   RunCore con un catálogo de mentira (2 mundos x 2 nodos): orden de los nodos, el mundo siguiente tras el
 --              jefe, frontier, score (mejor nota, puntos), restartWorld (borra lo superado del mundo y guarda los récords)
 --   zonas      cada etapa de src/flappy/Zones.lua existe, es un nivel Flappy con meta y sin errores del editor, con al
---              menos 1 jaula, 3 cargas y 1 comida (la de su zona); la etapa del JEFE, sin jaula pero con su zona de jefe
---              y un jefe dentro
+--              menos 1 jaula, 3 cargas y 1 comida (la de su zona); cada muro agrietado TAPA algo (lo de detrás no se
+--              alcanza desde delante sin romperlo); la etapa del JEFE, sin jaula pero con su zona de jefe y un jefe dentro
 --   premio     el premio de la nota (S: +1 vida; A: +500 puntos) se DA y se guarda, no solo sale en los resultados
 --   partida    FlappyRun: abrir un hueco escribe flappy<n>.sav (no story<n>.sav), las etapas se abren en orden, vidas de
 --              Fácil al empezar, gameOver vuelve al principio de la zona
@@ -109,12 +109,36 @@ function cases.zonas()
                         if skin ~= Zones.get(z).food then bad[#bad + 1] = node.id .. ' (comida ' .. tostring(skin) .. ')' end
                     end
                 end
-                -- (el muro TAPA algo: la carga de detrás está encerrada — bloque sólido debajo y a su derecha —)
+                -- (el muro TAPA algo: la casilla de detrás de su fila de arriba no se alcanza desde delante del muro
+                --  sin romperlo — un escondite o la entrada de un túnel —: se busca un camino por casillas sin bloques
+                --  sólidos ni muros —los pilares se atraviesan— sin pasar de dos columnas detrás del muro)
+                local walls = {}
                 for _, e in ipairs(lv.entities) do
                     if e.type == 'crackwall' then
-                        local c = e.col
-                        local closed = lv:getDef(c + 1, 2).collision == 'solid' and lv:getDef(c + 2, 1).collision == 'solid'
-                        if not closed then bad[#bad + 1] = node.id .. ' (el muro de la columna ' .. c .. ' no encierra nada)' end
+                        local rows = e.props and e.props.rows or 3
+                        for r = e.row - rows + 1, e.row do walls[e.col .. ',' .. r] = true end
+                    end
+                end
+                for _, e in ipairs(lv.entities) do
+                    if e.type == 'crackwall' then
+                        local c, top = e.col, e.row - (e.props and e.props.rows or 3) + 1
+                        local function free(cc, r)
+                            return cc >= 1 and r >= 1 and r <= lv.tileH and not walls[cc .. ',' .. r]
+                                   and lv:getDef(cc, r).collision ~= 'solid'
+                        end
+                        local seen, queue, reached = { [(c - 1) .. ',' .. top] = true }, { { c - 1, top } }, false
+                        while #queue > 0 and not reached do
+                            local p = table.remove(queue)
+                            for _, d in ipairs({ { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } }) do
+                                local cc, r = p[1] + d[1], p[2] + d[2]
+                                local k = cc .. ',' .. r
+                                if cc <= c + 2 and not seen[k] and free(cc, r) then
+                                    if cc == c + 1 and r == top then reached = true end
+                                    seen[k] = true; queue[#queue + 1] = { cc, r }
+                                end
+                            end
+                        end
+                        if reached then bad[#bad + 1] = node.id .. ' (el muro de la columna ' .. c .. ' no encierra nada)' end
                     end
                 end
                 -- (la etapa del jefe: sin jaula, pero con su zona de jefe y un jefe dentro)

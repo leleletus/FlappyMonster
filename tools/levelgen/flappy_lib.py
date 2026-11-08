@@ -20,9 +20,10 @@ AIR, DIRT, GRASS, FINISH, PILLAR = raw(0), raw(16), raw(17), raw(11), raw(59)
 SOLID = raw(1)
 
 
-def build(width, gaps, solids=None, floor=FLOOR):
+def build(width, gaps, solids=None, floor=FLOOR, air=None):
     """gaps = [(columna, fila de arriba del hueco, alto del hueco), ...]; solids = [(columna, fila), ...] bloques
-    sólidos sueltos (el escondite de detrás de un muro agrietado); floor = la fila del césped (debajo, tierra) → filas
+    sólidos sueltos (el escondite de detrás de un muro agrietado, el suelo de un túnel); floor = la fila del césped
+    (debajo, tierra); air = [(columna, fila), ...] casillas que quedan VACÍAS aunque sean de un pilar (un túnel) → filas
     de tiles"""
     tiles = [[AIR] * width for _ in range(H)]
     for c in range(width):
@@ -34,6 +35,8 @@ def build(width, gaps, solids=None, floor=FLOOR):
         for r in range(1, floor):        # filas 1..floor-1 (la del césped es el suelo)
             if not (top <= r < top + h):
                 tiles[r - 1][c - 1] = PILLAR
+    for c, r in air or []:
+        tiles[r - 1][c - 1] = AIR
     for r in range(1, floor):
         tiles[r - 1][width - 3] = FINISH
     for c, r in solids or []:
@@ -42,15 +45,15 @@ def build(width, gaps, solids=None, floor=FLOOR):
 
 
 def write(out, name, name_en, width, gaps, speed=200, music='flappy', entities=None, solids=None, arena=None,
-          floor=FLOOR):
+          floor=FLOOR, air=None, background=None):
     """arena = lo que devuelve boss_arena(): la cámara automática se para en ella y el nivel lleva su zona de jefe;
-    floor = la fila del césped (build)"""
+    floor, solids, air = los de build(); background = el fondo del nivel (un bioma de src/fx/Sky.lua, p. ej. 'valley')"""
     lvl = {
         "name": name,
         "name_en": name_en,
         "width": width, "height": H,
         "playerStart": [4, 5],
-        "tiles": build(width, gaps, solids, floor),
+        "tiles": build(width, gaps, solids, floor, air),
         "entities": entities or [],
         "autoScroll": {"startCol": 1, "endCol": 0, "speed": speed, "width": 20, "margin": 0.6, "countdown": 0},
         "music": music,
@@ -61,7 +64,9 @@ def write(out, name, name_en, width, gaps, speed=200, music='flappy', entities=N
         lvl["bossZones"] = [arena["zone"]]
         lvl["entities"] = lvl["entities"] + arena["entities"]
         gaps = gaps + arena["gaps"]
-        lvl["tiles"] = build(width, gaps, solids, floor)
+        lvl["tiles"] = build(width, gaps, solids, floor, air)
+    if background:
+        lvl["background"] = background
     with open(out, 'w') as f:
         f.write('{\n')
         keys = list(lvl.keys())
@@ -88,25 +93,34 @@ def ent(kind, col, row, **props):
     return {"type": kind, "col": col, "row": row, "props": props}
 
 
-def populate(gaps, charges, food, cage, wall, gift='shield'):
-    """Objetos de una etapa (Plan 4): CARGAS en el centro del hueco de los pilares `charges` (índices de gaps), COMIDA
-    en el de `food`, la JAULA (índice, carga mínima) arriba entre dos pilares y el MURO (índice) arriba entre dos pilares
-    ENCERRANDO una carga (bloques sólidos debajo y a su derecha: solo se llega rompiéndolo). La ruta principal (los
-    huecos) nunca queda tapada. → entidades, bloques sólidos"""
+def at_gaps(kind, gaps, idx, **props):
+    """Una entidad `kind` en el CENTRO del hueco de cada pilar de `idx` (índices de gaps): cargas y comida en la ruta"""
     out = []
-    for i in charges:
+    for i in idx:
         c, top, h = gaps[i]
-        out.append(ent('flapcharge', c, top + (h - 1) // 2))
-    for i in food:
-        c, top, h = gaps[i]
-        out.append(ent('apple', c, top + (h - 1) // 2))
-    ci, cmin = cage
-    out.append(ent('cage', gaps[ci][0] + 3, 2, minCharge=cmin, gift=gift))
-    wc = gaps[wall][0] + 3
-    out.append(ent('crackwall', wc, 2, minCharge=2, rows=2))
-    out.append(ent('flapcharge', wc + 1, 1))
-    solids = [(wc + 1, 2), (wc + 2, 1), (wc + 2, 2)]
-    return out, solids
+        out.append(ent(kind, c, top + (h - 1) // 2, **props))
+    return out
+
+
+def cubby(wc, inside, min_charge=2, **props):
+    """Un ESCONDITE arriba del todo: un muro agrietado en (wc, filas 1-2) que pide `min_charge` y, detrás, la casilla
+    (wc + 1, 1) con `inside` (una entidad: 'flapcharge', 'cage'... con sus props) encerrada por bloques sólidos debajo y a
+    su derecha (solo se llega rompiendo el muro; flappy_campaign `zonas` lo comprueba) → entidades, bloques sólidos"""
+    ents = [ent('crackwall', wc, 2, minCharge=min_charge, rows=2), ent(inside, wc + 1, 1, **props)]
+    return ents, [(wc + 1, 2), (wc + 2, 1), (wc + 2, 2)]
+
+
+def tunnel(c0, c1, gaps, min_charge=2):
+    """Un ATAJO arriba: un túnel de las filas 1-2 de la columna c0 + 1 a la c1, con un muro agrietado en c0 (pide
+    `min_charge`) y un suelo de bloques sólidos en la fila 3 de c0 a c1; los pilares de dentro pierden sus filas 1-2. Por
+    debajo sigue la ruta de los huecos (que han de empezar en la fila 5 o más abajo); el suelo del túnel para las redes de
+    los lanzarredes de debajo. → entidades, bloques sólidos, casillas vacías"""
+    for c, top, h in gaps:
+        assert not (c0 <= c <= c1) or top >= 5, ('hueco bajo el túnel demasiado alto', c, top)
+    ents = [ent('crackwall', c0, 2, minCharge=min_charge, rows=2)]
+    solids = [(c, 3) for c in range(c0, c1 + 1)]
+    air = [(c, r) for c, _, _ in gaps if c0 < c <= c1 for r in (1, 2)]
+    return ents, solids, air
 
 
 def boss_arena(col, boss, w=20, music='tuffi', boss_at=(15, 5), stubs=()):

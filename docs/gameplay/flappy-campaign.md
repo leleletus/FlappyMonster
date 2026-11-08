@@ -4,8 +4,8 @@
 3 save slots of its own (Easy / Normal / Hard), a map of ZONES, and STAGES that are Flappy levels (`"flappy": true`, the
 player flies: [player](player.md#flight-flappy-levels)) played on Adventure's engine with lives, Game Over and the
 results screen. Built in Plan 3 ([flappy-plan-3-campaign-frame](../design/flappy-plan-3-campaign-frame.md), 0.5.167).
-Today: zone 1 (Valley of the Pillars) with two PLACEHOLDER stages, its boss stage `valle_redcoptero` (Plan 5) and a
-placeholder map look; the real content comes in
+Today: zone 1 (Valley of the Pillars) with three stages (Plan 5b, [§ The Valley's stages](#the-valleys-stages-plan-5b)),
+its boss stage `valle_redcoptero` (Plan 5) and a placeholder map look; the real content comes in
 Plans 4–7 (roadmap: [flappy-prequel § Plans](../design/flappy-prequel.md#plans)).
 
 **Files**
@@ -24,7 +24,7 @@ Plans 4–7 (roadmap: [flappy-prequel § Plans](../design/flappy-prequel.md#plan
 | `src/flappy/Campaign.lua` | `READY`, the Adventure lock, `finished()` |
 | `src/world/entities/types/items/flapcharge.lua`, `items/cage.lua`, `mechanisms/crackwall.lua` | the Flappy-only entities (category Flappy) |
 | `src/ui/FlappyHud.lua` | hearts + charge meter |
-| `tools/levelgen/levels_flappy_valle.py`, `flappy_lib.py` | the two placeholder stages `valle_pilares_1/2` |
+| `tools/levelgen/levels_flappy_valle.py`, `flappy_lib.py` | the three Valley stages `valle_pilares_1/2/3` (writes only those files) |
 | `tools/levelgen/levels_flappy_valle_boss.py` | the Valley's boss stage `valle_redcoptero` (writes only that file) |
 
 **Data:** a zone = one entry in `Zones.LIST` (`id`, `stages`, `boss`, `food`) + a lang key `flappy.zone.<id>`. Stage ids are level
@@ -59,14 +59,35 @@ while Adventure is locked, its saves do not count.
 - **Cracked walls** (`crackwall`, Flappy-only, props `minCharge`, `rows`): solid like the door until a burst with enough
   power breaks it. They hide shortcuts / prizes: the main route never needs them (the zero-charge bot clears every
   Valley stage — `flappy_flight etapa`). The camera's left edge never pushes the player through an intact wall (0.5.170, final review of
-  Plan 4): against a wall it is the usual AutoScroll rule. In the Valley stages each wall encloses a charge item (solid
-  blocks under and right of it: `flappy_lib.populate`).
+  Plan 4): against a wall it is the usual AutoScroll rule. In the Valley stages a wall shuts a cage in a `cubby` or the
+  entrance of a `tunnel` shortcut (`flappy_lib`, below).
 - **Food:** a Flappy level's `apple` with skin `auto` takes its zone's `food` (`Zones.LIST`, via `level.id`, the level's
   file name set by `Level.new`); the Valley's is a peach (`food_valle.png`).
 - **HUD:** `src/ui/FlappyHud.lua` — hearts (always visible) and the charge meter under score / time; lives stay top
   right.
-- Stage objects come from `tools/levelgen/flappy_lib.py` `populate` (charges in the gaps, food, a cage up high, a wall
-  over a hidden charge).
+- Stage objects come from `tools/levelgen/flappy_lib.py`: `at_gaps` (charges / food at the centre of chosen pillar
+  gaps), `cubby` (a cracked wall at rows 1-2 with one thing — a charge, a cage — shut in behind it), `tunnel` (a
+  shortcut: rows 1-2 behind a cracked wall over a floor of solid blocks at row 3; the pillars inside lose rows 1-2 —
+  `build(..., air=)` —; the gaps below start at row 5 or lower). `write(..., background=)` sets the level's sky biome.
+  `flappy_campaign zonas` checks every wall SHUTS something: the cell behind its top row cannot be reached from in
+  front of it without breaking it (a search through non-solid cells, pillars passable, up to two columns behind).
+
+## The Valley's stages (Plan 5b)
+
+Generator `tools/levelgen/levels_flappy_valle.py` (ids kept: `valle_pilares_1/2` since Plan 3, `valle_pilares_3` new),
+all with `"background": "valley"` ([sky-and-biomes](../art/sky-and-biomes.md)), auto-scroll 200 px/s, floor at row 10.
+
+| Stage | Width | Pillars | Content |
+|---|---|---|---|
+| `valle_pilares_1` | 130 | 13, every 8 cols, gaps 4-5, heights change 1-2 rows | 5 charges, 2 food, 1 easy cage (`minCharge` 1, row 3 just above the route, right after the first charge; gift `shield`), no walls |
+| `valle_pilares_2` | 139 | 16, every 7 cols, gaps 4 then 3, bigger height jumps | 6 charges, 2 food; a cage in the open (row 2, `minCharge` 2, gift `heart`) and a `cubby` at col 72 (wall `minCharge` 2) with a cage (`minCharge` 1, gift `magnet_points`) behind it: 3 charges in all, 4 are on the route before it |
+| `valle_pilares_3` | 139 | 16, every 7 cols, gaps 3-4 | 3 `netlauncher` (cols 30, 72, 100, row 9, each 3 cols from both pillars: room to wait for the net), 6 charges on the route + 2 in the shortcut, 2 food (right after launchers 1 and 3), a cage at row 1 (`minCharge` 3, gift `strength`, before the boss), and the shortcut `tunnel` cols 58-80 (wall `minCharge` 2) running over launcher 2, whose nets stop on its floor |
+
+The net-launcher and a steady flyer: it comes within range 20 tiles (6.4 s at 200 px/s) before the player reaches it
+and fires every 3.5 s, so a player who flies straight on without looking is usually hit as it passes (the zero-charge
+pilot of `flappy_flight etapa` is hit by launchers 1 and 3 and still finishes, 3 → 1 HP; the harness applies no food
+healing, the game does, and the food sits right after those two). Dodging = waiting left of its column or hurrying
+past during the 0.6 s glow. Feel judged by the user in play.
 
 ## Evil Monster machines (Plan 5b)
 

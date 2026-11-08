@@ -9,9 +9,11 @@
 local Zones = {}
 
 Zones.LIST = {
-    -- 1 El Valle de los Pilares: el hogar; las tuberías de siempre son sus pilares (Plan 3: dos etapas provisionales);
-    --   su jefe, el Redcóptero (Plan 5: types/bosses/netcopter.lua)
-    { id = 'valle', stages = { 'valle_pilares_1', 'valle_pilares_2' }, boss = 'valle_redcoptero', food = 'valle' },
+    -- 1 El Valle de los Pilares: el hogar; las tuberías de siempre son sus pilares. Tres etapas (Plan 5b,
+    --   tools/levelgen/levels_flappy_valle.py: 1 aletear, cargas y comida; 2 jaulas y muros; 3 el lanzarredes) y su
+    --   jefe, el Redcóptero (Plan 5: types/bosses/netcopter.lua)
+    { id = 'valle', stages = { 'valle_pilares_1', 'valle_pilares_2', 'valle_pilares_3' }, boss = 'valle_redcoptero',
+      food = 'valle' },
 }
 
 function Zones.count() return #Zones.LIST end
