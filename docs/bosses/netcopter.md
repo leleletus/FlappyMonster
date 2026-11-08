@@ -204,6 +204,8 @@ fight in the `T` table of `netcopter.lua`. A new reflectable projectile: the `re
 
 ## History
 
+- 2026-11-08, the user after 0.5.178: **approved** ("queda aprobado"). The fight, art and sounds stand as built.
+
 - 2026-11-08 (Plan 5, task 4): first version (provisional art, reused sounds).
 - 2026-11-08, second art pass after the user's verdict: stitched patches, full-body pilot, 44x54 frame.
 - 2026-11-08 (Plan 5, task 5): the campaign stage `valle_redcoptero`; ruling R4: dying in a Flappy boss fight respawns
