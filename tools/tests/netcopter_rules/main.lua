@@ -5,6 +5,11 @@
 --   de_lado  sin subir (vy = 0) la bomba explota y el jugador pierde 1 de vida
 --   falla    el jefe se aparta del camino: la bomba acaba en un bloque sólido, el jugador sigue igual y ella desaparece
 --   mecha    sin que nadie la toque explota a los 2,5 s
+-- Y la ayuda del jefe en salas Flappy (director bossdrops, docs/design/flappy-plan-5-netcopter.md):
+--   cargas   en 30 s a Normal salen cargas y nunca hay dos a la vez
+--   lastima  jugador a 0 de carga con el reloj lejos: sale una antes de PITY_T + 1 s (y con carga no sale)
+--   aire     cada ayuda que sale está en una casilla sin sólido ni pilar, a ≥ 4 del jefe y a 2-6 del jugador
+--   aventura un nivel de jefe que no es Flappy nunca da cargas
 --
 --   tools/tests/run.sh netcopter_rules   (CASE=nombre: solo ese)
 io.stdout:setvbuf('no')
@@ -118,7 +123,137 @@ function cases.mecha()
     check('mecha', t and math.abs(t - 2.5) < 0.1, 'explota a los 2,5 s: ' .. tostring(t))
 end
 
-local ORDER = { 'rebote', 'de_lado', 'falla', 'mecha' }
+-- ── La ayuda del jefe ────────────────────────────────────────────────────────────────────────────────────────────
+-- Sala de 30 x 11 con una zona de jefe en la pelea (columnas 6-25), un pilar (columna 15, filas 1-6), el jefe en la
+-- zona y el director con su reserva (lo que añade Level.fromData), todo creado a mano como en room()
+local PILLAR = 59
+local function arena(flappy, diff)
+    local tiles = {}
+    for r = 1, H do
+        tiles[r] = {}
+        for c = 1, 30 do tiles[r][c] = (r >= FLOOR) and SOLID or ((c == 15 and r <= 6 and flappy) and PILLAR or 0) end
+    end
+    local level = Level.fromData({ name = 'ayuda', width = 30, height = H, playerStart = { 3, 5 }, tiles = tiles,
+        flappy = flappy, difficulty = diff,
+        bossZones = { { id = 1, col = 6, row = 1, w = 20, h = 11 } },
+        entities = { { type = 'miniboss1', col = 22, row = 5, props = { hp = 3 } } } })
+    level.difficulty = diff
+    local es = {}
+    for _, pl in ipairs(level.entities) do es[#es + 1] = Entities.create(pl) end
+    local boss, dir, items = es[1], nil, {}
+    for _, e in ipairs(es) do
+        if e.def.name == 'bossdrops' then dir = e elseif e.summonOf then items[#items + 1] = e end
+    end
+    level.liveEntities, level.players = es, {}
+    local z = level.bossZones[1]
+    z.state, z.bosses = 'fight', { boss }
+    return level, dir, items, boss
+end
+local function alive(items, name)
+    local n = 0
+    for _, e in ipairs(items) do if e.def.name == name and e.alive and e.state ~= 'reserve' then n = n + 1 end end
+    return n
+end
+
+function cases.cargas()
+    local level, dir, items = arena(true, 'normal')
+    local pa = player(level, 10 * T, 5 * T, 0)
+    pa.charge = 0
+    local maxAt, drops, was = 0, 0, 0
+    for i = 1, 30 * 60 do
+        dir:updateCustom(DT, level)
+        local n = alive(items, 'flapcharge')
+        maxAt = math.max(maxAt, n)
+        if n > was then drops = drops + 1 end
+        was = n
+        if n > 0 and i % 30 == 0 then                     -- (el jugador la coge medio segundo después)
+            for _, e in ipairs(items) do if e.def.name == 'flapcharge' then e.alive = false end end
+            pa:addCharge(1)
+            was = 0
+        end
+    end
+    check('cargas', drops >= 3, ('salen cargas en 30 s a Normal: %d'):format(drops))
+    check('cargas', maxAt == 1, 'nunca dos a la vez: máximo ' .. maxAt)
+    -- sin cogerlas: una sola en el suelo todo el rato
+    local level2, dir2, items2 = arena(true, 'normal')
+    local pb = player(level2, 10 * T, 5 * T, 0)
+    pb.charge = 0
+    local mx = 0
+    for _ = 1, 30 * 60 do dir2:updateCustom(DT, level2); mx = math.max(mx, alive(items2, 'flapcharge')) end
+    check('cargas', mx == 1, 'sin cogerla no sale otra: ' .. mx)
+end
+
+function cases.lastima()
+    local level, dir, items = arena(true, 'normal')
+    local pa = player(level, 10 * T, 5 * T, 0)
+    pa.charge = 0
+    dir:updateCustom(DT, level)
+    dir.cool.charge = 999                                  -- el reloj, lejísimos
+    local t
+    for i = 1, 20 * 60 do
+        dir:updateCustom(DT, level)
+        if alive(items, 'flapcharge') > 0 then t = i * DT; break end
+    end
+    check('lastima', t and t <= 13, 'a 0 de carga sale una a los 12 s: ' .. tostring(t))
+    -- con algo de carga la lástima no vale
+    local level2, dir2, items2 = arena(true, 'normal')
+    local pb = player(level2, 10 * T, 5 * T, 0)
+    pb.charge = 2
+    dir2:updateCustom(DT, level2)
+    dir2.cool.charge = 999
+    local got = false
+    for _ = 1, 20 * 60 do
+        dir2:updateCustom(DT, level2)
+        if alive(items2, 'flapcharge') > 0 then got = true end
+    end
+    check('lastima', not got, 'con carga y el reloj lejos no sale')
+end
+
+function cases.aire()
+    local level, dir, items, boss = arena(true, 'normal')
+    local pa = player(level, 10 * T, 5 * T, 0)
+    pa.charge = 0
+    local n, bad = 0, {}
+    local spots = { { 8, 3 }, { 12, 7 }, { 14, 4 }, { 16, 8 }, { 18, 2 }, { 20, 6 }, { 24, 8 }, { 10, 9 } }
+    for i = 1, 300 do
+        local sp = spots[i % #spots + 1]
+        pa.x, pa.y = (sp[1] - 0.5) * T, (sp[2] - 0.5) * T
+        dir.cool.charge, dir.cool.food = 0, 0
+        pa.hp = 1                                           -- (herido: también pide comida)
+        dir:updateCustom(DT, level)
+        for _, e in ipairs(items) do
+            if e.alive and e.state ~= 'reserve' then
+                n = n + 1
+                local c, r = math.floor(e.x / T) + 1, math.floor(e.y / T) + 1
+                local d = level:getDef(c, r)
+                local db = math.sqrt((boss.x - e.x) ^ 2 + (boss.y - e.y) ^ 2) / T
+                local dp = math.sqrt((pa.x - e.x) ^ 2 + (pa.y - e.y) ^ 2) / T
+                if d.collision ~= 'none' or d.name == 'pillar' or db < 4 - 0.01 or dp < 2 - 0.01 or dp > 6 + 0.01 then
+                    bad[#bad + 1] = ('(%d,%d) %s boss %.1f jug %.1f'):format(c, r, d.name, db, dp)
+                end
+                e.alive = false
+            end
+        end
+    end
+    check('aire', n >= 20, 'salieron ayudas: ' .. n)
+    check('aire', #bad == 0, 'todas en aire libre, a ≥ 4 del jefe y a 2-6 del jugador' .. (bad[1] and (' — ' .. bad[1]) or ''))
+end
+
+function cases.aventura()
+    local level, dir, items = arena(false, 'normal')
+    local pa = player(level, 10 * T, 5 * T, 0)
+    pa.charge = 0
+    local any = 0
+    for _ = 1, 40 * 60 do
+        if dir then dir:updateCustom(DT, level) end
+        any = any + alive(items, 'flapcharge')
+    end
+    local charges = 0
+    for _, e in ipairs(level.entities) do if e.type == 'flapcharge' then charges = charges + 1 end end
+    check('aventura', any == 0 and charges == 0, 'ninguna carga en un jefe que no es Flappy')
+end
+
+local ORDER = { 'rebote', 'de_lado', 'falla', 'mecha', 'cargas', 'lastima', 'aire', 'aventura' }
 function love.load()
     local only = os.getenv('CASE')
     for _, name in ipairs(ORDER) do

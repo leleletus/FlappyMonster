@@ -208,6 +208,7 @@ function Level.fromData(lvl, difficulty)
     end
     -- Zonas de jefe (src/world/systems/BossZones.lua)
     self.bossZones = BossZones.build(lvl.bossZones, lvl.openTop == true)
+    self.flappy    = lvl.flappy == true                -- (nivel FLAPPY: el jugador vuela — src/player/PlayerFlight.lua —)
     self.event     = lvl.event == true                 -- (nivel de EVENTO: el Mega Mashup; Juego Libre lo destaca; la ayuda)
     -- Ayuda en las peleas de jefe (Extremo / Xtra extremo: modificadores bossFood / bossLives): un director y su
     -- reserva de comidas y vidas, AL FINAL de la lista (mismos índices en servidor y clientes)
@@ -257,7 +258,6 @@ function Level.fromData(lvl, difficulty)
     self.snow      = lvl.snow == true                  -- (nieve cayendo: src/fx/Snowfall.lua, solo visual)
     self.parTime   = tonumber(lvl.parTime)             -- (tiempo objetivo del nivel, s: la nota del modo historia; nil = según su ancho)
     self.peaceful  = lvl.peaceful == true              -- (enemigos INOFENSIVOS: niveles de prueba; Interactions.check)
-    self.flappy    = lvl.flappy == true                -- (nivel FLAPPY: el jugador vuela — src/player/PlayerFlight.lua —)
     self.dark      = lvl.dark == true                  -- (nivel a OSCURAS: linternas, src/world/level/Lights.lua; afecta al juego)
     -- LUZ AMBIENTE (solo visual, src/fx/Darkness.lua): "light": day | dusk | night | cave | none; sin ella, de su
     -- hora ("time") y, con fondo de cueva, cueva. La profundidad (debajo de la superficie) va en penumbra.

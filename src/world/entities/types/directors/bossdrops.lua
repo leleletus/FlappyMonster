@@ -17,24 +17,37 @@
 -- Dónde: de las casillas de la zona con suelo de verdad (sin agua, lava ni pinchos), la mejor: lejos del jefe (y de
 -- donde va a caer su ataque si apunta), alcanzable (2-6 casillas del jugador que la necesita) y nunca encima de él.
 --
+-- NIVELES FLAPPY (level.flappy, en TODAS las dificultades; docs/design/flappy-plan-5-netcopter.md): no hay suelo, así
+-- que las ayudas APARECEN EN SU SITIO (Entity:appearAt) en una casilla de aire libre de la zona (ni sólida ni pilar), a
+-- 4 casillas o más del jefe y a 2-6 del jugador que la necesita, y flotan. Dos reglas: la COMIDA, con las mismas reglas
+-- de «cuándo hace falta» y su ritmo FLAPPY_FOOD; y la CARGA de aleteo (`flapcharge`), controlada: como mucho UNA a la
+-- vez, una cada FLAPPY_CHARGE s al jugador con menos carga, y si todos los de la zona están a 0 durante PITY_T s, una
+-- ya (sin esperar al reloj). Sin vidas extra.
+--
 -- No va en ningún nivel: Level.fromData lo añade solo, con su reserva de comidas y vidas (súbditos de reserva,
 -- `summonKey` 'bossdrops': mismos índices en servidor y clientes). Lo simula el servidor online; lo que cae son
 -- entidades normales (viajan en las instantáneas) que caen con el estado base 'skyfall' (Entity:dropFromSky) y se
 -- cogen como siempre. Lo que da se guarda al acabar el nivel, como todo.
 local Entity = require 'src/world/entities/base/Entity'
 local Difficulty = require 'src/core/Difficulty'
+local SubTiles = require 'src/world/level/SubTiles'
 
 local Drops = Entity.extend(Entity, { debugColor = { 0.4, 1, 0.6 },
     hitbox = { outerW = 1, outerH = 1, innerW = 1, innerH = 1 } })
 
 Drops.KEY = 'bossdrops'
-Drops.POOL = { food = 2, lives = 1 }       -- cuántas puede haber a la vez por el escenario (se reutilizan al cogerlas)
-local KIND_TYPE = { food = 'apple', lives = 'extralife' }
+Drops.POOL = { food = 2, lives = 1, charge = 1 }       -- cuántas puede haber a la vez por el escenario (se reutilizan al cogerlas)
+local KIND_TYPE = { food = 'apple', lives = 'extralife', charge = 'flapcharge' }
+local KINDS = { 'food', 'lives', 'charge' }
 local MOD = { food = 'bossFood', lives = 'bossLives' }
 local LIFT = { food = 10, lives = 0 }      -- (la comida se mece: posada un poco por encima del suelo)
 -- En un nivel de EVENTO, en todas las dificultades: s mínimos entre comidas / vidas (Extremo y Xtra: los suyos)
 Drops.EVENT_FOOD  = { easy = 8, normal = 11, hard = 14 }
 Drops.EVENT_LIVES = { easy = 40, normal = 55, hard = 75 }
+-- En un nivel FLAPPY, en todas las dificultades: s entre comidas y entre cargas; PITY_T = s con todos a 0 de carga
+Drops.FLAPPY_FOOD   = { easy = 10, normal = 14, hard = 18 }
+Drops.FLAPPY_CHARGE = { easy = 6, normal = 8, hard = 10 }
+Drops.PITY_T = 12
 Drops.STRUGGLE_T, Drops.NO_DAMAGE_T, Drops.DEATH_T = 12, 25, 20
 
 function Drops.loadAssets() end
@@ -43,7 +56,8 @@ function Drops.sizePx() return TILE_PX, TILE_PX end
 function Drops:init()
     self.moving, self.flying, self.vx, self.vy = false, true, 0, 0
     self.state = 'idle'
-    self.cool = { food = 0, lives = 0 }
+    self.cool = { food = 0, lives = 0, charge = 0 }
+    self.zeroT = 0                                      -- (s con todos los de la zona a 0 de carga)
     self.t = 0
     self.hits = setmetatable({}, { __mode = 'k' })      -- [pa] = { instantes de golpes }
     self.lastHp = setmetatable({}, { __mode = 'k' })
@@ -62,6 +76,11 @@ function Drops:netRest() end
 
 -- s mínimos entre una y otra de `kind` en este nivel (0 = no ayuda con eso)
 function Drops.every(level, kind)
+    if level.flappy then
+        local t = kind == 'food' and Drops.FLAPPY_FOOD or kind == 'charge' and Drops.FLAPPY_CHARGE
+        return t and (t[level.difficulty or 'normal'] or t.normal) or 0
+    end
+    if not MOD[kind] then return 0 end
     local v = Difficulty.of(level.difficulty, MOD[kind], 0)
     if v > 0 then return v end
     if level.event then
@@ -76,13 +95,13 @@ function Drops.placements(level)
     local z = level.bossZones and level.bossZones[1]
     if not z then return {} end
     local any = false
-    for kind in pairs(MOD) do if Drops.every(level, kind) > 0 then any = true end end
+    for _, kind in ipairs(KINDS) do if Drops.every(level, kind) > 0 then any = true end end
     if not any then return {} end
     local col, row = z.col, math.max(1, z.row)
     local out = { { type = 'bossdrops', col = col, row = row } }
-    for kind, n in pairs({ food = Drops.POOL.food, lives = Drops.POOL.lives }) do
+    for _, kind in ipairs(KINDS) do
         if Drops.every(level, kind) > 0 then
-            for _ = 1, n do
+            for _ = 1, Drops.POOL[kind] do
                 out[#out + 1] = { type = KIND_TYPE[kind], col = col, row = row, reserve = true, summonKey = Drops.KEY }
             end
         end
@@ -136,6 +155,49 @@ function Drops.spot(level, z, pa)
     return bx, by
 end
 
+-- ¿Es la casilla (c, r) aire libre para una ayuda Flappy? (ni sólida ni pilar ni peligro ni agua)
+function Drops.airFree(level, c, r)
+    local d = level:getDef(c, r)
+    if d.collision ~= 'none' or d.enemySolid or d.name == 'pillar' or d.mat.contact or d.trigger then return false end
+    if SubTiles.solidInCell(level, c, r) then return false end
+    return not level:liquidAt((c - 0.5) * TILE_PX, (r - 0.5) * TILE_PX)
+end
+
+-- Dónde aparece la ayuda Flappy para `pa`: casilla de aire libre de la zona a ≥ 4 casillas del jefe y a 2-6 del
+-- jugador (mejor, a ~3,5 y lejos del jefe). Devuelve x, y del centro de la casilla, o nil
+function Drops.spotAir(level, z, pa)
+    local T = TILE_PX
+    local c0, c1 = z.col + 1, z.col + z.w - 2
+    local r0, r1 = math.max(1, z.row), math.min(level.tileH, z.row + z.h - 1)
+    local bosses = {}
+    for _, b in ipairs(z.bosses or {}) do
+        if b.alive and not b.offstage and not (b.isDying and b:isDying()) then bosses[#bosses + 1] = b end
+    end
+    local best, bx, by
+    for c = c0, c1 do
+        for r = r0, r1 do
+            if Drops.airFree(level, c, r) then
+                local x, y = (c - 0.5) * T, (r - 0.5) * T
+                local ok, sc = true, 0
+                for _, b in ipairs(bosses) do
+                    local d = math.sqrt((b.x - x) ^ 2 + (b.y - y) ^ 2) / T
+                    if d < 4 then ok = false; break end
+                    sc = sc + math.min(8, d)
+                end
+                if ok and pa then
+                    local dp = math.sqrt((pa.x - x) ^ 2 + (pa.y - y) ^ 2) / T
+                    if dp < 2 or dp > 6 then ok = false else sc = sc * 0.5 - math.abs(dp - 3.5) end
+                end
+                if ok then
+                    sc = sc + ((c * 7919 + r * 104729) % 13) * 0.01          -- (desempate fijo, sin azar)
+                    if not best or sc > best then best, bx, by = sc, x, y end
+                end
+            end
+        end
+    end
+    return bx, by
+end
+
 -- ¿Qué necesita `pa` ahora? → 'lives', 'food' o nil
 function Drops:needOf(level, pa)
     if pa.dying or pa.alive == false then return nil end
@@ -155,10 +217,11 @@ end
 function Drops:updateCustom(dt, level)
     self.t = self.t + dt
     if not self.pool then
-        self.pool = { food = {}, lives = {} }
+        self.pool = { food = {}, lives = {}, charge = {} }
         for _, e in ipairs(level.liveEntities or {}) do
             if e.summonOf == Drops.KEY then
-                local kind = (e.def.pickup and e.def.pickup.lives) and 'lives' or 'food'
+                local pk = e.def.pickup
+                local kind = (pk and pk.lives) and 'lives' or (pk and pk.charge) and 'charge' or 'food'
                 table.insert(self.pool[kind], e)
             end
         end
@@ -190,10 +253,34 @@ function Drops:updateCustom(dt, level)
                     end
                 end
             end
+            if level.flappy then self:flappyCharge(dt, level, z) end
         end
     end
     level.helpHint = nil                                 -- (el aviso dura un paso: lo vuelve a poner quien lo da)
     return true
+end
+
+-- La carga de aleteo en un nivel Flappy: una cada FLAPPY_CHARGE s, como mucho una a la vez, al jugador de la zona
+-- con menos carga; y la LÁSTIMA: todos a 0 durante PITY_T s → una ya
+function Drops:flappyCharge(dt, level, z)
+    if not self.chargeInit then self.chargeInit, self.cool.charge = true, Drops.every(level, 'charge') end
+    local Max = require('src/player/PlayerAdventure').CHARGE_MAX or 5
+    local who, allZero, any = nil, true, false
+    for _, pa in ipairs(level.players or {}) do
+        if not pa.dying and pa.alive ~= false and require('src/world/systems/BossZones').contains(z, pa.x, pa.y) then
+            any = true
+            local ch = pa.charge or 0
+            if ch > 0 then allZero = false end
+            if ch < Max and (not who or ch < (who.charge or 0)) then who = pa end
+        end
+    end
+    self.zeroT = (any and allZero) and self.zeroT + dt or 0
+    if not who or #self.pool.charge == 0 or self:lying('charge') then return end
+    if self.cool.charge <= 0 or self.zeroT >= Drops.PITY_T then
+        if self:drop(level, z, 'charge', who) then
+            self.cool.charge, self.zeroT = Drops.every(level, 'charge'), 0
+        end
+    end
 end
 
 -- ¿Hay ya una de `kind` en el suelo sin coger? (no se amontonan)
@@ -209,6 +296,13 @@ function Drops:drop(level, z, kind, pa)
         if not e.alive then free = e; break end
     end
     if not free then return false end       -- (todas por ahí sin coger: no caen más)
+    if level.flappy then
+        local fx, fy = Drops.spotAir(level, z, pa)
+        if not fx then return false end
+        free:appearAt(fx, fy)
+        Sound.playAt('respawnFx', fx, fy, 1.3, 0.6)
+        return true
+    end
     local x, y = Drops.spot(level, z, pa)
     if not x then return false end
     free:dropFromSky(x, y + TILE_PX / 2 - free.outerH / 2, LIFT[kind])

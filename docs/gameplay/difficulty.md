@@ -88,6 +88,13 @@ unlocked); Free Play has a ◀ ▶ selector (key F or tap either half); online, 
   0.3 × gravity, max 420 px/s: it is seen coming); a pickup is reused once taken, so at most 2 food + 1 life lie
   around at once. Server-simulated online (they are ordinary entities in the snapshots; the director is never sent).
   What a life gives is saved at the end of the level, like every pickup. Harness `difficulty_rules` case `ayuda`.
+  FLAPPY LEVELS (`level.flappy`, EVERY difficulty; Flappy campaign plan 5): the same director runs a Flappy rule set.
+  No ground, so pickups appear IN PLACE (`Entity:appearAt`, no skyfall) in a free air cell of the zone (not solid, not a
+  pillar, hazard or water), >= 4 tiles from the boss and 2-6 from the player who needs it, and float. Food: the same
+  "when it is needed" rules, pacing `Drops.FLAPPY_FOOD` (easy 10 / normal 14 / hard 18 s). Flap charge (`flapcharge`,
+  pool of 1: never two at once): one every `Drops.FLAPPY_CHARGE` (6 / 8 / 10 s) for the in-zone player with the least
+  charge; if every in-zone player sits at 0 charge for `Drops.PITY_T` (12 s) one comes at once. No extra lives. Harness
+  `netcopter_rules` (`cargas`, `lastima`, `aire`, `aventura`).
   Not judged yet: the rates (how much easier it gets).
 
 - (6) THE WAITING ALLY STEPS ASIDE (0.5.23, the user: on Xtra Extreme the two Mega Crabbies were "incredibly hard,

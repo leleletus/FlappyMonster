@@ -344,6 +344,15 @@ function Entity:dropFromSky(x, y, lift)
     self.vx, self.vy, self.deadTimer = 0, 0, 0
 end
 
+-- APARECER EN SU SITIO en (x, y) — cualquier entidad de reserva: vuelve a jugar ya en su estado de siempre (un
+-- volador se queda ahí flotando); es lo que hacen las ayudas de los niveles Flappy (no caen: no hay suelo)
+function Entity:appearAt(x, y)
+    local h = self.home
+    h.x, h.y = x, y
+    self:resetToHome()
+    self.vx, self.vy, self.deadTimer = 0, 0, 0
+end
+
 -- ¿Puede empezar ya la caída desde el techo? (el Crabby también escondido)
 function Entity:canDropNow() return self.state == 'walk' or self.state == 'idle' end
 function Entity:isHiding() return false end
