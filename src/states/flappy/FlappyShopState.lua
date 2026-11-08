@@ -129,7 +129,7 @@ end
 
 function FlappyShopState:render()
     loadArt()
-    MenuScene.draw()
+    MenuScene.flappyBg()
     MenuList.header(L('shop.title'), 'yellow', self.anim, 1)
     local Ly = self:_layout()
     -- el monedero y el inventario
