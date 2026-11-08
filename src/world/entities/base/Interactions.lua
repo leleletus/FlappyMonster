@@ -22,6 +22,9 @@
 --                                 matar: rebota y le rompe el hielo (e:shatter)
 --   'pickup'                      coleccionable (estrella, vida extra...)
 --   'checkpoint'                  punto de control
+--   'reflect'                     RASGO `reflectable` (la bomba luminosa del Redcóptero): un jugador que VUELA (`pa.flight`)
+--                                 SUBIENDO (`pa.vy < 0`) toca la entidad y la devuelve: e:onReflect(pa). Sin eso, su
+--                                 `interact` de siempre
 --
 -- Interactions.run(pa, entities, cb, rewind) aplica todo lo anterior (y el
 -- impacto del ground pound) para un jugador; el juego solo pone los efectos
@@ -45,6 +48,7 @@ local function prevDy(pa)
     return pa.vy * STEP_DT
 end
 
+local RPB, REB = {}, {}   -- (cajas de la devolución, reutilizadas)
 function Interactions.check(pa, e)
     if not e.alive or e.state == 'dead' or (e.isGhost and e:isGhost()) then return nil end
     if e.state == 'carried' then return nil end                     -- (en las manos de alguien: systems/Carry)
@@ -55,6 +59,10 @@ function Interactions.check(pa, e)
     -- Reglas propias (jefes: ver entities/Boss.lua). Debe ser una consulta
     -- sin efectos: el cliente online la usa para predecir rebotes.
     local r, a, b, c
+    if e.reflectable and pa.flight and pa.vy < 0 and (not e.canReflect or e:canReflect())
+       and overlap(pa:getOuterBounds(RPB), e:getOuterBounds(REB)) then
+        return 'reflect'
+    end
     if e.interact then r, a, b, c = e:interact(pa) else r, a, b, c = Interactions.defaultCheck(pa, e) end
     -- Enemigos DUROS (`needsPound` en su clase): un pisotón normal solo rebota; hace falta un
     -- ground pound para matarlos
@@ -290,6 +298,8 @@ function Interactions.run(pa, entities, cb, rewind)
         elseif result == 'launch' then
             pa:launch(a, b, c)
             if e.onLaunch then e:onLaunch(pa) end
+        elseif result == 'reflect' then
+            e:onReflect(pa)
         elseif result == 'pickup' then
             if e:collect() then
                 Noise.emit(e.x, e.y, e.def.noise or (e.def.pickup and e.def.pickup.lives and Noise.R.life) or Noise.R.pickup)

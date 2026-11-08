@@ -123,4 +123,5 @@ and the network use; **Label** is the (Spanish) name in the editor. Own props = 
 | `cage` | Flappy enjaulado | `types/items/cage.lua` |  | `minCharge`: int = 1 · `gift`: enum = shield |
 | `crackwall` | Muro agrietado | `types/mechanisms/crackwall.lua` |  | `minCharge`: int = 2 · `rows`: int = 3 |
 | `flapcharge` | Carga de aleteo | `types/items/flapcharge.lua` | pickup |  |
+| `glowbomb` | Bomba luminosa | `types/traps/glowbomb.lua` |  | `fuse`: number = 2.5 · `fall`: number = 90 |
 

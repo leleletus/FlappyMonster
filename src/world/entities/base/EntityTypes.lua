@@ -33,6 +33,11 @@
 --   flappyOnly  true: solo en niveles Flappy ("flappy": true; docs/design/flappy-prequel.md): el editor no lo ofrece en
 --               los demás y Model:validate da un error si un nivel normal lo usa (como los tiles con flappyOnly)
 --
+-- RASGOS de clase (campos de la clase, no de la definición):
+--   reflectable true: un jugador que VUELA (`pa.flight`) SUBIENDO (`pa.vy < 0`) que la toca la DEVUELVE: Interactions
+--               llama a `e:onReflect(pa)` (en vez de su `interact` de siempre) si `e:canReflect()` (opcional) lo permite.
+--               La bomba luminosa del Redcóptero (types/traps/glowbomb.lua).
+--
 -- En el nivel, cada colocación es:
 --   { type='crabby', col=10, row=2, props={ attach='ceiling', ... } }
 -- Solo se guardan las propiedades que difieren del valor por defecto.
