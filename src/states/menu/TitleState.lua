@@ -19,6 +19,7 @@ local MenuList   = require 'src/ui/menu/MenuList'
 local Transition = require 'src/ui/menu/Transition'
 local Save       = require 'src/story/Save'
 local TitleLogo  = require 'src/ui/menu/TitleLogo'
+local Campaign   = require 'src/flappy/Campaign'
 local TitleState = BaseState:new()
 
 local LOGO_S = math.floor(LOGO_SCALE / 2)      -- el logo remasterizado está a 2x: a media escala ocupa lo de siempre
@@ -49,17 +50,25 @@ function TitleState:enter(args)
 end
 
 function TitleState:_buildList(selected)
-    local slot = lastSlot()
+    -- Aventura bloqueada (hasta terminar la campaña Flappy: src/flappy/Campaign.lua): botón gris con su aviso y sin
+    -- CONTINUAR (las partidas siguen en el disco y vuelven al desbloquear)
+    local locked = Campaign.adventureLocked()
+    local slot = not locked and lastSlot() or nil
     self.slot = slot
     local items = {}
     if slot then
         items[#items + 1] = { text = 'menu.continue', color = 'pink', desc = 'menu.desc_continue', descArgs = { n = slot },
                               id = 'continue', go = function() self:_continue() end }
     end
-    items[#items + 1] = { text = 'menu.adventure', color = 'green', desc = 'menu.desc_adventure', id = 'adventure',
-                          go = function() self:_leave('adv_mode_select') end }
+    if locked then
+        items[#items + 1] = { text = 'menu.adventure', color = 'grey', desc = 'menu.desc_adventure_locked', id = 'adventure',
+                              locked = true, go = function() Sound.play('headBump') end }
+    else
+        items[#items + 1] = { text = 'menu.adventure', color = 'green', desc = 'menu.desc_adventure', id = 'adventure',
+                              go = function() self:_leave('adv_mode_select') end }
+    end
     items[#items + 1] = { text = 'menu.classic', color = 'orange', desc = 'menu.desc_classic', id = 'classic',
-                          go = function() self:_leave('difficulty') end }
+                          go = function() self:_leave('flappy_campaign') end }
     items[#items + 1] = { text = 'menu.settings', color = 'blue', desc = 'menu.desc_settings', id = 'settings',
                           go = function() self:_leave('settings') end }
     -- args.selected = 1 aventura, 2 clásico, 3 configuración (sin contar CONTINUAR, que no siempre está)
@@ -100,7 +109,8 @@ function TitleState:_continue()
     Transition.go('story_map')
 end
 
--- SOUND TEST secreto (src/states/menu/SoundTestState.lua): ↑ ↑ ↓ ↓ ← → ← → (flechas o cruceta), o 7 toques seguidos
+-- MENÚ DE DEPURACIÓN secreto (src/states/menu/DebugMenuState.lua: clásico infinito, Aventura sin candado, juego libre,
+-- sound test, film test): ↑ ↑ ↓ ↓ ← → ← → (flechas o cruceta), o 7 toques seguidos
 -- en la versión (abajo a la derecha)
 local SECRET = { 'nav_up', 'nav_up', 'nav_down', 'nav_down', 'nav_left', 'nav_right', 'nav_left', 'nav_right' }
 function TitleState:_secret()
@@ -113,15 +123,15 @@ function TitleState:_secret()
             if #seq == #SECRET then
                 local ok = true
                 for i = 1, #SECRET do if seq[i] ~= SECRET[i] then ok = false; break end end
-                if ok then self:_openSoundTest(); return true end
+                if ok then self:_openDebug(); return true end
             end
         end
     end
 end
-function TitleState:_openSoundTest()
+function TitleState:_openDebug()
     self.secretSeq, self.versionTaps = nil, nil
     Sound.play('oneUp')
-    gStateMachine:change('sound_test')
+    gStateMachine:change('debug_menu')
 end
 function TitleState:_versionRect() return WINDOW_W - 180, WINDOW_H - 50, 180, 50 end
 
@@ -217,7 +227,7 @@ function TitleState:touchpressed(id, x, y)
         if not vt or now - vt.t > 0.8 then vt = { n = 0 } end
         vt.n, vt.t = vt.n + 1, now
         self.versionTaps = vt
-        if vt.n >= 7 then self:_openSoundTest() end
+        if vt.n >= 7 then self:_openDebug() end
         return
     end
     if self.anim:busy() then return end

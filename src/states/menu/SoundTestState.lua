@@ -1,8 +1,8 @@
 -- src/states/menu/SoundTestState.lua
 -- SOUND TEST secreto (para desarrolladores): todas las pistas de música (assets/music/index.json) y todos los efectos
 -- que carga Sound, para escucharlos con opciones: repetir, tono, volumen, eco y sala (reverberación), y avanzar /
--- retroceder en la pista. Se entra desde el TÍTULO (TitleState): ↑ ↑ ↓ ↓ ← → ← → con las flechas o la cruceta, o
--- tocando 7 veces seguidas la versión (abajo a la derecha) en el móvil.
+-- retroceder en la pista. Se entra desde el MENÚ DE DEPURACIÓN (DebugMenuState; a él se llega desde el título con
+-- ↑ ↑ ↓ ↓ ← → ← → o 7 toques en la versión).
 --
 -- Suena con sus PROPIAS fuentes (no toca la música ni las voces del juego): la música, desde sus archivos (con su
 -- intro y su bucle, como en el juego); los efectos, copias de los de Sound (con su ganancia ya aplicada).
@@ -238,10 +238,9 @@ function SoundTestState:update(dt)
         if Input.pressed('nav_up') then self:_move(-1) end
         if Input.pressed('nav_down') then self:_move(1) end
         if Input.pressed('nav_right') then self.focus = 'opts'; Sound.play('select') end
-        if Input.pressed('nav_left') then self:_stop(); Sound.play('select'); gStateMachine:change('film_test'); return end   -- (el FILM TEST)
         if Input.pressed('light') then self:_change(1, 1) end                       -- (atajo: música / efectos)
         if Input.pressed('confirm') or Input.pressed('flap') then self:_toggle() end
-        if Input.pressed('back') then Sound.play('select'); gStateMachine:change('title', { menu = true }) end
+        if Input.pressed('back') then Sound.play('select'); gStateMachine:change('debug_menu', { selected = 4 }) end
     else
         if Input.pressed('nav_up') then self.opt = (self.opt - 2) % #OPTS + 1; Sound.play('select') end
         if Input.pressed('nav_down') then self.opt = self.opt % #OPTS + 1; Sound.play('select') end
@@ -294,7 +293,7 @@ function SoundTestState:_seek(k)
 end
 
 function SoundTestState:touchpressed(id, x, y)
-    if CornerButtons.hitBack(x, y) then gStateMachine:change('title', { menu = true }); return end
+    if CornerButtons.hitBack(x, y) then gStateMachine:change('debug_menu', { selected = 4 }); return end
     local Ly = self:_layout()
     for i, r in ipairs(Ly.opts) do
         if inside(r, x, y) then

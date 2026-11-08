@@ -112,8 +112,9 @@ nothing special as long as they're played from those update loops.
 
 ## Sound test (secret, for developers) — 0.5.14
 
-`src/states/menu/SoundTestState.lua` (state `sound_test`). ◀ (left) in its list opens the FILM TEST ([cinematics](../story/cinematics.md#film-test-secret-05112)). From the TITLE screen: ↑ ↑ ↓ ↓ ← → ← → with the arrows or
-the d-pad, or 7 quick taps on the version number (bottom right) on a phone. Two lists: every track of
+`src/states/menu/SoundTestState.lua` (state `sound_test`), entered from the secret DEBUG MENU
+([menus](../architecture/menus.md#debug-menu-secret)); BACK returns to it. (Until 0.5.163 the title code opened the sound test
+directly and ◀ in its list opened the film test.) Two lists: every track of
 `assets/music/index.json` (with its intro + loop, as in the game; pending tracks are skipped) and every sound loaded by
 `Sound.load` (copies of the game's sources, so their `GAIN` is applied). Options (◀ ▶): list, loop, pitch (0.25–3),
 volume, echo and room (OpenAL effects `love.audio.setEffect`; "not available" where the platform has none), and

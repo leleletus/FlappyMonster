@@ -16,6 +16,7 @@ local DifficultySelectionState = BaseState:new()
 local COLORS = { easy = 'green', normal = 'yellow', hard = 'red' }
 
 function DifficultySelectionState:enter(args)
+    self.from = args and args.from          -- de dónde se vino: flappy_campaign, debug_menu (o el menú principal)
     self.anim = MenuAnim.new({ n = 2 + #DIFFICULTY_ORDER })
     local items = {}
     for i, key in ipairs(DIFFICULTY_ORDER) do
@@ -33,7 +34,12 @@ end
 function DifficultySelectionState:_back()
     if self.anim:busy() then return end
     Sound.play('select', 0.85)
-    self.anim:leave(function() gStateMachine:change('main_menu', { selected = 2 }) end)
+    local from = self.from
+    self.anim:leave(function()
+        if from == 'debug_menu' then gStateMachine:change('debug_menu', { selected = 1 })
+        elseif from == 'flappy_campaign' then gStateMachine:change('flappy_campaign', { selected = 2 })
+        else gStateMachine:change('main_menu', { selected = 2 }) end
+    end)
 end
 
 function DifficultySelectionState:update(dt)

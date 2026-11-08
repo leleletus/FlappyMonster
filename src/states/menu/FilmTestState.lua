@@ -8,7 +8,7 @@
 --     jefe en su arena (la del Espejo entre ellos: el nivel empieza con el jugador ya en la zona) y la intro del Mega
 --     Mashup.
 -- La lista sale de los CATÁLOGOS (films.json, SCENES, Worlds.LIST): una película o un jefe nuevos salen solos.
--- Se entra desde el SOUND TEST (◀ en la lista, o su botón); ◀ / ▶ pasan de uno a otro. Para ver las escenas que leen
+-- Se entra desde el MENÚ DE DEPURACIÓN (DebugMenuState); ATRÁS vuelve a él. Para ver las escenas que leen
 -- la partida se monta una PARTIDA DE MENTIRA en memoria (Run.data sin hueco: Run.save no escribe nada) con lo que la
 -- escena necesita, y al volver se deja la de antes como estaba.
 local BaseState     = require 'src/core/BaseState'
@@ -183,8 +183,7 @@ function FilmTestState:_layout()
     local optW = WINDOW_W - ox - m
     local info = { x = ox, y = TOP, w = optW, h = 150 }
     return { list = list, info = info,
-             play = { x = info.x + info.w - 64, y = info.y + 10, w = 52, h = 44 },
-             sound = { x = ox, y = TOP + 170, w = optW, h = 48 } }
+             play = { x = info.x + info.w - 64, y = info.y + 10, w = 52, h = 44 } }
 end
 
 function FilmTestState:_keepVisible()
@@ -213,8 +212,7 @@ function FilmTestState:_watch()
     it.go()
 end
 
-function FilmTestState:_toSound() Sound.play('select'); gStateMachine:change('sound_test') end
-function FilmTestState:_exit() Sound.play('select'); gStateMachine:change('title', { menu = true }) end
+function FilmTestState:_exit() Sound.play('select'); gStateMachine:change('debug_menu', { selected = 5 }) end
 
 function FilmTestState:update(dt)
     MenuScene.update(dt)
@@ -222,7 +220,6 @@ function FilmTestState:update(dt)
     self.t = self.t + dt
     if Input.pressed('nav_up') then self:_move(-1) end
     if Input.pressed('nav_down') then self:_move(1) end
-    if Input.pressed('nav_left') or Input.pressed('nav_right') or Input.pressed('light') then self:_toSound() end
     if Input.pressed('confirm') or Input.pressed('flap') then self:_watch() end
     if Input.pressed('back') then self:_exit() end
     self.scroll = self.scroll + (self.scrollTarget - self.scroll) * math.min(1, dt * 14)
@@ -243,7 +240,7 @@ end
 function FilmTestState:mousemoved(x, y)
     self.backHover = CornerButtons.hitBack(x, y)
     local Ly = self:_layout()
-    self.hoverPlay, self.hoverSound = inside(Ly.play, x, y), inside(Ly.sound, x, y)
+    self.hoverPlay = inside(Ly.play, x, y)
     local row = self:_rowAt(x, y)
     if row and self.sel ~= row then self.sel = row; Sound.play('select') end
 end
@@ -251,7 +248,6 @@ function FilmTestState:touchpressed(id, x, y)
     if CornerButtons.hitBack(x, y) then self:_exit(); return end
     local Ly = self:_layout()
     if inside(Ly.play, x, y) or inside(Ly.info, x, y) then self:_watch(); return end
-    if inside(Ly.sound, x, y) then self:_toSound(); return end
     local row = self:_rowAt(x, y)
     if row then self.touch = { id = id, y = y, lastY = y, row = row, moved = false } end
 end
@@ -318,8 +314,6 @@ function FilmTestState:render()
         local cx, cy = P.x + P.w / 2, P.y + (P.h - 4) / 2
         love.graphics.polygon('fill', cx - 7, cy - 10, cx - 7, cy + 10, cx + 10, cy)
     end
-    local S = Ly.sound
-    MenuButton.draw(L('ft.to_sound'), S.x, S.y, S.w, S.h, self.hoverSound and 'teal' or 'blue', self.hoverSound, { scale = 3 })
     MenuKit.hint(L('ft.hint'), A, 3)
     CornerButtons.drawBack(self.backHover)
 end

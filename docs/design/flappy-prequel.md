@@ -192,6 +192,9 @@ Approved by the user on 2026-11-04. Next step: write the implementation plan fro
 
 1. **Debug menu + Adventure lock** (the Sound Test combination opens it; Classic / Adventure / Free Play / Sound
    Test / Film Test; the global unlock; the CLÁSICO button opens a placeholder campaign menu).
+   **DONE in 0.5.163** ([menus](../architecture/menus.md#debug-menu-secret)). "Adventure without the lock" lasts the
+   session. The lock is built but switched off (`Campaign.READY = false`) until the campaign can be finished, so
+   testers keep Adventure; CLÁSICO's placeholder offers the endless mode until then.
 2. **Flight trait + one test stage** on Adventure's engine (auto-scroll window, free left/right, flap, 3 HP, pass
    through on hit, Flappy-only catalog flag enforced) — the user judges the feel here before anything else.
 3. **Campaign frame:** Flappy saves (3 slots), zone map, lives / Game Over / results, Flappy HUD, Easy/Normal/Hard.

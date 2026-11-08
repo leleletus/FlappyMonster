@@ -12,8 +12,11 @@
 --     daño de verdad); la misma carrera con el dt real variable (pasos fijos por dentro); morir: reaparece y las
 --     vidas no se acaban; el iris entre escenas se cierra, pasa a la siguiente y se abre;
 --  6. capturas a 1280, 960 y 1600 de ancho;
---  1b. el SOUND TEST secreto (↑↑↓↓←→←→ en el título, o 7 toques en la versión): suena música y un efecto, el tono
---     cambia lo que suena, ATRÁS vuelve al título (captura menu_soundtest.png).
+--  1b. el MENÚ DE DEPURACIÓN secreto (↑↑↓↓←→←→ en el título, o 7 toques en la versión) y desde él el SOUND TEST:
+--     suena música y un efecto, el tono cambia lo que suena, ATRÁS vuelve al menú de depuración (menu_soundtest.png);
+--  1c. el FILM TEST desde el menú de depuración; 1d. CLÁSICO INFINITO y AVENTURA SIN CANDADO desde él;
+--  2b. el CANDADO DE AVENTURA (src/flappy/Campaign.lua) con la campaña "lista": botón gris sin CONTINUAR, no entra;
+--     se abre al terminar la campaña (global) o desde el menú de depuración (solo la sesión).
 -- Capturas: <save>/menu_*.png                tools/tests/run.sh menu_flow
 --   SCENES=0             sin el paso 5
 --   LEVELS=a,b,c         el paso 5 con esos niveles (sin semilla: una al azar; SEED=n: esa) en vez de SCENES
@@ -74,6 +77,17 @@ local function run()
     --        lo que suena; ATRÁS vuelve; 7 toques en la versión también entran ──
     for _, a in ipairs({ 'nav_up', 'nav_up', 'nav_down', 'nav_down', 'nav_left', 'nav_right', 'nav_left', 'nav_right' }) do press(a, 0.05) end
     wait(0.2)
+    local dbg = top()
+    local inDbg = name(dbg) == 'DebugMenuState'
+    if inDbg then wait(0.8) end
+    shot('debug')
+    -- elegir un botón del menú de depuración por su id (los que van con el iris tardan más)
+    local function pickDbg(id)
+        local m = top()
+        for _ = 1, 6 do if selId(m) == id then break end; press('nav_down', 0.1) end
+        press('confirm', 1.2)
+    end
+    if inDbg then pickDbg('sound') end
     local stt = top()
     local inST = name(stt) == 'SoundTestState'
     local musicOk, pitchOk, sfxOk, back, taps = false, false, false, false, false
@@ -109,22 +123,22 @@ local function run()
         shot('soundtest')
         if stt.focus == 'opts' then press('back', 0.1) end                    -- (tocar una opción deja el foco en ellas)
         press('back', 0.6)
-        back = name(top()) == 'TitleState'
+        back = name(top()) == 'DebugMenuState' and selId(top()) == 'sound'
+        gStateMachine:change('title'); wait(1.8)
         local t = top()
         for _ = 1, 7 do t:touchpressed('dedo', WINDOW_W - 40, WINDOW_H - 20); wait(0.05) end
         wait(0.2)
-        taps = name(top()) == 'SoundTestState'
-        press('back', 0.6)
+        taps = name(top()) == 'DebugMenuState'
     end
-    check('soundtest', inST and musicOk and pitchOk and sfxOk and back and taps and TOUCH_ST,
-        ('código → %s; música suena=%s; tono 1,05 en lo que suena=%s; efectos suena=%s; atrás → título=%s; 7 toques en la versión → entra=%s; con el dedo: %s'):format(
-         name(stt), tostring(musicOk), tostring(pitchOk), tostring(sfxOk), tostring(back), tostring(taps), tostring(TOUCH_MSG)))
-    -- ── 1c. FILM TEST secreto (desde el sound test, ◀): la lista sale de los catálogos (películas, escenas del mapa,
+    check('soundtest', inDbg and inST and musicOk and pitchOk and sfxOk and back and taps and TOUCH_ST,
+        ('código → %s → %s; música suena=%s; tono 1,05 en lo que suena=%s; efectos suena=%s; atrás → depuración=%s; 7 toques en la versión → depuración=%s; con el dedo: %s'):format(
+         name(dbg), name(stt), tostring(musicOk), tostring(pitchOk), tostring(sfxOk), tostring(back), tostring(taps), tostring(TOUCH_MSG)))
+    -- ── 1c. FILM TEST secreto (desde el menú de depuración): la lista sale de los catálogos (películas, escenas del mapa,
     --        escenas dentro del juego); ver una película, una escena del mapa, la escena final de la huida y la
     --        entrada de un jefe, y cada una vuelve al film test; la partida de mentira no toca la de verdad ──
     do
-        gStateMachine:change('sound_test'); wait(0.3)
-        press('nav_left', 0.3)
+        gStateMachine:change('debug_menu'); wait(0.6)
+        pickDbg('film')
         local ft = top()
         local inFT = name(ft) == 'FilmTestState'
         local groups, ids = {}, {}
@@ -157,8 +171,24 @@ local function run()
         end
         local restored = (Run.data == before) and not Run.filmTest
         check('filmtest', inFT and (groups.film or 0) >= 6 and (groups.map or 0) >= 3 and (groups.game or 0) >= 10 and filmOk and mapOk and outroOk and bossOk and restored,
-            ('◀ en el sound test → %s; %d películas, %d escenas del mapa, %d en el juego; película → y vuelta=%s; escena del mapa=%s; escena final de la huida=%s; entrada del Espejo=%s; partida de verdad intacta=%s'):format(
+            ('depuración → %s; %d películas, %d escenas del mapa, %d en el juego; película → y vuelta=%s; escena del mapa=%s; escena final de la huida=%s; entrada del Espejo=%s; partida de verdad intacta=%s'):format(
              name(ft), groups.film or 0, groups.map or 0, groups.game or 0, tostring(filmOk), tostring(mapOk), tostring(outroOk), tostring(bossOk), tostring(restored)))
+    end
+    -- ── 1d. depuración: CLÁSICO INFINITO (atrás vuelve a la depuración) y AVENTURA SIN CANDADO (abre la sesión) ──
+    do
+        local Campaign = require 'src/flappy/Campaign'
+        gStateMachine:change('debug_menu'); wait(0.6)
+        pickDbg('classic')
+        local toDiff = name(top()) == 'DifficultySelectionState'
+        press('back', 0.6)
+        local backDbg = name(top()) == 'DebugMenuState' and selId(top()) == 'classic'
+        Campaign.debugOpen = false
+        pickDbg('adventure')
+        local toAdv = name(top()) == 'AdventureModeSelectState' and Campaign.debugOpen == true
+        Campaign.debugOpen = false
+        check('depuracion', toDiff and backDbg and toAdv,
+            ('clásico infinito → dificultad=%s, atrás → depuración=%s; aventura sin candado → %s (sesión abierta=%s)'):format(
+             tostring(toDiff), tostring(backDbg), name(top()), tostring(toAdv)))
     end
     gStateMachine:change('title'); st = top(); wait(1.8)
     press('confirm', 0.8)
@@ -177,9 +207,53 @@ local function run()
     go('adventure', 'AdventureModeSelectState', 'adventure')
     press('back', 0.6)
     check('vuelve adv', top().startInMenu and selId(top()) == 'adventure', 'atrás → menú con AVENTURA elegido: ' .. tostring(selId(top())))
-    go('classic', 'DifficultySelectionState', 'difficulty')
+    go('classic', 'FlappyCampaignState', 'classic')
+    do      -- (la campaña aún no existe: CAMPAÑA gris y el INFINITO, que lleva a la dificultad y vuelve)
+        local fc = top()
+        local ids = {}
+        for _, it in ipairs(fc.list.items) do ids[#ids + 1] = it.id end
+        press('nav_down', 0.1); press('confirm', 0.75)
+        local toDiff = name(top()) == 'DifficultySelectionState'
+        shot('difficulty')
+        press('back', 0.6)
+        local backFc = name(top()) == 'FlappyCampaignState' and selId(top()) == 'endless'
+        check('campana', table.concat(ids, ',') == 'campaign,endless' and toDiff and backFc,
+            ('botones %s; infinito → dificultad=%s; atrás → campaña con INFINITO elegido=%s'):format(table.concat(ids, ','), tostring(toDiff), tostring(backFc)))
+    end
     press('back', 0.6)
     check('vuelve cla', selId(top()) == 'classic', 'atrás → menú con CLÁSICO elegido: ' .. tostring(selId(top())))
+    -- ── 2b. el candado de Aventura con la campaña "lista" ──
+    do
+        local Campaign = require 'src/flappy/Campaign'
+        local Save = require 'src/story/Save'
+        local g0 = love.filesystem.read('story.sav')
+        local g = Save.global(); g.adventure = nil; Save.writeGlobal(g)
+        Save.write(1, Save.new('normal'))
+        Campaign.READY = true
+        gStateMachine:change('main_menu'); wait(0.6)
+        local m = top()
+        local it = m.list.items[m.list.selected]
+        local lockedOk = m.slot == nil and selId(m) == 'adventure' and it.locked == true and it.color == 'grey'
+        shot('locked')
+        press('confirm', 0.75)
+        local stays = name(top()) == 'TitleState'
+        gStateMachine:change('flappy_campaign'); wait(0.3)
+        local noEndless = #top().list.items == 1
+        Campaign.debugOpen = true
+        gStateMachine:change('main_menu'); wait(0.1)
+        local dbgOpen = not top().list.items[top().list.selected].locked and top().slot == 1
+        Campaign.debugOpen = false
+        Campaign.unlockAdventure()
+        gStateMachine:change('main_menu'); wait(0.1)
+        local unlocked = not Campaign.adventureLocked() and top().slot == 1 and Save.global().adventure == true
+        Campaign.READY = false
+        Save.delete(1)
+        if g0 then love.filesystem.write('story.sav', g0) else love.filesystem.remove('story.sav') end
+        check('candado', lockedOk and stays and noEndless and dbgOpen and unlocked,
+            ('bloqueada: gris sin CONTINUAR=%s, no entra=%s; campaña lista sin infinito=%s; depuración la abre=%s; terminar la campaña la abre (global)=%s'):format(
+             tostring(lockedOk), tostring(stays), tostring(noEndless), tostring(dbgOpen), tostring(unlocked)))
+        gStateMachine:change('main_menu', { selected = 2 }); wait(0.6)
+    end
     go('settings', 'SettingsState', 'settings')
     local lang0 = L.current()
     press('nav_right', 0.3)

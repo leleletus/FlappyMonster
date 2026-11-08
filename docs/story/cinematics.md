@@ -62,8 +62,8 @@ Since 0.5.99 (the user, below) the films take every count and place from data:
 ## Film test (secret, 0.5.112)
 
 The user (2026-10-30): "un test de cinemática, de esta forma podré ver las que quiera cuando quiera", including "las
-microcinemáticas in-game del Mirror". `src/states/menu/FilmTestState.lua` (state `film_test`), entered from the SOUND
-TEST with ◀ (left). The list is built from the catalogs, so new films, scenes and bosses appear by themselves:
+microcinemáticas in-game del Mirror". `src/states/menu/FilmTestState.lua` (state `film_test`), entered from the secret
+DEBUG MENU ([menus](../architecture/menus.md#debug-menu-secret); before 0.5.163, from the sound test with ◀). The list is built from the catalogs, so new films, scenes and bosses appear by themselves:
 - FILMS: every film of `films.json` (the ending twice: without and with every splinter — the Groove's ball bouncing
   the wave);
 - MAP scenes: `StoryMapState.SCENES` (the Groove's theft, the crabs growing back, the ball breaking) — the map opens

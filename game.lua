@@ -97,8 +97,10 @@ function love.load()
         main_menu          = function() local s = TitleState:new(); s.startInMenu = true; return s end,   -- (la misma pantalla, con los botones)
         difficulty         = function() return DifficultySelectionState:new() end,
         settings           = function() return SettingsState:new() end,
-        sound_test         = function() return SoundTestState:new() end,   -- (secreto: ver TitleState)
-        film_test          = function() return FilmTestState:new() end,    -- (secreto: desde el sound test, ◀)
+        debug_menu         = function() return require('src/states/menu/DebugMenuState'):new() end,   -- (secreto: ver TitleState)
+        flappy_campaign    = function() return require('src/states/flappy/FlappyCampaignState'):new() end, -- CLÁSICO: la campaña Flappy
+        sound_test         = function() return SoundTestState:new() end,   -- (desde el menú de depuración)
+        film_test          = function() return FilmTestState:new() end,    -- (desde el menú de depuración)
         play               = function() return PlayState:new() end,
         pause              = function() return PauseState:new() end,
         adventure          = function() return AdventureState:new() end,

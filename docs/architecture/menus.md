@@ -18,7 +18,8 @@ save slots are **cartridges** (Sonic 3 style save select).
 | File | Role |
 |---|---|
 | `src/states/menu/TitleState.lua` | title + main menu (`title` starts on the title, `main_menu` starts with the buttons; `args.selected` = 1 adventure, 2 classic, 3 settings) |
-| `src/states/menu/AdventureModeSelectState.lua`, `SettingsState.lua`, `src/states/flappy/DifficultySelectionState.lua` | the sub-menus, built with the pieces below |
+| `src/states/menu/AdventureModeSelectState.lua`, `SettingsState.lua`, `src/states/flappy/DifficultySelectionState.lua`, `src/states/flappy/FlappyCampaignState.lua` (CLÁSICO), `src/states/menu/DebugMenuState.lua` | the sub-menus, built with the pieces below |
+| `src/flappy/Campaign.lua` | the Adventure lock (below) |
 | `src/states/story/StorySlotState.lua` | the save slots as cartridges (see below) |
 | `src/states/story/StoryCollectionState.lua` | the story COLLECTION, pushed over the world map (see below) |
 | `src/ui/menu/MenuScene.lua` | the living background: `SCENES` (level + seed), `SCENE_MAX`, `STALL`, `CAM_X/CAM_Y` (where the monster sits on screen), iris timings; `update`, `draw`, `backdrop()` (background + big dark panel for content screens), `dim(a)` |
@@ -79,6 +80,27 @@ selection, a drag or the wheel, clipped with `Clip`). An owned card: icon in a w
 kind (`story.collect.kind.<kind>`), what it is (`desc`) and how it was won (`how`); a missing one: the "???" silhouette
 (`assets/images/story/collectibles/locked.png`) and its `hint`. Texts: `<entry.keys>.name|desc|how|hint`. Arrows walk
 the grid in order (left / right wrap to the next row, up / down change row). Harness `collection`.
+
+## Debug menu (secret)
+
+0.5.163 (step 1 of [flappy-prequel](../design/flappy-prequel.md)). `DebugMenuState` (state `debug_menu`, red banner),
+opened from the TITLE with ↑ ↑ ↓ ↓ ← → ← → (arrows or d-pad) or 7 quick taps on the version number (bottom right) —
+the combination that used to open the sound test. Buttons: ENDLESS CLASSIC (the old Flappy, `difficulty` with
+`from = 'debug_menu'`), UNLOCKED ADVENTURE (`Campaign.debugOpen = true`, then `adv_mode_select`: Adventure stays open
+for the rest of the SESSION, not saved), FREE PLAY (also opens the session), SOUND TEST, FILM TEST (each its own
+entry now; BACK in them returns here). BACK → main menu. Texts `dbg.*`.
+
+## Adventure lock
+
+`src/flappy/Campaign.lua`. Adventure (story, Free Play, online) is locked until the Flappy campaign is finished in ANY
+Flappy slot: `Campaign.unlockAdventure()` writes `adventure = true` into `story.sav` (global, like the unlocked
+difficulties). `Campaign.adventureLocked()` is true only when `Campaign.READY` is true, the session was not opened from
+the debug menu and `story.sav` has no `adventure`. Locked, the main menu shows AVENTURA grey with
+`menu.desc_adventure_locked` (choosing it bumps) and hides CONTINUAR (the story saves stay on disk).
+
+**`Campaign.READY` is false today:** the campaign cannot be finished yet, so the lock is OFF and CLÁSICO still offers the
+endless mode. Testers keep Adventure and Flappy. Turn it on in the same commit that makes the campaign finishable
+(Claude's call, 2026-11-07).
 
 **SP / server / client:** client only. The demo is a local single-player simulation, never online.
 
