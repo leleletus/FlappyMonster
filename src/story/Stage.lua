@@ -12,6 +12,7 @@
 --                                 como en el juego (cielo, bloques, lava, decoraciones, luz)
 --   Stage.map()                   el mapa del mundo como decorado (StoryMapState:filmDraw)
 --   Stage.flash / bars / rays     destello, franjas de cine, rayos de luz
+local SIDES = { -1, 1 }        -- (izquierda y derecha: constante, sin una tabla nueva en cada vuelta)
 local Sky = require 'src/fx/Sky'
 local Darkness = require 'src/fx/Darkness'
 local LavaFx = require 'src/fx/LavaFx'
@@ -115,7 +116,7 @@ function Stage.laugh(x, y, t, o)
     love.graphics.draw(head, x, y + bob, 0, s * f, s, iw / 2, ih / 2)
     local cell = math.max(1, floor(s / 2 + 0.5))
     local ew, eh = eyes:getDimensions()
-    for _, side in ipairs({ -1, 1 }) do
+    for _, side in ipairs(SIDES) do
         local cx = floor(x + side * 1.2 * s * f + 0.5)
         local cy = floor(y + bob - 2.5 * s + 0.5)
         love.graphics.draw(eyes, cx - floor(ew * cell / 2), cy - floor(eh * cell / 2), 0, cell, cell)

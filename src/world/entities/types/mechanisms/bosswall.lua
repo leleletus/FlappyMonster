@@ -142,6 +142,18 @@ local function cellK(self, c, r, t, dur, appearing)
     return appearing and k or 1 - k
 end
 
+-- Aristas: solo las de fuera del rectángulo, con la regla de todos los bloques (bloques grandes, mini bloques y
+-- otros bloques de jefe)
+local function side(level, inside, c, r, name)
+    if inside then return false end
+    if not level then return true end
+    return TileTypes.sideExposure(level, c, r, name, 'ground')
+end
+
+-- (tablas de dibujo reutilizadas en cada casilla y fotograma: sin basura — docs/testing/performance.md —)
+local EDGES, ALL_EDGES = {}, { top = true, bottom = true, left = true, right = true }
+local CTX = {}
+
 function BW:render(camX, camY)
     local st, t = self.state, self.deadTimer or 0
     local T = TILE_PX
@@ -150,8 +162,19 @@ function BW:render(camX, camY)
     local level = self.levelRef
     local appearing = st == 'appearing'
     local dur = appearing and (self.props.appearTime or 0.5) or (self.props.vanishTime or 0.6)
-    for c = self.c0, self.c1 do
-        for r = self.r0, self.r1 do
+    -- (en juego, solo las casillas a la vista: un muro de jefe puede ser mucho más grande que la pantalla; el
+    -- editor dibuja con zoom, todas)
+    local c0, c1, r0, r1 = self.c0, self.c1, self.r0, self.r1
+    if not EDITOR_VIEW then
+        c0 = math.max(c0, math.floor(camX / T))
+        c1 = math.min(c1, math.floor((camX + WINDOW_W) / T) + 2)
+        r0 = math.max(r0, math.floor(camY / T))
+        r1 = math.min(r1, math.floor((camY + WINDOW_H) / T) + 2)
+    end
+    local ctx = CTX
+    ctx.level = level
+    for c = c0, c1 do
+        for r = r0, r1 do
             local k = 1
             if st == 'appearing' or st == 'vanishing' then k = cellK(self, c, r, t, dur, appearing) end
             if EDITOR_VIEW and st == 'hidden' then k = 1 end
@@ -161,22 +184,17 @@ function BW:render(camX, camY)
                 local s = (k < 1) and (k + math.sin(k * math.pi) * 0.15) or 1
                 local sz = math.floor(T * s + 0.5)
                 local ox, oy = math.floor(x + (T - sz) / 2), math.floor(y + (T - sz) / 2)
-                -- Aristas: solo las de fuera del rectángulo, con la regla de todos
-                -- los bloques (bloques grandes, mini bloques y otros bloques de jefe)
-                local function side(inside, name)
-                    if inside then return false end
-                    if not level then return true end
-                    return TileTypes.sideExposure(level, c, r, name, 'ground')
+                local e = ALL_EDGES
+                if k >= 1 then
+                    e = EDGES
+                    e.top    = side(level, r > self.r0, c, r, 'top')
+                    e.bottom = side(level, r < self.r1, c, r, 'bottom')
+                    e.left   = side(level, c > self.c0, c, r, 'left')
+                    e.right  = side(level, c < self.c1, c, r, 'right')
                 end
-                local e = {
-                    top    = side(r > self.r0, 'top'),
-                    bottom = side(r < self.r1, 'bottom'),
-                    left   = side(c > self.c0, 'left'),
-                    right  = side(c < self.c1, 'right'),
-                }
-                if k < 1 then e = { top = true, bottom = true, left = true, right = true } end
                 -- (el dibujo real del tile de su material: césped, transiciones de la arena...)
-                TileTypes.drawTile(def, { x = ox, y = oy, size = sz, level = level, col = c, row = r, edges = e })
+                ctx.x, ctx.y, ctx.size, ctx.col, ctx.row, ctx.edges = ox, oy, sz, c, r, e
+                TileTypes.drawTile(def, ctx)
                 if EDITOR_VIEW and st == 'hidden' then
                     love.graphics.setColor(1, 0.35, 0.35, 0.3)       -- (en el editor: aún no está)
                     love.graphics.rectangle('fill', ox, oy, sz, sz)

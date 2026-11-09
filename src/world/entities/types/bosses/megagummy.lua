@@ -23,6 +23,7 @@
 -- (tools/sounds/megagummy.py). Física (choques, saltos a una marca, zona): la de la Gran Bola
 -- de Nieve (types/snowboss.lua), reutilizada.
 
+local SIDES = { -1, 1 }        -- (izquierda y derecha: constante, sin una tabla nueva en cada vuelta)
 local Entity      = require 'src/world/entities/base/Entity'
 local Boss        = require 'src/world/entities/base/Boss'
 local SpriteStrip = require 'src/fx/SpriteStrip'
@@ -181,7 +182,7 @@ end
 -- ── Olas de gelatina ─────────────────────────────────────────────────────────
 function MG:spawnWaves(level)
     local fy = math.floor(self:feetY())
-    for _, d in ipairs({ -1, 1 }) do
+    for _, d in ipairs(SIDES) do
         self.nextId = self.nextId % 999 + 1
         self.waves[#self.waves + 1] = { id = self.nextId, x = math.floor(self.x + d * (self.outerW / 2 - 10)),
                                         y = fy, dir = d, t = 0, hit = {} }
@@ -875,16 +876,7 @@ function MG:netPackExtra()
     return out
 end
 
-local function readList(b, k, stride)
-    local n = b[k] or 0
-    local list = {}
-    for i = 0, n - 1 do
-        local e = {}
-        for j = 1, stride do e[j] = b[k + 1 + i * stride + j - 1] end
-        list[#list + 1] = e
-    end
-    return list, k + 1 + n * stride
-end
+local readList = require('src/world/entities/base/NetList').read      -- (listas planas del estado propio)
 
 function MG:netApplyExtra(a, b, f)
     if type(b[1]) ~= 'number' then return end

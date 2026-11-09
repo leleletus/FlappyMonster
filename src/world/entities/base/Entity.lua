@@ -495,16 +495,41 @@ end
 -- trampolín y los demás se hundían hasta el fondo como si nada. Los voladores no tocan nada; un tipo que viva en la
 -- lava pone `lavaProof = true` en su clase. Lo que hace al caer lo decide `onLava` (por defecto: reventar).
 Entity.lavaProof = false
+local LAVA_B = {}          -- (caja reutilizada: se pregunta en cada paso por cada enemigo)
 function Entity:inLava(level)
     if self.lavaProof or self.flying or not self.alive then return false end
     local st = self.state
     if st == 'dead' or st == 'gone' or st == 'spawning' or st == 'reserve' or Entity.SPECIAL_DEATH[st] then return false end
     if (self.def and self.def.category) ~= 'Enemigos' then return false end
-    local b = self:getOuterBounds()
+    local b = self:getOuterBounds(LAVA_B)
     local t = level:getDefAt(self.x, b.y + b.h - 6)              -- (los pies ya dentro)
     return t ~= nil and t.lava == true
 end
 function Entity:onLava(level) self:dieBurst() end
+
+-- El jugador vivo más cercano (lo vertical cuenta menos) y su distancia. `filter(self, level, pa)` (opcional): solo
+-- cuenta el que lo cumple (p. ej. `self.sees`: el que ve). Antes, una copia en Boss, otra en DataEnemy y dos en jefes.
+local NO_PLAYERS = {}
+function Entity:nearestPlayer(level, filter)
+    local best, bd
+    for _, pa in ipairs(level.players or NO_PLAYERS) do
+        if not pa.dying and pa.alive ~= false and (not filter or filter(self, level, pa)) then
+            local d = math.abs(pa.x - self.x) + math.abs(pa.y - self.y) * 0.3
+            if not bd or d < bd then best, bd = pa, d end
+        end
+    end
+    return best, bd
+end
+
+-- UNA luz para `lights()` (src/fx/Darkness.lua): la lista y la luz son de la entidad y se rellenan en cada llamada
+-- (sin dos tablas nuevas por entidad y fotograma). Quien las lee no las guarda.
+function Entity:oneLight(x, y, r, color, a, pulse)
+    local list = self._oneLight
+    if not list then list = { {} }; self._oneLight = list end
+    local L = list[1]
+    L.x, L.y, L.r, L.color, L.a, L.pulse = x, y, r, color, a, pulse
+    return list
+end
 
 -- CAYENDO DEL TECHO (cualquier tipo: cae, clavado, rebota, se levanta…) y acaba en pinchos: revienta, como lanzado por
 -- un trampolín. Antes se quedaba encima, quieto o andando sin camino (el usuario, 0.5.56). La caída solo cuenta ya
@@ -795,15 +820,17 @@ local EMBED = 6         -- px: un volador más metido que esto en una cara la at
 -- ANCHO o ALTO que lo pide (`denseProbe = true`: el Iceberg de varias casillas) mira cada media casilla: con 3 puntos
 -- se metía en una columna de una casilla que le quedaba entre medias.
 local DENSE_STEP = TILE_PX / 2
-local function sidePoints(level, self, a, b)
+-- (`into`: la tabla de cada lado, reutilizada en cada paso — se recorre enseguida, nadie la guarda —)
+local function sidePoints(level, self, a, b, into)
     if self.denseProbe and not level.subSolid and b - a > 2 * DENSE_STEP then      -- (con subtiles ya va más denso)
         local n = math.ceil((b - a) / DENSE_STEP)
         local out = {}
         for i = 0, n do out[i + 1] = a + (b - a) * i / n end
         return out
     end
-    return level.samples and level:samples(a, b) or { a, (a + b) / 2, b }
+    return level.samples and level:samples(a, b, into) or { a, (a + b) / 2, b }
 end
+local ROWS_P, COLS_P = {}, {}
 
 -- Cara que se toca en el punto: tile (forma real) u objeto sólido (trampolín,
 -- mortero...). `side` = cara del obstáculo que se toca ('left' al ir hacia la
@@ -838,7 +865,7 @@ function Entity:moveAndCollide(level, dx, dy)
     local touched, touchedFace                 -- objeto sólido que tocó (trampolín)
 
     x = x + dx
-    local rows = sidePoints(level, self, y - hh + 4, y + hh - 4)
+    local rows = sidePoints(level, self, y - hh + 4, y + hh - 4, ROWS_P)
     if dx ~= 0 then
         local side = (dx > 0) and 'left' or 'right'
         local edge = (dx > 0) and (x + hw) or (x - hw)
@@ -870,7 +897,7 @@ function Entity:moveAndCollide(level, dx, dy)
     end
 
     self.onGround = false
-    local chx = sidePoints(level, self, x - hw + 4, x + hw - 4)
+    local chx = sidePoints(level, self, x - hw + 4, x + hw - 4, COLS_P)
     local landDown = not self.flipped
     -- En sub-pasos: una caída rápida no se salta una losa fina
     local left = dy

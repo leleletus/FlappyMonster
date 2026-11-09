@@ -7,6 +7,7 @@
 -- rave nocturna y concierto en la playa, de atardecer" — que se vea que es un jefe MUSICAL.
 -- Todo sale de state + deadTimer + songT + lo que llega por red: igual online. Solo dibujo (sin efectos).
 -- La carga groovecrab.lua con require(...)(GC, P): añade sus funciones a la tabla GC.
+local SIDES = { -1, 1 }        -- (izquierda y derecha: constante, sin una tabla nueva en cada vuelta)
 local BossFx = require 'src/fx/BossFx'
 local BossWaves = require 'src/world/entities/base/BossWaves'
 local SpriteStrip = require 'src/fx/SpriteStrip'
@@ -478,7 +479,7 @@ function GC:drawCrowd(camX, camY, et, nb, beat, row)
                 -- sus PINZAS: la del lado `lean`, ALZADA con la barra de luz (sube un poco más en el pulso); la otra, abajo
                 local c, st = cl.cfg, cl.strip
                 local fw, fh = c.w, st.h or st.image:getHeight()
-                for _, side in ipairs({ -1, 1 }) do
+                for _, side in ipairs(SIDES) do
                     local raised = side == lean and not boo
                     -- (alzada BIEN por encima del caparazón y un poco hacia fuera, y de un tono algo más claro que el
                     -- cuerpo: en silueta, si no, la pinza se fundía con él y no se veía)

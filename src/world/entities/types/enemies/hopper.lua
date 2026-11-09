@@ -302,8 +302,8 @@ function Hopper:lights()
     if st == 'scared' or st == 'dead' or st == 'reserve' or not self:isMoth() then return nil end
     local a = 0.6
     if st == 'crouch' then a = (math.floor(love.timer.getTime() * 18) % 2 == 0) and 0.75 or 0.3 end
-    return { { x = self.x - 2 * S * (self.facing or 1), y = self.y + self.sprH / 2 - 16.5 * S,
-               r = LANTERN_R * TILE_PX, color = LAMP, a = a, pulse = 3 } }
+    return self:oneLight(self.x - 2 * S * (self.facing or 1), self.y + self.sprH / 2 - 16.5 * S,
+                         LANTERN_R * TILE_PX, LAMP, a, 3)
 end
 
 local G = 'Saltarín'

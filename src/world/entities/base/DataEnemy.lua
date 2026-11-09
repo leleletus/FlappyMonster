@@ -139,17 +139,6 @@ function DataEnemy:backToWalk()
     self:startWalk()
 end
 
-function DataEnemy:nearestPlayer(level)
-    local best, bd
-    for _, pa in ipairs(level.players or {}) do
-        if not pa.dying and pa.alive ~= false then
-            local d = math.abs(pa.x - self.x) + math.abs(pa.y - self.y) * 0.3
-            if not bd or d < bd then best, bd = pa, d end
-        end
-    end
-    return best, bd
-end
-
 -- ¿Ve a un jugador? A `tiles` casillas como mucho en horizontal (× la dificultad) y `height` en vertical, sin un
 -- bloque sólido entre los dos. Devuelve el más cercano.
 function DataEnemy:seesPlayer(level, tiles, height)

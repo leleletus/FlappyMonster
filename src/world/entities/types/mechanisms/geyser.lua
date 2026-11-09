@@ -192,10 +192,11 @@ function Gey:updateCustom(dt, level)
 end
 
 -- (la cueva: el vapor brilla)
+local GEY_LIGHT = { 0.75, 0.95, 1 }
 function Gey:lights()
     if self:isle() ~= 'cueva' or (self.state ~= 'erupt' and self.state ~= 'warn') then return nil end
     local k = self.state == 'warn' and 0.3 or math.max(0.3, self:amount())
-    return { { x = self.x, y = (self:mouthY() + self:topY()) / 2, r = 220 * k, color = { 0.75, 0.95, 1 }, a = 0.5, pulse = 3 } }
+    return self:oneLight(self.x, (self:mouthY() + self:topY()) / 2, 220 * k, GEY_LIGHT, 0.5, 3)
 end
 
 -- ── Red ───────────────────────────────────────────────────────────────────────

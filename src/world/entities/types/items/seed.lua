@@ -152,12 +152,13 @@ function Seed:updateCustom(dt, level)
 end
 
 -- (la seta de la cueva da luz, como las bayas)
+local SEED_LIGHT = { 0.6, 0.95, 1 }
 function Seed:lights()
     if self:isle() ~= 'cueva' or self.plantH < MIN_H then return nil end
     local k = self:reveal()
     if k <= 0 then return nil end
     local d = plantData('cueva', self.plantH)
-    return { { x = self.plantX, y = self.groundY - d.h * S * k + 30, r = 260 * k, color = { 0.6, 0.95, 1 }, a = 0.45, pulse = 1.5 } }
+    return self:oneLight(self.plantX, self.groundY - d.h * S * k + 30, 260 * k, SEED_LIGHT, 0.45, 1.5)
 end
 
 -- ── Red ───────────────────────────────────────────────────────────────────────

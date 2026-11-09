@@ -1123,16 +1123,7 @@ end
 --   público (0/1/2), su songT·100 (-1), duelo: compás (-1) y compases, vuelta del noqueo songT·100 (-1), nOndas, {ondas…}, nNotas, {id, x, y, vx, vy, color}…, nPlatos, {x, y, girando s·10}… }
 local NOTE_STRIDE, DECK_STRIDE = 6, 3
 local HEAD = 13                                 -- (donde empiezan las ondas)
-local function readList(b, k, stride)
-    local n = type(b[k]) == 'number' and b[k] or 0
-    local list = {}
-    for i = 0, n - 1 do
-        local e = {}
-        for j = 1, stride do e[j] = b[k + 1 + i * stride + j - 1] end
-        list[#list + 1] = e
-    end
-    return list, k + 1 + n * stride
-end
+local readList = require('src/world/entities/base/NetList').read      -- (listas planas del estado propio)
 
 function GC:netPackExtra()
     local out = { math.floor(self.songT * 100), self.rage and 1 or 0, self.markX or 0, self.stunHits or 0, self.phase or 1,

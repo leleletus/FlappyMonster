@@ -16,6 +16,7 @@
 -- Sus súbditos son Crabbies helados (púa de hielo / trampolín de hielo).
 -- Todo lo que se dibuja sale de state + deadTimer + lo que llega en netPackExtra (igual online).
 
+local SIDES = { -1, 1 }        -- (izquierda y derecha: constante, sin una tabla nueva en cada vuelta)
 local Entity      = require 'src/world/entities/base/Entity'
 local Boss        = require 'src/world/entities/base/Boss'
 local SpriteStrip = require 'src/fx/SpriteStrip'
@@ -73,7 +74,7 @@ function IM:clawBoxes()
     local cs = s * A.clawK
     local fx, fy = self.x, self.y + self.sprH / 2
     local out = {}
-    for i, side in ipairs({ -1, 1 }) do
+    for i, side in ipairs(SIDES) do
         local cx = fx + side * (A.clawX * s + A.clawW * cs / 2 - A.clawIn * cs + CLAW_OUT * cs)
         local cy = fy + A.clawY * s - A.clawH * cs / 2 + CLAW_DOWN * cs
         local w, h = A.clawW * cs + 8, A.clawH * cs + 8
@@ -138,7 +139,7 @@ end
 
 function IM:spawnWaves()
     local fy = self.y + self.outerH / 2
-    for _, d in ipairs({ -1, 1 }) do
+    for _, d in ipairs(SIDES) do
         self.nextWave = self.nextWave % 999 + 1
         self.waves[#self.waves + 1] = { id = self.nextWave, x = self.x + d * self.sprW * 0.45, y = fy, dir = d, t = 0 }
     end
@@ -205,7 +206,7 @@ function IM:addField(level)
     local life = (self:rage() and (p.ragePatchTime or 8) or (p.patchTime or 5)) + FIELD_WARN
     local zx0, zx1 = -1e9, 1e9
     if self.zone then zx0, zx1 = self.zone.x0, self.zone.x1 end
-    for _, dir in ipairs({ -1, 1 }) do
+    for _, dir in ipairs(SIDES) do
         local inner = math.floor(self.x + dir * (self.sprW / 2 + 48))      -- (por fuera de las pinzas)
         local x0, x1 = inner, inner + dir * w
         if dir < 0 then x0, x1 = x1, x0 end
@@ -419,7 +420,7 @@ function IM:pose2d(now, moving, walkPhase)
     local st, t = self.state, self.deadTimer or 0
     if st == 'clap' or st == 'clap_stuck' or st == 'dying_iced' then
         local q = (st == 'clap') and math.min(1, t / CLAP_AT) or 1
-        for i, side in ipairs({ -1, 1 }) do
+        for i, side in ipairs(SIDES) do
             if st == 'clap' and t < CLAP_AT then
                 claws[i][1] = side * CLAW_OUT * q * 0.5
                 claws[i][2] = -3.2 * math.sin(q * math.pi * 0.5)

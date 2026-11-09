@@ -84,6 +84,18 @@ need goes through `P` (export it where it is defined: `P.name = name`; import it
 it); a local that is REASSIGNED must live in one part only (or become a field of `P`). A part must not import from
 a part loaded after it.
 
+## Shared between single player and online
+
+What both level states do the same way lives in ONE module, never in two copies (golden rule 1):
+`src/world/systems/Sim.lua` (the simulation glue: bodies, respawn point, entity step…) and
+`src/world/level/SceneLayers.lua` (0.5.182: the ORDER of the scene's layers — sky, back plane, entities behind,
+tiles, ice drips, ambience, lava, vents, back decorations, entities, the players, particles, entities in front,
+decorations, bubbles, snow — drawn into the scene canvas, then the water effect). Each state only passes its
+entities and an `actors(camX, camY)` function that draws its players (`AdventureState:_drawActors`,
+`OnlineAdventureState:_drawActors`); darkness, prompts and the HUD stay in each state. **A new layer goes in
+SceneLayers**, never in one state. (Side effect of the merge: an online spectator now sees particles, which were only
+drawn inside the local player's branch.)
+
 ## Naming
 
 Code identifiers and file names are English (with a few historic Spanish level and type ids); code comments are

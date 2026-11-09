@@ -25,6 +25,7 @@
 -- CONTRA EL TECHO (2026-10-30, el usuario: no solo en la pelea del Escarabajo): todo lo que dispara la catapulta va
 -- marcado (systems/HardLaunch): si se estrella fuerte subiendo, una entidad queda aturdida y un jugador pierde 1.
 -- Red: el desnivel (`d`) en su netPack; los platillos se calculan de él.
+local SIDES = { -1, 1 }        -- (izquierda y derecha: constante, sin una tabla nueva en cada vuelta)
 local Entity = require 'src/world/entities/base/Entity'
 local Isles  = require 'src/world/level/Isles'
 local Weight = require 'src/world/systems/Weight'
@@ -471,7 +472,7 @@ function Scale.drawEditorOverlay(props, cx, cy, zoom)
     local tr = (props.travel or 2.5) * TILE_PX * k
     local w = PAN_W * k
     love.graphics.setColor(1, 0.85, 0.3, 0.9)
-    for _, sx in ipairs({ -1, 1 }) do
+    for _, sx in ipairs(SIDES) do
         love.graphics.rectangle('line', cx + sx * half - w / 2, cy + base, w, PAN_H * k)
         love.graphics.setColor(1, 0.85, 0.3, 0.35)
         love.graphics.rectangle('line', cx + sx * half - w / 2, cy + base - tr, w, 2 * tr + PAN_H * k)

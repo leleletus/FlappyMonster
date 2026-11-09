@@ -27,6 +27,7 @@
 -- = pinza izquierda 10x7 abierta/cerrada (dibujada por el usuario); la derecha es la misma volteada;
 -- spike.png = el pincho del Crabby, al doble). Sonidos: bosses/megacrabby/.
 
+local SIDES = { -1, 1 }        -- (izquierda y derecha: constante, sin una tabla nueva en cada vuelta)
 local Entity      = require 'src/world/entities/base/Entity'
 local Boss        = require 'src/world/entities/base/Boss'
 local Crawler     = require 'src/world/entities/base/Crawler'
@@ -636,7 +637,7 @@ function Mega:pickSummonSpots(level, n)
     local spots = {}
     local d0 = self.outerW / 2 + T * 0.9           -- (fuera de su cuerpo, con margen)
     for d = d0, (x1 - x0) + d0, T / 2 do
-        for _, dir in ipairs({ -1, 1 }) do
+        for _, dir in ipairs(SIDES) do
             local x = math.floor(self.x + dir * d)
             if #spots < n and x >= x0 and x <= x1 then
                 local fy = self:floorBelow(level, x, floorY - 2 * T)
@@ -1211,7 +1212,7 @@ function Mega:pose2d(now, moving, walkPhase)
     local sx, sy, shx = 1, 1, 0
     local claws = { { 0, 0 }, { 0, 0 } }                 -- izquierda, derecha: dx, dy
     local function swing(amp, speed, spread)
-        for i, side in ipairs({ -1, 1 }) do
+        for i, side in ipairs(SIDES) do
             local ph = (i == 1) and 0 or 1.9
             claws[i][2] = math.sin(now * speed + ph) * amp
             claws[i][1] = side * (spread or 0)
@@ -1232,7 +1233,7 @@ function Mega:pose2d(now, moving, walkPhase)
             sx, sy = 1 - 0.07 * k - tr, 1 + 0.16 * k + tr
             shx = math.floor(math.sin(now * 61) * 2 * self.MS / 4)
             spikeK = 1 + 0.1 * k + math.sin(now * 40) * 0.04
-            for i, side in ipairs({ -1, 1 }) do
+            for i, side in ipairs(SIDES) do
                 claws[i][1] = side * 1.4 * k
                 claws[i][2] = -3.4 * k + math.sin(now * 34 + i * 2) * 0.6
             end
@@ -1257,7 +1258,7 @@ function Mega:pose2d(now, moving, walkPhase)
             -- Amenaza: puñetazos al aire alternando las pinzas, botando
             local k = math.min(1, t / 0.12) * math.min(1, (1.15 - t) / 0.15)
             sy, sx = 1 + 0.05 * math.abs(math.sin(t * 16)) * k, 1 - 0.03 * math.abs(math.sin(t * 16)) * k
-            for i, side in ipairs({ -1, 1 }) do
+            for i, side in ipairs(SIDES) do
                 local ph = math.max(0, math.sin(t * 16 + (i == 1 and 0 or math.pi)))
                 claws[i][1] = side * (0.4 + 1.2 * ph) * k
                 claws[i][2] = (-1.0 - 2.6 * ph) * k
@@ -1273,7 +1274,7 @@ function Mega:pose2d(now, moving, walkPhase)
                 local q = spring(t - 0.5, 0.18, 18, 5)
                 sx, sy = 1 - 0.05 - q * 0.5, 1 + 0.1 + q
                 spikeK = 1.35 + spring(t - 0.5, 0.25, 30, 5)
-                for i, side in ipairs({ -1, 1 }) do claws[i][1] = side * 1.0; claws[i][2] = -1.6 end
+                for i, side in ipairs(SIDES) do claws[i][1] = side * 1.0; claws[i][2] = -1.6 end
             end
         end
     elseif st == 'roar_in' then
@@ -1282,11 +1283,11 @@ function Mega:pose2d(now, moving, walkPhase)
         -- Aterriza del cielo: aplastado y rebotando
         local q = spring(t, 0.32, 17, 5)
         sx, sy = 1 + q, 1 - q
-        for i, side in ipairs({ -1, 1 }) do claws[i][1] = side * 1.2 * math.max(0, q * 3); claws[i][2] = 1.2 end
+        for i, side in ipairs(SIDES) do claws[i][1] = side * 1.2 * math.max(0, q * 3); claws[i][2] = 1.2 end
     elseif st == 'fall_in' then
         -- Cayendo: estirado, patas y pinzas arriba agitándose
         sx, sy = 0.9, 1.14
-        for i, side in ipairs({ -1, 1 }) do
+        for i, side in ipairs(SIDES) do
             claws[i][1] = side * 0.8
             claws[i][2] = -2.4 + math.sin(now * 26 + i * 2) * 0.8
         end
@@ -1295,7 +1296,7 @@ function Mega:pose2d(now, moving, walkPhase)
         -- Andando: rebota con cada paso y las pinzas se mecen a contrapaso
         local b = math.sin(walkPhase * TAU)
         sy, sx = 1 + 0.045 * b, 1 - 0.03 * b
-        for i, side in ipairs({ -1, 1 }) do
+        for i, side in ipairs(SIDES) do
             local w = walkPhase * TAU + (i == 1 and 0 or math.pi)
             claws[i][1], claws[i][2] = math.cos(w) * 0.6, math.sin(w) * 1.3
         end
@@ -1308,7 +1309,7 @@ function Mega:pose2d(now, moving, walkPhase)
         -- Invoca: se alza con las pinzas arriba, castañeteando
         local up = math.sin(math.min(1, t / 0.45) * math.pi * 0.5)
         sx, sy = 1 - 0.08 * up, 1 + 0.14 * up
-        for i, side in ipairs({ -1, 1 }) do
+        for i, side in ipairs(SIDES) do
             claws[i][1] = side * 0.8 * up
             claws[i][2] = -3.0 * up + math.sin(now * 30 + i) * 0.5
         end
@@ -1316,7 +1317,7 @@ function Mega:pose2d(now, moving, walkPhase)
         -- En la pared, a punto de saltar: encogido, pinzas arriba temblando
         local k = math.min(1, t / 0.5)
         sx, sy = 1 + 0.08 * k, 1 - 0.12 * k
-        for i, side in ipairs({ -1, 1 }) do
+        for i, side in ipairs(SIDES) do
             claws[i][1] = side * 0.5
             claws[i][2] = -2 * k + math.sin(now * 38 + i * 2) * 0.5
         end
@@ -1336,7 +1337,7 @@ function Mega:pose2d(now, moving, walkPhase)
         sx, sy = 1 + 0.10 * k, 1 - 0.14 * k
         shx = math.floor(math.sin(t * 38) * 2 * self.MS / 4)
         local snap, which = windupSnap(t)
-        for i, side in ipairs({ -1, 1 }) do
+        for i, side in ipairs(SIDES) do
             local jab = (snap and (which == 0 or which == i)) and 1 or 0
             claws[i][1] = side * 0.6 * k + self.facing * 0.9 * jab
             claws[i][2] = -2.2 * k + 0.8 * jab + math.sin(now * 42 + i) * 0.3
@@ -1352,7 +1353,7 @@ function Mega:pose2d(now, moving, walkPhase)
     elseif st == 'aim' then
         -- Colgado, a punto de caer: vibra y abre las pinzas
         sx, sy = 1 + 0.03 * math.sin(now * 30), 1 - 0.03 * math.sin(now * 30)
-        for i, side in ipairs({ -1, 1 }) do
+        for i, side in ipairs(SIDES) do
             claws[i][1] = side * 0.8
             claws[i][2] = math.sin(now * 20 + i * 2) * 1.2
         end
@@ -1380,7 +1381,7 @@ function Mega:pose2d(now, moving, walkPhase)
         -- Aturdido: se bambolea y las pinzas cuelgan sueltas, meciéndose a destiempo con el vaivén
         local w = math.sin(now * 7)
         sy, sx = 1 + 0.05 * math.abs(w), 1 - 0.03 * math.abs(w)
-        for i, side in ipairs({ -1, 1 }) do
+        for i, side in ipairs(SIDES) do
             claws[i][1] = side * 0.3 + w * 0.9 + math.sin(now * 23 + i * 2) * 0.2
             claws[i][2] = 0.6 + math.sin(now * 7 + (i == 1 and 0.9 or -0.9)) * 1.6 + math.sin(now * 31 + i) * 0.3
         end
@@ -1388,7 +1389,7 @@ function Mega:pose2d(now, moving, walkPhase)
         -- Huyendo, en un salto: estirado subiendo, aplastado al bajar; pinzas arriba agitándose
         local up = (self._rdy or 0) < 0
         sx, sy = up and 0.92 or 1.05, up and 1.1 or 0.96
-        for i, side in ipairs({ -1, 1 }) do
+        for i, side in ipairs(SIDES) do
             claws[i][1] = side * 0.7
             claws[i][2] = (up and -2.2 or -1.2) + math.sin(now * 26 + i * 2) * 0.8
         end

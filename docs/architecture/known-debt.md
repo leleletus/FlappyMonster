@@ -18,8 +18,7 @@ would help future work.
    Unifying it means choosing one order and re-checking every gameplay harness: a design decision, not a rename.
 2. **Large single-system files** that are long because the system is big, not tangled — left as they are:
    `snowboss.lua` (1841), `megacrabby.lua` (1613), `StoryMapState.lua` (~1300), `mirror.lua` (1095), `megagummy.lua`
-   (1078), `OnlineHubState.lua` (~750), `Particles.lua` (993, one long `elseif` chain per particle kind — a table of
-   kinds would let a kind be added without touching the function).
+   (1078), `OnlineHubState.lua` (~750).
 3. **Two unrelated "difficulty" tables**: `DIFFICULTIES` in `settings.lua` (Flappy mode pacing) and
    `src/core/Difficulty.lua` (Adventure modifiers). Only the name is confusing.
 
@@ -45,11 +44,20 @@ from `FlappyMonster_originals`.
 
 ## Fixed (history)
 
+- 0.5.182 (optimisation / modularisation round): `Particles.lua`'s `elseif` chain is a table of kinds (`EMIT`); the
+  scene layer order is one module for single player and online (`SceneLayers`); duplicated helpers moved to the base
+  (`Entity:nearestPlayer`, `Entity:oneLight`, `NetList.read`). Details in [performance](../testing/performance.md).
+
 - 0.5.175: `bossdrops` built its food / lives reserves with `pairs(...)` over a table, so server and clients could
   create the Extreme / Xtra reserves in a different order (online nondeterminism); placements now walk an ordered
   `ipairs(KINDS)` list.
 
 ## Failing tests
+
+- Also failing before 0.5.182 (identical output on the clean tree, 2026-11-09, not investigated): `bot_nav` level
+  `ciudadela_alterna` (stopped up to 6.4 s), `gloomy_rules` check `parkour` (the farthest Gloomy stays 1.6 tiles away),
+  `free_play` check `rush_arena` (`valle_redcoptero.json` does not start alone: `idle`). On the Mac, `project_check`
+  fails on `tools/music/ref` (a git-ignored folder that only exists on the Linux machine).
 
 - `run.sh bot_nav`, level `cascada_dorada`: fails its water check (0.1 jumps/s in 30 s in the water). Already failing
   before 0.5.175 (identical output at `fe2fad5f~1`); not investigated.

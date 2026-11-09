@@ -774,16 +774,7 @@ function GB:netPackExtra()
     return BossWaves.pack(self.waves, out)
 end
 
-local function readList(b, k, stride)
-    local n = type(b[k]) == 'number' and b[k] or 0
-    local list = {}
-    for i = 0, n - 1 do
-        local e = {}
-        for j = 1, stride do e[j] = b[k + 1 + i * stride + j - 1] end
-        list[#list + 1] = e
-    end
-    return list, k + 1 + n * stride
-end
+local readList = require('src/world/entities/base/NetList').read      -- (listas planas del estado propio)
 
 function GB:netApplyExtra(a, b, f)
     if type(b[1]) ~= 'number' then return end

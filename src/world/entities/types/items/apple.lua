@@ -57,7 +57,7 @@ function Apple:canBeStomped() return false end
 function Apple:lights()
     local c = GLOW[Apple.skinFor(self.props, self.levelRef)]
     if not c or self.state == 'dead' then return nil end
-    return { { x = self.x, y = self.y, r = 70, color = c, a = 0.35, pulse = 2 } }
+    return self:oneLight(self.x, self.y, 70, c, 0.35, 2)
 end
 
 function Apple:render(camX, camY)

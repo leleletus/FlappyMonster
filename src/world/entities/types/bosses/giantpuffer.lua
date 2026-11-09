@@ -511,16 +511,7 @@ function GP:netPackExtra()
     return out
 end
 
-local function readList(b, k, stride)
-    local n = b[k] or 0
-    local list = {}
-    for i = 0, n - 1 do
-        local e = {}
-        for j = 1, stride do e[j] = b[k + 1 + i * stride + j - 1] end
-        list[#list + 1] = e
-    end
-    return list
-end
+local readList = require('src/world/entities/base/NetList').read      -- (listas planas del estado propio)
 
 function GP:netApplyExtra(a, b, f)
     if type(b[1]) ~= 'number' then return end

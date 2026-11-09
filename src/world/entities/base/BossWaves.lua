@@ -6,6 +6,7 @@
 --   cfg = { spd = px/s, life = s, w = ancho, h = alto (de la caja, desde el suelo), hit = { vida, vx, vy, s, s } }
 -- Las ondas del jefe van en `boss.waves` ({ id, x, y, dir, t, hit = {} }) con un `id` estable (boss.nextId) para
 -- interpolar en red: BossWaves.pack / BossWaves.unpack van dentro de su netPackExtra / netApplyExtra.
+local SIDES = { -1, 1 }        -- (izquierda y derecha: constante, sin una tabla nueva en cada vuelta)
 local Boss = require 'src/world/entities/base/Boss'
 
 local BossWaves = {}
@@ -14,7 +15,7 @@ local STRIDE = 5
 -- Dos ondas, una a cada lado, saliendo de los costados del jefe (`halfW`) en la altura de sus pies `y`
 function BossWaves.spawn(boss, y, halfW)
     boss.waves, boss.nextId = boss.waves or {}, boss.nextId or 0
-    for _, d in ipairs({ -1, 1 }) do
+    for _, d in ipairs(SIDES) do
         boss.nextId = boss.nextId % 999 + 1
         boss.waves[#boss.waves + 1] = { id = boss.nextId, x = math.floor(boss.x + d * (halfW + 4)), y = math.floor(y),
                                         dir = d, t = 0, hit = {} }

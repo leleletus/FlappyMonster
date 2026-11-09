@@ -41,6 +41,7 @@
 -- está en el suelo). Graba a TODOS a la vez, así al cambiar de objetivo sigue
 -- el retardo del nuevo sin saltos.
 
+local SIDES = { -1, 1 }        -- (izquierda y derecha: constante, sin una tabla nueva en cada vuelta)
 local Entity          = require 'src/world/entities/base/Entity'
 local Boss            = require 'src/world/entities/base/Boss'
 local PlayerAdventure = require 'src/player/PlayerAdventure'
@@ -1037,7 +1038,7 @@ function Mirror:render(camX, camY)
         local cell = math.max(1, math.floor(s / 2 + 0.5))
         local joy = M('joy_eyes')
         local ew, eh = joy.w, joy.h
-        for _, side in ipairs({ -1, 1 }) do
+        for _, side in ipairs(SIDES) do
             local cx = math.floor(x + side * 1.2 * s * f + 0.5)
             local cy = math.floor(y + bob - 2.5 * s + 0.5)
             PS.draw(joy, cx - math.floor(ew * cell / 2), cy - math.floor(eh * cell / 2), 0, cell, cell)

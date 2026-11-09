@@ -11,7 +11,10 @@ variant needs its own kind name). **From drawing** call `Particles.emit` directl
 
 ## Particles
 
-- `src/fx/Particles.lua` — Particles.emit(kind,x,y) — kinds: gp_land, gp_start, block_break, oneup, spawn, spike_land, spike_pop, collect, checkpoint, boss_hit, boss_blast, boss_big_blast, mortar_blast, fire_puff, ember, exhaust, smoke, sparks, mega_* (Mega Crabby), shake_small/shake_big (screen shake: states add Particles.shakeOffset() to the camera when drawing)
+- `src/fx/Particles.lua` — Particles.emit(kind,x,y) — **each kind is one function of the `EMIT` table**
+  (`EMIT['kind'] = function(kind, x, y, opts) … end`; kinds that share a look point to the same function). To add a
+  kind: one more entry, `emit` is not touched (until 0.5.182 it was one long `elseif` chain). `opts` is read-only (a
+  shared empty table when nil). Kinds: gp_land, gp_start, block_break, oneup, spawn, spike_land, spike_pop, collect, checkpoint, boss_hit, boss_blast, boss_big_blast, mortar_blast, fire_puff, ember, exhaust, smoke, sparks, mega_* (Mega Crabby), shake_small/shake_big (screen shake: states add Particles.shakeOffset() to the camera when drawing)
 
 - **Physical particles** (`phys = true` in `Particles`): collide with the level set by
   `Particles.setLevel(level)` (Adventure/Online states): bounce off walls/ceilings,
@@ -46,3 +49,13 @@ variant needs its own kind name). **From drawing** call `Particles.emit` directl
 - `src/fx/Particles.lua` limits (0.5.11): at 600 live particles the oldest one is marked to go on the next update
   (hard cap 1200) and finished particles are removed by compacting the list in one pass (same draw order). Before,
   `table.remove(list, 1)` shifted the whole list for every new particle once full: bursts cost n².
+
+## History
+
+- 0.5.182 (optimisation round): the `elseif` chain became the `EMIT` table. It exposed a hidden bug: `snow_burst` was
+  written TWICE. The first one (the Big Snowball's huge burst: a shockwave and ~64 particles) always won; the second,
+  the light snow-dust cloud written for the **Avalanche** (14 particles), never ran. The Avalanche emits `snow_burst`
+  on release and once per column at the bottom, so it has always shown the Snowball's burst. Behaviour was kept; the
+  Avalanche cloud is now kind `avalanche_dust` (unused). **Waiting for the user:** switching `avalanche.lua` to
+  `avalanche_dust` is one word in two lines (looks lighter, far fewer particles on impact).
+

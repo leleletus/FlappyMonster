@@ -21,6 +21,7 @@
 -- graba en cada POSE —una por fila que recorre—: los nodos de esa pose son las casillas donde queda su cara y sus
 -- aristas se graban con él ahí. En la partida (`track`), un nodo de cuerpo vale solo si la cara del cuerpo está
 -- AHORA en su fila, y su x / y siguen al cuerpo: el bot planea hasta el platillo esté donde esté.
+local SIDES = { -1, 1 }        -- (izquierda y derecha: constante, sin una tabla nueva en cada vuelta)
 local P = require 'src/network/Protocol'
 local json = require 'libs/json'
 
@@ -76,7 +77,7 @@ local function macros()
     if MACROS then return MACROS end
     MACROS = {}
     local function add(m) MACROS[#MACROS + 1] = m end
-    for _, d in ipairs({ -1, 1 }) do
+    for _, d in ipairs(SIDES) do
         add(macro(d, 0, 0, MAXF, nil, 'walkoff'))
         for _, hold in ipairs({ 6, 30 }) do
             for _, dirTo in ipairs({ MAXF, 14 }) do
@@ -145,7 +146,7 @@ end
 
 local function cellNode(g, c, r)
     if g.nodes[nodeId(c, r)] then return nodeId(c, r) end
-    for _, dc in ipairs({ -1, 1 }) do
+    for _, dc in ipairs(SIDES) do
         if g.nodes[nodeId(c + dc, r)] then return nodeId(c + dc, r) end
     end
     return nil
@@ -160,7 +161,7 @@ function BotNav.nodeAt(g, x, y, h)
     if g.bodyNodes and g.bodyNodes[1] then
         local n = id and g.nodes[id]
         if not n or (n.body and not n.live) then
-            for _, dr in ipairs({ -1, 1 }) do
+            for _, dr in ipairs(SIDES) do
                 local alt = cellNode(g, c, r + dr)
                 if alt and g.nodes[alt].body and g.nodes[alt].live then return alt end
             end
@@ -446,7 +447,7 @@ function BotNav.buildOne(level, opts, ents, nearOnly)
             local out = {}
             g.edges[id] = out
             -- caminar a la de al lado (sin simular: la ejecución lo corrige en bucle cerrado)
-            for _, dc in ipairs({ -1, 1 }) do
+            for _, dc in ipairs(SIDES) do
                 local to = nodeId(n.c + dc, n.r)
                 if g.nodes[to] then out[#out + 1] = { to = to, cost = math.ceil(TILE_PX / ADV_MOVE_SPD * 60), walk = dc } end
             end

@@ -143,6 +143,31 @@ local function restoreGlow(scene)
     love.graphics.setShader()
 end
 
+-- Estado del fotograma que se está dibujando (lo ponen Darkness.render; lo leen glow y lightsMult): funciones de
+-- módulo en vez de dos cierres nuevos en cada fotograma
+local WHITE, EMPTY = { 1, 1, 1 }, {}
+local FAN_CACHE, TOP_DARK = {}, { AMBIENT, AMBIENT, AMBIENT * 1.5 }
+local fDark, fDeepY, fM, fNow = false, nil, nil, 0
+local function glow(lx, ly, L, mult)
+    local c = L.color or WHITE
+    local a = (L.a or 0.14) * mult * (1 + 0.12 * math.sin(fNow * (L.pulse or 1.7) + lx * 0.05))
+    if fDark then
+        love.graphics.setColor(c[1] * a * 0.5, c[2] * a * 0.5, c[3] * a * 0.5, 1)
+        disc(lx, ly, L.r)
+        love.graphics.setColor(c[1] * a, c[2] * a, c[3] * a, 1)
+        disc(lx, ly, L.r * 0.55)
+    else
+        -- (degradado en RINGS escalones: la luz se va apagando hacia fuera, sin borde de disco)
+        love.graphics.setColor(c[1] * a, c[2] * a, c[3] * a, 1)                 -- (RINGS anillos: light_rings.png)
+        sprite('rings', lx, ly, L.r)
+    end
+end
+local function lightsMult(y)
+    if fDark then return 1 end
+    local H = (fDeepY and y > fDeepY) and DEEP or fM
+    return H and H.lights or 0
+end
+
 -- `scene` = el lienzo de la escena (opcional): con él, lo incandescente del fondo sigue brillando de noche
 function Darkness.render(level, camX, camY, sources, entities, scene)
     if not Darkness.active(level) then return end
@@ -162,7 +187,7 @@ function Darkness.render(level, camX, camY, sources, entities, scene)
     local prevCanvas = love.graphics.getCanvas()
     love.graphics.setCanvas(canvas)
     -- 1) la luz AMBIENTE: la del ánimo arriba y, con profundidad, la penumbra de cueva bajo la superficie
-    local top = dark and { AMBIENT, AMBIENT, AMBIENT * 1.5 } or (M and M.amb) or { 1, 1, 1 }
+    local top = dark and TOP_DARK or (M and M.amb) or WHITE
     love.graphics.clear(top[1], top[2], top[3], 1)
     local deepY
     if not dark and level.depth and mood ~= 'cave' then
@@ -199,7 +224,9 @@ function Darkness.render(level, camX, camY, sources, entities, scene)
         end
         if dark and s.on then
             local ox, oy, dir = Lights.origin(s.x, s.y, s.facing or 1)
-            local cache = {}
+            -- (los rayos se calculan una vez por linterna y valen para todas las bandas: se vacían por linterna)
+            local cache = FAN_CACHE
+            for i = 0, RAYS do cache[i] = nil end
             for _, b in ipairs(BANDS) do
                 fan(ox, oy, dir, b[1], level, cache)
                 love.graphics.setColor(b[2], b[2], b[2] * 0.94, 1)
@@ -212,26 +239,7 @@ function Darkness.render(level, camX, camY, sources, entities, scene)
     -- 2) LUCES de decoraciones (su tipo declara `light = { r = px, color = {r, g, b}, a = fuerza, dy = px }`:
     -- setas luminosas, cristales, antorchas...) y de tiles (la lava), en dos escalones. No son linternas (no
     -- cuentan para la simulación: Lights); a oscuras, muy tenues; de noche y en cueva, más
-    local now = love.timer.getTime()
-    local function glow(lx, ly, L, mult)
-        local c = L.color or { 1, 1, 1 }
-        local a = (L.a or 0.14) * mult * (1 + 0.12 * math.sin(now * (L.pulse or 1.7) + lx * 0.05))
-        if dark then
-            love.graphics.setColor(c[1] * a * 0.5, c[2] * a * 0.5, c[3] * a * 0.5, 1)
-            disc(lx, ly, L.r)
-            love.graphics.setColor(c[1] * a, c[2] * a, c[3] * a, 1)
-            disc(lx, ly, L.r * 0.55)
-        else
-            -- (degradado en RINGS escalones: la luz se va apagando hacia fuera, sin borde de disco)
-            love.graphics.setColor(c[1] * a, c[2] * a, c[3] * a, 1)                 -- (RINGS anillos: light_rings.png)
-            sprite('rings', lx, ly, L.r)
-        end
-    end
-    local function lightsMult(y)
-        if dark then return 1 end
-        local H = (deepY and y > deepY) and DEEP or M
-        return H and H.lights or 0
-    end
+    fDark, fDeepY, fM, fNow = dark, deepY, M, love.timer.getTime()
     for _, d in ipairs(level.decorations or {}) do
         local L = d.def and d.def.light
         if L and d.x > camX - L.r and d.x < camX + WINDOW_W + L.r and d.y > camY - L.r and d.y < camY + WINDOW_H + L.r then
@@ -253,11 +261,11 @@ function Darkness.render(level, camX, camY, sources, entities, scene)
     end
     for _, e in pairs(entities or level.liveEntities or {}) do
         if e.alive ~= false and e.lights then
-            for _, L in ipairs(e:lights() or {}) do
+            for _, L in ipairs(e:lights() or EMPTY) do
                 if L.x > camX - L.r and L.x < camX + WINDOW_W + L.r and L.y > camY - L.r and L.y < camY + WINDOW_H + L.r then
                     local k = lightsMult(L.y)
                     if k > 0 then
-                        if L.cast and dark then castLight(level, L.x, L.y, L.r, L.color or { 1, 1, 1 }, L.a or 0.5)
+                        if L.cast and dark then castLight(level, L.x, L.y, L.r, L.color or WHITE, L.a or 0.5)
                         else glow(L.x, L.y, L, k) end
                     end
                 end

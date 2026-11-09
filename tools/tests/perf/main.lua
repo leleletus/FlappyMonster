@@ -129,10 +129,7 @@ local function measure(name, lazyOk)
         for i = 1, math.min(TOP, #cl) do print(('      %7.1f  %s'):format(cl[i][2] / N, cl[i][1])) end
         callers = {}
     end
-    if GP then
-        print('   basura por función (KB por fotograma, sin las que llama):')
-        for _, e in ipairs(GP.top(TOP, N)) do print(('      %7.2f  %s'):format(e[2], e[1])) end
-    end
+    local garbTop = GP and GP.top(TOP, N)        -- (se imprime bajo la cabecera de su escena, no encima)
     local st = stats
     stats = nil
     if os.getenv('SHOTS') then
@@ -159,6 +156,10 @@ local function measure(name, lazyOk)
         table.sort(pl, function(a, b) return a[2] > b[2] end)
         print('   perfil (muestras, función):')
         for i = 1, math.min(TOP, #pl) do print(('      %5.1f%%  %s'):format(100 * pl[i][2] / ps, pl[i][1])) end
+    end
+    if garbTop then
+        print('   basura por función (KB por fotograma, sin las que llama):')
+        for _, e in ipairs(garbTop) do print(('      %7.2f  %s'):format(e[2], e[1])) end
     end
     check('basura', g <= LIMIT_GARBAGE, ('%s: %.1f KB por fotograma (límite %d)'):format(name, g, LIMIT_GARBAGE))
     -- (los archivos que se leen en régimen cuentan como recursos: deberían leerse al cargar)

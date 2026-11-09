@@ -43,6 +43,20 @@ function G.wrap()
             if mt and type(mt.__index) == 'table' then wrapTable(mt.__index, short .. ':') end
         end
     end
+    -- Las CLASES de las entidades no son módulos (cada tipo devuelve su definición y la clase va en `def.class`):
+    -- sin esto su basura (render, update...) se cargaba a quien las llama (p. ej. AdventureState._renderScene).
+    -- Se envuelve la clase de cada tipo y su cadena de padres (Entity, Crawler, Boss...), con el nombre del tipo.
+    local ET = package.loaded['src/world/entities/base/EntityTypes']
+    if ET and ET.byName then
+        for name, def in pairs(ET.byName) do
+            local cls = def.class
+            while type(cls) == 'table' and not seen[cls] do
+                wrapTable(cls, name .. ':')
+                local mt = getmetatable(cls)
+                cls = mt and (type(mt.__index) == 'table' and mt.__index or mt) or nil
+            end
+        end
+    end
 end
 
 function G.reset() garb = {} end

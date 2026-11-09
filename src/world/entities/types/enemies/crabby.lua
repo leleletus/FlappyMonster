@@ -1,6 +1,7 @@
 -- Crabby: cangrejo que camina por suelo o techo (propiedad attach). Tras una
 -- pausa puede esconderse en su caparazón: saca un pincho (zona de peligro) y
 -- mientras está escondido no se le puede pisotear. De vez en cuando se asoma.
+local SIDES = { -1, 1 }        -- (izquierda y derecha: constante, sin una tabla nueva en cada vuelta)
 local Entity  = require 'src/world/entities/base/Entity'
 local Crawler = require 'src/world/entities/base/Crawler'
 local Anim    = require 'src/fx/Anim'
@@ -637,7 +638,7 @@ function Crabby:drawClaws(drawX, feetY, flipped)
     love.graphics.translate(drawX, feetY)
     if flipped then love.graphics.scale(1, -1) end
     love.graphics.setColor(1, 1, 1, 1)
-    for i, side in ipairs({ -1, 1 }) do
+    for i, side in ipairs(SIDES) do
         local cl = self._claws[i]
         local fr, dx, dy = 1, 0, 0                        -- 1 abierta, 2 cerrada; desplazamiento en px de arte
         if sink > 0 then

@@ -3,6 +3,7 @@
 -- de muerte del monstruito (monstrito4.png). Cada píxel de la X mide medio
 -- píxel del sprite, como en el juego original.
 
+local SIDES = { -1, 1 }        -- (izquierda y derecha: constante, sin una tabla nueva en cada vuelta)
 local DeadEyes = {}
 local img
 
@@ -20,7 +21,7 @@ function DeadEyes.drawPair(mx, my, sep, s, r, g, b, a)
     local cell = math.max(1, math.floor(s / 2 + 0.5))      -- píxel de la X en pantalla
     local iw, ih = img.w, img.h
     love.graphics.setColor(r or 1, g or 1, b or 1, a or 1)
-    for _, side in ipairs({ -1, 1 }) do
+    for _, side in ipairs(SIDES) do
         local cx = math.floor(mx + side * sep * s + 0.5)
         local cy = math.floor(my + 0.5)
         require('src/player/PlayerSprite').draw(img, cx - math.floor(iw * cell / 2), cy - math.floor(ih * cell / 2), 0, cell, cell)

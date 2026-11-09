@@ -11,6 +11,7 @@
 -- al final), los puentes entre mundos, las decoraciones, los bichos y el jefe de cada castillo. El orden
 -- de mundos y niveles sigue siendo src/story/Worlds.lua; el progreso, src/story/Run.lua.
 -- La geometría de pantalla se calcula al dibujar (WINDOW_W cambia: PC, móvil, Switch).
+local SIDES = { -1, 1 }        -- (izquierda y derecha: constante, sin una tabla nueva en cada vuelta)
 local BaseState     = require 'src/core/BaseState'
 local CornerButtons = require 'src/ui/CornerButtons'
 local PixelFont     = require 'src/ui/PixelFont'
@@ -1170,7 +1171,7 @@ function StoryMapState:_drawCritters(cx, cy)
                         local cl = def.claw
                         local ci = img(cl.file)
                         local fh = ci:getHeight()
-                        for k, side in ipairs({ -1, 1 }) do
+                        for k, side in ipairs(SIDES) do
                             local ph = (k == 1) and 0 or 1.9
                             local snap = (math.floor(self.t * 1.3 + i * 0.7 + k * 0.5) % 4 == 0) and (self.t * 1.3 + i * 0.7 + k * 0.5) % 1 < 0.2
                             local dy = math.sin(self.t * 9 + ph + i) * 0.55
@@ -1258,7 +1259,7 @@ function StoryMapState:_drawBossArt(art, bx, by, w, mul)
     if cl and (big or cl.small) then
         local ci = img(cl.file)
         local fh = ci:getHeight()
-        for k, side in ipairs({ -1, 1 }) do
+        for k, side in ipairs(SIDES) do
             local ph = (k == 1) and 0 or 1.9
             local q = self.t * 1.1 + w * 0.6 + k * 0.5
             local fr = (math.floor(q) % 3 == 0 and q % 1 < 0.22) and 2 or 1          -- un chasquido de vez en cuando
@@ -1584,7 +1585,7 @@ function StoryMapState:_drawHud()
     if Input.lastDevice ~= 'touch' then love.graphics.printf(L('story.map_hint'), 100, by + 80, nameW, 'center') end
     -- flechas: nivel anterior / siguiente
     local cur = stopIndex(self.world, self.node)
-    for _, side in ipairs({ -1, 1 }) do
+    for _, side in ipairs(SIDES) do
         local i = stepStop(cur, side)                  -- (la anterior / siguiente que se VE)
         if i then
             local x, y, aw, ah = arrowRect(side)

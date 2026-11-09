@@ -2,10 +2,6 @@
 -- PARTE de src/states/online/OnlineAdventureState.lua: el dibujo de la partida (escena, jugadores, entidades, oscuridad, hitboxes).
 -- La carga OnlineAdventureState.lua con require(...)(OnlineAdventureState, P): añade sus funciones a la tabla OnlineAdventureState. P = lo que
 -- antes eran locales del archivo y comparten las partes.
-local IceDrips = require 'src/fx/IceDrips'
-local LavaFx   = require 'src/fx/LavaFx'
-local Sky      = require 'src/fx/Sky'
-local Snowfall = require 'src/fx/Snowfall'
 local L = require 'src/core/Lang'
 local PlayerAdventure      = require 'src/player/PlayerAdventure'
 local PixelIcons           = require 'src/ui/PixelIcons'
@@ -17,6 +13,7 @@ local BossHud              = require 'src/ui/BossHud'
 local RhythmDuel           = require 'src/ui/RhythmDuel'
 local PointAreas           = require 'src/world/systems/PointAreas'
 local Darkness             = require 'src/fx/Darkness'
+local SceneLayers          = require 'src/world/level/SceneLayers'
 
 return function(OnlineAdventureState, P)
 local INTRO_DUR, BANNER_DUR = P.INTRO_DUR, P.BANNER_DUR
@@ -54,55 +51,21 @@ function OnlineAdventureState:render()
     self.camX, self.camY = realCamX, realCamY
 end
 
-function OnlineAdventureState:_renderScene()
-
-    love.graphics.push()
-    love.graphics.origin()
-    -- El recorte de lovesize (bandas negras) está en píxeles de la PANTALLA:
-    -- dentro del canvas de la escena (tamaño lógico) recortaba otra zona y, con
-    -- la ventana a otro tamaño que 1280x720, el juego salía cortado/descuadrado
-    local scX, scY, scW, scH = love.graphics.getScissor()
-    love.graphics.setScissor()
-    love.graphics.setCanvas(self.sceneCanvas)
-    love.graphics.clear(0, 0, 0, 1)
-
-    -- Cielo y fondo con paralaje (bioma del nivel; src/fx/Sky.lua)
-    Sky.punch = Darkness.active(self.level) and not self.level.dark      -- (lo incandescente del fondo: ver Sky.lua)
-    Sky.render(self.level, self.camX, self.camY)
-    Sky.punch = false
-
-    -- Nivel (y, antes, el plano de fondo y lo que las entidades dibujan detrás de sus bloques)
-    self.level:renderBackPlane(self.camX, self.camY)
-    require('src/world/entities/Entities').renderBack(self.enemyRenderers, self.camX, self.camY)
-    self.level:render(self.camX, self.camY, true)
-    IceDrips.render(self.level, self.camX, self.camY)      -- (gotas del hielo: solo dibujo)
-    require('src/fx/Ambience').tick(self.level)            -- (ambiente de la isla: cuevas, jungla... solo sonido)
-    LavaFx.render(self.level, self.camX, self.camY)        -- (burbujas de la lava: solo dibujo)
-    self.level:renderVents(self.camX, self.camY)
-    self.level:renderFoliageBack(self.camX, self.camY)
-
-    -- Enemigos (estado controlado por el servidor)
-    require('src/fx/Silhouette').level = self.level      -- (filo de los enemigos oscuros en lo oscuro: `darkEdge`)
-    for i, er in pairs(self.enemyRenderers) do
-        if er.alive and not er:drawsInFront() then
-            (er.renderLive or er.render)(er, self.camX, self.camY)
-        end
-    end
-
-    -- (en lo oscuro —a oscuras, noche, cuevas— los monstruos llevan su fondo blanco: src/fx/Silhouette.lua)
-    PlayerAdventure.lightLevel = self.level
+-- Lo que va entre las entidades de atrás y las de delante (SceneLayers: el orden de las capas, compartido con un
+-- jugador)
+function OnlineAdventureState:_drawActors(camX, camY)
     -- Jugadores remotos via OnlinePlayer (excluye al propio)
     local adminId = self.currentRoom and self.currentRoom.adminId
     for _, rp in pairs(self.remotePlayers) do
         rp.isHost = (rp.id == adminId)
         -- (en el duelo de ritmo no están en la arena: salen bailando en el minijuego — src/ui/RhythmDuel.lua —)
-        if rp.visible and not RhythmDuel.hides(self.level, rp.x, rp.y) then rp:render(self.camX, self.camY) end
+        if rp.visible and not RhythmDuel.hides(self.level, rp.x, rp.y) then rp:render(camX, camY) end
     end
 
     -- Jugador propio ya en la meta
     if self.selfGhost and self.selfGhost.visible and self.ownData.finished then
         self.selfGhost.isHost = (self.selfGhost.id == adminId)
-        self.selfGhost:render(self.camX, self.camY)
+        self.selfGhost:render(camX, camY)
     end
 
     -- Jugador propio via simulación local (posición interpolada + corrección suave)
@@ -110,54 +73,42 @@ function OnlineAdventureState:_renderScene()
         local pa = self.localPa
         local sx, sy = pa.x, pa.y
         pa.x, pa.y = self.renderX, self.renderY
-        if not RhythmDuel.hides(self.level, pa.x, pa.y) then pa:render(self.camX, self.camY) end
+        if not RhythmDuel.hides(self.level, pa.x, pa.y) then pa:render(camX, camY) end
         pa.isLocalView = true
-        PointAreas.drawProgress(self.level, pa, self.renderX - self.camX, self.renderY - self.camY)
-        Particles.render(self.camX, self.camY)
-        if DEBUG_HITBOX then
-            -- (F1 online: también las ENTIDADES — con su estado del snapshot — y los demás jugadores; antes solo
-            -- salían el jugador propio y el nivel)
-            love.graphics.setLineWidth(2)
-            pa:renderDebug(self.camX, self.camY)
-            for _, er in pairs(self.enemyRenderers) do
-                if er.alive and er.renderDebug then
-                    -- (protegido: un tipo cuyas cajas pidan algo que solo existe al simular no tumba la partida)
-                    local ok, err = pcall(er.renderDebug, er, self.camX, self.camY)
-                    if not ok and not self._dbgErr then self._dbgErr = true; print('[hitbox] ' .. tostring(err)) end
-                end
-            end
-            for _, rp in pairs(self.remotePlayers) do
-                if rp.renderX and not rp.hidden then
-                    local b = PlayerAdventure.outerBoxAt(rp.renderX, rp.renderY)
-                    love.graphics.setColor(0, 1, 0, 0.4)
-                    love.graphics.rectangle('line', b.x - self.camX, b.y - self.camY, b.w, b.h)
-                end
-            end
-            love.graphics.setColor(1, 1, 1, 1)
-            self.level:renderDebug(self.camX, self.camY)
-            love.graphics.setLineWidth(1)
-        end
+        PointAreas.drawProgress(self.level, pa, self.renderX - camX, self.renderY - camY)
+        if DEBUG_HITBOX then self:_renderDebugBoxes(pa, camX, camY) end
         pa.x, pa.y = sx, sy
     end
-    PlayerAdventure.lightLevel = nil
+end
 
-    -- Entidades en un plano por delante de los jugadores (Entity:drawsInFront: pez globo, la red que envuelve…)
+-- F1 online: también las ENTIDADES — con su estado del snapshot — y los demás jugadores (antes solo salían el jugador
+-- propio y el nivel)
+function OnlineAdventureState:_renderDebugBoxes(pa, camX, camY)
+    love.graphics.setLineWidth(2)
+    pa:renderDebug(camX, camY)
     for _, er in pairs(self.enemyRenderers) do
-        if er.alive and er:drawsInFront() then (er.renderLive or er.render)(er, self.camX, self.camY) end
+        if er.alive and er.renderDebug then
+            -- (protegido: un tipo cuyas cajas pidan algo que solo existe al simular no tumba la partida)
+            local ok, err = pcall(er.renderDebug, er, camX, camY)
+            if not ok and not self._dbgErr then self._dbgErr = true; print('[hitbox] ' .. tostring(err)) end
+        end
     end
-
-    -- Foliaje y burbujas
-    self.level:renderFoliage(self.camX, self.camY)
-    self.level:renderBubbles(self.camX, self.camY)
-    Snowfall.render(self.level, self.camX, self.camY)      -- (nieve cayendo: solo dibujo)
-
-    love.graphics.setCanvas()
-    if scX then love.graphics.setScissor(scX, scY, scW, scH) end
-    love.graphics.pop()
-
-    -- Efecto agua
+    for _, rp in pairs(self.remotePlayers) do
+        if rp.renderX and not rp.hidden then
+            local b = PlayerAdventure.outerBoxAt(rp.renderX, rp.renderY)
+            love.graphics.setColor(0, 1, 0, 0.4)
+            love.graphics.rectangle('line', b.x - camX, b.y - camY, b.w, b.h)
+        end
+    end
     love.graphics.setColor(1, 1, 1, 1)
-    self.level:renderWaterEffect(self.camX, self.camY, self.sceneCanvas)
+    self.level:renderDebug(camX, camY)
+    love.graphics.setLineWidth(1)
+end
+
+function OnlineAdventureState:_renderScene()
+    -- ── La escena entera al lienzo, y al volver, el efecto del agua (src/world/level/SceneLayers.lua) ──
+    self._actorsFn = self._actorsFn or function(cx, cy) self:_drawActors(cx, cy) end     -- (uno por estado: sin basura)
+    SceneLayers.draw(self.level, self.camX, self.camY, self.sceneCanvas, self.enemyRenderers, self._actorsFn)
 
     -- A oscuras: las linternas de todos los jugadores; encima, los puntos luminosos
     -- (y la luz ambiente de cada nivel: atardecer, noche, cueva en penumbra — src/fx/Darkness.lua)

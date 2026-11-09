@@ -781,6 +781,7 @@ local SILENT = setmetatable({}, { __index = function() return noop end })
 -- ¿Es SEGURO hacer `bits`? Lo simula en un fantasma (una copia del jugador con su mismo estado: P.packOwnState) con la
 -- física de verdad: falla si muere o pierde vida (pinchos, lava, caerse) o si toca a un enemigo (que se supone que
 -- sigue andando como va) sin ser pisándolo desde arriba. Sin tocar el nivel (nada se rompe ni se pulsa).
+local SAFE_GB, SAFE_BOX = {}, {}       -- (cajas del fantasma y del enemigo de cada prueba, reutilizadas)
 function Bot:_safe(level, bits)
     local PlayerAdventure = require 'src/player/PlayerAdventure'
     local pa = self.pa
@@ -818,10 +819,11 @@ function Bot:_safe(level, bits)
             P.decodeInput(bits[f] or 0, stub.state)
             g:update(Bot.DT, level)
             if g.dying or g.hp < hp0 or g.y > level.tileH * TILE_PX then safe = false; return end
-            local gb = g:getOuterBounds()
+            local gb = g:getOuterBounds(SAFE_GB)
             for _, en in ipairs(list) do
                 local b = en.b
-                local box = { x = b.x + en.vx * f * Bot.DT, y = b.y, w = b.w, h = b.h }
+                local box = SAFE_BOX                         -- (rellenada en cada prueba: sin basura)
+                box.x, box.y, box.w, box.h = b.x + en.vx * f * Bot.DT, b.y, b.w, b.h
                 if overlap(gb, box) then
                     if en.stomp and g.vy > 0 and gb.y + gb.h < box.y + box.h * 0.45 then return end   -- (lo pisa: bien)
                     safe = false; return

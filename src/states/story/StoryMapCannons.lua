@@ -11,6 +11,7 @@
 -- cañón" (StoryMapState `reversed` lo mantiene al darle la vuelta). Quien anda (update) se para en ese punto y
 -- aquí se hace todo el número; el cañón de salida es el de la punta más cercana al monstruo.
 -- La carga StoryMapState.lua con require(...)(StoryMapState, P).
+local SIDES = { -1, 1 }        -- (izquierda y derecha: constante, sin una tabla nueva en cada vuelta)
 local Worlds = require 'src/story/Worlds'
 
 return function(StoryMapState, P)
@@ -191,7 +192,7 @@ function StoryMapState:_cannonTick(dt)
         if u >= 1 then
             self.heroX, self.heroY, self.flyH = F.land[1], F.land[2], 0
             Sound.play('cannonLand')
-            for _, side in ipairs({ -1, 1 }) do
+            for _, side in ipairs(SIDES) do
                 self:_cfx('smoke', F.land[1] + side * 10, F.land[2] + 6, { life = 0.5, vx = side * 60, vy = -12, s = 2, c = { 0.82, 0.72, 0.56 } })
             end
             nextPh('land')

@@ -46,6 +46,7 @@
 -- Arte: assets/images/bosses/megagloomy/ (el MISMO píxel que el pequeño, a escala 10; tools/ui/
 -- make_gloomy_sprites.py); sonidos: tools/sounds/gloomy.py (MEGA).
 
+local SIDES = { -1, 1 }        -- (izquierda y derecha: constante, sin una tabla nueva en cada vuelta)
 local Entity      = require 'src/world/entities/base/Entity'
 local Boss        = require 'src/world/entities/base/Boss'
 local Lights      = require 'src/world/level/Lights'
@@ -866,7 +867,7 @@ function MG:drawClaws(camX, camY, now, sheet)
     if st == 'dying_out' and (self.deadTimer or 0) > 0.4 then return end
     sheet = sheet or (self.rage and 'rage_' or '')          -- (qué pinzas: prefijo de sus animaciones)
     local oy = (sheet == '') and CLAW_H / 2 or (5 + CLAW_H / 2)      -- (las de la rabia llevan 5 filas de cristales encima)
-    for _, side in ipairs({ -1, 1 }) do
+    for _, side in ipairs(SIDES) do
         local out, dy, raised, fr, outward = self:clawPose(side, now)
         local cr = clawRec(sheet, fr)
         local ax = self.x - camX + side * (5.5 * MS + out * MS)

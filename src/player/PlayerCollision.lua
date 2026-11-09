@@ -63,6 +63,8 @@ PlayerAdventure.STEP_MAX = 16
 -- Se SUBE cuando el borde de delante ya está STEP_FOOT px encima del escalón: los pies se apoyan en una casilla desde
 -- que pisan 4 px de ella (el aterrizaje mira de x-hw+4 a x+hw-4); subido antes, se caía otra vez abajo. Mientras
 -- tanto el escalón no le para (se mete esos px en su esquina, que no se ve).
+local CHY_P, CHX_P = {}, {}   -- (puntos de choque de cada lado, reutilizados: se recorren enseguida)
+local OB_B = {}            -- (caja de un cuerpo sólido, rellenada al probarlo: sin basura por paso; solo lectura)
 local STEP_FOOT = 4
 -- (lo que se subió se DIBUJA subiendo en unos fotogramas: `stepVis`, PlayerAdventure STEP_EASE / PlayerRender)
 
@@ -137,7 +139,7 @@ function PlayerAdventure:moveAndCollide(level, dx, dy)
     -- (con varios choques manda la cara más restrictiva: con subtiles, medio
     -- tile y un tile entero pueden tener caras distintas en la misma columna)
     -- (entrando en un escalón bajo, lo que hay por debajo de su cara no le para)
-    local chy = level.samples and level:samples(y-hh+4, y+hh-math.max(4, pend+1)) or {y-hh+4, y, y+hh-math.max(4, pend+1)}
+    local chy = level.samples and level:samples(y-hh+4, y+hh-math.max(4, pend+1), CHY_P) or {y-hh+4, y, y+hh-math.max(4, pend+1)}
     if dx > 0 then
         local edge
         for _,py in ipairs(chy) do
@@ -170,8 +172,8 @@ function PlayerAdventure:moveAndCollide(level, dx, dy)
             -- que va montado tampoco: al subir se le mete por los pies)
             -- (ni el escalón bajo en el que está entrando: pend)
             if o ~= self and not o.dying and o.alive ~= false and not o.oneway and o ~= self.rideBody
-               and not (pend > 0 and o.solidFull and o:getOuterBounds().y >= y + hh - pend - 0.5) then
-                local ob = o:getOuterBounds()
+               and not (pend > 0 and o.solidFull and o:getOuterBounds(OB_B).y >= y + hh - pend - 0.5) then
+                local ob = o:getOuterBounds(OB_B)
                 local myTop, myBot = y - hh, y + hh
                 -- Solapan en vertical "de lado": en los sólidos completos (solidFull,
                 -- p. ej. el mortero) de verdad; en los demás, sin contar la zona de
@@ -231,7 +233,7 @@ function PlayerAdventure:moveAndCollide(level, dx, dy)
     local groundTop                                     -- (la cara de la casilla en la que se apoya, si alguna)
     self.onGround = false
     self.groundDef = nil
-    local chx = level.samples and level:samples(x-hw+4, x+hw-4) or {x-hw+4, x, x+hw-4}
+    local chx = level.samples and level:samples(x-hw+4, x+hw-4, CHX_P) or {x-hw+4, x, x+hw-4}
     if dy > 0 then
         local best, bestT
         for _,px in ipairs(chx) do
@@ -303,7 +305,7 @@ function PlayerAdventure:moveAndCollide(level, dx, dy)
         local headWas = self.y + yoff - hh - lift
         for _, o in ipairs(bodies) do
             if o.solidFull and o ~= self and o.alive ~= false then
-                local ob = o:getOuterBounds()
+                local ob = o:getOuterBounds(OB_B)
                 if x + hw - 2 > ob.x and x - hw + 2 < ob.x + ob.w then
                     -- (montado en él y sin saltar: aunque suba o baje, sigue encima; un cuerpo que sube
                     -- `stepDy` px se ha metido eso en los pies)

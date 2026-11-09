@@ -276,17 +276,7 @@ function Boss:zoneBounds()
     return self.x - 12 * T, self.x + 12 * T, self.y - 8 * T, self.y + 2 * T
 end
 -- (Sus súbditos de reserva: Entity:minions / Entity:freeMinion, genéricos)
--- El jugador vivo más cercano (lo vertical cuenta menos) y su distancia
-function Boss:nearestPlayer(level)
-    local best, bd
-    for _, pa in ipairs(level.players or {}) do
-        if not pa.dying and pa.alive ~= false then
-            local d = math.abs(pa.x - self.x) + math.abs(pa.y - self.y) * 0.3
-            if not bd or d < bd then best, bd = pa, d end
-        end
-    end
-    return best, bd
-end
+-- (el jugador vivo más cercano: Entity:nearestPlayer, en la base)
 -- Golpe del jefe a un jugador: hit = { vida, vx, vy, s sin control, s aturdido }, dir = ±1.
 -- false si no le da (invulnerable, muriendo). El daño queda atribuido (Boss.withPlayer).
 function Boss.strike(pa, hit, dir)

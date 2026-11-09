@@ -392,15 +392,29 @@ function Level:getRawAt(wx, wy)
     return self:getRaw(math.floor(wx/TILE_PX)+1, math.floor(wy/TILE_PX)+1)
 end
 
+-- Definición del catálogo de un valor crudo de casilla (cacheada por valor: es la consulta más repetida del juego —
+-- choques, sensores, partículas — y sin el JIT de Switch / Android cada llamada cuenta). Solo guarda las que existen:
+-- un id desconocido sigue saliendo como el tile 0 sin quedar fijado.
+local DEF_OF_RAW = {}
+local byIdTiles = TileTypes.byId
+local function defOfRaw(raw)
+    local d = DEF_OF_RAW[raw]
+    if d then return d end
+    d = byIdTiles[tileBaseId(raw)]
+    if d then DEF_OF_RAW[raw] = d; return d end
+    return byIdTiles[0]
+end
+
 -- Tipo de tile (definición del catálogo) en la celda / en el punto de mundo
+-- (Level:getRaw por dentro, sin las tres llamadas intermedias de getTile / getTileAt)
 function Level:getDef(col, row)
-    return TileTypes.get(self:getTile(col, row))
+    return defOfRaw(self:getRaw(col, row))
 end
 
 -- (con subtiles: en una celda sin colisión propia, la subcelda sólida que
 -- contiene el punto; ver src/world/level/SubTiles.lua)
 function Level:getDefAt(wx, wy)
-    local t = TileTypes.get(self:getTileAt(wx, wy))
+    local t = defOfRaw(self:getRaw(math.floor(wx / TILE_PX) + 1, math.floor(wy / TILE_PX) + 1))
     if self.subSolid and t.collision == 'none' then
         local s = SubTiles.defAt(self, wx, wy)
         if s then return s end
@@ -420,11 +434,18 @@ end
 -- siempre (extremos y centro) o, si el nivel tiene subtiles (bloques de medio
 -- tile, 32 px), los que hagan falta para no saltarse ninguno
 local SUB_STEP = 24
-function Level:samples(a, b)
-    if not self.subSolid or b - a <= 2 * SUB_STEP then return { a, (a + b) / 2, b } end
-    local n = math.ceil((b - a) / SUB_STEP)
-    local out = {}
-    for i = 0, n do out[i + 1] = a + (b - a) * i / n end
+-- `into` (opcional): la tabla que se rellena y devuelve (se recorta lo que sobre): quien la pide en cada paso pasa
+-- una suya y no crea basura.
+function Level:samples(a, b, into)
+    local out, m = into or {}, 3
+    if not self.subSolid or b - a <= 2 * SUB_STEP then
+        out[1], out[2], out[3] = a, (a + b) / 2, b
+    else
+        local n = math.ceil((b - a) / SUB_STEP)
+        for i = 0, n do out[i + 1] = a + (b - a) * i / n end
+        m = n + 1
+    end
+    for i = #out, m + 1, -1 do out[i] = nil end
     return out
 end
 

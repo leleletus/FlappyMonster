@@ -1,7 +1,3 @@
-local IceDrips = require 'src/fx/IceDrips'
-local LavaFx   = require 'src/fx/LavaFx'
-local Sky      = require 'src/fx/Sky'
-local Snowfall = require 'src/fx/Snowfall'
 local TouchControls = require 'src/ui/TouchControls'
 local Darkness      = require 'src/fx/Darkness'
 local LightHud      = require 'src/ui/LightHud'
@@ -27,6 +23,7 @@ local Floods          = require 'src/world/systems/Floods'
 local PointAreas      = require 'src/world/systems/PointAreas'
 local StartCountdown  = require 'src/world/systems/StartCountdown'
 local Sim             = require 'src/world/systems/Sim'
+local SceneLayers     = require 'src/world/level/SceneLayers'
 
 local AdventureState = BaseState:new()
 
@@ -882,80 +879,29 @@ function AdventureState:render()
     end
 end
 
-function AdventureState:_renderScene()
-
-    -- ── Aislar transformaciones para el Canvas (Evita zoom doble y cortes) ──
-    love.graphics.push()
-    love.graphics.origin()
-    -- El recorte de lovesize (bandas negras) está en píxeles de la PANTALLA:
-    -- dentro del canvas de la escena (tamaño lógico) recortaba otra zona y, con
-    -- la ventana a otro tamaño que 1280x720, el juego salía cortado/descuadrado
-    local scX, scY, scW, scH = love.graphics.getScissor()
-    love.graphics.setScissor()
-
-    -- ── Paso 1: renderizar toda la escena al canvas ───────────────────────────
-    local outCanvas = love.graphics.getCanvas()          -- (a dónde va luego: la pantalla, o el lienzo de quien la dibuja)
-    love.graphics.setCanvas(self.sceneCanvas)
-    if self.demo and self.demo.noSky then
-        love.graphics.clear(0, 0, 0, 0)                    -- (sin cielo: se ve lo que haya detrás; los créditos)
-    else
-        love.graphics.clear(0, 0, 0, 1)
-        Sky.punch = Darkness.active(self.level) and not self.level.dark      -- (lo incandescente del fondo: ver Sky.lua)
-        Sky.render(self.level, self.camX, self.camY)          -- (cielo y fondo con paralaje)
-        Sky.punch = false
-    end
-
-    self.level:renderBackPlane(self.camX, self.camY)         -- (el plano de fondo: detrás de todo menos del cielo)
-    Entities.renderBack(self.enemies, self.camX, self.camY)  -- (lo que las entidades dibujan detrás de los bloques)
-    self.level:render(self.camX, self.camY, true)
-    IceDrips.render(self.level, self.camX, self.camY)      -- (gotas del hielo: solo dibujo)
-    require('src/fx/Ambience').tick(self.level)            -- (ambiente de la isla: cuevas, jungla... solo sonido)
-    LavaFx.render(self.level, self.camX, self.camY)        -- (burbujas de la lava: solo dibujo)
-    self.level:renderVents(self.camX, self.camY)
-    self.level:renderFoliageBack(self.camX, self.camY)
-
-    require('src/fx/Silhouette').level = self.level      -- (filo de los enemigos oscuros en lo oscuro: `darkEdge`)
-    -- Renderizar enemigos (entre tiles y jugador)
-    for _, g in ipairs(self.enemies) do
-        if g.alive and not g:drawsInFront() then (g.renderLive or g.render)(g, self.camX, self.camY) end      -- (reservas: no)
-    end
-
-    PlayerAdventure.lightLevel = self.level          -- (en lo oscuro, filo blanco: cada monstruo según SU sitio)
-    if self.bonus then self.bonus:render(self.camX, self.camY) end
+-- Lo que va entre las entidades de atrás y las de delante (SceneLayers: el orden de las capas, compartido con online)
+function AdventureState:_drawActors(camX, camY)
+    if self.bonus then self.bonus:render(camX, camY) end
     -- (en el duelo de ritmo no está en la arena: sale bailando en el minijuego — src/ui/RhythmDuel.lua —)
-    if self.ghost and self.ghost.draw then self.ghost.draw(self.levelTime, self.camX, self.camY) end   -- (el fantasma, detrás)
-    if not RhythmDuel.hides(self.level, self.player.x, self.player.y) then self.player:render(self.camX, self.camY) end
-    PlayerAdventure.lightLevel = nil
-    PointAreas.drawProgress(self.level, self.player, self.player.x - self.camX, self.player.y - self.camY)
-    Particles.render(self.camX, self.camY)
+    if self.ghost and self.ghost.draw then self.ghost.draw(self.levelTime, camX, camY) end   -- (el fantasma, detrás)
+    if not RhythmDuel.hides(self.level, self.player.x, self.player.y) then self.player:render(camX, camY) end
+    PointAreas.drawProgress(self.level, self.player, self.player.x - camX, self.player.y - camY)
+end
 
-    -- Entidades en un plano por delante del jugador (Entity:drawsInFront: pez globo, la red que envuelve…)
-    for _, g in ipairs(self.enemies) do
-        if g.alive and g:drawsInFront() then (g.renderLive or g.render)(g, self.camX, self.camY) end
-    end
-
-    -- Decoraciones (por encima de enemigos y player)
-    self.level:renderFoliage(self.camX, self.camY)
-
-    -- Burbujas de agua y vent (por encima de todo menos agua)
-    self.level:renderBubbles(self.camX, self.camY)
-    Snowfall.render(self.level, self.camX, self.camY)      -- (nieve cayendo: solo dibujo)
-
-    love.graphics.setCanvas(outCanvas)
-    if scX then love.graphics.setScissor(scX, scY, scW, scH) end
-    love.graphics.pop()
-
-    -- ── Paso 2: volver a pantalla y aplicar efecto agua ───────────────────────
-    love.graphics.setColor(1, 1, 1, 1)
-
-    self.level:renderWaterEffect(self.camX, self.camY, self.sceneCanvas)
+function AdventureState:_renderScene()
+    -- ── La escena entera al lienzo, y al volver, el efecto del agua (src/world/level/SceneLayers.lua) ──
+    self._actorsFn = self._actorsFn or function(cx, cy) self:_drawActors(cx, cy) end     -- (uno por estado: sin basura)
+    SceneLayers.draw(self.level, self.camX, self.camY, self.sceneCanvas, self.enemies, self._actorsFn,
+                     self.demo and self.demo.noSky)
 
     -- A oscuras: solo se ve lo que alumbra la linterna; encima, los puntos luminosos
     -- (y la luz ambiente de cada nivel: atardecer, noche, cueva en penumbra — src/fx/Darkness.lua)
     if Darkness.active(self.level) then
-        local p = self.player
-        Darkness.render(self.level, self.camX, self.camY,
-                        { { x = p.x, y = p.y, facing = p.facing, on = p.lightOn and not p.dying } }, self.enemies, self.sceneCanvas)
+        local p, src = self.player, self._lightSrc        -- (la linterna del jugador: tabla del estado, rellenada aquí)
+        if not src then src = { {} }; self._lightSrc = src end
+        local L1 = src[1]
+        L1.x, L1.y, L1.facing, L1.on = p.x, p.y, p.facing, p.lightOn and not p.dying
+        Darkness.render(self.level, self.camX, self.camY, src, self.enemies, self.sceneCanvas)
         Darkness.renderGlow(self.level, self.enemies, self.camX, self.camY)
     end
 
@@ -992,7 +938,34 @@ function AdventureState:_renderScene()
     BossHud.drawCinema(self.level)        -- (entrada de un jefe: franjas de cine, bajo el HUD)
 
     -- (todo el HUD se desvanece durante la entrada de un jefe: BossHud.fadeHud)
-    BossHud.fadeHud(function()
+    self._hudFn = self._hudFn or function() self:_drawHud() end           -- (uno por estado: sin basura)
+    BossHud.fadeHud(self._hudFn)
+
+    -- ── Game over overlay (la ventana de opciones de los menús: src/ui/menu/MenuKit) ──
+    if self.dead and self.deadTimer > 0.4 then
+        local oa = math.min(1, (self.deadTimer - 0.4) / 0.4)
+        local labels, colors, o = self:_gameOverOptions()
+        o.titleColor = { 1, 0.42, 0.38 }
+        MenuKit.optionsWindow(L('hud.game_over'), labels, colors, self.onGameOver and 1 or self.selectedOpt, oa, o)
+    end
+
+    if not self.dead then BossHud.fadeHud(function() CornerButtons.drawPause(self.pauseHover) end) end
+
+    love.graphics.setFont(FONT_MED)
+    love.graphics.setColor(COLOR_WHITE)
+end
+
+-- Imprime texto con borde negro (sombra de 2 px)
+local function printOutlined(text, x, y, r, g, b, a)
+    love.graphics.setColor(0, 0, 0, (a or 1) * 0.75)
+    love.graphics.print(text, x + 2, y + 2)
+    love.graphics.setColor(r, g, b, a or 1)
+    love.graphics.print(text, x, y)
+end
+
+-- El HUD de la partida: puntos, tiempo, vidas, luz, jefe, aire... (dentro de BossHud.fadeHud: se desvanece en la entrada
+-- de un jefe)
+function AdventureState:_drawHud()
     -- HUD: SCORE y TIME  (sin fondo, valores alineados a la derecha)
     love.graphics.setFont(FONT_BIG)
     local fh = FONT_BIG:getHeight()
@@ -1018,14 +991,6 @@ function AdventureState:_renderScene()
     -- El ancho del área de valor se fija al más ancho de los dos valores
     local maxValueW   = math.max(FONT_BIG:getWidth(scoreStr), FONT_BIG:getWidth(timeStr))
     local valueEndX   = valueStartX + maxValueW  -- borde derecho común
-
-    -- Helper: imprime texto con borde negro de 1px
-    local function printOutlined(text, x, y, r, g, b, a)
-        love.graphics.setColor(0, 0, 0, (a or 1) * 0.75)
-        love.graphics.print(text, x + 2, y + 2)
-        love.graphics.setColor(r, g, b, a or 1)
-        love.graphics.print(text, x, y)
-    end
 
     local sw = FONT_BIG:getWidth(scoreStr)
     local tw = FONT_BIG:getWidth(timeStr)
@@ -1057,20 +1022,6 @@ function AdventureState:_renderScene()
     self.player:renderAirBar()
     self.player:renderDrownCountdown(self.player.x - self.camX, self.player.y - self.camY)
     self:renderPopups()
-    end)
-
-    -- ── Game over overlay (la ventana de opciones de los menús: src/ui/menu/MenuKit) ──
-    if self.dead and self.deadTimer > 0.4 then
-        local oa = math.min(1, (self.deadTimer - 0.4) / 0.4)
-        local labels, colors, o = self:_gameOverOptions()
-        o.titleColor = { 1, 0.42, 0.38 }
-        MenuKit.optionsWindow(L('hud.game_over'), labels, colors, self.onGameOver and 1 or self.selectedOpt, oa, o)
-    end
-
-    if not self.dead then BossHud.fadeHud(function() CornerButtons.drawPause(self.pauseHover) end) end
-
-    love.graphics.setFont(FONT_MED)
-    love.graphics.setColor(COLOR_WHITE)
 end
 
 -- Las opciones del fin de partida: textos, colores y opciones de la ventana (historia: solo seguir, con su nota)

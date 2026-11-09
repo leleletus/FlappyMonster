@@ -25,6 +25,7 @@
 -- Sprites: assets/images/bosses/snowboss/ (tools/art/bosses/make_snowboss_sprites.py);
 -- sonidos: assets/sounds/bosses/snowboss/ (tools/sounds/snowboss.py).
 
+local SIDES = { -1, 1 }        -- (izquierda y derecha: constante, sin una tabla nueva en cada vuelta)
 local Entity      = require 'src/world/entities/base/Entity'
 local Boss        = require 'src/world/entities/base/Boss'
 local SpriteStrip = require 'src/fx/SpriteStrip'
@@ -194,14 +195,9 @@ function Snow:zoneBounds()
     return 0, 1e9, 0, 1e9
 end
 
+-- (como función de la base, no como método: el Mega Gummy la usa con sus trozos, que no son entidades)
 function Snow:target(level)
-    local best, bd
-    for _, pa in ipairs(level.players or {}) do
-        if not pa.dying and pa.alive ~= false then
-            local d = math.abs(pa.x - self.x) + math.abs(pa.y - self.y) * 0.3
-            if not bd or d < bd then best, bd = pa, d end
-        end
-    end
+    local best = Entity.nearestPlayer(self, level)
     return best
 end
 
@@ -568,7 +564,7 @@ function Snow:hitWithShots(level)
     end
     if (self.shockT or 99) < SHOCK_LIFE then
         local d = self.shockT * SHOCK_SPD
-        for _, sd in ipairs({ -1, 1 }) do
+        for _, sd in ipairs(SIDES) do
             local x = self.shockX + sd * d
             local box = { x = x - 22, y = self.shockY - 30, w = 44, h = 30 }
             for _, pa in ipairs(players) do
@@ -955,7 +951,7 @@ function Snow:getHazardBoxes()
     end
     if (self.shockT or 99) < SHOCK_LIFE then
         local d = self.shockT * SHOCK_SPD
-        for _, s in ipairs({ -1, 1 }) do
+        for _, s in ipairs(SIDES) do
             local x = self.shockX + s * d
             out[#out + 1] = { x = x - 22, y = self.shockY - 30, w = 44, h = 30, effect = 'hurt' }
         end
@@ -1508,16 +1504,7 @@ function Snow:netPackExtra()
     return out
 end
 
-local function readList(b, k, stride)
-    local n = b[k] or 0
-    local list = {}
-    for i = 0, n - 1 do
-        local e = {}
-        for j = 1, stride do e[j] = b[k + 1 + i * stride + j - 1] end
-        list[#list + 1] = e
-    end
-    return list, k + 1 + n * stride
-end
+local readList = require('src/world/entities/base/NetList').read      -- (listas planas del estado propio)
 
 function Snow:netApplyExtra(a, b, f)
     if type(b[1]) ~= 'number' then return end
@@ -1800,7 +1787,7 @@ function Snow:render(camX, camY)
         local d = self.shockT * SHOCK_SPD
         local a = math.min(1, (SHOCK_LIFE - self.shockT) / 0.3)
         love.graphics.setColor(1, 1, 1, a)
-        for _, s in ipairs({ -1, 1 }) do
+        for _, s in ipairs(SIDES) do
             S('shock'):play(now, math.floor(self.shockX + s * d - camX), math.floor(self.shockY - camY - 16), 0, 4 * s, 4)
         end
     end

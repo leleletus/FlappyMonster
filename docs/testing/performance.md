@@ -92,3 +92,25 @@ per-frame system: run `perf GARB=1` before committing it.
 - 0.5.11 (review): new scene `map` (the story map, the monster walking stop to stop; lazy loading only reported).
   It found ~77 KB of garbage per frame on the map: `_drawTerrain` created a closure per visible cell (the cliff-edge
   test) and string keys per quad. Now 5.5 KB. `FM_PERF=1` on the server also logs snapshot sizes (see netcode).
+
+- 0.5.182 (2026-11-09, the user: "optimisation / modularisation update: search the whole game for what is slow or
+  tangled and rewrite it better without changing what it does"). Measured first (`perf GARB=1`). Garbage per frame,
+  before → after: boss (guarida_cangrejo_rey) 51 → 15 KB, caldera_roja 25 → 16 KB, menu 20–36 → 19 KB,
+  laberinto_submarino 10.4 → 8.2 KB. JIT off (as on Switch / Android): boss draw 1.65 → 1.37 ms, menu update 0.48 →
+  0.33 ms; the Gloomies' path cost in templo_del_eco (`gloomy_rules`) 55 → 38 ms. What it was:
+  - `bosswall:render`: a closure and three tables PER CELL per frame and no culling (30 KB/frame in the boss scene).
+    Now reused tables and only the cells on screen (the editor still draws all: it zooms).
+  - `Level:samples(a, b, into)` and the entity / player collision probes reuse their point lists; boxes that callers
+    dropped at once (`inLava`, the player against solid bodies, `Crawler.entityAhead`, the menu bot's safety sim) pass
+    an `into`.
+  - `Level:getDef` / `getDefAt` call `getRaw` directly and cache raw → definition (they went through getTileAt →
+    getTile → getRaw → TileCodec.id → TileTypes.get: five Lua calls for the most repeated query of the game).
+  - Lights: `Entity:oneLight` and the mortar refill their own tables; `Darkness.render` lost its two closures per
+    frame (its fan cache is now shared and CLEARED per flashlight: it memoises ray lengths).
+  - 38 `ipairs({ -1, 1 })` (a table per loop) → a file-level `SIDES`.
+  - The harness: `garbage_profile` now also wraps the entity CLASSES (their garbage was charged to the caller:
+    `_renderScene` showed 30 KB that were `bosswall:render`), and the per-function table prints UNDER its scene's
+    header (it printed above it, so it read as the previous scene's).
+  Not done (needs device numbers or the user): the story map's ~610 draw calls (one per terrain piece: a sprite batch
+  would change nothing visible but is a bigger rewrite), merging the single-player and server step order (known-debt).
+

@@ -150,13 +150,7 @@ end
 
 -- El jugador más cercano que VE (y se apunta dónde y cuándo)
 function GH:target(level)
-    local best, bd
-    for _, pa in ipairs(level.players or {}) do
-        if not pa.dying and pa.alive ~= false and self:sees(level, pa) then
-            local d = math.abs(pa.x - self.x) + math.abs(pa.y - self.y) * 0.3
-            if not bd or d < bd then best, bd = pa, d end
-        end
-    end
+    local best = self:nearestPlayer(level, self.sees)
     if best then self.seenX, self.seenY, self.memT = best.x, best.y, MEMORY end
     return best
 end

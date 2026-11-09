@@ -214,12 +214,20 @@ end
 local Particles
 -- Luz de sus bolas de fuego (de noche / en cueva: src/fx/Darkness.lua)
 local FIRE_LIGHT = { 1, 0.55, 0.2 }
+-- (la lista y sus luces son del mortero y se rellenan en cada llamada: sin tablas nuevas por fotograma)
 function Mortar:lights()
-    local out = {}
+    local out, n = self._lights or {}, 0
+    self._lights = out
     for _, f in ipairs(self.proj) do
         local sc = f.scale or 1
-        if sc > 0.05 then out[#out + 1] = { x = f.x, y = f.y, r = 130 * sc, color = FIRE_LIGHT, a = 0.4 * sc, pulse = 7 } end
+        if sc > 0.05 then
+            n = n + 1
+            local L = out[n] or {}
+            out[n] = L
+            L.x, L.y, L.r, L.color, L.a, L.pulse = f.x, f.y, 130 * sc, FIRE_LIGHT, 0.4 * sc, 7
+        end
     end
+    for i = #out, n + 1, -1 do out[i] = nil end
     return out
 end
 
