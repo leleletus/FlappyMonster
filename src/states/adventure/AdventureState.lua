@@ -125,6 +125,7 @@ function AdventureState:enter(args)
     end
     local sx, sy = self.level:getSpawnPx()
     self.player = PlayerAdventure:new(sx, sy)
+    if self.demo then self.player.moveK = 1 end      -- (el bot del fondo de los menús: a su velocidad de siempre)
     self.player:settle(self.level)             -- (de pie sobre el suelo desde el primer fotograma: la cuenta atrás)
     self.player:applyDifficulty()
     if self.startLives then self.player.lives = self.startLives end
@@ -523,6 +524,7 @@ end
 AdventureState.WIN_TIME = 2.6
 function AdventureState:win()
     self.won, self.wonT = true, 0
+    self.player.victory = true                               -- (su pose de victoria: PlayerAdventure.actionPose)
     -- (contrarreloj: ¿su mejor tiempo? se guarda el fantasma nuevo y se dice)
     if self.ghost and require('src/story/Ghost').finish(self.levelPath, self.levelTime, self.ghost.rec) then
         self:spawnPopup(L('free.ghost_record'), self.player.x, self.player.y - 90)
@@ -599,7 +601,7 @@ function AdventureState:update(dt)
 
     -- ── Controles táctiles (móvil): cruceta + salto, ver src/ui/TouchControls ──
     -- (el botón extra: el ATAQUE ESPECIAL en los niveles Flappy; la linterna en los niveles a oscuras)
-    if not self.demo then TouchControls.update(not self.dead, self.level.flappy and 'special' or self.level.dark) end
+    if not self.demo then TouchControls.update(not self.dead, self.level.flappy and 'special' or self.level.dark, not self.level.flappy) end
 
     -- (en la escena final no hay pausa, ni ya ganado: salir en la celebración perdía el nivel)
     if not self.demo and Input.pressed('pause') and not (self.runOut and self.runOut.active) and not self.won and not self.endingT then
@@ -735,6 +737,7 @@ function AdventureState:_makeSimHooks()
         elseif scripted then                                              -- (sin control: corre y salta solo)
             local real = Input
             Input = scripted
+            self.player.moveK = 1                                         -- (a la velocidad fija: el guion no pulsa correr)
             local ok, err = pcall(self.player.update, self.player, dt, self.level)
             Input = real
             if not ok then error(err, 0) end
@@ -949,6 +952,7 @@ function AdventureState:_renderScene()
     -- Fragmentos del espejo que han soltado los jefes (brillan: encima de la oscuridad)
     if self.shards then self.shards:render(self.camX, self.camY) end
     Carry.drawPrompt(self.player, self.enemies, self.camX, self.camY)      -- (la ayuda de "coger": systems/Carry)
+    if not self.demo then Entities.renderOverlays(self.enemies, self.camX, self.camY, self.player, love.timer.getDelta()) end   -- (carteles)
     self.player.drawMashPrompt(self.player, self.camX, self.camY)          -- (machacar: tragado por una planta / en hielo)
 
     -- ── Debug hitboxes (F1) ───────────────────────────────────────────────────

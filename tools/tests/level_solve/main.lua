@@ -4,6 +4,8 @@
 -- enemigos y trampolines: solo terreno (pinchos, agua y aire sí cuentan).
 -- PUERTAS (`door`): cerradas son sólidas como en el juego; DOORS=1,3 = abiertas las de esos id, DOORS=all = todas
 -- (el resolvedor no pulsa Activadores: así se prueba qué puertas hacen falta).
+-- CORRER (0.5.190): el resolvedor corre siempre y, si no llega, repite andando; WALK=1 solo anda (andar es ×0,9: así se
+-- ve qué niveles necesitan correr).
 -- GOAL=secret_exit: la meta es la SALIDA SECRETA (tile `secret_exit`); tocar la meta normal termina el nivel, así que
 -- esos estados se descartan (¿se llega a la secreta sin pasar por la meta?).
 --
@@ -24,6 +26,7 @@ local Entities = require 'src/world/entities/Entities'
 local DT, K = 1 / 60, 6
 local NODROWN = os.getenv('NODROWN')    -- (sin ahogarse: ¿el terreno se puede recorrer?)
 local VENTS                                          -- (VENTS=1: ver más abajo)
+local WALK = os.getenv('WALK') ~= nil                 -- (WALK=1: sin correr — ¿qué niveles NECESITAN correr? —)
 local GOAL = os.getenv('GOAL') or 'finish'          -- (el trigger que hay que tocar: 'finish' o 'secret_exit')
 local ACTIONS = {}
 for _, d in ipairs({ -1, 0, 1 }) do
@@ -197,6 +200,7 @@ local function solve(path)
             local ok = true
             for f = 1, K do
                 st.left, st.right, st.crouch = a.d < 0, a.d > 0, a.c
+                st.run = not WALK                        -- (0.5.190: corre siempre — lo mejor que puede el jugador —; WALK=1, andando)
                 st.jump = a.j
                 st.jump_pressed = a.j and f == 1
                 st.crouch_pressed = a.c and f == 1
@@ -287,6 +291,14 @@ function love.load(arg)
     for _, f in ipairs(files) do
         local t0 = love.timer.getTime()
         local ok, kind, n, q = solve(f)
+        -- (siempre corriendo no sabe ir despacio: si no llega, se prueba andando — cala_resaca —; con WALK=1, solo andando)
+        local walkOnly = WALK
+        if not ok and not walkOnly then
+            WALK = true
+            local ok2, kind2, n2, q2 = solve(f)
+            WALK = false
+            if ok2 then ok, kind, n, q = ok2, kind2 .. ' (andando)', n2, q2 end
+        end
         if ok then print(('OK    %-40s → %s en %d acciones (%.1fs)'):format(f, kind, n, love.timer.getTime() - t0))
         else bad = bad + 1; print(('FALLA %-40s → %s; columna más lejana %s, %s estados'):format(f, kind, tostring(n), tostring(q))) end
     end

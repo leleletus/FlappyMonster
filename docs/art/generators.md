@@ -85,6 +85,9 @@ the diff before committing anything they write.
   ridden, getup, dead), two designs A «Torpedo» / B «Zancos» drawn with `make_jungle_enemies.py`'s piece engine; no flags =
   previews in `FlappyMonster_pruebas/pinguino/`; `--apply A|B [--force]` writes `enemies/penguin/penguin-Sheet.png` and
   (only if missing) `assets/anim/enemies/penguin.json`. B applied 2026-10-29 without the user (away): to switch, `--apply A --force`.
+- `tools/art/player/make_monster_actions.py` (0.5.190): the monster's ACTION poses (`assets/images/player/actions/<pose>.png`, 9x16 / 13x16, plain face) and their EYE overlays (`actions/eyes/`), hand-written pixel maps; with no flags only previews (`FlappyMonster_pruebas/monstrito_animaciones/vista_previa_v4.png`, `escala_juego_v4.png`); `--apply` writes new files only (`--force` overwrites: the user may retouch them by hand). Prints each pose's eye table (the `eye`, `ex`, `ey`, `esep` of `assets/anim/player.json`). Plain Python.
+- `tools/art/items/make_hint_sign.py` (0.5.190): the help SIGN `assets/images/items/hint/sign-Sheet.png` (12x16 ×2: lit «?», read «?»; wood of the boxes, the game's navy outline; plain Python, safe to re-run).
+- `tools/art/ui/make_run_button.py` (0.5.190): the touch RUN button `assets/images/ui/touch/run-Sheet.png` (24x24 ×2, the round style of the flashlight / special buttons with a » inside; plain Python, safe to re-run).
 - `tools/art/items/make_snowball_ball.py` (0.5.186): the carryable snowball `assets/images/items/snowball/ball.png` (10x10, hand-drawn map in the script with the Snowball's palette; plain Python, no PIL).
 - `tools/art/enemies/make_snowball.py`: the Snowball (`snowball`, the Giant Snowball's little sister; 14x12 frames: happy
   roll, angry roll, idle + blink, windup, laugh, dazed, squash → snow pile), derived from the user's boss design (it only

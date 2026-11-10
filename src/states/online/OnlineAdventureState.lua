@@ -325,6 +325,7 @@ function OnlineAdventureState:_collectInput()
     self.inputState.right  = Input.down('move_right')
     self.inputState.jump   = Input.down('jump')
     self.inputState.crouch = Input.down('crouch')
+    self.inputState.run    = Input.down('run')
     if Input.pressed('jump')   then self.pendingJump   = true end
     if Input.pressed('crouch') then self.pendingCrouch = true end
     if Input.pressed('light')  then self.pendingLight  = true end
@@ -459,7 +460,7 @@ function OnlineAdventureState:update(dt)
     self.pingIcon:update(dt, NC:getPing(), age, NC.connected ~= false)
     -- Controles táctiles (móvil): cruceta + salto en píxeles de pantalla
     TouchControls.update(not self.showPause and not self.showGameOver and not (self.ownData and self.ownData.isSpectator),
-                         self.level and self.level.dark)
+                         self.level and self.level.dark, true)          -- (true: el botón de CORRER)
     -- ── Game Over ─────────────────────────────────────────────────────────────
     if self.showGameOver then
         self.gameOverTimer = self.gameOverTimer + dt
@@ -634,7 +635,7 @@ function OnlineAdventureState:update(dt)
             ticks = ticks + 1
             local s = self.inputState
             local bits = Protocol.encodeInput(s.left, s.right, s.jump, s.crouch,
-                                              self.pendingJump, self.pendingCrouch, self.pendingLight, self.pendingGrab)
+                                              self.pendingJump, self.pendingCrouch, self.pendingLight, self.pendingGrab, s.run)
             self.pendingJump, self.pendingCrouch, self.pendingLight, self.pendingGrab = false, false, false, false
             local held = self:_startFrozenAhead()                -- (cuenta atrás: el servidor aún no lo mueve)
             self.predictor:tick(bits, held)

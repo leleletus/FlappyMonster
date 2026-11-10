@@ -25,7 +25,7 @@ function PlayerAdventure:render(camX, camY)
     elseif self.frame == 5 then
         img = PS.rec('crouch')
     else
-        img = PS.rec(self.frame)
+        img = PS.recOf(self, self.frame)          -- (las de una sola vez, desde que empezó la pose)
     end
     local iw=img.w; local ih=img.h
     -- (power-up PEQUEÑO: el sprite a ×4 — la densidad de los objetos; a ×3 se vería más fino que todo lo demás —, la caja

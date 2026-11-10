@@ -8,6 +8,7 @@
 --     + dirección (el salto agachado usa la dirección que se mantiene).
 --     Zona táctil GRANDE: toda la mitad izquierda de abajo; cuenta la
 --     dirección del dedo respecto al centro de la cruceta (se puede deslizar).
+--   * CORRER (0.5.190): botón pequeño a la izquierda del salto, se mantiene (no en los niveles Flappy).
 --   * SALTO (derecha): toda la mitad derecha de abajo. Salto agachado = pulgar
 --     izquierdo abajo + pulgar derecho salta.
 -- Arriba de la pantalla (HUD, pausa) no cuenta como control.
@@ -24,7 +25,10 @@ local SpriteStrip = require 'src/fx/SpriteStrip'
 
 local TC = {}
 local dpad, jump, lightBtn
-local state = { l = false, r = false, d = false, j = false, f = false, u = false, x = false }
+local state = { l = false, r = false, d = false, j = false, f = false, u = false, x = false, rn = false }
+-- El botón de CORRER (0.5.190, el usuario: «un botón especial en pantalla, para más control»): a la izquierda del de
+-- salto, se MANTIENE. No en los niveles Flappy (no se corre volando)
+local runOn = false
 local prev = { d = false, j = false, f = false, u = false, x = false }
 -- El botón EXTRA, encima del salto: 'light' (niveles a oscuras: la linterna) · 'special' (niveles Flappy: el ATAQUE
 -- ESPECIAL — src/player/PlayerFlight.lua —) · nil. (`true` = 'light', como antes)
@@ -70,13 +74,16 @@ function TC.layout(sw, sh)
     L.lightW = 24 * L.lightPx
     L.lightX = math.floor(L.jumpX - jumpW * 0.55)
     L.lightY = math.floor(L.jumpY - jumpW * 0.5 - L.lightW * 0.75)
+    -- Correr: del tamaño de la linterna, a la izquierda del salto y un poco más abajo (el pulgar llega sin soltar el salto)
+    L.runX = math.floor(L.jumpX - jumpW * 0.5 - L.lightW * 0.8)
+    L.runY = math.floor(L.jumpY + jumpW * 0.18)
     return L
 end
 
 -- ¿Qué pulsa cada dedo? (posiciones de pantalla)
-function TC.read(L, touches, ex)
+function TC.read(L, touches, ex, run)
     if ex == true then ex = 'light' end
-    local s = { l = false, r = false, d = false, j = false, f = false, u = false, x = false }
+    local s = { l = false, r = false, d = false, j = false, f = false, u = false, x = false, rn = false }
     local dead = L.padW * DEAD_FRAC
     for _, t in ipairs(touches) do
         local x, y = t[1], t[2]
@@ -88,6 +95,8 @@ function TC.read(L, touches, ex)
                 end
                 if dy > dead and dy > 0.45 * math.abs(dx) then s.d = true end
                 if -dy > dead and -dy > 0.45 * math.abs(dx) then s.u = true end
+            elseif run and (x - L.runX) ^ 2 + (y - L.runY) ^ 2 <= (L.lightW * 0.75) ^ 2 then
+                s.rn = true                                      -- (correr: tiene prioridad sobre el salto)
             elseif ex and (x - L.lightX) ^ 2 + (y - L.lightY) ^ 2 <= (L.lightW * 0.75) ^ 2 then
                 -- (el botón extra tiene prioridad sobre el salto)
                 if ex == 'special' then s.x = true else s.f = true end
@@ -101,11 +110,13 @@ end
 
 -- Cada frame: lee los dedos y pone las acciones del jugador. `active` = el
 -- estado quiere controles (nivel en marcha, no muerto / espectador)
-function TC.update(active, ex)
+function TC.update(active, ex, run)
     local VP = Input.VirtualPad
     extra = (ex == true) and 'light' or ((ex == 'light' or ex == 'special') and ex or nil)
+    runOn = run == true
     if not (active and Input.isMobile) then
-        state = { l = false, r = false, d = false, j = false, f = false, u = false, x = false }
+        state = { l = false, r = false, d = false, j = false, f = false, u = false, x = false, rn = false }
+        VP.down['run'] = false
         prev.d, prev.j, prev.f, prev.u, prev.x = false, false, false, false, false
         return
     end
@@ -116,7 +127,8 @@ function TC.update(active, ex)
         local x, y = love.touch.getPosition(id)
         touches[#touches + 1] = { x, y }
     end
-    state = TC.read(L, touches, extra)
+    state = TC.read(L, touches, extra, runOn)
+    VP.down['run'] = state.rn
     VP.down['move_left'], VP.down['move_right'] = state.l, state.r
     VP.down['crouch'], VP.down['jump'] = state.d, state.j
     -- "Recién pulsado" (este mismo frame: saltar, y abajo en el aire = ground pound)
@@ -145,7 +157,7 @@ local function show(name, x, y, px) T(name):play(love.timer.getTime(), x, y, 0, 
 
 -- Dibuja en píxeles de pantalla (fuera de lovesize). `st` = lo pulsado (por
 -- defecto, lo del último update)
-function TC.draw(L, st, fade, ex)
+function TC.draw(L, st, fade, ex, run)
     fade = fade or 1                              -- (entrada de un jefe: se van)
     ex = ex or extra                              -- (el botón extra: el del último update, o el que pida quien dibuja)
     if fade <= 0.001 then return end
@@ -164,6 +176,14 @@ function TC.draw(L, st, fade, ex)
     show(padFrame(st), L.padX, L.padY, L.padPx)
     love.graphics.setColor(1, 1, 1, (st.j and 0.8 or a) * fade)
     show(st.j and 'jump_pressed' or 'jump_up', L.jumpX, L.jumpY + (st.j and L.jumpPx or 0), L.jumpPx)
+    if run == nil then run = runOn end
+    if run then
+        local name = st.rn and 'run_pressed' or 'run_up'
+        love.graphics.setColor(0, 0, 0, 0.35 * a / 0.7 * fade)
+        show(name, L.runX + sh, L.runY + sh, L.lightPx)
+        love.graphics.setColor(1, 1, 1, (st.rn and 0.8 or a) * fade)
+        show(name, L.runX, L.runY, L.lightPx)
+    end
     if ex then
         local on = (ex == 'special') and st.x or st.f
         local name = ex .. (on and '_pressed' or '_up')

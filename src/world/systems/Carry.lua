@@ -75,6 +75,7 @@ end
 
 function Carry.throw(pa, e)
     release(e, pa)
+    pa.throwPoseT = 0.22                                        -- (la pose de lanzar: PlayerAdventure.actionPose)
     local dir = pa.facing or 1
     local vx = dir * (THROW_VX + math.abs(pa.vx or 0) * 0.5)
     e.thrownBy, e.thrownT = pa, THROW_SAFE

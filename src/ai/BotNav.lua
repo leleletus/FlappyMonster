@@ -202,6 +202,7 @@ local function rowOfTop(y)
     if not YOFF then
         local PlayerAdventure = require 'src/player/PlayerAdventure'
         local p = PlayerAdventure:new(0, 0)
+        p.moveK = 1                    -- (los bots van a 240 siempre: los grafos guardados se hicieron así)
         local ob = p:getOuterBounds()
         YOFF = (ob.y + ob.h) - (p.y + ob.h / 2)
     end
@@ -367,6 +368,7 @@ function BotNav.buildOne(level, opts, ents, nearOnly)
         end
     end
     local pa = PlayerAdventure:new(0, 0)
+    pa.moveK = 1                       -- (los bots van a 240 siempre: los grafos guardados se hicieron así)
     level.players = { pa }
     -- objetos SÓLIDOS del nivel (trampolines, morteros): con sus caras de rebote. Un trampolín siempre "listo"
     -- (se pregunta su interact, sin gastarlo); en la partida, si está recargando, la arista falla y se descarta

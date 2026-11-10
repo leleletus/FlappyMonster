@@ -79,7 +79,7 @@ local cases = {}
 
 function cases.neutro()
     Difficulty.bind(nil)
-    local a = Difficulty.k('enemyPace') == 1 and Difficulty.k('bossHp') == 1 and Difficulty.k('playerHp', 3) == 3 and not Difficulty.flag('hazardHurt')
+    local a = Difficulty.k('enemyPace') == 1 and Difficulty.k('bossHp') == 1 and Difficulty.k('playerHp', 3) == 3 and Difficulty.k('hazardDmg', 1) == 1
     local level, es, g = room(20, 8, { { type = 'gummy', col = 6, row = 7, props = {} } }, nil)
     local same = Difficulty.dt(g, 0.5) == 0.5
     local pa = player(level, 3, 8)
@@ -172,14 +172,18 @@ function cases.peligros()
         end
         return pa.dying, pa.hp, up
     end
-    local dN, hN = onSpikes(nil)
+    -- (0.5.190: nunca de un toque salvo en Xtra extremo; Fácil y Normal 1, Difícil y Extremo 2, sin dificultad 1)
+    local dN, hN, upN = onSpikes(nil)
     local dE, hE, upE = onSpikes('easy')
-    check('peligros', dN == true and dE ~= true and hE == 3 and upE,
-        ('caer en pinchos: sin dificultad muere=%s; en Fácil muere=%s, vida 4 → %d y sale de un bote=%s'):format(tostring(dN), tostring(dE), hE, tostring(upE)))
+    local dH, hH = onSpikes('hard')
+    local dX = onSpikes('xtra')
+    check('peligros', dN ~= true and hN == 2 and upN and dE ~= true and hE == 3 and upE and dH ~= true and hH == 1 and dX == true,
+        ('caer en pinchos: sin dificultad vida 3 → %s (muere %s) · Fácil 4 → %s y sale de un bote=%s · Difícil 3 → %s · Xtra muere=%s')
+        :format(tostring(hN), tostring(dN), tostring(hE), tostring(upE), tostring(hH), tostring(dX)))
 end
 
--- Los pinchos que son ENTIDADES (los que cuelgan y caen, la lluvia de pinchos...) igual que los del suelo: matan…
--- salvo en Fácil (antes en Fácil también mataban)
+-- Los pinchos que son ENTIDADES (los que cuelgan y caen, la lluvia de pinchos...) igual que los del suelo (0.5.190: el daño
+-- de su dificultad; solo matan en Xtra extremo)
 function cases.peligros_ent()
     local function touch(diff)
         local level, es, sp = room(20, 8, { { type = 'spikefall', col = 8, row = 2, sub = 1, props = {} } }, diff)
@@ -189,10 +193,11 @@ function cases.peligros_ent()
         Interactions.run(pa, es, {})
         return pa.dying, pa.hp
     end
-    local dN = touch(nil)
+    local dN, hN = touch(nil)
     local dE, hE = touch('easy')
-    check('peligros_ent', dN == true and dE ~= true and hE == 3,
-        ('tocar un pincho colgante: sin dificultad muere=%s; en Fácil muere=%s, vida 4 → %s'):format(tostring(dN), tostring(dE), tostring(hE)))
+    local dX = touch('xtra')
+    check('peligros_ent', dN ~= true and hN == 2 and dE ~= true and hE == 3 and dX == true,
+        ('tocar un pincho colgante: sin dificultad vida 3 → %s · Fácil 4 → %s · Xtra muere=%s'):format(tostring(hN), tostring(hE), tostring(dX)))
 end
 
 function cases.salas()

@@ -301,7 +301,7 @@ function love.load()
     check('libres', freeMoved > 20, ('se movieron %.0f px en 0.5 s de pelea'):format(freeMoved))
     local ks = { 1, 2, 1, 3 }
     local okR = #rests >= 3
-    for i, k in ipairs(rests) do if k ~= ks[i] then okR = false end end
+    for i, k in ipairs(rests) do if k ~= ks[(i - 1) % #ks + 1] then okR = false end end   -- (la secuencia da la vuelta si la pelea dura más)
     if mega then check('emotes', okR, 'descansos: ' .. table.concat(rests, ', ')) end
     local okS, minD = #spawns >= 3, nil
     for _, sp in ipairs(spawns) do

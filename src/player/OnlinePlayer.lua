@@ -96,7 +96,7 @@ function OnlinePlayer:render(camX, camY)
     elseif self.frame == 5 then
         img = PS.rec('crouch')
     else
-        img = PS.rec(self.frame)
+        img = PS.recOf(self, self.frame)          -- (las de una sola vez, desde que empezó la pose)
     end
 
     local iw = img.w

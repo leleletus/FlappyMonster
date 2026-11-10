@@ -156,6 +156,7 @@ function Mirror:initBoss()
     b.updateDrowning = noop            -- no se ahoga (ni toca la música)
     b.lives = 99
     b.speedMult, b.jumpMult = SPEED_MULT, JUMP_MULT
+    b.moveK = 1                        -- (su velocidad de siempre: no anda más lento ni corre — PlayerAdventure.WALK_K —)
     -- Los jugadores son sólidos para él (y él para ellos: level.solidBodies),
     -- salvo mientras él o ellos son invulnerables: entonces se atraviesan
     local me = self
@@ -1044,7 +1045,7 @@ function Mirror:render(camX, camY)
         elseif self.crouching or self.frame == 5 then
             img = PS.rec('crouch')
         else
-            img = PS.rec(self.frame)
+            img = PS.recOf(self, self.frame)      -- (también las poses de acción del jugador: PlayerSprite)
         end
         local iw, ih = img.w, img.h
         local sx = s * f

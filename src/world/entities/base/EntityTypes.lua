@@ -105,7 +105,9 @@ EntityTypes.COMMON = {
       showIf=function(p) return p.movement == 'fly' and p.flyMode ~= 'free' end },
     { key='pauses', kind='bool', label='Hace pausas', group='Comportamiento', default=true,
       help='De vez en cuando se para un momento' },
-    { key='onTouch', kind='enum', label='Al tocarlo', group='Combate', default='kill',
+    -- (0.5.190, el usuario: «casi todos los enemigos matan al tocarlos; eso está muy OP incluso para Xtra extremo» → por
+    -- defecto quitan 1; lo que un nivel puso a mano — «Mata», «Nada» — se queda)
+    { key='onTouch', kind='enum', label='Al tocarlo', group='Combate', default='hurt',
       options=opts({'kill','Mata'}, {'hurt','Quita 1 de vida'}, {'none','Nada (neutral)'}) },
     { key='stompable', kind='bool', label='Se puede pisotear', group='Combate', default=true },
     { key='points', kind='int', label='Puntos al pisotearlo', group='Combate', default=10,

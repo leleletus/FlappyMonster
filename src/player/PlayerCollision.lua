@@ -215,6 +215,7 @@ function PlayerAdventure:moveAndCollide(level, dx, dy)
                         if o.pushBy and (self.onGround or (o.pushInWater and self.inWater)) and (self.inMoveX or 0) == ((dx > 0) and 1 or -1) then
                             local over = (dx > 0) and (x + hw - ob.x) or (x - hw - (ob.x + ob.w))
                             pushed = o:pushBy(self, over)
+                            if pushed and pushed ~= 0 then self.pushPoseT = 0.15 end      -- (la pose de empujar)
                             ob = o:getOuterBounds()
                         end
                         -- Choque al moverse: se queda pegado a su costado

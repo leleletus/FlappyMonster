@@ -58,6 +58,9 @@ from `FlappyMonster_originals`.
   `free_play` check `rush_arena` (`valle_redcoptero.json` does not start alone: `idle`). On the Mac, `project_check`
   fails on `tools/music/ref` (a git-ignored folder that only exists on the Linux machine).
 
+- `run.sh bot_nav`, level `la_cima`: its saved graph is stale (`DESACTUALIZADO`); same result on a clean export of
+  0.5.189, 2026-11-10. Not investigated; `BUILD=1` for that level would rebuild it.
+
 - `run.sh bot_nav`, level `cascada_dorada`: fails its water check (0.1 jumps/s in 30 s in the water). Already failing
   before 0.5.175 (identical output at `fe2fad5f~1`); not investigated.
 

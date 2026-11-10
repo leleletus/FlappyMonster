@@ -461,6 +461,13 @@ function love.update(dt)
         local Model = require 'src/editor/EditorModel'
         local json = require 'libs/json'
         local n, lost = 0, {}
+        -- (json.encode sigue el orden de pairs, que cambia de una copia a otra: se compara el contenido, no el texto)
+        local function same(x, y)
+            if type(x) ~= 'table' or type(y) ~= 'table' then return x == y end
+            for k, v in pairs(x) do if not same(v, y[k]) then return false end end
+            for k in pairs(y) do if x[k] == nil then return false end end
+            return true
+        end
         for _, f in ipairs(love.filesystem.getDirectoryItems('assets/levels')) do
             if f:match('%.json$') then
                 local path = 'assets/levels/' .. f
@@ -471,7 +478,7 @@ function love.update(dt)
                     local okB, b = pcall(json.decode, m:encode())
                     for k, v in pairs(a) do
                         local miss = not okB or b[k] == nil
-                        if not miss and not (Model.KNOWN or {})[k] then miss = json.encode(v) ~= json.encode(b[k]) end
+                        if not miss and not (Model.KNOWN or {})[k] then miss = not same(v, b[k]) end
                         if miss and not (type(v) == 'table' and next(v) == nil) and v ~= false then lost[#lost + 1] = f .. ':' .. k end
                     end
                 end

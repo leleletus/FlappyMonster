@@ -983,6 +983,15 @@ EMIT['land_dust'] = function(kind, x, y, opts)
               g = 300, life = rnd(0.25, 0.42), size = math.random(1, 2) * 3, col = dust, drag = 4, dust = true })
     end
 end
+-- (corriendo: una mota pequeña detrás de los pies, que se queda atrás y se desvanece — 0.5.190 —)
+-- (más visible desde la primera prueba del usuario — «no lo noto» —: 2-3 motas más grandes, enteras, que se apagan solas)
+EMIT['run_dust'] = function(kind, x, y, opts)
+    local dust = dustOf(paletteAt(x, y, opts))
+    for _ = 1, math.random(2, 3) do
+        add({ x = x + rnd(-6, 6), y = y - rnd(0, 4), vx = rnd(-50, 50), vy = -rnd(40, 110), g = 260,
+              life = rnd(0.3, 0.45), size = math.random(2, 3) * 3, col = dust, drag = 3, fadeLast = 0.6, alpha = 0.7 })
+    end
+end
 EMIT['skid_dust'] = function(kind, x, y, opts)
     local dust = dustOf(paletteAt(x, y, opts))
     for _ = 1, 2 do
@@ -1169,7 +1178,7 @@ local function renderOne(p, camX, camY)
     elseif p.fadeLast then
         a = math.min(1, (1 - p.t / p.life) / p.fadeLast)
     end
-    love.graphics.setColor(c[1], c[2], c[3], a)
+    love.graphics.setColor(c[1], c[2], c[3], a * (p.alpha or 1))      -- (`alpha`: una partícula más transparente)
     if p.star then
         love.graphics.rectangle('fill', x - s / 2, y - 1, s, 2)
         love.graphics.rectangle('fill', x - 1, y - s / 2, 2, s)

@@ -819,9 +819,10 @@ function cases.bomba_radios()
     p5.invT = 3
     level.players = { p1, p2, p3, p4, p5 }
     local ex = detonate(level, es, b, 0.3)
-    local r = ('muy cerca: muere=%s · medio: vida %d/%d vx %d · lejos: vida %d vx %d · fuera: vx %d · invulnerable cerca: muere=%s'):format(
-        tostring(p1.dying), p2.hp, p2.hpMax, p2.vx, p3.hp, p3.vx, p4.vx, tostring(p5.dying))
-    check('bomba_radios', ex and p1.dying and p2.hp == p2.hpMax - 1 and p2.vx > 200 and p3.hp == p3.hpMax
+    -- (0.5.190: el centro de la explosión es un PELIGRO — el daño de la dificultad, 1 sin ella; solo mata en Xtra —)
+    local r = ('muy cerca: vida %d/%d (muere %s) · medio: vida %d/%d vx %d · lejos: vida %d vx %d · fuera: vx %d · invulnerable cerca: muere=%s'):format(
+        p1.hp, p1.hpMax, tostring(p1.dying), p2.hp, p2.hpMax, p2.vx, p3.hp, p3.vx, p4.vx, tostring(p5.dying))
+    check('bomba_radios', ex and not p1.dying and p1.hp == p1.hpMax - 1 and p2.hp == p2.hpMax - 1 and p2.vx > 200 and p3.hp == p3.hpMax
           and p3.vx < -100 and math.abs(p4.vx) < 1 and not p5.dying and p5.hp == p5.hpMax, r)
 end
 
@@ -1121,6 +1122,140 @@ function cases.hitstop()
         :format(frozen, tostring(not blocked), tostring(after), tostring(off)))
 end
 
+-- POSES DE ACCIÓN (0.5.190, PlayerAdventure.actionPose / PlayerSprite): cada una sale cuando toca, con su número
+function cases.poses()
+    local PSP = require 'src/player/PlayerSprite'
+    local function fresh()
+        local level = room(16, 12)
+        local pa = playerAt(level, 8, 11)
+        clear()
+        return level, pa
+    end
+    local got = {}
+    local function run(level, pa, frames, setup)
+        for _ = 1, frames do if setup then setup() end; pa:update(1 / 60, level) end
+        return pa.frame
+    end
+    -- dolor
+    -- aterrizar fuerte (cae 5 casillas)
+    level, pa = fresh(); pa.y = pa.y - 5 * T; pa.onGround = false
+    local landed
+    for _ = 1, 120 do pa:update(1 / 60, level); if pa.onGround then landed = pa.frame; break end end
+    got.land = landed
+    -- mirar arriba (ARRIBA mantenido, quieto) y agachado mirando abajo
+    local held = {}
+    local real = Input
+    Input = setmetatable({ down = function(a) return held[a] == true or stub.down(a) end, pressed = function(a) return stub.pressed(a) end }, { __index = stub })
+    level, pa = fresh(); held.grab = true; got.look_up = run(level, pa, 45); held.grab = nil
+    level, pa = fresh(); held.crouch = true; stub.state.crouch = true; got.look_down = run(level, pa, 45); held.crouch = nil; stub.state.crouch = false
+    Input = real
+    -- quieto mucho rato
+    level, pa = fresh(); got.idle_long = run(level, pa, 60 * 5 + 10)
+    -- ground pound (encogido, al empezar)
+    level, pa = fresh(); pa.y = pa.y - 3 * T; pa.onGround = false; pa:update(1 / 60, level)
+    stub.state.crouch_pressed = true; got.gp = run(level, pa, 2)
+    for _ = 1, 6 do pa:update(1 / 60, level) end                         -- (pasado el encogido, aún colgado)
+    got.gpFall = run(level, pa, 1)                                         -- (el cuadro de salto de siempre, el 2)
+    -- victoria
+    level, pa = fresh(); pa.victory = true; got.victory = run(level, pa, 1)
+    clear()
+    local ok = got.land == PSP.LAND and got.look_up == PSP.LOOK_UP
+               and got.look_down == PSP.CROUCH_LOOK_DOWN and got.idle_long == PSP.IDLE_LONG and got.gp == PSP.GP_CURL and got.gpFall == 2
+               and got.victory == PSP.VICTORY
+    -- LOOK=1: una captura de todas las poses dibujadas por el juego (PlayerSprite.draw, con sus ojos) a ×6, en <save>/poses.png
+    if os.getenv('LOOK') then
+        local n = #PSP.POSES
+        local cols = 0
+        for i = 1, n do cols = math.max(cols, #PSP.clip(i).recs) end
+        local cv = love.graphics.newCanvas(cols * 90 + 20, n * 110 + 20)
+        love.graphics.setCanvas(cv); love.graphics.clear(0.42, 0.5, 0.42, 1)
+        love.graphics.setFont(FONT_SMALL or love.graphics.newFont(14))
+        for i = 1, n do
+            local c = PSP.clip(i)
+            love.graphics.setColor(1, 1, 1, 1)
+            love.graphics.print(i .. ' ' .. PSP.POSES[i], 6, 10 + (i - 1) * 110)
+            for k, f in ipairs(c.recs) do
+                love.graphics.setColor(1, 1, 1, 1)
+                PSP.draw(f, 200 + (k - 1) * 90, 70 + (i - 1) * 110, 0, PLAYER_SCALE, PLAYER_SCALE, f.w / 2, f.h / 2)
+            end
+        end
+        love.graphics.setCanvas()
+        cv:newImageData():encode('png', 'poses.png')
+        print('  captura: ' .. love.filesystem.getSaveDirectory() .. '/poses.png')
+    end
+    check('poses', ok, ('aterrizar %s (6) · mirar arriba %s (10) · agachado mira abajo %s (11) · quieto %s (12) · ground pound %s (7), luego %s (2) · victoria %s (13)')
+        :format(tostring(got.land), tostring(got.look_up), tostring(got.look_down), tostring(got.idle_long), tostring(got.gp), tostring(got.gpFall), tostring(got.victory)))
+end
+
+-- CORRER levanta polvo (0.5.190: el efecto `run_dust`, por PlayerAdventure.fx); andando, no
+function cases.polvo_correr()
+    local count = 0
+    local PA = PlayerAdventure
+    local prev = PA.fx
+    PA.fx = function(kind) if kind == 'run_dust' then count = count + 1 end end
+    local held = {}
+    local real = Input
+    Input = setmetatable({ down = function(a) return held[a] == true or stub.down(a) end, pressed = function(a) return stub.pressed(a) end }, { __index = stub })
+    local function run(withRun)
+        count = 0
+        local level = room(40, 12)
+        local pa = playerAt(level, 4, 11)
+        stub.state.right = true; held.run = withRun or nil
+        for _ = 1, 90 do pa:update(1 / 60, level) end
+        stub.state.right = false; held.run = nil
+        return count, pa.vx
+    end
+    local nRun, vRun = run(true)
+    local nWalk, vWalk = run(false)
+    Input, PA.fx = real, prev
+    clear()
+    check('polvo_correr', nRun >= 10 and nWalk == 0,
+        ('corriendo 1,5 s: %d bocanadas de polvo (a %.0f px/s) · andando: %d (a %.0f px/s)'):format(nRun, vRun, nWalk, vWalk))
+end
+
+-- El NIVEL TUTORIAL de verdad (docs/design/tutorial-level.md): lo que level_solve no puede probar — los carteles tienen su
+-- texto, el Activador abre el muro ON/OFF, el ground pound rompe la tapa, el otro Activador abre la puerta —
+function cases.tutorial()
+    local json = require 'libs/json'
+    local L = require 'src/core/Lang'
+    local level = Level.fromData(json.decode(love.filesystem.read('assets/levels/tutorial.json')))
+    local es = {}
+    for _, pl in ipairs(level.entities) do es[#es + 1] = Entities.create(pl) end
+    level.liveEntities, level.players = es, {}
+    local signs, noText, door = 0, {}, nil
+    for _, e in ipairs(es) do
+        if e.def.name == 'hint' then
+            signs = signs + 1
+            if not L.has(e.props.text) then noText[#noText + 1] = tostring(e.props.text) end
+        elseif e.def.name == 'door' then door = e end
+    end
+    local function find(name)
+        local out = {}
+        for r = 1, level.tileH do for c = 1, level.tileW do
+            if level:getDef(c, r).name == name then out[#out + 1] = { c, r } end
+        end end
+        return out
+    end
+    local walls, switches, lids = find('switchblock_on'), find('switch_on'), find('breakable')
+    local wall = walls[1]
+    -- el Activador más cercano al muro
+    table.sort(switches, function(a, b) return math.abs(a[1] - wall[1]) < math.abs(b[1] - wall[1]) end)
+    local solidBefore = level:getDef(wall[1], wall[2]).collision
+    level:hitTile(switches[1][1], switches[1][2], 'head')
+    local solidAfter = level:getDef(wall[1], wall[2]).collision
+    -- la tapa del ground pound: la fila de rompibles a ras de suelo (fila 14)
+    local lid
+    for _, b in ipairs(lids) do if b[2] == 14 then lid = b end end
+    level:hitTile(lid[1], lid[2], 'pound')
+    local lidName = level:getDef(lid[1], lid[2]).name
+    -- la puerta: su Activador es el otro (antes, un paso: la puerta apunta cómo estaba la señal — Door:fired —)
+    for _, e in ipairs(es) do if e.alive then e:update(1 / 60, level) end end
+    level:hitTile(switches[2][1], switches[2][2], 'head')
+    for _ = 1, 60 * 3 do level:update(1 / 60); for _, e in ipairs(es) do if e.alive then e:update(1 / 60, level) end end end
+    check('tutorial', signs > 20 and #noText == 0 and solidBefore == 'solid' and solidAfter == 'none' and lidName == 'empty' and door and door.state == 'open',
+        ('%d carteles (sin texto: %s) · muro ON/OFF %s → %s · tapa → %s · puerta %s'):format(signs, table.concat(noText, ','), solidBefore, solidAfter, lidName, door and door.state or 'no hay'))
+end
+
 function cases.hielo_gp()
     local level, fx = iceRoom()
     local function gp(col)
@@ -1190,7 +1325,8 @@ function cases.hielo_resbala()
         local tAccel
         for i = 1, 120 do
             pa:update(1 / 60, level)
-            if not tAccel and pa.vx >= ADV_MOVE_SPD * 0.9 then tAccel = i / 60 end
+            -- (90 % de la velocidad de ANDAR: desde 0.5.190 se anda a ×0,9 — PlayerAdventure.WALK_K —)
+            if not tAccel and pa.vx >= ADV_MOVE_SPD * PlayerAdventure.WALK_K * 0.9 then tAccel = i / 60 end
         end
         stub.state.right = false
         local xs = pa.x
@@ -4182,7 +4318,7 @@ function love.load()
                          'puffer_through', 'puffer_concave', 'puffer_cycle', 'puffer_dry', 'flyer_anim', 'vuelo_libre', 'boxed_in',
                          'bloque_roto', 'activador', 'tramp_avanza', 'tramp_pinchos', 'ping_icono',
                          'bomba_activa', 'bomba_pisada', 'bomba_radios', 'bomba_mundo', 'bomba_objeto',
-                         'hielo_solido', 'hielo_desgaste', 'hielo_nivel', 'hielo_vuelve', 'mirar', 'salto_variable', 'esquina', 'hitstop', 'hielo_gp', 'hielo_bomba', 'encerrado', 'trepador_canto', 'hielo_resbala', 'filo_propio', 'saltarin', 'saltarin_cueva', 'persecucion', 'persecucion_cuerpo', 'inofensivos', 'tapa_base', 'manzana',
+                         'hielo_solido', 'hielo_desgaste', 'hielo_nivel', 'hielo_vuelve', 'mirar', 'salto_variable', 'esquina', 'hitstop', 'poses', 'polvo_correr', 'tutorial', 'hielo_gp', 'hielo_bomba', 'encerrado', 'trepador_canto', 'hielo_resbala', 'filo_propio', 'saltarin', 'saltarin_cueva', 'persecucion', 'persecucion_cuerpo', 'inofensivos', 'tapa_base', 'manzana',
                          'cryo_jugador', 'cryo_enemigo', 'cryo_activador', 'cryo_corte', 'lava', 'pocos_fps', 'ahogo_ganado', 'techo_pinchos',
                          'caja_empuje', 'caja_rota', 'caja_borde', 'cargar', 'bomba_reaparece', 'islas', 'islas_arte', 'viento', 'cuerpo_mueve', 'cajas_golpes', 'balanza', 'soplon', 'semilla', 'ventisca', 'geiser', 'balanza_tope', 'caja_choques', 'cargar_gp', 'gp_radio', 'dejar_encima', 'jump_buffer', 'jefe_puntos', 'persecucion_toque', 'secreto_reina', 'secreto_tifon', 'paredes_falsas', 'aire_caja', 'geiser_peso', 'bomba_cajas', 'cajas_fila', 'balanza_impacto', 'balanza_salto', 'balanza_techo', 'escarabajo', 'escarabajo_lanzado', 'escarabajo_ruta', 'escarabajo_manos', 'escarabajo_arrolla',
                          'topo', 'topo_culetazo', 'topo_suelo', 'topo_borde', 'pirana', 'pirana_pisar', 'pirana_rebota', 'pirana_nada', 'planta', 'planta_pisar', 'planta_traga', 'planta_colgada', 'planta_come', 'planta_bomba' }) do

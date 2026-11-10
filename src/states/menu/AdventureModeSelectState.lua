@@ -1,5 +1,5 @@
 -- src/states/menu/AdventureModeSelectState.lua
--- Menú intermedio: HISTORIA (un jugador) u ONLINE (multijugador). (JUEGO LIBRE salió de aquí el 2026-11-07: está en
+-- Menú intermedio: TUTORIAL (0.5.190), HISTORIA (un jugador) u ONLINE (multijugador). (JUEGO LIBRE salió de aquí el 2026-11-07: está en
 -- el menú de depuración — DebugMenuState —.)
 -- Se muestra al elegir Aventura en el menú principal. Como todas las pantallas de menú (docs/architecture/menus.md): sobre
 -- el fondo vivo (MenuScene), rótulo arriba, botones de colores que entran y salen escalonados (MenuList, MenuAnim)
@@ -18,16 +18,19 @@ local AdventureModeSelectState = BaseState:new()
 function AdventureModeSelectState:enter(args)
     self.anim = MenuAnim.new({ n = 5 })
     local go = function(state) return function() self:_leave(state) end end
-    self.list = MenuList.new({ anim = self.anim, first = 2, top = 0.34, selected = (args and args.selected) or 1, items = {
+    self.list = MenuList.new({ anim = self.anim, first = 2, top = 0.34, selected = (args and args.selected) or 2, items = {   -- (por defecto, HISTORIA: el tutorial va primero en la lista)
+        -- (el nivel TUTORIAL — docs/design/tutorial-level.md —: se vuelve a este menú)
+        { text = 'adv.tutorial', color = 'green', desc = 'adv.desc_tutorial',
+          go = function() self:_leave('adventure', { level = 'assets/levels/tutorial.json', returnTo = 'adv_mode_select' }) end },
         { text = 'adv.story',  color = 'yellow', desc = 'adv.desc_story',  go = go('story_slots') },
         { text = 'adv.online', color = 'purple', desc = 'adv.desc_online', go = go('online_login') },
     } })
     Sound.playMusic('menus')
 end
 
-function AdventureModeSelectState:_leave(state)
+function AdventureModeSelectState:_leave(state, args)
     self.anim:leave(function() end, 5)
-    Transition.go(state)
+    Transition.go(state, args)
 end
 
 function AdventureModeSelectState:_back()

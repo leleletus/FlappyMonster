@@ -44,6 +44,7 @@ function BonusMatch.new(state, opts)
         local col = (i == 1) and (level.tileW - (level.playerStart[1] or 2) + 1) or math.floor(level.tileW / 2)
         local bx, by = level:findGround(col)
         local pa = PlayerAdventure:new(bx or (sx + TILE_PX), by or sy)
+        pa.moveK = 1                   -- (el bot del bonus, a su velocidad de siempre: PlayerAdventure.WALK_K)
         pa.spawnX, pa.spawnY = pa.x, pa.y
         pa.facing = -1
         local bot = Bot.new(pa, nav, { firstDelay = 1.5 + (i - 1) * 1.2, attackCd = Bot.ATTACK_CD * Difficulty.k('botRest'),

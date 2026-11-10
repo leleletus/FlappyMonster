@@ -2,7 +2,7 @@
 
 A difficulty is **a table of named modifiers** in `src/core/Difficulty.lua` (`easy`, `normal`, `hard`, `extreme`,
 `xtra`). Base code never asks "which difficulty is this?"; it asks for a modifier: `Difficulty.k('airTime')`
-(multiplier, 1 when absent), `Difficulty.flag('hazardHurt')`, `Difficulty.dt(entity, dt)` (time scale by entity
+(multiplier, 1 when absent), `Difficulty.k('hazardDmg', 1)`, `Difficulty.dt(entity, dt)` (time scale by entity
 category), or `Difficulty.of(id, name, default)` when there is no level. The difficulty is a property of the LEVEL
 being simulated (`level.difficulty`; `nil` = neutral, the game as it was), bound with `Difficulty.bind(level)` by
 whoever steps the simulation — so single player, the server (several rooms) and the client always agree.
@@ -18,7 +18,7 @@ unlocked); Free Play has a ◀ ▶ selector (key F or tap either half); online, 
 | `enemyPace`, `trapPace`, `bossPace` | the whole update of entities of that category (speed, telegraphs, cooldowns, projectiles) | `Difficulty.dt` in the entity loops; a type opts out with `pace = false` |
 | `bossHp`, `pairHp` | boss health; health of each boss of a pair (`bossExtra`, which no difficulty sets) | `Boss:startFight` |
 | `playerHp`, `invuln`, `airTime` | player HP, invulnerability time, air under water | `PlayerAdventure` |
-| `hazardHurt` | spikes and lava take 1 HP + a hop instead of killing — also the hazard boxes of entities (hanging / falling spikes, spike rain, the Crabby's spike, mortar fire; `Interactions` marks them `'hazard'`, since 0.5.11) | `pa:hazardHit()` |
+| `hazardDmg` | HP taken by every HAZARD, plus a hop out (`pa:hazardHit()`): Easy and Normal 1, Hard and Extreme 2, Xtra Extreme 0 = kills in one touch, no difficulty 1 (0.5.190; the user: "never in one touch, but scaled; in Xtra they do kill". Before: `hazardHurt`, 1 HP on Easy and death everywhere else) — spikes, lava, the centre of an explosion and also the hazard boxes of entities (hanging / falling spikes, spike rain, the Crabby's spike, mortar fire; `Interactions` marks them `'hazard'`, since 0.5.11) | `pa:hazardHit()` |
 | `sense` | every enemy detection range (sight below, hearing, Gloomy sense, mortar, pufferfish, Hopper) | the entity types, `Noise.heard` |
 | `ventDelay` | delay between oxygen bubbles | `Level` vents |
 | `bossExtra` | TWO allied bosses per arena — kept for the future: NO difficulty sets it since 0.5.24 (harness: `sp_boss DIFF=xtra PAIR=1`, `difficulty_rules` `doble` switch it on) | `src/world/systems/XtraBosses.lua` |
@@ -42,9 +42,9 @@ unlocked); Free Play has a ◀ ▶ selector (key F or tap either half); online, 
   whole entity (walk, fall, telegraphs, cooldowns, projectiles) — `enemyPace` (Enemigos), `trapPace` (Trampas),
   `bossPace` (Jefes); a type opts out with `pace = false` or picks one with `pace = '...'`. No boss was retuned by
   hand. Others: `bossHp` (`Boss:startFight`), `playerHp` (`pa:applyDifficulty()`, called by whoever creates the player
-  after binding), `invuln` (hit / respawn), `airTime` (drowning), `hazardHurt` (spikes and lava: `pa:hazardHit()` =
+  after binding), `invuln` (hit / respawn), `airTime` (drowning), `hazardDmg` (spikes and lava: `pa:hazardHit()` =
   1 HP + a hop instead of death), `bossExtra` (stage 6). Values: easy .8/.8/.7 pace, boss hp .75, 4 HP, invuln 1.3,
-  air 1.4, hazardHurt; normal = boss pace .85, hp .9 (levels as today); hard = enemies/traps 1.1, air .9 (bosses as
+  air 1.4, hazardDmg 1; normal = boss pace .85, hp .9 (levels as today); hard = enemies/traps 1.1, air .9 (bosses as
   today); extreme 1.25/1.3/1.2, boss hp 1.15, invuln .75, air .8. Online: `set_mode { difficulty = id | 'none' }` →
   `room.difficulty` → `game_init.difficulty` (no room UI yet; additive, no protocol bump). Story: a NEW save asks the
   difficulty (`StorySlotState` picker; Extreme / Xtra locked until `Save.global().unlocked`); `AdventureState` takes
@@ -141,3 +141,17 @@ unlocked); Free Play has a ◀ ▶ selector (key F or tap either half); online, 
   their attack will land (`markerX` / `markX`), 2-6 cells from the player who needs it, never on them, never on lava
   or water. `bossdrops.lua`; harness `difficulty_rules` (`ayuda`). The server's Sound stub gained `playAt` (the
   director's drop sound crashed the online room).
+
+## Damage rework (0.5.190, the user: "almost every classic enemy kills on contact, that is too OP even for Xtra Extreme")
+
+- **Enemies:** the common prop `onTouch` now defaults to `hurt` (1 HP, every difficulty); a placement set by hand to
+  "Mata" / "Nada" keeps it (no level in the repo sets it).
+- **Hazards:** `hazardDmg` above, through `PlayerAdventure:hazardHit` (hurt + a hop, so nobody stays standing in lava).
+- **Still lethal:** falling out of the level, drowning, being crushed, the 10-minute limit, and the bosses' own attacks
+  (the user: bosses stay as they are; the Evil Ship and the Mega Crabby have hit boxes that kill). Invulnerability and
+  food unchanged (the user).
+- **Levels to review in play** (hazard-heavy: spots designed as "touching this is death" may now be tanked through):
+  `lluvia_pinchos`, `laberinto_submarino`, `coliseo_pinchos`, `caldera_roja` (secret exit), `canon_trampolines`,
+  `huida_del_espejo`, `el_teleferico`, `taller_trampas` (secret exit), `fortaleza_malvada`, `rebote_real`,
+  `fabrica_morteros`, `tren_fugaz`. Ranked by spikes + lava + traps: no judgement by a person yet.
+

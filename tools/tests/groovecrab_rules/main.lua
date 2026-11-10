@@ -540,6 +540,7 @@ function cases.trepar()
         boss.x = 23 * T + side * 3 * T
         local tb = boss:trampBox()
         local pa = playerAt(level, 2)
+        pa.moveK = 1                                                       -- (la velocidad para la que se midió el salto al plato)
         local ob = pa:getOuterBounds()
         pa.x, pa.y, pa.vy, pa.onGround = boss.x, tb.y - ob.h / 2 - 4, 300, false
         local landedY
@@ -792,6 +793,7 @@ local function bounceLoop(level, es, boss, pa, secs, dbl)
         if dbl and not pa.onGround and pa.vy > -20 and pa.vy < 40 and (pa.jumpsLeft or 0) > 0 then stub.state.jump, stub.state.jump_pressed = true, true end
         pa.x = boss.x
         pa:update(DT, level)
+        if pa.hitNow or pa.dying then states.hit = true end                 -- (en Difícil los pinchos quitan 2, no matan de un toque)
         local r, a, b, c = boss:interact(pa)
         if r == 'launch' then
             if os.getenv('DBG') then print(('  t=%d launch vy=%.0f estado=%s dt=%.2f y=%.0f'):format(i, b, boss.state, boss.deadTimer, pa.y)) end
@@ -830,9 +832,9 @@ function cases.techo()
     local _, _, vyHop = boss2:interact(hi)
     local apexHop = hi.y - vyHop * vyHop / (2 * ADV_GRAVITY)
     local apexWant = boss2.floorY - boss2.LAUNCH_APEX
-    check('techo', spikes >= 24 and safe and top1 > 2 * T + 13 + 15 and states.buck and pa.dying and math.abs(apexHop - apexWant) < 2,
-        ('pinchos en el techo: %d · un rebote + doble salto: lo más alto %.0f px (pinchos hasta 141), vivo=%s · rebotando: %d rebotes, corcovea=%s, muere en los pinchos=%s (lo más alto %.0f) · lanzado con él saltando: centro a %.0f (quiere %.0f)'):format(
-            spikes, top1, tostring(safe), n2 + n1, tostring(states.buck == true), tostring(pa.dying == true), top2, apexHop, apexWant))
+    check('techo', spikes >= 24 and safe and top1 > 2 * T + 13 + 15 and states.buck and states.hit and math.abs(apexHop - apexWant) < 2,
+        ('pinchos en el techo: %d · un rebote + doble salto: lo más alto %.0f px (pinchos hasta 141), vivo=%s · rebotando: %d rebotes, corcovea=%s, le dan los pinchos=%s (lo más alto %.0f) · lanzado con él saltando: centro a %.0f (quiere %.0f)'):format(
+            spikes, top1, tostring(safe), n2 + n1, tostring(states.buck == true), tostring(states.hit == true), top2, apexHop, apexWant))
 end
 
 -- (0.5.149) LAS PLATAFORMAS REVIENTAN durante el enfriamiento de los platos (tras el destello del bajón) y vuelven al acabar

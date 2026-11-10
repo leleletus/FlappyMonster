@@ -22,6 +22,37 @@ The part files are loaded by `PlayerAdventure.lua` and add methods to the same c
 
 **Moves:** walk, jump + double jump, crouch (and crouch jump), ground pound (crouch in the air), swimming, the
 flashlight in dark levels, carrying (UP: pick up / throw; crouch + UP: put down carefully — [carry-and-push](carry-and-push.md)).
+**Action poses** (0.5.190; designed by an art agent from the user's frames and the rhythm-duel poses, every one
+approved by the user — `tools/art/player/make_monster_actions.py` → `assets/images/player/actions/`, anims `act_*` in
+`assets/anim/player.json`): the pose NUMBER (`frame`, it travels online) 6 hard landing, 7 ground-pound wind-up (curled,
+only the first `GP_CURL_T` 0.08 s; then the classic jump frame 2, also for the dive: the user), 8 throw, 9 push, 10 look
+up (UP held standing still 0.6 s), 11 crouched looking down (DOWN held crouched 0.6 s, the camera look), 12 long idle
+(5 s still: blink, antennae), 13 victory (on winning the level). Built and then removed in play (the user: "it does
+not quite work"): skid, hurt. Chosen by priority at the end of `PlayerAdventure:update`
+(`actionPose`); drawing only. Walking and running keep the idle / jump frames (the user: part of its essence); the
+ledge pose and the swim / carry / double-jump ones were rejected. **Eyes** are separate overlay sprites
+(`assets/images/player/actions/eyes/`: normal, blink, happy — the Mirror's laugh eyes, same size and gap —,
+sparkle), drawn by `PlayerSprite.draw` at half a sprite pixel from each frame's `eye`, `ex`, `ey`, `esep`, SYMMETRIC by
+construction (the right eye is the mirror image of the left around the pair's centre, in screen pixels: rounding each
+one apart had shifted the `^ ^` a quarter pixel — the user saw it). One-shot anims start from their first frame
+(`PlayerSprite.recOf`: the time since that object's pose changed). Cutscene actors keep the basic poses
+(`basicPoses`). Online: remote players see what the server's simulation picks; look up shows only on your own screen
+(the held UP is not in the input bits). Harness `mechanics poses` (`LOOK=1` → `<save>/poses.png`, every frame drawn
+by the game).
+
+**Walking and running** (0.5.190; the user: "by default a bit slower, and with a button it runs, a bit faster than
+now"; testers complained it could not run): walking `ADV_MOVE_SPD × PlayerAdventure.WALK_K` (0.9 → 216 px/s), holding
+RUN `× RUN_K` (1.11 → 266 px/s; the user asked for 1.1 and then "1 % more"), on the ground and in the air (also the crouch jump's take-off); running on the ground leaves `run_dust` behind the feet (2-3 motes every 0.06 s at 70 % opacity; made bigger after the user's first try, "I don't notice it"; drawing only). Harness `mechanics polvo_correr`. No new animation: it
+keeps moving with its idle / jump frames (the user: that is part of its essence). Buttons: Shift (both) on keyboard
+(the flashlight is F only now), the controller's top face button (Nintendo **[X]**, Xbox / SDL `y`; the flashlight keeps
+SDL `x`, Nintendo [Y]), on touch a held button left of the jump button (not in Flappy levels:
+`TouchControls.update(active, extra, run)`; art `tools/art/ui/make_run_button.py` → `ui/touch/run-Sheet.png`).
+Online: input bit `IN_RUN` = 256 (held, inside `IN_HELD_MASK`; `IN_MAX` 511, protocol 115). **Speed override**
+`pa.moveK` (a fixed factor, no running): the bots (menu demo, bonus, the planner's simulations — their moves and the
+saved graphs `assets/nav/` were made at 240 —), cutscene actors (choreographed at 240) and the Mirror (its own speed
+multiplier was tuned on 240) keep exactly 240. Harness `level_solve` runs by default (`WALK=1`: walking); see the
+history below for which levels need running.
+
 **Game feel (0.5.188, the user approved the round in [gamefeel-round-2026-11](../design/gamefeel-round-2026-11.md)):**
 - **Variable jump height:** releasing JUMP while rising cuts the jump to `JUMP_CUT` (0.45) × its take-off speed
   (held 1.5 tiles, released after 4 frames 0.8). Only when the button was SEEN held after the jump

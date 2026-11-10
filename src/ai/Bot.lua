@@ -81,6 +81,7 @@ local L, R, J, JP, C, CP = P.IN_LEFT, P.IN_RIGHT, P.IN_JUMP, P.IN_JUMP_P, P.IN_C
 function Bot.new(pa, nav, opts)
     opts = opts or {}
     pa.immortal = not opts.mortal
+    pa.moveK = 1                       -- (a la velocidad fija de siempre: los grafos de assets/nav/ cuentan con ella)
     return setmetatable({
         pa = pa, nav = nav, stub = P.newInputStub(),
         cd = opts.firstDelay or 1.5, attackCd = opts.attackCd or Bot.ATTACK_CD,
@@ -803,6 +804,7 @@ function Bot:_safe(level, bits)
     local pa = self.pa
     local g = self.ghost
     if not g then g = PlayerAdventure:new(pa.x, pa.y); self.ghost = g end
+    g.moveK = pa.moveK                                       -- (a la velocidad del bot)
     P.applyOwnState(P.packOwnState(pa), g)
     g.immortal = false
     local list = {}

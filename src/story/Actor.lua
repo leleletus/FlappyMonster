@@ -22,6 +22,8 @@ local function noop() end
 function Actor.new(level, x, y, o)
     o = o or {}
     local b = PlayerAdventure:new(x, y)
+    b.moveK = 1                        -- (las cinemáticas se coreografiaron a esta velocidad: ni anda lento ni corre)
+    b.basicPoses = true                -- (y con las poses de siempre: sin las de acción — PlayerAdventure.actionPose —)
     b.updateDrowning = noop
     b.lives = 99
     local a = setmetatable({ level = level, body = b, mx = 0, crouch = false, jumpQ = false, acc = 0, invert = o.invert,
@@ -106,7 +108,7 @@ function Actor:draw(o)
             PS.draw(img, math.floor(h[1]), math.floor(h[2]), 0, PLAYER_SCALE * h[4], PLAYER_SCALE, img.w / 2, img.h / 2)
         end
     end
-    local img = PS.rec(frameOf(b.frame))
+    local img = PS.recOf(self, frameOf(b.frame))
     -- (el filo blanco, como en el juego: solo donde está oscuro — Silhouette.on —)
     if not self.invert and alpha > 0.5 and Silhouette.on(self.level, b.y) then Silhouette.draw(img, b.x, b.y, 0, s * f, s, alpha) end
     invert(self.invert)

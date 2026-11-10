@@ -17,6 +17,15 @@ local FALL_FPS   = 6
 -- corto para afinar). Solo si se vio el botón MANTENIDO tras saltar: lo que solo "pulsa" (cinemáticas, bots que pulsan
 -- un fotograma) salta entero como siempre. Online: el bit de mantener viaja en el input (cliente = servidor).
 local JUMP_CUT = 0.45
+-- ANDAR y CORRER (0.5.190, el usuario: «por defecto un poco más lento y con un botón corre, un poco más rápido que
+-- ahora»; los probadores se quejaban de que no podía correr): × ADV_MOVE_SPD (240). Con `moveK` en el jugador, esa
+-- velocidad fija y sin correr: los bots, los actores de las cinemáticas, el Espejo — sus movimientos, grafos y
+-- coreografías se hicieron a 240 —
+PlayerAdventure.WALK_K, PlayerAdventure.RUN_K = 0.9, 1.11     -- (correr: 1.10 → 1.11, el usuario: «un 1 % más»)
+local function moveK(self)
+    if self.moveK then return self.moveK end
+    return Input.down('run') and PlayerAdventure.RUN_K or PlayerAdventure.WALK_K
+end
 -- POLVO y APLASTARSE al caer (solo dibujo): aterrizar más rápido que LAND_DUST_VY levanta polvo; LAND_SQ_VY o más, un
 -- achatado corto (landSq: 1 → 0 en LAND_SQ_T s). Dar la vuelta corriendo en el suelo: polvo de derrape.
 local LAND_DUST_VY, LAND_SQ_VY, LAND_SQ_T = 420, 650, 0.16
@@ -332,12 +341,13 @@ function PlayerAdventure:applyDifficulty()
     self.hp = self.hpMax
 end
 
--- Pinchos y lava: matan… salvo que la dificultad los rebaje a 1 de vida (`hazardHurt`): entonces
+-- Pinchos y lava (y los demás PELIGROS): quitan `hazardDmg` de vida según la dificultad — 0 = matan (Xtra extremo) —:
 -- hacen daño y te sacan de un bote hacia arriba (para poder salir del foso). true = ha muerto.
 function PlayerAdventure:hazardHit()
-    if not Difficulty.flag('hazardHurt') then return self:die() ~= false end
+    local dmg = Difficulty.k('hazardDmg', 1)                -- (0 = mata de un toque: Xtra extremo; Difficulty.lua)
+    if dmg <= 0 then return self:die() ~= false end
     if self:isInvulnerable() then return false end
-    if self:hurt() then return true end
+    if self:hurt(dmg) then return true end
     self.vy, self.onGround = -620, false
     self.gpPhase, self.gpT = nil, 0
     return false
@@ -504,6 +514,7 @@ function PlayerAdventure:_update(dt, level)
     end
     if self.gpPhase then
         self:updateGroundPound(dt, level)
+        self:actionPose(dt, 0)
         return
     end
 
@@ -570,7 +581,7 @@ function PlayerAdventure:_update(dt, level)
             -- Salto agachado con dirección: sale ya lanzado hacia ese lado
             if crouchJump and inX ~= 0 and not locked then
                 local liqM = (self.inWater and self.liquid) and self.liquid.speedMult or 1
-                self.vx = inX * ADV_MOVE_SPD * liqM * (self.speedMult or 1)
+                self.vx = inX * ADV_MOVE_SPD * moveK(self) * liqM * (self.speedMult or 1)
                 self.facing = inX
             end
         end
@@ -589,7 +600,7 @@ function PlayerAdventure:_update(dt, level)
 
     -- (lanzado de lado: el impulso se mantiene mientras dura el bloqueo)
     if (self.ctrlLockT or 0) <= 0 then
-        self.vx = self.vx + (moveX*ADV_MOVE_SPD*speedM*walkM*(self.speedMult or 1) - self.vx)*fric*dt
+        self.vx = self.vx + (moveX*ADV_MOVE_SPD*moveK(self)*speedM*walkM*(self.speedMult or 1) - self.vx)*fric*dt
     end
     self.vy = self.vy + ADV_GRAVITY*gravM*dt
     if liq then self.vy=self.vy+(-self.vy*liq.drag*dt) end
@@ -609,13 +620,22 @@ function PlayerAdventure:_update(dt, level)
     local feetY = self.y + OUTER_YOFF * (self.sizeK or 1) + self.h / 2
     if self.onGround and not wasGround and not self.inWater then
         if vyMove > LAND_DUST_VY then fx(self, 'land_dust', self.x, feetY) end
-        if vyMove > LAND_SQ_VY then self.landSq = 1 end
+        if vyMove > LAND_SQ_VY then self.landSq, self.landPoseT = 1, 0.28 end        -- (y su pose: actionPose)
     end
     if self.onGround and moveX ~= 0 and self.vx * moveX < -ADV_MOVE_SPD * 0.5 and not self.inWater then
         self.skidT = (self.skidT or 0) - dt
         if self.skidT <= 0 then self.skidT = 0.07; fx(self, 'skid_dust', self.x - moveX * 10, feetY) end
     end
     if (self.landSq or 0) > 0 then self.landSq = math.max(0, self.landSq - dt / LAND_SQ_T) end
+    -- CORRIENDO por el suelo: polvito detrás (que se vea la diferencia con andar; el usuario). Solo dibujo
+    if self.onGround and not self.inWater and not self.moveK and Input.down('run')
+       and math.abs(self.vx) > ADV_MOVE_SPD * PlayerAdventure.WALK_K * 1.05 then
+        self.runDustT = (self.runDustT or 0) - dt
+        if self.runDustT <= 0 then
+            self.runDustT = 0.06
+            fx(self, 'run_dust', self.x - (self.vx > 0 and 1 or -1) * 14, feetY)
+        end
+    end
     self.rideBody = nil
     -- (disparado fuerte por una catapulta contra el techo: pierde 1 y queda aturdido — systems/HardLaunch)
     if self.hardLaunch then HardLaunch.player(self, level, vyMove) end
@@ -654,12 +674,45 @@ function PlayerAdventure:_update(dt, level)
     -- Aplastado: agachado (sprite) desde el golpe, también en el saltito; y
     -- el salto agachado también se ve agachado
     if (self.squashT or 0) > 0 or self.crouching then self.frame, self.animT = 5, 0 end
+    self:actionPose(dt, moveX)
 
     self.puff=self.puff+(1-self.puff)*PUFF_SPD*dt
 
     self:updateDrowning(dt, level)
     self:updateFrost(dt, level)
     self:updateAirBarAnim(dt)
+end
+
+-- ── POSES DE ACCIÓN (0.5.190, el usuario aprobó cada una — src/player/PlayerSprite.lua, docs/gameplay/player.md —): al
+-- final del paso, encima del cuadro de siempre, por prioridad. Solo es el NÚMERO de la pose (lo visual: viaja como
+-- `frame`); no cambia nada de la simulación. Los actores de las cinemáticas (`basicPoses`) no las usan: sus películas
+-- se aprobaron con las poses de siempre
+local PSP = require 'src/player/PlayerSprite'
+local LOOK_HOLD, IDLE_LONG_AT, IDLE_LONG_T = 0.6, 5, 1.25
+local GP_CURL_T = 0.08          -- s del encogido al empezar el ground pound (el usuario: «tarda bastante»; antes toda la carga)
+local function tick(self, k, dt) local v = self[k]; if v and v > 0 then self[k] = math.max(0, v - dt) end end
+function PlayerAdventure:actionPose(dt, moveX)
+    if self.dying or self.basicPoses or self.flight then return end
+    for _, k in ipairs({ 'landPoseT', 'throwPoseT', 'pushPoseT' }) do tick(self, k, dt) end
+    local still = self.onGround and math.abs(self.vx or 0) < 20 and not self.inWater
+    self.lookUpT = (still and not self.crouching and not self.carrying and Input.down('grab')) and (self.lookUpT or 0) + dt or 0
+    self.lookDownT = (still and self.crouching and Input.down('crouch')) and (self.lookDownT or 0) + dt or 0
+    local idle = still and not self.crouching and (moveX or 0) == 0 and self.frame == 3 and not self.carrying
+    self.idleLongT = idle and (self.idleLongT or 0) + dt or 0
+    local p
+    if self.victory then p = PSP.VICTORY
+    elseif self.gpPhase == 'windup' and (self.gpT or 0) < GP_CURL_T then p = PSP.GP_CURL   -- (el encogido, un instante)
+    elseif self.gpPhase then p = 2                                -- (el resto, y en picado: el cuadro de salto de siempre)
+    elseif (self.throwPoseT or 0) > 0 then p = PSP.THROW
+    elseif self.onGround and not self.inWater and (self.landPoseT or 0) > 0 then p = PSP.LAND
+    elseif self.onGround and (self.pushPoseT or 0) > 0 then p = PSP.PUSH
+    elseif self.lookUpT >= LOOK_HOLD then p = PSP.LOOK_UP
+    elseif self.lookDownT >= LOOK_HOLD then p = PSP.CROUCH_LOOK_DOWN
+    elseif self.idleLongT >= IDLE_LONG_AT then
+        p = PSP.IDLE_LONG
+        if self.idleLongT >= IDLE_LONG_AT + IDLE_LONG_T then self.idleLongT = 0 end   -- (y vuelta a esperar)
+    end
+    if p then self.frame = p end
 end
 
 -- ── Partes (el resto de PlayerAdventure.lua, por sistemas) ────────────────────

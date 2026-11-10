@@ -30,8 +30,8 @@ local MenuScene = {}
 MenuScene.SCENES = {
     { level = 'valle_soleado',    seed = 14 },     -- la Pradera (37 s, 0 muertes; 0.5.72: con el Soplón)
     { level = 'arrecife_globo',   seed = 7 },      -- la Costa, buceando (65 s; 0.5.72)
-    { level = 'fabrica_morteros', seed = 17 },     -- la Fortaleza, al atardecer (46 s, 1 muerte; 0.5.72)
-    { level = 'cumbres_escarcha', seed = 7 },      -- las Cumbres (62 s, 2 muertes)
+    { level = 'fabrica_morteros', seed = 30 },     -- la Fortaleza, al atardecer (43 s, 0 muertes; 0.5.190)
+    { level = 'cumbres_escarcha', seed = 12 },     -- las Cumbres (50 s, 0 muertes; 0.5.190)
 }
 MenuScene.SCENE_MAX = 100       -- s como mucho por escena (si el bot no llega a la meta)
 MenuScene.STALL = 8             -- s sin avanzar hacia la meta → se rinde (muere y reaparece en el punto de control)

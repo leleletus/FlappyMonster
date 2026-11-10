@@ -24,7 +24,7 @@ local DEF = {
         local Save, Shards = require 'src/story/Save', require 'src/story/Shards'
         return {
             id = 'story', saves = Save, run = require 'src/story/Run', worlds = require 'src/story/Worlds',
-            map = 'story_map', back = { 'adv_mode_select', { selected = 1 } },
+            map = 'story_map', back = { 'adv_mode_select', { selected = 2 } },   -- (2 = HISTORIA: el TUTORIAL es el 1)
             difficulties = require('src/core/Difficulty').ORDER,
             unlocked = function() return Save.global().unlocked end,
             title = 'story.title',

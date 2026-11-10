@@ -104,6 +104,7 @@ and the network use; **Label** is the (Spanish) name in the editor. Own props = 
 | `box` | Caja | `types/items/box.lua` |  | `respawn`: number = 5 |
 | `checkpoint` | Checkpoint | `types/items/checkpoint.lua` | checkpoint |  |
 | `extralife` | Vida extra | `types/items/extralife.lua` | pickup |  |
+| `hint` | Cartel de ayuda | `types/items/hint.lua` |  | `text`: text = tut.missing · `radius`: int = 3 |
 | `seed` | Semilla | `types/items/seed.lua` |  | `height`: int = 6 · `life`: number = 20 |
 | `smallbox` | Caja pequeña | `types/items/box.lua` |  | `respawn`: number = 5 |
 | `snowball_ball` | Bola de nieve (cargable) | `types/items/snowball_ball.lua` |  |  |

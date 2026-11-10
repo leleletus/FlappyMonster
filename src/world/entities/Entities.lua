@@ -38,7 +38,7 @@ local TYPES = { 'enemies/gummy', 'enemies/crabby', 'traps/spikefall', 'traps/glo
                 'enemies/beetle', 'bosses/giantbeetle', 'enemies/gummy_jungle', 'enemies/crabby_jungle',
                 'enemies/mole', 'enemies/piranha', 'enemies/carnivoreplant', 'enemies/penguin',
                 'mechanisms/iceberg', 'traps/avalanche', 'mechanisms/cablecar', 'mechanisms/door',
-                'enemies/scorpion', 'bosses/giantscorpion', 'bosses/carnqueen', 'bosses/tifon', 'bosses/netcopter', 'traps/netlauncher', 'items/snowball_ball' }
+                'enemies/scorpion', 'bosses/giantscorpion', 'bosses/carnqueen', 'bosses/tifon', 'bosses/netcopter', 'traps/netlauncher', 'items/snowball_ball', 'items/hint' }
 
 -- Un archivo puede definir varios tipos (p. ej. el trampolín en sus 4 direcciones)
 for _, name in ipairs(TYPES) do
@@ -61,6 +61,14 @@ local Entities = {
 -- pone en level.solidBodies antes de mover a los jugadores.
 -- PLANO DE FONDO: lo que una entidad dibuja DETRÁS de los bloques del nivel (después del cielo), con
 -- `renderBack(camX, camY)` — p. ej. el escenario y el público de El Groove. Solo dibujo (un jugador y cliente online)
+-- Lo que va POR ENCIMA de todo — también de la oscuridad —: `e:renderOverlay(camX, camY, viewer, dt)` (el bocadillo
+-- del cartel de ayuda). `viewer` = el jugador de este aparato. Lo dibujan los estados de nivel después de Darkness.
+function Entities.renderOverlays(list, camX, camY, viewer, dt)
+    for _, e in pairs(list or {}) do
+        if e.alive ~= false and e.renderOverlay then e:renderOverlay(camX, camY, viewer, dt) end
+    end
+end
+
 function Entities.renderBack(list, camX, camY)
     for _, e in pairs(list or {}) do
         if e.alive and e.renderBack then e:renderBack(camX, camY) end

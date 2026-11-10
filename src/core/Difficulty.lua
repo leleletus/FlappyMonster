@@ -27,7 +27,11 @@
 --   playerHp                        vida del jugador (3)
 --   invuln                          × tiempo invulnerable tras un golpe o al reaparecer
 --   airTime                         × aire bajo el agua
---   hazardHurt                      pinchos y lava quitan 1 de vida (y te sacan de un bote) en vez de matar
+--   hazardDmg                       vida que quitan los PELIGROS — pinchos, lava, pinchos que caen o llueven, el pincho del
+--                                   Crabby, el fuego del mortero, el centro de una explosión — (y te sacan de un bote);
+--                                   0 = matan de un toque. Fácil y Normal 1, Difícil y Extremo 2, Xtra extremo 0 (sin
+--                                   dificultad, 1). 0.5.190, el usuario: «nunca de un toque, pero que escalen; en Xtra sí
+--                                   matan» (antes: matar en todas, salvo Fácil — `hazardHurt` —)
 --   bossExtra                       un SEGUNDO jefe en cada arena (src/world/systems/XtraBosses.lua; hoy ninguna)
 --   bossFury, bossFuryPace          los jefes empiezan ENFADADOS (rojizos, temblor, símbolos y × ritmo) hasta su
 --                                   propia fase enfadada (Boss:furyActive; Xtra extremo)
@@ -50,13 +54,13 @@ Difficulty.START = { easy = true, normal = true, hard = true }       -- disponib
 Difficulty.DEFAULT = 'normal'
 
 Difficulty.MODS = {
-    easy    = { scoreMult = 0.8, enemyPace = 0.8, trapPace = 0.8, bossPace = 0.7, bossHp = 0.75, playerHp = 4, invuln = 1.3, airTime = 1.4, hazardHurt = true,
+    easy    = { scoreMult = 0.8, enemyPace = 0.8, trapPace = 0.8, bossPace = 0.7, bossHp = 0.75, playerHp = 4, invuln = 1.3, airTime = 1.4, hazardDmg = 1,
                 sense = 0.8, botRest = 3.5, botChase = 3, ventDelay = 0.8 },
-    normal  = { bossPace = 0.85, bossHp = 0.9, botRest = 2, botChase = 5 },
-    hard    = { scoreMult = 1.2, enemyPace = 1.1, trapPace = 1.1, airTime = 0.9, ventDelay = 1.15 },
-    extreme = { scoreMult = 1.5, enemyPace = 1.25, trapPace = 1.3, bossPace = 1.2, bossHp = 1.15, invuln = 0.75, airTime = 0.8, livesStart = 4,
+    normal  = { bossPace = 0.85, bossHp = 0.9, botRest = 2, botChase = 5, hazardDmg = 1 },
+    hard    = { scoreMult = 1.2, enemyPace = 1.1, trapPace = 1.1, airTime = 0.9, ventDelay = 1.15, hazardDmg = 2 },
+    extreme = { scoreMult = 1.5, enemyPace = 1.25, trapPace = 1.3, bossPace = 1.2, bossHp = 1.15, invuln = 0.75, airTime = 0.8, livesStart = 4, hazardDmg = 2,
                 sense = 1.3, botRest = 0.7, botChase = 10, ventDelay = 1.35, bossFood = 15.12 },   -- (0.5.26: un 25 % menos que 11,34)
-    xtra    = { scoreMult = 2, enemyPace = 1.25, trapPace = 1.3, bossPace = 1.2, bossHp = 1.15, invuln = 0.75, airTime = 0.8, livesStart = 6,
+    xtra    = { scoreMult = 2, enemyPace = 1.25, trapPace = 1.3, bossPace = 1.2, bossHp = 1.15, invuln = 0.75, airTime = 0.8, livesStart = 6, hazardDmg = 0,
                 sense = 1.3, botRest = 0.7, botChase = 10, ventDelay = 1.35, botCount = 2, pairHp = 0.65,     -- (restartGame: hasta 0.5.25; ya no, el usuario)
                 bossFury = true, bossFuryPace = 1.2,
                 bossFood = 13.98, bossLives = 70 },   -- (comida 0.5.26: un 35 % menos que 9,09; vidas 0.5.25: un 54 % menos que 31,9 — salían hasta 8 por jefe, el usuario)

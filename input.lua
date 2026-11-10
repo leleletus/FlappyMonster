@@ -28,7 +28,9 @@ local controls = {
     grab       = {'key:up', 'key:w', 'button:dpup', 'axis:lefty-'},
     crouch     = {'key:down', 'key:s', 'button:dpdown', 'axis:lefty+'},
     -- Linterna (niveles a oscuras): encender / apagar
-    light      = {'key:f', 'key:lshift', 'button:x', 'button:y'},
+    light      = {'key:f', 'button:x'},
+    -- CORRER (mantener; 0.5.190, el usuario: «Shift para correr, F la linterna; en el mando el otro botón»)
+    run        = {'key:lshift', 'key:rshift', 'button:y'},
     -- Ataque ESPECIAL (niveles Flappy: gasta la carga de aleteo — src/player/PlayerFlight.lua —; el hombro izquierdo queda
     -- para la rueda rápida de los power-ups)
     special    = {'key:x', 'key:k', 'button:rightshoulder'},
@@ -50,7 +52,7 @@ local labelsConsole = {
     nav_left   = "[<]",    nav_right = "[>]",     confirm   = "[A]",
     move_left  = "[<]",    move_right= "[>]",     jump      = "[A]",
     crouch     = "[v]",    light     = "[Y]",    grab      = "[^]",
-    special    = "[R]",      wheel     = "[L]",
+    special    = "[R]",      wheel     = "[L]",      run       = "[X]",
 }
 local labelsPC = {
     flap       = "[Space]", pause  = "[Esc]",   resume = "[Enter]",
@@ -58,7 +60,7 @@ local labelsPC = {
     nav_left   = "[<]",     nav_right= "[>]",   confirm   = "[Enter]",
     move_left  = "[<]",     move_right= "[>]",  jump      = "[Space]",
     crouch     = "[Down]",  light = "[F]",      grab      = "[Up]",
-    special    = "[X]",     wheel  = "[Q]",
+    special    = "[X]",     wheel  = "[Q]",     run   = "[Shift]",
 }
 
 -- ¿Se está usando un mando? (el último aparato tocado; en la Switch, siempre que no sea el táctil)
@@ -71,6 +73,11 @@ end
 -- La tecla / el botón de una acción, según el aparato que se está usando (antes solo según la plataforma: un PC con
 -- mando veía [Enter] y la Switch o Android veían las teclas del PC en las ayudas)
 function Input.label(action)
+    -- (en un móvil con el dedo: el nombre del botón de la pantalla, traducido — `keys.touch_<acción>` —)
+    if Input.lastDevice == 'touch' then
+        local L = require 'src/core/Lang'
+        if L.has('keys.touch_' .. action) then return L('keys.touch_' .. action) end
+    end
     local t = Input.usingPad() and labelsConsole or labelsPC
     return t[action] or ("[" .. action .. "]")
 end

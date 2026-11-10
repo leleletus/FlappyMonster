@@ -85,6 +85,14 @@ function love.load()
            or not tap.x or tap.j or not jumpTap.j or jumpTap.x then
             ok.especial = false; notes[#notes + 1] = S[3] .. ' especial'
         end
+        -- el botón de CORRER (0.5.190): dentro, sin tocar la cruceta, el salto ni el botón extra; tocarlo corre (no salta)
+        local rb = { x = L.runX - L.lightW / 2, y = L.runY - L.lightW / 2, w = L.lightW, h = L.lightW }
+        local rtap = TC.read(L, { { L.runX, L.runY } }, 'light', true)
+        local both = TC.read(L, { { L.runX, L.runY }, { L.jumpX, L.jumpY } }, 'light', true)
+        if rb.x < 0 or rb.y < 0 or rb.x + rb.w > sw or rb.y + rb.h > sh or overlap(rb, pad) or overlap(rb, ex)
+           or not rtap.rn or rtap.j or not (both.rn and both.j) then
+            ok.correr = false; notes[#notes + 1] = S[3] .. ' correr'
+        end
         -- dibujo (reducido) para la rejilla
         local col, row = (i - 1) % COLS, math.floor((i - 1) / COLS)
         local k = math.min((CW - 10) / sw, (CH - 24) / sh)
@@ -98,7 +106,8 @@ function love.load()
             local hs = toScreen(h)
             love.graphics.setColor(1, 0.9, 0.2, 0.5); love.graphics.rectangle('fill', hs.x, hs.y, hs.w, hs.h)
         end
-        TC.draw(L, { l = false, r = false, d = (i % 2 == 0), j = (i % 3 == 0) }, nil, (i % 2 == 0) and 'special' or 'light')
+        TC.draw(L, { l = false, r = false, d = (i % 2 == 0), j = (i % 3 == 0), rn = (i % 2 == 1) }, nil,
+                (i % 2 == 0) and 'special' or 'light', i % 2 == 1)
         love.graphics.pop()
         love.graphics.setColor(1, 1, 1, 1)
         love.graphics.setFont(FONT_SMALL)
@@ -107,6 +116,7 @@ function love.load()
     end
     check('dentro', ok.dentro, #SCREENS .. ' pantallas')
     check('separados', ok.separados, 'cruceta y salto no se tocan')
+    check('correr', ok.correr ~= false, 'el botón de correr cabe, no pisa la cruceta ni el botón extra y corre sin saltar (con el salto a la vez, las dos)')
     check('hud', ok.hud, 'no pisan tiempo/puntos, vidas, pausa ni ping' .. (#notes > 0 and (': ' .. table.concat(notes, ', ')) or ''))
     check('grandes', ok.grandes, 'cruceta ≥ 24 % del alto, salto ≥ 17 %')
     check('zonas', ok.zonas, 'brazos, botón y diagonal abajo-izq')
