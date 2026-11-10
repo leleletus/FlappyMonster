@@ -5,17 +5,7 @@ would help future work.
 
 ## Architecture
 
-1. **The single-player loop and the server loop still run the step in a different ORDER.** 2026-11-02: the server
-   was split into parts (`server/srv/`, see [netcode](netcode.md)) and the glue both did by hand moved to
-   `src/world/systems/Sim.lua` (solid bodies + air, respawn point, entity step, ground pound on other players, the
-   10-minute limit). The entity update order was unified on single player's (last to first; the server went first to
-   last). What still differs, and could make "works offline, differs online" bugs:
-   - single player: level update → floods → point zones → bodies → player → carry → entities → interactions → boss
-     controller → auto-scroll;
-   - server: floods → bodies → each player (step, its interactions with lag compensation, ground pound push) → carry →
-     level update → entities → point zones → boss controller → auto-scroll → tile events → interactions again (a
-     second pass, so enemies that moved reach a still player).
-   Unifying it means choosing one order and re-checking every gameplay harness: a design decision, not a rename.
+1. (Fixed in 0.5.185: the single-player and server step order — see the history below.)
 2. **Large single-system files** that are long because the system is big, not tangled — left as they are:
    `snowboss.lua` (1841), `megacrabby.lua` (1613), `StoryMapState.lua` (~1300), `mirror.lua` (1095), `megagummy.lua`
    (1078), `OnlineHubState.lua` (~750).
@@ -43,6 +33,15 @@ from `FlappyMonster_originals`.
   approved tracks and cannot be verified by ear here.
 
 ## Fixed (history)
+
+- 0.5.185 (the user: "unify them, it is the right thing"): ONE step order, `Sim.step` in `src/world/systems/Sim.lua`,
+  used by `AdventureState` and `server/srv/sim.lua`; each passes hooks for what is only its own. The order is the
+  server's (the one the network imposes): floods → solid bodies → players (each, after moving: air bubble, 1st
+  interactions pass — online against what that player SAW —, goals) → carry → level update → entities → point zones →
+  boss zones → auto-scroll → 2nd interactions pass. What changed for single player: the level update, point zones and
+  the boss controller now run after the player and the entities; the player's interactions run twice per frame (right
+  after moving and after the entities), the air bubble and the goal are checked right after moving. The server only
+  moved into hooks (point zones now advance their clock even in a level without zones).
 
 - 0.5.182 (optimisation / modularisation round): `Particles.lua`'s `elseif` chain is a table of kinds (`EMIT`); the
   scene layer order is one module for single player and online (`SceneLayers`); duplicated helpers moved to the base

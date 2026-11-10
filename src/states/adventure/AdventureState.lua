@@ -646,32 +646,10 @@ function AdventureState:update(dt)
         self.player:die(nil, true)
     end
 
-    self.level:update(dt)
+    -- (solo dibujo / solo de este jugador: decoraciones, bloques escondidos que ve, la espuma de las inundaciones)
     self.level:updateFoliage(dt)
     self.level:updateHiddenBlocks(dt, self.player.dying and {} or { self.player:getOuterBounds() })
-    Floods.advance(self.level, dt)                 -- inundaciones: el agua sube y baja
     Floods.updateFx(self.level, dt)
-    -- Zonas de puntos: estar dentro da puntos cada cierto tiempo
-    local inZones = self.bonus and self.bonus:players() or (self.player.dying and {} or { self.player })
-    if self.bonus and self.bonus.over then inZones = {} end
-    -- (cuánto tiempo pasa el jugador DENTRO de una zona: los resultados del bonus)
-    if #inZones > 0 and not self.player.dying then
-        for _, a in ipairs(self.level.pointAreas or {}) do
-            if PointAreas.isActive(self.level, a) and PointAreas.inside(a, self.player.x, self.player.y) then
-                self.stats.zoneT = self.stats.zoneT + dt; break
-            end
-        end
-    end
-    PointAreas.update(self.level, dt, inZones, function(pa, pts)
-        if self.bonus and not self.bonus:award(pa, pts) then
-            Particles.emit('points', pa.x, pa.y)
-            return
-        end
-        self.score = self.score + pts
-        self:spawnPopup('+' .. pts, pa.x, pa.y - 60)
-        Sound.play('pointGain'); Particles.emit('points', pa.x, pa.y)
-    end)
-    Sim.bodies(self.level, self.enemies)                           -- cuerpos sólidos y lo que sopla
     -- (la escena final de una carrera en la historia: al acabar, el nivel termina sin meta y enlaza con el siguiente)
     if self.runOut and self.runOut:update(dt) then
         local r = self:result()
@@ -680,45 +658,19 @@ function AdventureState:update(dt)
         if self.onFinish then self.onFinish(r) else gStateMachine:change(self.returnTo) end
         return
     end
-    local scripted = self.runOut and self.runOut:input()
-    if self.demo then
-        self.demo.step(dt, self.level)                                -- (el bot del fondo de los menús)
-    elseif scripted then                                                  -- (sin control: corre y salta solo)
-        local real = Input
-        Input = scripted
-        local ok, err = pcall(self.player.update, self.player, dt, self.level)
-        Input = real
-        if not ok then error(err, 0) end
-    else
-        self.player:update(dt, self.level)
-    end
-    Carry.step(self.level, { self.player }, self.enemies)          -- (coger / lanzar: systems/Carry)
-    if self.bonus then
-        self.level.players = { self.player }                          -- (los enemigos ven a todos)
-        for _, b in ipairs(self.bonus.bots) do self.level.players[#self.level.players + 1] = b.pa end
-        self.bonus:update(dt)
-        if self.bonus.sent then return end
-    end
 
-    -- Actualizar enemigos y limpiar los que ya murieron. Sus sonidos se
-    -- atenúan según lo lejos que estén del jugador (Sound.setEmitter).
-    Sound.setListener(self.player.x, self.player.y)
-    Sim.stepEntities(self.level, self.enemies, dt, Sound.setEmitter, true)
+    -- ── EL PASO de la simulación: el mismo orden que el servidor (src/world/systems/Sim.lua, Sim.step) ──
+    self._simHooks = self._simHooks or self:_makeSimHooks()
+    self._simDt = dt
+    if not Sim.step(self.level, self.enemies, dt, self._simHooks) then return end      -- (el bonus terminó)
 
-    -- Colisiones jugador ↔ entidades
-    self:checkEnemyCollisions()
-    if not (self.demo and self.demo.noBossCtl) then self:updateBoss(dt) end      -- (los créditos: jefes sin pelea de verdad)
     -- (Boss Rush: vencidos todos sus jefes, el nivel termina — sin ir a la meta —)
     if self.endOnBoss and not self.won and not self.player.dying and #(self.level.bossZones or {}) > 0 then
         local all = true
         for _, bz in ipairs(self.level.bossZones) do if bz.state ~= 'cleared' then all = false end end
         if all then self:win() end
     end
-    for _, ev in ipairs(AutoScroll.update(self.level, dt)) do
-        if ev.type == 'scroll_start' and not ev.quiet then self.bossBanner = { text = L('hud.go'), t = 0, col = { 0.4, 1, 0.5 } } end
-    end
     Particles.update(dt)
-    self:checkVentOxyCollisions()
     self:updatePopups(dt)
 
     self:updateShards(dt)
@@ -728,18 +680,6 @@ function AdventureState:update(dt)
     -- (golpes recibidos: cada vez que baja la vida sin morir)
     if self.player.hp < self.prevHp and not self.player.dying then self.stats.hits = self.stats.hits + (self.prevHp - self.player.hp) end
     self.prevHp = self.player.hp
-
-    -- ── META: tocarla termina el nivel ────────────────────────────────────────
-    if not self.won and not self.endingT and not self.player.dying then
-        local ob = self.player:getOuterBounds()
-        if self.level:triggerInBox(ob.x, ob.y, ob.w, ob.h, 'finish') then self:win() end
-        -- (la SALIDA SECRETA, tile `secret_exit`: termina el nivel como la meta y el resultado lo dice — `secretExit` —; en
-        --  la historia abre además el camino secreto: Worlds `secrets`, StoryMapState. Fuera de la historia es una meta más)
-        if not self.won and self.level:triggerInBox(ob.x, ob.y, ob.w, ob.h, 'secret_exit') then
-            self.secretExit = true
-            self:win()
-        end
-    end
 
     -- ── Detectar muerte del jugador ───────────────────────────────────────────
     if self.player.dying and not self.player.alive then
@@ -759,6 +699,87 @@ function AdventureState:update(dt)
         end
     elseif self.player.dying then
         self.camFrozen = true
+    end
+end
+
+-- Los GANCHOS del paso compartido (Sim.step: el orden está allí, igual que en el servidor). Uno por estado: sin cierres
+-- nuevos por fotograma; el dt del fotograma, en self._simDt.
+function AdventureState:_makeSimHooks()
+    local h = {}
+    h.floods = function() Floods.advance(self.level, self._simDt) end           -- inundaciones: el agua sube y baja
+    h.players = function()
+        local dt = self._simDt
+        local scripted = self.runOut and self.runOut:input()
+        if self.demo then
+            self.demo.step(dt, self.level)                                -- (el bot del fondo de los menús)
+        elseif scripted then                                              -- (sin control: corre y salta solo)
+            local real = Input
+            Input = scripted
+            local ok, err = pcall(self.player.update, self.player, dt, self.level)
+            Input = real
+            if not ok then error(err, 0) end
+        else
+            self.player:update(dt, self.level)
+        end
+        -- al moverse, como cada jugador en el servidor: el oxígeno, la 1ª pasada de choques y las metas
+        self:checkVentOxyCollisions()
+        self:checkEnemyCollisions()
+        self:_checkGoals()
+        if self.bonus then
+            self.level.players = { self.player }                          -- (los enemigos ven a todos)
+            for _, b in ipairs(self.bonus.bots) do self.level.players[#self.level.players + 1] = b.pa end
+            self.bonus:update(dt)
+            if self.bonus.sent then return 'stop' end
+        end
+        -- (los sonidos de las entidades se atenúan según lo lejos que estén del jugador: Sound.setEmitter)
+        Sound.setListener(self.player.x, self.player.y)
+    end
+    h.emit, h.prune = Sound.setEmitter, true
+    h.zonePlayers = function()
+        -- Zonas de puntos: estar dentro da puntos cada cierto tiempo
+        local inZones = self.bonus and self.bonus:players() or (self.player.dying and {} or { self.player })
+        if self.bonus and self.bonus.over then inZones = {} end
+        -- (cuánto tiempo pasa el jugador DENTRO de una zona: los resultados del bonus)
+        if #inZones > 0 and not self.player.dying then
+            for _, a in ipairs(self.level.pointAreas or {}) do
+                if PointAreas.isActive(self.level, a) and PointAreas.inside(a, self.player.x, self.player.y) then
+                    self.stats.zoneT = self.stats.zoneT + self._simDt; break
+                end
+            end
+        end
+        return inZones
+    end
+    h.zonePoints = function(pa, pts)
+        if self.bonus and not self.bonus:award(pa, pts) then
+            Particles.emit('points', pa.x, pa.y)
+            return
+        end
+        self.score = self.score + pts
+        self:spawnPopup('+' .. pts, pa.x, pa.y - 60)
+        Sound.play('pointGain'); Particles.emit('points', pa.x, pa.y)
+    end
+    h.bosses = function()
+        if not (self.demo and self.demo.noBossCtl) then self:updateBoss(self._simDt) end   -- (los créditos: sin pelea de verdad)
+    end
+    h.autoScroll = function()
+        for _, ev in ipairs(AutoScroll.update(self.level, self._simDt)) do
+            if ev.type == 'scroll_start' and not ev.quiet then self.bossBanner = { text = L('hud.go'), t = 0, col = { 0.4, 1, 0.5 } } end
+        end
+    end
+    h.interactions = function() self:checkEnemyCollisions() end         -- (2ª pasada: lo que se movió alcanza al jugador)
+    return h
+end
+
+-- ── META: tocarla termina el nivel (al moverse el jugador, como en el servidor: Sim.step) ──
+function AdventureState:_checkGoals()
+    if self.won or self.endingT or self.player.dying then return end
+    local ob = self.player:getOuterBounds()
+    if self.level:triggerInBox(ob.x, ob.y, ob.w, ob.h, 'finish') then self:win() end
+    -- (la SALIDA SECRETA, tile `secret_exit`: termina el nivel como la meta y el resultado lo dice — `secretExit` —; en
+    --  la historia abre además el camino secreto: Worlds `secrets`, StoryMapState. Fuera de la historia es una meta más)
+    if not self.won and self.level:triggerInBox(ob.x, ob.y, ob.w, ob.h, 'secret_exit') then
+        self.secretExit = true
+        self:win()
     end
 end
 

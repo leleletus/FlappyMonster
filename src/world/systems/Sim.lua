@@ -1,14 +1,16 @@
 -- src/world/systems/Sim.lua
 -- El PEGAMENTO de la simulación que comparten un jugador (AdventureState) y el servidor (server/srv/sim.lua): las
--- piezas del paso que antes eran dos copias a mano. Las REGLAS siguen en su sitio (Interactions, BossZones, AutoScroll...);
--- aquí solo lo que los dos bucles hacían igual. El ORDEN del paso todavía no es el mismo en los dos (ver
--- docs/architecture/known-debt.md): no se cambia aquí, cambiaría el juego.
+-- piezas del paso que antes eran dos copias a mano, y desde 0.5.185 EL ORDEN DEL PASO (Sim.step): antes cada bucle
+-- llevaba el suyo y lo que funcionaba en un jugador podía ir distinto online. Las REGLAS siguen en su sitio
+-- (Interactions, BossZones, AutoScroll...).
 local Entities   = require 'src/world/entities/Entities'
 local Push       = require 'src/world/systems/Push'
 local AutoScroll = require 'src/world/systems/AutoScroll'
 local BossZones  = require 'src/world/systems/BossZones'
 local Difficulty = require 'src/core/Difficulty'
 local Interactions = require 'src/world/entities/base/Interactions'
+local Carry      = require 'src/world/systems/Carry'
+local PointAreas = require 'src/world/systems/PointAreas'
 
 local Sim = {}
 
@@ -51,6 +53,37 @@ function Sim.poundPlayers(pa, others, each)
             if each then each(o, push) else push() end
         end
     end
+end
+
+-- ── EL PASO: uno, en el mismo orden para un jugador (AdventureState) y para el servidor (server/srv/sim.lua) ───────
+-- Es el orden que ya tenía el servidor (el que obliga el juego en red: cada jugador choca con lo que VEÍA justo al
+-- moverse, y otra vez cuando ya se movieron las entidades). Lo que es solo de uno de los dos va en `h` (ganchos):
+--   1  h.floods()                    el agua de las inundaciones (un jugador: su reloj; el servidor: el del tick)
+--   2  Sim.bodies                    cuerpos sólidos y lo que sopla
+--   3  h.players()                   mover a los jugadores; cada uno, al moverse: oxígeno, 1ª PASADA de choques con
+--                                    las entidades y las metas. Devolver 'stop' corta el paso (el bonus terminó)
+--   4  Carry.step                    coger / lanzar (level.players)
+--   5  level:update                  ON/OFF pendientes, hielo fino, bloques golpeados, burbujas
+--   6  Sim.stepEntities              las entidades (h.emit: de dónde salen sus sonidos; h.prune: quitar las muertas)
+--   7  h.afterEntities()             (opcional; el servidor: daño de prueba, la historia para compensar el lag)
+--   8  PointAreas.update             zonas de puntos: h.zonePlayers() quién cuenta, h.zonePoints(pa, pts)
+--   9  h.bosses()                    las zonas de jefe (llegadas, inicio y fin de cada pelea)
+--  10  h.autoScroll()                la cámara automática
+--  11  h.interactions()              2ª PASADA de choques: una entidad que se movió alcanza a un jugador quieto
+-- Devuelve false si h.players cortó el paso.
+function Sim.step(level, entities, dt, h)
+    if h.floods then h.floods() end
+    Sim.bodies(level, entities)
+    if h.players() == 'stop' then return false end
+    Carry.step(level, level.players or {}, entities)
+    level:update(dt)
+    Sim.stepEntities(level, entities, dt, h.emit, h.prune)
+    if h.afterEntities then h.afterEntities() end
+    if h.zonePlayers then PointAreas.update(level, dt, h.zonePlayers(), h.zonePoints) end
+    if h.bosses then h.bosses() end
+    if h.autoScroll then h.autoScroll() end
+    if h.interactions then h.interactions() end
+    return true
 end
 
 return Sim

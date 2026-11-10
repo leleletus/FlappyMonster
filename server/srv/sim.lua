@@ -370,6 +370,93 @@ local function drainFrozenInputs(ps)
     ps.budget, ps.starve, ps.highQueue = 0, 0, 0
 end
 
+-- Los GANCHOS del servidor para el paso compartido (Sim.step: el orden está allí). Uno por sala.
+local function makeSimHooks(room, sim)
+    local h = {}
+    h.floods = function()
+        -- Inundaciones: el nivel del agua es función del tick (el cliente lo estima igual; empieza al acabar la cuenta
+        -- atrás); las controladas (jefe / ON-OFF) cambian aquí y van en el snapshot
+        S.Floods.control(sim.level, sim.floodT)
+        S.Floods.setTime(sim.level, sim.floodT)
+    end
+    h.players = function()
+        -- Jugadores (orden estable: el de la sala); cada uno, al moverse, choca con lo que veía (stepPlayer)
+        for _, pid in ipairs(room.playerIds) do
+            local ps = sim.playerSims[pid]
+            if ps and not ps.isSpectator then processPlayerInputs(sim, pid, ps) end
+        end
+        -- Restaurar input neutral
+        Protocol.decodeInput(0, _inp)
+        S.soundOwner = nil
+        S.emitX, S.emitY = nil, nil
+        -- Las trampas y entidades de techo "ven" a los jugadores activos
+        local active = sim.active or {}
+        for i = #active, 1, -1 do active[i] = nil end
+        sim.active = active
+        for _, pid in ipairs(room.playerIds) do
+            local ps = sim.playerSims[pid]
+            if ps and not ps.isSpectator then active[#active+1] = ps.pa; ps.pa.ownerIdx = ps.idx end   -- (ownerIdx: el ranking del Mega Mashup)
+        end
+        sim.level.players = active
+    end
+    -- (sin quitar las muertas: el índice de cada entidad es el de las fotos)
+    h.emit, h.prune = function(x, y) S.emitX, S.emitY = x, y end, false
+    h.afterEntities = function()
+        if TEST_BOSSDMG then
+            sim.testDmgT = (sim.testDmgT or 0) + TICK_DT
+            if sim.testDmgT >= TEST_BOSSDMG then
+                sim.testDmgT = 0
+                for _, e in ipairs(sim.enemies) do
+                    local ev = e.eventRef
+                    if ev then                                 -- (evento: acaba el turno del que pelea, sea cual sea su ventana)
+                        if not e.eventFrozen and e:isActive() and ev:isTurnOf(e) then ev:crabDown(e) end
+                    elseif e.def and e.def.boss and e.state ~= 'parts' then e:damage(1, 'stomp') end   -- (los trozos: que peguen de verdad)
+                end
+            end
+        end
+        recordEnemyHistory(sim)
+    end
+    -- Zonas de puntos: quien está dentro suma cada cierto tiempo
+    h.zonePlayers = function() return sim.active end
+    h.zonePoints = function(pa, pts)
+        local pid
+        for _, id in ipairs(room.playerIds) do
+            local ps = sim.playerSims[id]
+            if ps and ps.pa == pa then pid = id; break end
+        end
+        local ps = pid and sim.playerSims[pid]
+        if not ps then return end
+        ps.score = ps.score + pts
+        ps.scoreT = sim.levelTime
+        pushEvent(sim, { type='score', playerId=pid, delta=pts, x=round(pa.x), y=round(pa.y - 40), kind='zone' })
+        pushEvent(sim, { type='fx', kind='points', x=round(pa.x), y=round(pa.y) })
+        S.emitX, S.emitY = pa.x, pa.y
+        Sound.play('pointGain')
+        S.emitX, S.emitY = nil, nil
+    end
+    -- Zonas de jefe: llegada de los jugadores, inicio y fin de la pelea
+    h.bosses = function()
+        for _, ev in ipairs(sim.bossCtl:update(TICK_DT)) do pushEvent(sim, ev) end
+    end
+    -- Cámara automática: espera a todos, avanza y mata a quien se queda atrás. Se para en cuanto alguien llega a la meta.
+    h.autoScroll = function()
+        if not sim.level.autoScroll then return end
+        for _, ps in pairs(sim.playerSims) do if ps.finished then sim.level.finishReached = true end end
+        local evs = S.AutoScroll.update(sim.level, TICK_DT, function(pa)
+            S.PlayerAdventure.asOwner(pa, function() pa:die(nil, true) end)
+        end)
+        for _, ev in ipairs(evs) do pushEvent(sim, ev) end
+    end
+    -- Colisiones tras mover enemigos (un enemigo puede alcanzar a un jugador quieto)
+    h.interactions = function()
+        for _, pid in ipairs(room.playerIds) do
+            local ps = sim.playerSims[pid]
+            if ps then checkPlayerEnemyCollisions(sim, pid, ps, ps.lastProcSeq) end
+        end
+    end
+    return h
+end
+
 -- Avanzar la simulación de una sala un tick fijo
 
 local function stepRoom(room)
@@ -398,9 +485,7 @@ local function stepRoom(room)
     -- Inundaciones: el nivel del agua es función del tick (el cliente lo estima
     -- igual; empieza al acabar la cuenta atrás); las controladas (jefe / ON-OFF)
     -- cambian aquí y van en el snapshot
-    local floodT = (sim.tick - sim.startTicks) * TICK_DT
-    S.Floods.control(sim.level, floodT)
-    S.Floods.setTime(sim.level, floodT)
+    local floodT = (sim.tick - sim.startTicks) * TICK_DT       -- (se aplica en el paso: gancho floods)
 
     -- Límite de 10 minutos: matar a todos los jugadores activos (igual que modo solo)
     if sim.levelTime >= S.Sim.TIME_LIMIT and not sim.timeLimitKilled then
@@ -415,91 +500,16 @@ local function stepRoom(room)
         end
     end
 
-    -- ── Jugadores (orden estable: el de la sala) ──────────────────────────────
-    S.Sim.bodies(sim.level, sim.enemies)                             -- cuerpos sólidos y lo que sopla
-    for _, pid in ipairs(room.playerIds) do
-        local ps = sim.playerSims[pid]
-        if ps and not ps.isSpectator then
-            processPlayerInputs(sim, pid, ps)
-        end
-    end
-
-    -- Restaurar input neutral
-    Protocol.decodeInput(0, _inp)
-    S.soundOwner = nil
-    S.emitX, S.emitY = nil, nil
-
-    -- ── Nivel (burbujas de oxígeno en vents) y enemigos ──────────────────────
-    -- Las trampas y entidades de techo "ven" a los jugadores activos
-    local active = {}
-    for _, pid in ipairs(room.playerIds) do
-        local ps = sim.playerSims[pid]
-        if ps and not ps.isSpectator then active[#active+1] = ps.pa; ps.pa.ownerIdx = ps.idx end   -- (ownerIdx: el ranking del Mega Mashup)
-    end
-    sim.level.players = active
-    S.Carry.step(sim.level, active, sim.enemies)                    -- coger / lanzar (systems/Carry)
-    sim.level:update(TICK_DT)
-    -- (sin quitar las muertas: el índice de cada entidad es el de las fotos)
-    S.Sim.stepEntities(sim.level, sim.enemies, TICK_DT, function(x, y) S.emitX, S.emitY = x, y end, false)
-    if TEST_BOSSDMG then
-        sim.testDmgT = (sim.testDmgT or 0) + TICK_DT
-        if sim.testDmgT >= TEST_BOSSDMG then
-            sim.testDmgT = 0
-            for _, e in ipairs(sim.enemies) do
-                local ev = e.eventRef
-                if ev then                                 -- (evento: acaba el turno del que pelea, sea cual sea su ventana)
-                    if not e.eventFrozen and e:isActive() and ev:isTurnOf(e) then ev:crabDown(e) end
-                elseif e.def and e.def.boss and e.state ~= 'parts' then e:damage(1, 'stomp') end   -- (los trozos: que peguen de verdad)
-            end
-        end
-    end
-    recordEnemyHistory(sim)
-
-    -- Zonas de puntos: quien está dentro suma cada cierto tiempo
-    if #(sim.level.pointAreas or {}) > 0 then
-        local owner = {}
-        for _, pid in ipairs(room.playerIds) do
-            local ps = sim.playerSims[pid]
-            if ps and not ps.isSpectator then owner[ps.pa] = pid end
-        end
-        S.PointAreas.update(sim.level, TICK_DT, active, function(pa, pts)
-            local pid = owner[pa]
-            local ps = pid and sim.playerSims[pid]
-            if not ps then return end
-            ps.score = ps.score + pts
-            ps.scoreT = sim.levelTime
-            pushEvent(sim, { type='score', playerId=pid, delta=pts, x=round(pa.x), y=round(pa.y - 40), kind='zone' })
-            pushEvent(sim, { type='fx', kind='points', x=round(pa.x), y=round(pa.y) })
-            S.emitX, S.emitY = pa.x, pa.y
-            Sound.play('pointGain')
-            S.emitX, S.emitY = nil, nil
-        end)
-    end
-
-    -- Zonas de jefe: llegada de los jugadores, inicio y fin de la pelea
-    for _, ev in ipairs(sim.bossCtl:update(TICK_DT)) do pushEvent(sim, ev) end
-
-    -- Cámara automática: espera a todos, avanza y mata a quien se queda atrás.
-    -- Se para en cuanto alguien llega a la meta.
-    if sim.level.autoScroll then
-        for _, ps in pairs(sim.playerSims) do if ps.finished then sim.level.finishReached = true end end
-        local evs = S.AutoScroll.update(sim.level, TICK_DT, function(pa)
-            S.PlayerAdventure.asOwner(pa, function() pa:die(nil, true) end)
-        end)
-        for _, ev in ipairs(evs) do pushEvent(sim, ev) end
-    end
+    -- ── EL PASO: el mismo orden que un jugador (src/world/systems/Sim.lua, Sim.step); aquí, los ganchos del servidor ──
+    sim.floodT = floodT
+    sim.hooks = sim.hooks or makeSimHooks(room, sim)
+    S.Sim.step(sim.level, sim.enemies, TICK_DT, sim.hooks)
 
     -- Bloques rotos este tick → a todos los clientes
     local bq = sim.level.brokenQueue
     if bq and #bq > 0 then
         for _, b in ipairs(bq) do pushEvent(sim, { type='tile', c=b[1], r=b[2], v=b[3], k=b[4], from=b[5] }) end
         sim.level.brokenQueue = {}
-    end
-
-    -- ── Colisiones tras mover enemigos (un enemigo puede alcanzar a un jugador quieto)
-    for _, pid in ipairs(room.playerIds) do
-        local ps = sim.playerSims[pid]
-        if ps then checkPlayerEnemyCollisions(sim, pid, ps, ps.lastProcSeq) end
     end
 
     -- ── Fusionar eventos de sonido ────────────────────────────────────────────

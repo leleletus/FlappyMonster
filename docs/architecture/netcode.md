@@ -64,11 +64,13 @@ once at load (`local MAX_BUDGET = S.MAX_BUDGET`), and mutable state and function
 - `initRoomSim(room)`: Level + `Entities.create` for each placement →
   `sim.enemies`; one `playerSims[pid] = {pa, idx, queue, score, isSpectator,...}`.
 
-- `stepRoom`: per player `processPlayerInputs` → `stepPlayer` (decodes bits into
-  the Input stub, `pa:update`, death→lives/respawn/spectate,
-  `checkPlayerEnemyCollisions` with lag-compensation rewind), then
-  `level.players = active`, `level:update`, `e:update` for each entity,
-  collisions again, sound events merged, mode tick / end-of-round.
+- `stepRoom`: countdown, level clock and the 10-minute limit, then **`Sim.step`** (`src/world/systems/Sim.lua`: the
+  ONE step order, shared with single player since 0.5.185) with the server's hooks (`makeSimHooks`): `players` = per
+  player `processPlayerInputs` → `stepPlayer` (decodes bits into the Input stub, `pa:update`,
+  death→lives/respawn/spectate, `checkPlayerEnemyCollisions` with lag-compensation rewind, mode triggers), then
+  `level.players = active`; `afterEntities` = test damage + the rewind history; `interactions` = collisions again.
+  After the step: broken tiles to everyone, sound events merged, mode tick / end-of-round. **A new step goes in
+  Sim.step**, never in one of the two loops.
 
 - Robustness (0.5.8): each room's step + snapshot runs under `xpcall` (`guarded` in `server/main.lua`): a Lua error
   logs `ERROR en la sala …` with its traceback and ends only that match (before, it took the whole server down).
