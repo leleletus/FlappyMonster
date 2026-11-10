@@ -964,6 +964,7 @@ local function tilePath(name)
     return p
 end
 
+local CLIFF_ROW = {}          -- (las caras de acantilado de la fila que se dibuja: tablas reutilizadas)
 function StoryMapState:_drawTerrain(cx, cy)
     local M = loadMap()
     local C, rows, hrows = M.C, M.d.rows, M.d.heights
@@ -987,23 +988,47 @@ function StoryMapState:_drawTerrain(cx, cy)
     end
     love.graphics.setColor(1, 1, 1, 1)
     -- 1) el mar (también fuera del mapa) y el suelo, con su luz por altura
-    for r = math.floor(cy / C) - 1, math.floor((cy + WINDOW_H) / C) + 1 do
-        for c = math.floor(cx / C) - 1, math.floor((cx + WINDOW_W) / C) + 1 do
+    -- (UNA PASADA POR TEXTURA — mar, lava, suelo, briznas —: alternándolas casilla a casilla, LÖVE no podía juntar los
+    -- dibujos y eran cientos de llamadas. Nada se pisa: cada casilla ocupa la suya y las briznas, 8 px de alto, caen
+    -- dentro de su casilla. Comprobado con capturas: los mismos píxeles)
+    local rA, rB = math.floor(cy / C) - 1, math.floor((cy + WINDOW_H) / C) + 1
+    local cA, cB = math.floor(cx / C) - 1, math.floor((cx + WINDOW_W) / C) + 1
+    love.graphics.setColor(1, 1, 1, 1)
+    for r = rA, rB do
+        for c = cA, cB do
+            if at(c, r) == '~' then love.graphics.draw(water, wq, c * C - cx, r * C - cy, 0, C / 16, C / 16) end
+        end
+    end
+    local lq = frameQ(lava, 64, (math.floor(self.t * 6) % 4) + 1)
+    for r = rA, rB do
+        for c = cA, cB do
+            if at(c, r) == 'L' then love.graphics.draw(lava, lq, c * C - cx, r * C - cy, 0, C / 64, C / 64) end
+        end
+    end
+    for r = rA, rB do
+        for c = cA, cB do
             local ch = at(c, r)
-            local x, y = c * C - cx, r * C - cy
-            if ch == '~' then love.graphics.setColor(1, 1, 1, 1); love.graphics.draw(water, wq, x, y, 0, C / 16, C / 16)
-            elseif ch == 'L' then love.graphics.setColor(1, 1, 1, 1); love.graphics.draw(lava, frameQ(lava, 64, (math.floor(self.t * 6) % 4) + 1), x, y, 0, C / 64, C / 64)
-            else
+            if ch ~= '~' and ch ~= 'L' then
                 local l = LIT[ht(c, r)] or 1
                 love.graphics.setColor(l, l, l, 1)
                 -- variante por casilla (fija): casi siempre lisa, a veces con motas o una mancha
                 local h = (c * 73 + r * 151) % 17
                 local v = (h < 11) and 1 or (h < 15) and 2 or 3
-                love.graphics.draw(ground, frameQ(ground, 16, ((GROUND[ch] or 1) - 1) * 3 + v), x, y, 0, C / 16, C / 16)
-                -- hierba alta (las briznas del bloque de césped del juego) sobre algo de la pradera
-                if (ch == 'g' or ch == 'j') and (c * 31 + r * 17) % (ch == 'j' and 4 or 7) == 0 and ht(c, r) > 0 then
-                    local bl = img(ch == 'j' and 'assets/images/world/tiles/jungle_blades.png' or 'assets/images/world/tiles/grass_blades.png')
-                    love.graphics.draw(bl, frameQ(bl, 64, (c + r) % 3 + 1), x, y + math.floor(C * 0.4), 0, C / 64, C / 64)
+                love.graphics.draw(ground, frameQ(ground, 16, ((GROUND[ch] or 1) - 1) * 3 + v), c * C - cx, r * C - cy, 0, C / 16, C / 16)
+            end
+        end
+    end
+    -- hierba alta (las briznas del bloque de césped del juego) sobre algo de la pradera y la jungla
+    local bladeY = math.floor(C * 0.4)
+    for pass = 1, 2 do
+        local want = (pass == 1) and 'g' or 'j'
+        local bl = img(want == 'j' and 'assets/images/world/tiles/jungle_blades.png' or 'assets/images/world/tiles/grass_blades.png')
+        for r = rA, rB do
+            for c = cA, cB do
+                if at(c, r) == want and (c * 31 + r * 17) % (want == 'j' and 4 or 7) == 0 and ht(c, r) > 0 then
+                    local l = LIT[ht(c, r)] or 1
+                    love.graphics.setColor(l, l, l, 1)
+                    love.graphics.draw(bl, frameQ(bl, 64, (c + r) % 3 + 1), c * C - cx, r * C - cy + bladeY, 0, C / 64, C / 64)
                 end
             end
         end
@@ -1028,34 +1053,56 @@ function StoryMapState:_drawTerrain(cx, cy)
     end
     -- 2) acantilados: bajo toda casilla más alta que la de abajo, la cara del bloque (vista de lado): el labio con
     --    la textura de su bloque y, si el salto es de más de un nivel, el cuerpo de roca / tierra debajo
+    -- (por FILAS y, dentro de cada fila, una pasada por cosa — labios, cuerpos, sombras, espuma —: en una fila las caras
+    -- no se pisan, entre filas sí — una cara alta baja sobre la de debajo —, así que el orden de las filas se respeta.
+    -- Antes, cuatro dibujos alternados por casilla: LÖVE no los podía juntar)
     local FACE = math.floor(C * 0.75)
+    local LIP = math.floor(C * 0.34)
+    local cl = CLIFF_ROW
     for r = r0, r1 do
+        local n = 0
         for c = c0, c1 do
             local ch = at(c, r)
             local below = at(c, r + 1)
             local diff = (ch ~= '~') and (ht(c, r) - ht(c, r + 1)) or 0
             if ch == 'L' and below ~= '~' then diff = 0 end
             if diff > 0 then
-                local key = (ch == 'L') and 'l' or ch
-                local x, y = c * C - cx, (r + 1) * C - cy
-                -- labio (la parte de arriba de su bloque: césped, nieve…) y debajo el cuerpo de roca / tierra
-                local LIP = math.floor(C * 0.34)
-                local tex = img(tilePath(CLIFF[key] or 'dirt'))
+                n = n + 1
+                local e = cl[n] or {}
+                cl[n] = e
+                e.c, e.key, e.diff, e.sea = c, (ch == 'L') and 'l' or ch, diff, below == '~'
+            end
+        end
+        if n > 0 then
+            local y = (r + 1) * C - cy
+            -- labio (la parte de arriba de su bloque: césped, nieve…)
+            love.graphics.setColor(1, 1, 1, 1)
+            for i = 1, n do
+                local e = cl[i]
+                local tex = img(tilePath(CLIFF[e.key] or 'dirt'))
                 local span = tex:getWidth() / 64
-                love.graphics.setColor(1, 1, 1, 1)
-                love.graphics.draw(tex, quad(tex, (c % span) * 64, 0, 64, LIP * 64 / C), x, y, 0, C / 64, C / 64)
-                local body = img(tilePath(CLIFF_BODY[key] or 'dirt'))
+                love.graphics.draw(tex, quad(tex, (e.c % span) * 64, 0, 64, LIP * 64 / C), e.c * C - cx, y, 0, C / 64, C / 64)
+            end
+            -- y debajo el cuerpo de roca / tierra
+            love.graphics.setColor(0.66, 0.66, 0.72, 1)
+            for i = 1, n do
+                local e = cl[i]
+                local body = img(tilePath(CLIFF_BODY[e.key] or 'dirt'))
                 body:setWrap('repeat', 'repeat')
                 local bspan = body:getWidth() / 64
-                local bh = FACE * diff - LIP
-                love.graphics.setColor(0.66, 0.66, 0.72, 1)
-                love.graphics.draw(body, quad(body, (c % bspan) * 64, 20, 64, bh * 64 / C), x, y + LIP, 0, C / 64, C / 64)
-                local fh = FACE * diff
-                love.graphics.setColor(0, 0, 0, 0.35)
-                love.graphics.rectangle('fill', x, y + fh, C, 4)
-                love.graphics.setColor(1, 1, 1, 1)
-                if below == '~' then
-                    love.graphics.draw(foam, x, y + fh + 4 + math.floor(math.sin(self.t * 2 + c) * 1.5), 0, C / 16, 2)
+                local bh = FACE * e.diff - LIP
+                love.graphics.draw(body, quad(body, (e.c % bspan) * 64, 20, 64, bh * 64 / C), e.c * C - cx, y + LIP, 0, C / 64, C / 64)
+            end
+            love.graphics.setColor(0, 0, 0, 0.35)
+            for i = 1, n do
+                local e = cl[i]
+                love.graphics.rectangle('fill', e.c * C - cx, y + FACE * e.diff, C, 4)
+            end
+            love.graphics.setColor(1, 1, 1, 1)
+            for i = 1, n do
+                local e = cl[i]
+                if e.sea then
+                    love.graphics.draw(foam, e.c * C - cx, y + FACE * e.diff + 4 + math.floor(math.sin(self.t * 2 + e.c) * 1.5), 0, C / 16, 2)
                 end
             end
         end

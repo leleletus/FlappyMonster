@@ -286,21 +286,26 @@ end
 
 -- Devuelve lista de {dir, x, y, w, h} de pinchos que intersectan la hitbox.
 -- Hitbox = BASE del pincho (la misma que dibuja Level:renderDebug).
-function Level:getSpikesInBox(bx, by, bw, bh)
+-- `into` (opcional): la lista que se vacía, rellena y devuelve (quien pregunta en cada paso pasa una suya: sin basura;
+-- los pinchos que toca sí son tablas nuevas, pero solo cuando toca alguno)
+local SUB_OFFSETS                               -- (esquinas de las 4 subceldas: constante, se calcula una vez)
+function Level:getSpikesInBox(bx, by, bw, bh, into)
     local HALF = TILE_PX / 2
-    local result = {}
+    local result = into or {}
+    for i = #result, 1, -1 do result[i] = nil end
 
     local sc = math.max(1, math.floor(bx / TILE_PX))
     local ec = math.min(self.tileW, math.ceil((bx+bw) / TILE_PX) + 1)
     local sr = math.max(1, math.floor(by / TILE_PX))
     local er = math.min(self.tileH, math.ceil((by+bh) / TILE_PX) + 1)
 
-    local subOffsets = {
+    SUB_OFFSETS = SUB_OFFSETS or {
         {0,    0   },  -- TL
         {HALF, 0   },  -- TR
         {0,    HALF},  -- BL
         {HALF, HALF},  -- BR
     }
+    local subOffsets = SUB_OFFSETS
 
     for row = sr, er do
         for col = sc, ec do

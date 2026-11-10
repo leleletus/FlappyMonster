@@ -64,6 +64,7 @@ PlayerAdventure.STEP_MAX = 16
 -- que pisan 4 px de ella (el aterrizaje mira de x-hw+4 a x+hw-4); subido antes, se caía otra vez abajo. Mientras
 -- tanto el escalón no le para (se mete esos px en su esquina, que no se ve).
 local CHY_P, CHX_P = {}, {}   -- (puntos de choque de cada lado, reutilizados: se recorren enseguida)
+local SPIKE_OB, SPIKE_L = {}, {}   -- (caja y pinchos del paso: reutilizados)
 local OB_B = {}            -- (caja de un cuerpo sólido, rellenada al probarlo: sin basura por paso; solo lectura)
 local STEP_FOOT = 4
 -- (lo que se subió se DIBUJA subiendo en unos fotogramas: `stepVis`, PlayerAdventure STEP_EASE / PlayerRender)
@@ -366,8 +367,8 @@ function PlayerAdventure:moveAndCollide(level, dx, dy)
     end
 
     -- Pinchos: usar outer bounds contra getSpikesInBox
-    local ob = self:getOuterBounds()
-    local spikeList = level:getSpikesInBox(ob.x, ob.y, ob.w, ob.h)
+    local ob = self:getOuterBounds(SPIKE_OB)
+    local spikeList = level:getSpikesInBox(ob.x, ob.y, ob.w, ob.h, SPIKE_L)
     for _, sp in ipairs(spikeList) do
         if spikeHitsPlayer(sp, ob) and self:hazardHit() then return end
     end

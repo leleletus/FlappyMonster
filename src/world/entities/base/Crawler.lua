@@ -60,14 +60,16 @@ end
 -- = normal) → caja en el mundo (las rotaciones son de 90°)
 function Crawler.toWorldBox(e, lx, ly, w, h)
     local rx, ry, dx, dy = Crawler.axes(e)
-    local x0, y0 = math.huge, math.huge
-    local x1, y1 = -math.huge, -math.huge
-    for _, c in ipairs({ { lx, ly }, { lx + w, ly }, { lx, ly + h }, { lx + w, ly + h } }) do
-        local wx = e.x + rx * c[1] + dx * c[2]
-        local wy = e.y + ry * c[1] + dy * c[2]
-        x0, y0 = math.min(x0, wx), math.min(y0, wy)
-        x1, y1 = math.max(x1, wx), math.max(y1, wy)
-    end
+    -- (las cuatro esquinas una a una: antes, una tabla por esquina y otra con la lista en cada llamada)
+    local ex, ey = e.x, e.y
+    local ax, ay = ex + rx * lx, ey + ry * lx                 -- (columna izquierda / derecha de la caja local)
+    local bx, by = ex + rx * (lx + w), ey + ry * (lx + w)
+    local ux, uy = dx * ly, dy * ly                           -- (fila de arriba / de abajo)
+    local vx, vy = dx * (ly + h), dy * (ly + h)
+    local x0 = math.min(ax + ux, bx + ux, ax + vx, bx + vx)
+    local x1 = math.max(ax + ux, bx + ux, ax + vx, bx + vx)
+    local y0 = math.min(ay + uy, by + uy, ay + vy, by + vy)
+    local y1 = math.max(ay + uy, by + uy, ay + vy, by + vy)
     return { x = x0, y = y0, w = x1 - x0, h = y1 - y0 }
 end
 

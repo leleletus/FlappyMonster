@@ -113,14 +113,23 @@ function OnlineAdventureState:_renderScene()
     -- A oscuras: las linternas de todos los jugadores; encima, los puntos luminosos
     -- (y la luz ambiente de cada nivel: atardecer, noche, cueva en penumbra — src/fx/Darkness.lua)
     if Darkness.active(self.level) then
-        local src = {}
+        -- (la lista de linternas y sus entradas son del estado y se rellenan en cada fotograma: sin basura)
+        local src, n = self._lightSrc or {}, 0
+        self._lightSrc = src
+        local function put(x, y, facing, on)
+            n = n + 1
+            local L = src[n] or {}
+            src[n] = L
+            L.x, L.y, L.facing, L.on = x, y, facing, on
+        end
         for _, rp in pairs(self.remotePlayers) do
-            if rp.visible and not rp.dying then src[#src + 1] = { x = rp.x, y = rp.y, facing = rp.facing, on = rp.lightOn } end
+            if rp.visible and not rp.dying then put(rp.x, rp.y, rp.facing, rp.lightOn) end
         end
         if self.localPaInit and not self.ownData.isSpectator then
             local pa = self.localPa
-            src[#src + 1] = { x = self.renderX, y = self.renderY, facing = pa.facing, on = pa.lightOn and not pa.dying }
+            put(self.renderX, self.renderY, pa.facing, pa.lightOn and not pa.dying)
         end
+        for i = #src, n + 1, -1 do src[i] = nil end
         Darkness.render(self.level, self.camX, self.camY, src, self.enemyRenderers, self.sceneCanvas)
         Darkness.renderGlow(self.level, self.enemyRenderers, self.camX, self.camY)
     end
@@ -136,18 +145,20 @@ function OnlineAdventureState:_renderScene()
     RhythmDuel.drawDim()                                                 -- (el duelo de ritmo: el fondo se oscurece)
     BossHud.drawCinema(self.level)
     -- (todo el HUD se desvanece durante la entrada de un jefe: BossHud.fadeHud)
-    BossHud.fadeHud(function()
+    self._hudFn = self._hudFn or function()                 -- (uno por estado: sin un cierre nuevo por fotograma)
         self:_renderHUD()
         if not self.showGameOver and not self.showPause and not self.specOverlay then
             CornerButtons.drawPause(self.pauseHover)
         end
         self:_renderBossHUD()
-    end)
+    end
+    BossHud.fadeHud(self._hudFn)
     RhythmDuel.draw(self:_duelCast())
 
     -- Overlays
     if self.showPause then self:_renderPauseOverlay() end
-    BossHud.fadeHud(function() self:_renderModeHUD() end)
+    self._modeHudFn = self._modeHudFn or function() self:_renderModeHUD() end
+    BossHud.fadeHud(self._modeHudFn)
     if self.ownData.isSpectator and not self.showGameOver then self:_renderSpectatorOverlay() end
 
     -- ── Game Over overlay ─────────────────────────────────────────────────────

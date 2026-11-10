@@ -591,16 +591,9 @@ local EDGE_EPS = 1e-6
 -- Material líquido que toca la caja (primer punto de muestreo con líquido), o nil.
 function Level:liquidInBox(bx, by, bw, bh)
     local rx, ry = bx + bw - EDGE_EPS, by + bh - EDGE_EPS
-    local pts = {
-        {bx,      by      },{rx,      by      },
-        {bx,      ry      },{rx,      ry      },
-        {bx+bw/2, by+bh/2 },
-    }
-    for _, p in ipairs(pts) do
-        local m = self:liquidAt(p[1], p[2])
-        if m then return m end
-    end
-    return nil
+    -- (las cuatro esquinas y el centro, en este orden; sin una tabla de puntos por llamada)
+    return self:liquidAt(bx, by) or self:liquidAt(rx, by) or self:liquidAt(bx, ry) or self:liquidAt(rx, ry)
+        or self:liquidAt(bx + bw / 2, by + bh / 2)
 end
 
 -- ¿La caja toca algún tile con el trigger `name` (p. ej. 'finish')?

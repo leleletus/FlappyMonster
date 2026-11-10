@@ -552,12 +552,16 @@ function Entity:inVoid(level)
 end
 
 -- ¿Algo mortal donde está? (pinchos de verdad o material 'deadly')
+local DEADLY_B, SPIKES_S = {}, {}   -- (caja y lista de pinchos reutilizadas: se pregunta en cada paso)
+local function killsAt(level, x, y)
+    local t = level:getDefAt(x, y)
+    return t and t.mat and t.mat.contact == 'kill'
+end
 function Entity:onDeadlyGround(level)
-    local b = self:getOuterBounds()
-    if #level:getSpikesInBox(b.x, b.y, b.w, b.h) > 0 then return true end
-    for _, py in ipairs({ self.y, b.y + b.h - 4 }) do
-        local t = level:getDefAt(self.x, py)
-        if t and t.mat and t.mat.contact == 'kill' then return true end
+    local b = self:getOuterBounds(DEADLY_B)
+    if #level:getSpikesInBox(b.x, b.y, b.w, b.h, SPIKES_S) > 0 then return true end
+    for k = 1, 2 do
+        if killsAt(level, self.x, k == 1 and self.y or b.y + b.h - 4) then return true end
     end
     return false
 end
@@ -1151,7 +1155,7 @@ function Entity:landingAhead(level, dir, maxGap)
         local x = front + dir * d
         if solidAt(level, x, self.y) or solidAt(level, x, feet - 8) then return nil end     -- (una pared: no es un hueco)
         if solidAt(level, x, feet + 4) then
-            if #level:getSpikesInBox(x - 4, feet - 8, 8, 12) > 0 then return nil end
+            if #level:getSpikesInBox(x - 4, feet - 8, 8, 12, SPIKES_S) > 0 then return nil end
             if self:dangerAt(level, x - self.outerW / 2, feet - self.outerH, self.outerW, self.outerH) then return nil end
             return d
         end

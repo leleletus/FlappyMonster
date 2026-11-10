@@ -86,7 +86,7 @@ run_one() {
         export FM_SERVER=localhost      # (los arneses online nunca hablan con el servidor real)
         # (FM_TEST_*: también para el servidor; solo este arnés)
         local srv_env=()
-        for i in "${!envs[@]}"; do [[ ${envs[$i]} == FM_TEST_* ]] && srv_env+=("${envs[$i]}"); done
+        for i in "${!envs[@]}"; do [[ ${envs[$i]} == FM_TEST_* || ${envs[$i]} == FM_PERF=* ]] && srv_env+=("${envs[$i]}"); done   # (FM_PERF: el rendimiento del servidor, docs/testing/performance.md)
         env ${srv_env[@]+"${srv_env[@]}"} love server --headless > /tmp/fm_test_server.log 2>&1 &
         server_pid=$!
         for _ in $(seq 1 40); do port_up && break; sleep 0.25; done

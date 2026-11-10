@@ -111,6 +111,14 @@ per-frame system: run `perf GARB=1` before committing it.
   - The harness: `garbage_profile` now also wraps the entity CLASSES (their garbage was charged to the caller:
     `_renderScene` showed 30 KB that were `bosswall:render`), and the per-function table prints UNDER its scene's
     header (it printed above it, so it read as the previous scene's).
-  Not done (needs device numbers or the user): the story map's ~610 draw calls (one per terrain piece: a sprite batch
-  would change nothing visible but is a bigger rewrite), merging the single-player and server step order (known-debt).
+  Second pass (same version, 2026-11-10): the story map's terrain went from 611 to 234 draw calls (scene `map`): it
+  alternated textures cell by cell (sea, ground, lava, grass blades), which breaks LÖVE's automatic batching. Now one
+  pass per texture (nothing overlaps: the blades are 8 px tall, inside their cell) and the cliff faces grouped per ROW
+  (faces in one row never overlap; a tall face does reach the row below, so rows keep their order). Checked with
+  `perf SCENES=map SHOTS=1` against the old capture: 0 pixels differ. Also `Spikes/liquidInBox` without per-call
+  tables, `Crawler.toWorldBox` without its 5 corner tables (same float operations, same order), and the online
+  renderer's flashlight list and HUD closures reused. `run.sh` now forwards `FM_PERF=` to its local server (it only
+  forwarded `FM_TEST_*`): `run.sh online_boss ... FM_PERF=2` then `/tmp/fm_test_server.log`. Server, Snowball arena
+  boss fight: 0.23 ms per room step, 20 KB per step.
+  Not done: merging the single-player and server step order (a design decision, known-debt).
 
