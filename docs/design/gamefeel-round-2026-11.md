@@ -6,7 +6,7 @@ everything except the hit-stop (only if it is explained well) and the off-screen
 | # | What | Status |
 |---|---|---|
 | 1 | Variable jump height (releasing jump early cuts the jump) | built 0.5.188 ([player](../gameplay/player.md)) |
-| 2 | Hit-stop (2-4 frozen frames on hits) | built 0.5.188 as the user asked: ground pound (enemy or ground), boss hits, damage, death; never on stomps; online visual only, on your own screen ([player](../gameplay/player.md)) |
+| 2 | Hit-stop (2-4 frozen frames on hits) | built 0.5.188 (ground pound, boss hits, damage, death); **0.5.189: only on dying**, the user did not like it on ground pounds ([player](../gameplay/player.md)) |
 | 3 | Controller vibration (pound, hits, explosions, boss stomps) | built 0.5.188 (`src/core/Rumble.lua`, Settings → VIBRATION) |
 | 4 | Coyote time + corner correction | corner correction built 0.5.188; coyote time not needed (falling keeps both jumps) |
 | 5 | Landing / turning dust, squash on hard landings | built 0.5.188 |

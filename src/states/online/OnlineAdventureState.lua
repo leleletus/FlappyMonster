@@ -83,7 +83,6 @@ function OnlineAdventureState:enter(args)
     PlayerAdventure.fx = function(kind, x, y)
         if kind ~= 'block_break' and kind ~= 'switch_hit' then Particles.emit(kind, x, y) end
         require('src/core/Rumble').onPlayerFx(kind)         -- (solo el jugador propio: la predicción)
-        if kind == 'gp_land' then HitStop.trigger(HitStop.GP) end   -- (solo en esta pantalla: src/ui/HitStop.lua)
     end
     -- Las entidades las simula el servidor: sus efectos llegan como eventos 'fx'
     require('src/world/entities/base/Entity').fx = nil
@@ -432,9 +431,6 @@ function OnlineAdventureState:_checkLocalBounce()
                 self.predictor:recordBounce(bvy, dir, soft)
                 -- Los jefes suenan con su propio golpe (lo manda el servidor)
                 if not er.def.boss and result ~= 'bounce' then Sound.play('enemyExplode') end
-                -- (HIT-STOP solo en esta pantalla: a un jefe que se deja golpear, o un ground pound a un enemigo)
-                if er.def.boss and result ~= 'bounce' then HitStop.trigger(HitStop.BOSS)
-                elseif result == 'pound' then HitStop.trigger(HitStop.GP) end
                 if er.state == 'frozen' then Sound.play('cryoFree') end       -- (le rompió el hielo)
                 return
             end
@@ -693,7 +689,7 @@ function OnlineAdventureState:update(dt)
     if self.localPaInit and not self.ownData.isSpectator then
         local hp = self.localPa.hp
         if self._rumbleHp and hp < self._rumbleHp and not self.localPa.dying then
-            require('src/core/Rumble').hurt(); HitStop.trigger(HitStop.HURT)
+            require('src/core/Rumble').hurt()
         end
         self._rumbleHp = hp
         if self.localPa.dying and not self._hsDying then HitStop.trigger(HitStop.DEATH) end

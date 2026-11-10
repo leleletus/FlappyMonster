@@ -1,7 +1,7 @@
 -- src/ui/HitStop.lua
--- HIT-STOP (0.5.188, el usuario: «solo al hacer ground pound a un enemigo, al suelo, a un jefe y al recibir daño / morir;
--- no al pisar un enemigo: se sentiría trabado»): en el instante de un golpe fuerte el juego se CONGELA unos fotogramas
--- (2-5 a 60 Hz) y sigue; da peso al golpe. Música y sonido siguen sonando.
+-- HIT-STOP: el juego se CONGELA unos fotogramas y sigue. Solo AL MORIR (0.5.189, el usuario: «no me termina de
+-- convencer en los ground pounds, mejor solo al morir. Nada más»; en 0.5.188 también el ground pound, los golpes a un
+-- jefe y el daño). Música y sonido siguen sonando.
 --   · Un jugador: se congela de verdad (AdventureState:update no avanza).
 --   · Online: SOLO EN LA PANTALLA de quien lo provoca — la partida sigue en el servidor y en los demás —: se mantiene la
 --     última imagen de la escena y luego se pone al día. Nada de la simulación cambia: no se puede desincronizar.
@@ -11,7 +11,7 @@
 local HitStop = {}
 
 HitStop.COOLDOWN = 0.15
-HitStop.GP, HitStop.BOSS, HitStop.HURT, HitStop.DEATH = 3, 4, 3, 5      -- fotogramas (a 60 Hz) de cada golpe
+HitStop.DEATH = 5                -- fotogramas (a 60 Hz) al morir
 
 local left, cd = 0, 0
 

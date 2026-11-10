@@ -40,15 +40,12 @@ flashlight in dark levels, carrying (UP: pick up / throw; crouch + UP: put down 
 - **Rumble:** see `src/core/Rumble.lua` — the controller vibrates on the player's ground-pound landing, on damage and
   with every screen shake (explosions, boss stomps, roars; the same distance fall-off as the shake); a phone without
   a controller vibrates for the strong ones. Option Settings → VIBRATION (on by default, `Settings.rumble`).
-- **Hit-stop** (`src/ui/HitStop.lua`; the user, 2026-11-10: "not when stomping an enemy, it would feel stuck; only a
-  ground pound on an enemy or the ground, a boss and taking damage / dying"; online too, "as long as nothing breaks"):
-  the game freezes `HitStop.GP` 3 frames (the player's ground-pound landing, or a ground pound on an enemy),
-  `BOSS` 4 (hitting a boss that can be hit), `HURT` 3 (losing health), `DEATH` 5 (dying); never on a plain stomp; at
-  least `COOLDOWN` (0.15 s) between two. Music and sound keep playing. Single player: `AdventureState:update` does not
-  advance. Online it is VISUAL ONLY, on the screen of whoever caused it: the client keeps simulating and talking to the
-  server, but its camera stays put and `SceneLayers.draw(..., reuse)` shows the previous frame's scene for those frames,
-  then it catches up — nothing in the simulation changes (not the SMBU-style pause for every client). Option Settings
-  → HIT-STOP (`Settings.hitStop`, on by default).
+- **Hit-stop** (`src/ui/HitStop.lua`): ONLY WHEN DYING — the game freezes `HitStop.DEATH` (5) frames, music and
+  sound keep playing. Single player: `AdventureState:update` does not advance; online it is visual only, on your own
+  screen (the camera stays put and `SceneLayers.draw(..., reuse)` shows the previous frame's scene), nothing in the
+  simulation changes. `COOLDOWN` 0.15 s between two. Option Settings → HIT-STOP (`Settings.hitStop`). History: 0.5.188
+  also froze on ground pounds (enemy or ground), boss hits and damage; the user (2026-11-10): "it does not convince me
+  on ground pounds, better only on dying. Nothing else" → 0.5.189.
 - Bots and the credits fight hold JUMP through the whole rise (`Bot.holdJump`): their moves and the saved navigation
   graphs (`assets/nav/`) were recorded when the hold length did not matter, so their jumps stay exactly as before.
 - Harness `mechanics` `salto_variable`, `esquina`, `mirar`, `hitstop`. Not judged by a person: every number above (feel).

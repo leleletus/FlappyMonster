@@ -158,7 +158,6 @@ function AdventureState:enter(args)
         Particles.emit(kind, x, y)
         if pa == self.player and not self.demo then
             Rumble.onPlayerFx(kind)                                     -- (vibración: src/core/Rumble.lua)
-            if kind == 'gp_land' then HitStop.trigger(HitStop.GP) end   -- (ground pound al suelo: src/ui/HitStop.lua)
         end
         if kind == 'block_break' then Sound.play('blockBreak') end
         if kind == 'switch_hit' then               -- (el bloque ya cambió: suena su estado nuevo)
@@ -423,11 +422,6 @@ function AdventureState:checkEnemyCollisions()
     local player = self.player
     Entities.interactions.run(player, self.enemies, {
         stomp = function(g, pts)
-            -- (HIT-STOP: a un jefe; a un enemigo solo con ground pound — pisarlo no: se sentiría trabado —)
-            if not self.demo then
-                if g.def.boss then HitStop.trigger(HitStop.BOSS)
-                elseif player.gpPhase or player.gpLanded then HitStop.trigger(HitStop.GP) end
-            end
             self.score = self.score + (pts or 0)
             if not g.def.boss and g.state == 'dead' then self.stats.kills = self.stats.kills + 1 end
             local popY = g.flipped and (g.y + g.outerH / 2) or (g.y - g.outerH / 2)
@@ -701,7 +695,7 @@ function AdventureState:update(dt)
     -- (golpes recibidos: cada vez que baja la vida sin morir)
     if self.player.hp < self.prevHp and not self.player.dying then
         self.stats.hits = self.stats.hits + (self.prevHp - self.player.hp)
-        if not self.demo then Rumble.hurt(); HitStop.trigger(HitStop.HURT) end
+        if not self.demo then Rumble.hurt() end
     end
     self.prevHp = self.player.hp
 
