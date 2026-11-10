@@ -1002,6 +1002,53 @@ function cases.hielo_vuelve()
             broke, Level.THIN_ICE_REGROW - 0.2, early, Level.THIN_ICE_REGROW + 0.3, back, tostring(sent), blocked, after))
 end
 
+-- MIRAR arriba / abajo (src/ui/CameraLook.lua, 0.5.187): quieto en el suelo, manteniendo agacharse la cámara baja tras
+-- CameraLook.HOLD s (antes, nada) hasta LOOK × el alto de la pantalla; arriba igual hacia arriba; al soltar vuelve; andando
+-- o en el aire no se mueve
+function cases.mirar()
+    local CameraLook = require 'src/ui/CameraLook'
+    local level = room(16, 9)
+    local pa = PlayerAdventure:new(8 * T, 7 * T)
+    level.players = { pa }
+    clear()
+    for _ = 1, 60 do pa:update(1 / 60, level) end           -- (que esté en el suelo)
+    local held = {}
+    local real = Input
+    Input = setmetatable({ down = function(a) return held[a] == true end, pressed = function() return false end }, { __index = stub })
+    local st = {}
+    local function run(secs, crouch)
+        local maxDy, minDy, last = 0, 0, 0
+        for _ = 1, math.floor(secs * 60) do
+            stub.state.crouch = crouch or false
+            pa.crouching = crouch or false
+            last = CameraLook.offset(st, pa, 1 / 60, true)
+            maxDy, minDy = math.max(maxDy, last), math.min(minDy, last)
+        end
+        return maxDy, minDy, last
+    end
+    held.crouch = true
+    local early = select(1, run(CameraLook.HOLD - 0.1, true))
+    local down = select(1, run(1.5, true))
+    held.crouch = nil
+    local _, _, back = run(1.5, false)
+    held.grab = true
+    local _, up = run(2.1, false)
+    held.grab = nil
+    run(1.5, false)
+    -- andando no mira
+    held.crouch = true
+    pa.vx = 200
+    local walking = select(1, run(2, true))
+    pa.vx = 0
+    Input = real
+    clear()
+    local want = WINDOW_H * CameraLook.LOOK
+    check('mirar', early == 0 and down > want * 0.9 and down <= want + 0.5 and math.abs(back) < 1 and up < -want * 0.9
+                   and walking == 0,
+        ('agachado: a los %.1f s nada (%.0f px) · luego baja %.0f px (máx %.0f) · al soltar vuelve a %.0f · arriba %.0f · andando %.0f')
+        :format(CameraLook.HOLD - 0.1, early, down, want, back, up, walking))
+end
+
 function cases.hielo_gp()
     local level, fx = iceRoom()
     local function gp(col)
@@ -4063,7 +4110,7 @@ function love.load()
                          'puffer_through', 'puffer_concave', 'puffer_cycle', 'puffer_dry', 'flyer_anim', 'vuelo_libre', 'boxed_in',
                          'bloque_roto', 'activador', 'tramp_avanza', 'tramp_pinchos', 'ping_icono',
                          'bomba_activa', 'bomba_pisada', 'bomba_radios', 'bomba_mundo', 'bomba_objeto',
-                         'hielo_solido', 'hielo_desgaste', 'hielo_nivel', 'hielo_vuelve', 'hielo_gp', 'hielo_bomba', 'encerrado', 'trepador_canto', 'hielo_resbala', 'filo_propio', 'saltarin', 'saltarin_cueva', 'persecucion', 'persecucion_cuerpo', 'inofensivos', 'tapa_base', 'manzana',
+                         'hielo_solido', 'hielo_desgaste', 'hielo_nivel', 'hielo_vuelve', 'mirar', 'hielo_gp', 'hielo_bomba', 'encerrado', 'trepador_canto', 'hielo_resbala', 'filo_propio', 'saltarin', 'saltarin_cueva', 'persecucion', 'persecucion_cuerpo', 'inofensivos', 'tapa_base', 'manzana',
                          'cryo_jugador', 'cryo_enemigo', 'cryo_activador', 'cryo_corte', 'lava', 'pocos_fps', 'ahogo_ganado', 'techo_pinchos',
                          'caja_empuje', 'caja_rota', 'caja_borde', 'cargar', 'bomba_reaparece', 'islas', 'islas_arte', 'viento', 'cuerpo_mueve', 'cajas_golpes', 'balanza', 'soplon', 'semilla', 'ventisca', 'geiser', 'balanza_tope', 'caja_choques', 'cargar_gp', 'gp_radio', 'dejar_encima', 'jump_buffer', 'jefe_puntos', 'persecucion_toque', 'secreto_reina', 'secreto_tifon', 'paredes_falsas', 'aire_caja', 'geiser_peso', 'bomba_cajas', 'cajas_fila', 'balanza_impacto', 'balanza_salto', 'balanza_techo', 'escarabajo', 'escarabajo_lanzado', 'escarabajo_ruta', 'escarabajo_manos', 'escarabajo_arrolla',
                          'topo', 'topo_culetazo', 'topo_suelo', 'topo_borde', 'pirana', 'pirana_pisar', 'pirana_rebota', 'pirana_nada', 'planta', 'planta_pisar', 'planta_traga', 'planta_colgada', 'planta_come', 'planta_bomba' }) do

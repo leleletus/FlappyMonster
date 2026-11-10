@@ -22,6 +22,15 @@ The part files are loaded by `PlayerAdventure.lua` and add methods to the same c
 
 **Moves:** walk, jump + double jump, crouch (and crouch jump), ground pound (crouch in the air), swimming, the
 flashlight in dark levels, carrying (UP: pick up / throw; crouch + UP: put down carefully — [carry-and-push](carry-and-push.md)).
+**Looking up / down** (0.5.187, the user: "a player does not know what is above or below a blind jump; like Sonic 1,
+holding crouch a while moves the camera down A LITTLE, without overdoing it; the same with up"): standing still on the
+ground and holding CROUCH (or UP, the `grab` action) for `CameraLook.HOLD` (0.6 s), the camera glides
+`CameraLook.LOOK` (0.28 × the screen height, ~200 px at 720) that way and glides back on release or on moving
+(`src/ui/CameraLook.lua`, camera only — nothing in the simulation). The same in single player
+(`AdventureState:updateCamera`) and online (the client's own predicted player). Off in the menu demo, Flappy levels
+and boss zones (the camera is the zone there); not while walking, in the air, stunned, swallowed or frozen. On a
+one-way platform holding down drops through it, as before. Harness `mechanics mirar`. Not judged by a person: the
+distance and the wait.
 Input is read from the global `Input` (`jump`, `crouch`, `move_left`, `move_right`, `light`, `grab`); the server and
 the bot feed it through a stub. Since 0.5.68 UP (arrow, W, D-pad up) is `grab` and no longer jumps (the user). The
 player also rides moving bodies (`standBody`) and is dragged by the air (`windVx`, systems/Push).

@@ -1,5 +1,6 @@
 local IceDrips = require 'src/fx/IceDrips'
 local Blocks = require 'src/network/Blocks'
+local CameraLook = require 'src/ui/CameraLook'
 local LavaFx   = require 'src/fx/LavaFx'
 local Sky      = require 'src/fx/Sky'
 local Snowfall = require 'src/fx/Snowfall'
@@ -283,6 +284,11 @@ function OnlineAdventureState:_updateCamera(dt)
     end
     targetX = followX - WINDOW_W / 2
     targetY = followY - WINDOW_H / 2
+    -- (MIRAR arriba / abajo con el jugador propio, como en un jugador: src/ui/CameraLook.lua)
+    self._look = self._look or {}
+    local me = not self.ownData.isSpectator and self.localPaInit and self.localPa or nil
+    targetY = targetY + CameraLook.offset(self._look, me, dt,
+        me ~= nil and not self.level.flappy and not BossZones.cameraTarget(self.level, followX, followY))
 
     targetX = math.max(0, math.min(self.level.widthPx  - WINDOW_W, targetX))
     targetY = math.max(0, math.min(self.level.heightPx - WINDOW_H, targetY))

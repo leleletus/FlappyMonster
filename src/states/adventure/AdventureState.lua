@@ -24,6 +24,7 @@ local PointAreas      = require 'src/world/systems/PointAreas'
 local StartCountdown  = require 'src/world/systems/StartCountdown'
 local Sim             = require 'src/world/systems/Sim'
 local SceneLayers     = require 'src/world/level/SceneLayers'
+local CameraLook      = require 'src/ui/CameraLook'
 
 local AdventureState = BaseState:new()
 
@@ -382,6 +383,11 @@ function AdventureState:updateCamera(dt)
 
     local targetX = self.player.x - WINDOW_W * (self.demo and self.demo.camX or 0.5)
     local targetY = self.player.y - WINDOW_H * (self.demo and self.demo.camY or 0.5)
+    -- (MIRAR arriba / abajo manteniendo ARRIBA o AGACHARSE quieto: src/ui/CameraLook.lua; no en la demo, ni volando
+    -- en un nivel Flappy, ni en una zona de jefe — la cámara es la zona —)
+    self._look = self._look or {}
+    local zoneCam = BossZones.cameraTarget(self.level, self.player.x, self.player.y)
+    targetY = targetY + CameraLook.offset(self._look, self.player, dt, not self.demo and not self.level.flappy and not zoneCam)
 
     targetX = math.max(0, math.min(self.level.widthPx  - WINDOW_W, targetX))
     targetY = math.max(0, math.min(self.level.heightPx - WINDOW_H, targetY))
