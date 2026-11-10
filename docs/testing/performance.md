@@ -122,3 +122,15 @@ per-frame system: run `perf GARB=1` before committing it.
   boss fight: 0.23 ms per room step, 20 KB per step.
   Not done: merging the single-player and server step order (a design decision, known-debt).
 
+- 0.5.188 (game-feel round): **shaders compiled at start-up** — `src/fx/Shaders.lua`, a registry: each module
+  `Shaders.define(name, source)` next to its code and `Shaders.get(name)`; `game.lua` calls `Shaders.warm()` after
+  loading (before, each compiled on first use, mid-game: `perf` now reports no `newShader` while playing). The invert
+  shader was copied in five files (Mirror, Mirror chase, story map, Stage, Actor): one now. The tile loop
+  (`Level:render`) uses the cached raw → definition and only decodes spikes when the cell has the spike bit
+  (`level_shots FIXED=1` before / after: identical PNGs in caldera_roja, lluvia_pinchos, lago_de_cristal,
+  laberinto_submarino). **Pre-drawn static level chunks were measured and NOT built:** with the JIT off the Lua side of
+  drawing tiles is 1-3 % of the samples (the rest waits for the GPU — the water pass alone 66 % in
+  laberinto_submarino), and chunks would change the order in which tiles that draw beyond their cell (grass tops,
+  seams) overlap their neighbours at chunk borders, plus 12-24 MB of canvases. Worth it only if a device's F3 meter
+  shows drawing CPU as the bottleneck.
+

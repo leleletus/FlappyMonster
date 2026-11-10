@@ -272,6 +272,8 @@ EMIT['shake_small'] = function(kind, x, y, opts)
     if pow > shakePow * (shakeT / shakeDur) then
         shakePow, shakeDur = pow, (kind == 'shake_big') and 0.7 or (kind == 'shake_tick' and 0.15 or 0.3)
         shakeT = shakeDur
+        -- (el mando tiembla con la pantalla, igual de lejos: src/core/Rumble.lua; los tics, no)
+        if kind ~= 'shake_tick' then require('src/core/Rumble').play(pow / 16, math.min(0.35, shakeDur * 0.6)) end
     end
 end
 EMIT['shake_big'] = EMIT['shake_small']
@@ -967,6 +969,25 @@ EMIT['shake_roar'] = function(kind, x, y, opts)
     if pow > shakePow * (shakeT / shakeDur) then
         shakePow, shakeDur = pow, 0.9
         shakeT = shakeDur
+        require('src/core/Rumble').play(0.25 * k, 0.5)       -- (un rugido: vibración suave y larga)
+    end
+end
+
+-- POLVO del jugador (0.5.188, solo dibujo): al aterrizar fuerte, una bocanada baja a los dos lados, del color del suelo;
+-- al derrapar dando la vuelta, unas motas que se quedan atrás
+EMIT['land_dust'] = function(kind, x, y, opts)
+    local dust = dustOf(paletteAt(x, y, opts))
+    for i = 1, 8 do
+        local dir = (i % 2 == 0) and 1 or -1
+        add({ x = x + dir * rnd(6, 16), y = y - rnd(0, 4), vx = dir * rnd(60, 170), vy = -rnd(20, 90),
+              g = 300, life = rnd(0.25, 0.42), size = math.random(1, 2) * 3, col = dust, drag = 4, dust = true })
+    end
+end
+EMIT['skid_dust'] = function(kind, x, y, opts)
+    local dust = dustOf(paletteAt(x, y, opts))
+    for _ = 1, 2 do
+        add({ x = x + rnd(-6, 6), y = y - rnd(0, 4), vx = rnd(-40, 40), vy = -rnd(30, 90), g = 260,
+              life = rnd(0.2, 0.35), size = 3, col = dust, drag = 3, dust = true })
     end
 end
 

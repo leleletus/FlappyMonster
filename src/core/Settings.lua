@@ -7,7 +7,7 @@
 local Lang = require 'src/core/Lang'
 
 local Settings = { language = Lang.DEFAULT, onlineName = '', rhythmOffset = 0, showPerf = false,
-                   musicVol = 10, sfxVol = 10, muted = false, swapAB = false, wheelToggle = false,
+                   musicVol = 10, sfxVol = 10, muted = false, swapAB = false, wheelToggle = false, rumble = true, hitStop = true,
                    blocked = {} }   -- (volúmenes 0..10; swapAB: A / B al revés, mandos de Xbox; (rhythmOffset: ms de retardo del audio, duelo de ritmo; showPerf: src/ui/PerfOverlay.lua)
 local FILE = 'options.cfg'
 
@@ -27,6 +27,8 @@ function Settings.load()
                 if type(data.sfxVol) == 'number' then Settings.sfxVol = math.max(0, math.min(10, math.floor(data.sfxVol))) end
                 Settings.muted, Settings.swapAB = data.muted == true, data.swapAB == true
                 Settings.wheelToggle = data.wheelToggle == true      -- (la rueda de power-ups: pulsar en vez de mantener)
+                Settings.rumble = data.rumble ~= false                -- (vibración del mando / del móvil: src/core/Rumble.lua)
+                Settings.hitStop = data.hitStop ~= false              -- (congelar los golpes fuertes: src/ui/HitStop.lua)
                 -- (jugadores bloqueados, en minúsculas: src/network/Blocks.lua)
                 if type(data.blocked) == 'table' then
                     for _, n in ipairs(data.blocked) do
@@ -56,9 +58,9 @@ end
 function Settings.save()
     local bl = {}
     for _, n in ipairs(Settings.blocked or {}) do bl[#bl + 1] = string.format('%q', n) end
-    local s = string.format('return { language = %q, onlineName = %q, rhythmOffset = %d, showPerf = %s, musicVol = %d, sfxVol = %d, muted = %s, swapAB = %s, wheelToggle = %s, blocked = { %s } }\n',
+    local s = string.format('return { language = %q, onlineName = %q, rhythmOffset = %d, showPerf = %s, musicVol = %d, sfxVol = %d, muted = %s, swapAB = %s, wheelToggle = %s, rumble = %s, hitStop = %s, blocked = { %s } }\n',
         Settings.language, Settings.onlineName, Settings.rhythmOffset or 0, tostring(Settings.showPerf == true),
-        Settings.musicVol, Settings.sfxVol, tostring(Settings.muted == true), tostring(Settings.swapAB == true), tostring(Settings.wheelToggle == true), table.concat(bl, ', '))
+        Settings.musicVol, Settings.sfxVol, tostring(Settings.muted == true), tostring(Settings.swapAB == true), tostring(Settings.wheelToggle == true), tostring(Settings.rumble ~= false), tostring(Settings.hitStop ~= false), table.concat(bl, ', '))
     pcall(love.filesystem.write, FILE, s)
 end
 

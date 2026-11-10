@@ -16,16 +16,15 @@ Silhouette.COLOR = { 1, 1, 1 }
 Silhouette.WIDTH = 1 / 3          -- grosor del borde, en píxeles de ARTE (un píxel entero quedaba muy ancho: el usuario)
 local DIRS = { { -1, 0 }, { 1, 0 }, { 0, -1 }, { 0, 1 }, { -1, -1 }, { 1, -1 }, { -1, 1 }, { 1, 1 } }
 
-local shader
-local function get()
-    if shader == nil then
-        local ok, sh = pcall(love.graphics.newShader, [[
-            vec4 effect(vec4 c, Image t, vec2 uv, vec2 sc) { return vec4(c.rgb, Texel(t, uv).a * c.a); }
-        ]])
-        shader = ok and sh or false
-    end
-    return shader or nil
-end
+local Shaders = require 'src/fx/Shaders'
+Shaders.define('silhouette', [[
+    vec4 effect(vec4 c, Image t, vec2 uv, vec2 sc) { return vec4(c.rgb, Texel(t, uv).a * c.a); }
+]])
+Shaders.define('silhouette_flat', [[
+    extern vec4 tint;
+    vec4 effect(vec4 c, Image t, vec2 uv, vec2 sc) { return vec4(tint.rgb, Texel(t, uv).a * tint.a * c.a); }
+]])
+local function get() return Shaders.get('silhouette') end
 
 function Silhouette.draw(img, x, y, r, sx, sy, alpha, color)
     local sh = get()
@@ -71,15 +70,8 @@ end
 
 -- Todo lo que dibuje `fn(dx, dy)` (corrido esos píxeles) sale de UN color liso con su propia forma: se llama
 -- 8 veces alrededor, y encima va el dibujo normal. 1 px de pantalla: más fino que el del jugador.
-local flat
 function Silhouette.around(fn, color)
-    if flat == nil then
-        local ok, sh = pcall(love.graphics.newShader, [[
-            extern vec4 tint;
-            vec4 effect(vec4 c, Image t, vec2 uv, vec2 sc) { return vec4(tint.rgb, Texel(t, uv).a * tint.a * c.a); }
-        ]])
-        flat = ok and sh or false
-    end
+    local flat = Shaders.get('silhouette_flat')
     if not flat then return end
     local prev = love.graphics.getShader()
     flat:send('tint', { color[1], color[2], color[3], color[4] or 1 })

@@ -137,16 +137,7 @@ end
 -- cuadro i (1..) de una tira de ancho fw
 local function frameQ(im, fw, i) return quad(im, (i - 1) * fw, 0, fw, im:getHeight()) end
 
-local invertShader
-local function getInvert()
-    if invertShader == nil then
-        local ok, sh = pcall(love.graphics.newShader, [[
-            vec4 effect(vec4 c, Image t, vec2 uv, vec2 sc) { vec4 p = Texel(t, uv); return vec4(1.0 - p.rgb, p.a) * c; }
-        ]])
-        invertShader = ok and sh or false
-    end
-    return invertShader or nil
-end
+local function getInvert() return require('src/fx/Shaders').get('invert') end   -- (compartido: src/fx/Shaders.lua)
 
 -- Los nodos de un mundo EN EL MAPA: sus niveles, el jefe y, detrás, su BONUS (arena contra el bot; un ramal
 -- desde el castillo). El bonus no es un nodo de Worlds.nodes (no cuenta para el progreso): su estado es aparte.

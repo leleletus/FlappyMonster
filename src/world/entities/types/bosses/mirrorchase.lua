@@ -406,17 +406,8 @@ function Chase:netApply(a, b)
 end
 
 -- ── Dibujo ────────────────────────────────────────────────────────────────────
-local INVERT = [[
-vec4 effect(vec4 color, Image tex, vec2 tc, vec2 sc) {
-    vec4 c = Texel(tex, tc);
-    return vec4(1.0 - c.rgb, c.a) * color;
-}]]
-local shader
-local function invert()
-    if shader == nil then
-        local ok, sh = pcall(love.graphics.newShader, INVERT)
-        shader = ok and sh or false
-    end
+local function invert()                 -- (el shader compartido: src/fx/Shaders.lua)
+    local shader = require('src/fx/Shaders').get('invert')
     if shader then love.graphics.setShader(shader) end
 end
 

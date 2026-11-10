@@ -41,6 +41,10 @@ local ROWS = {
     vol('sfxVol', 'settings.sfx'),
     flag('muted', 'settings.mute_on', 'settings.mute_off', 'green'),
     flag('swapAB', 'settings.swap_on', 'settings.swap_off', 'blue'),
+    -- (vibración del mando y del móvil: src/core/Rumble.lua)
+    flag('rumble', 'settings.rumble_on', 'settings.rumble_off', 'blue'),
+    -- (congelar un instante los golpes fuertes: src/ui/HitStop.lua)
+    flag('hitStop', 'settings.hitstop_on', 'settings.hitstop_off', 'blue'),
     -- (la rueda de los power-ups: mantener y soltar, o pulsar para abrir y otra vez para elegir — accesibilidad —)
     flag('wheelToggle', 'settings.wheel_toggle', 'settings.wheel_hold', 'yellow'),
     -- (el retardo del audio en el duelo de ritmo del Cangrejo Groove: depende del aparato)

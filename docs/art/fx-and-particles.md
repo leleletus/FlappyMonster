@@ -50,6 +50,13 @@ variant needs its own kind name). **From drawing** call `Particles.emit` directl
   (hard cap 1200) and finished particles are removed by compacting the list in one pass (same draw order). Before,
   `table.remove(list, 1)` shifted the whole list for every new particle once full: bursts cost n².
 
+## Player dust and rumble (0.5.188)
+
+`land_dust` (a low puff to both sides on a hard landing, the floor's colours) and `skid_dust` (a few motes when turning
+round at speed), emitted by the player (`PlayerAdventure` → `PlayerAdventure.fx`). Every screen shake (`shake_small`,
+`shake_big`, `shake_roar`; not `shake_tick`) also makes the controller vibrate with the same strength and fall-off
+(`src/core/Rumble.lua`).
+
 ## History
 
 - 0.5.182 (optimisation round): the `elseif` chain became the `EMIT` table. It exposed a hidden bug: `snow_burst` was

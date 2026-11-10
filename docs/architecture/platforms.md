@@ -50,6 +50,9 @@ Actions (`input.lua`): `move_left`, `move_right`, `jump`, `crouch`, `light` (lev
   custom window size and `love.system.getOS = function() return 'Android' end`
   (Input.isMobile), plus a local server/bot for the online menus.
 
+- Vibration (0.5.188): `src/core/Rumble.lua` — `Rumble.play(strength, seconds)` drives every gamepad that supports
+  it (`Joystick:setVibration`, both motors) and, on Android / iOS without one, `love.system.vibrate` for the strong
+  hits only (the manifest already has VIBRATE). Off with Settings → VIBRATION. Never verified on a Switch or a phone.
 - Input devices (0.5.10, review): `Input.lastDevice` (keyboard / mouse / gamepad / touch; a stick move > 0.6 counts as
   gamepad; the Switch starts on gamepad; Android's Back arrives as escape and no longer switches to keyboard, which
   hid the touch controls). `Input.usingPad()` decides the labels: `Input.label(action)` and `Input.hints()` (the keys

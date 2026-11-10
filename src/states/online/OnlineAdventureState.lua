@@ -1,6 +1,7 @@
 local IceDrips = require 'src/fx/IceDrips'
 local Blocks = require 'src/network/Blocks'
 local CameraLook = require 'src/ui/CameraLook'
+local HitStop = require 'src/ui/HitStop'
 local LavaFx   = require 'src/fx/LavaFx'
 local Sky      = require 'src/fx/Sky'
 local Snowfall = require 'src/fx/Snowfall'
@@ -71,6 +72,7 @@ local function lerp(a, b, f) return a + (b - a) * f end
 -- ── Enter ─────────────────────────────────────────────────────────────────────
 
 function OnlineAdventureState:enter(args)
+    HitStop.reset(); self._sceneDrawn = false       -- (sin un hit-stop a medias de otra partida)
     require('src/ui/View').lockGameplay()      -- (todos ven la misma zona del nivel)
     loadAssets()
     args = args or {}
@@ -80,6 +82,8 @@ function OnlineAdventureState:enter(args)
     Particles.clear()
     PlayerAdventure.fx = function(kind, x, y)
         if kind ~= 'block_break' and kind ~= 'switch_hit' then Particles.emit(kind, x, y) end
+        require('src/core/Rumble').onPlayerFx(kind)         -- (solo el jugador propio: la predicción)
+        if kind == 'gp_land' then HitStop.trigger(HitStop.GP) end   -- (solo en esta pantalla: src/ui/HitStop.lua)
     end
     -- Las entidades las simula el servidor: sus efectos llegan como eventos 'fx'
     require('src/world/entities/base/Entity').fx = nil
@@ -287,8 +291,9 @@ function OnlineAdventureState:_updateCamera(dt)
     -- (MIRAR arriba / abajo con el jugador propio, como en un jugador: src/ui/CameraLook.lua)
     self._look = self._look or {}
     local me = not self.ownData.isSpectator and self.localPaInit and self.localPa or nil
-    targetY = targetY + CameraLook.offset(self._look, me, dt,
-        me ~= nil and not self.level.flappy and not BossZones.cameraTarget(self.level, followX, followY))
+    local lookOn = me ~= nil and not self.level.flappy and not BossZones.cameraTarget(self.level, followX, followY)
+    targetY = targetY + CameraLook.offset(self._look, me, dt, lookOn)
+    targetX = targetX + CameraLook.lead(self._look, me, dt, lookOn)
 
     targetX = math.max(0, math.min(self.level.widthPx  - WINDOW_W, targetX))
     targetY = math.max(0, math.min(self.level.heightPx - WINDOW_H, targetY))
@@ -427,6 +432,9 @@ function OnlineAdventureState:_checkLocalBounce()
                 self.predictor:recordBounce(bvy, dir, soft)
                 -- Los jefes suenan con su propio golpe (lo manda el servidor)
                 if not er.def.boss and result ~= 'bounce' then Sound.play('enemyExplode') end
+                -- (HIT-STOP solo en esta pantalla: a un jefe que se deja golpear, o un ground pound a un enemigo)
+                if er.def.boss and result ~= 'bounce' then HitStop.trigger(HitStop.BOSS)
+                elseif result == 'pound' then HitStop.trigger(HitStop.GP) end
                 if er.state == 'frozen' then Sound.play('cryoFree') end       -- (le rompió el hielo)
                 return
             end
@@ -678,7 +686,19 @@ function OnlineAdventureState:update(dt)
     self:_updateBoss(dt)
 
     -- ── Cámara ────────────────────────────────────────────────────────────────
-    self:_updateCamera(dt)
+    -- HIT-STOP (solo en esta pantalla: la partida sigue): la cámara y la escena se quedan quietas unos fotogramas
+    self._hsFrozen = HitStop.step(dt)
+    if not self._hsFrozen then self:_updateCamera(dt) end
+    -- (vibración al bajarle la vida al jugador propio: src/core/Rumble.lua)
+    if self.localPaInit and not self.ownData.isSpectator then
+        local hp = self.localPa.hp
+        if self._rumbleHp and hp < self._rumbleHp and not self.localPa.dying then
+            require('src/core/Rumble').hurt(); HitStop.trigger(HitStop.HURT)
+        end
+        self._rumbleHp = hp
+        if self.localPa.dying and not self._hsDying then HitStop.trigger(HitStop.DEATH) end
+        self._hsDying = self.localPa.dying
+    end
     self:_updatePopups(dt)
     Particles.update(dt)
 end

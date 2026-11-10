@@ -245,24 +245,29 @@ end
 -- a los clientes les llega como cualquier tile cambiado ('set'). Las celdas del lago de un jefe (`iceManaged`, la
 -- Gran Bola de Nieve) no: tienen sus propias reglas.
 Level.THIN_ICE_REGROW = 4
-local REGROW_BOX = {}
-local function cellTaken(level, c, r)
-    local T = TILE_PX
-    local x0, y0 = (c - 1) * T, (r - 1) * T
-    local b = REGROW_BOX
-    for _, pa in ipairs(level.players or {}) do
-        if not pa.dying and pa.getOuterBounds then
+-- ¿HAY ALGUIEN en la caja (x, y, w, h)? Un jugador vivo, o una entidad con cuerpo (un obstáculo o un sólido) que no
+-- sea `except`. LA regla de "¿está libre este sitio?" (0.5.188): el hielo fino que vuelve, el lago de la Gran Bola de
+-- Nieve, el sitio de salida de una caja que reaparece (antes cada uno con la suya)
+local TAKEN_B = {}
+function Level:boxTaken(x, y, w, h, except)
+    local b = TAKEN_B
+    for _, pa in ipairs(self.players or {}) do
+        if pa ~= except and not pa.dying and pa.alive ~= false and pa.getOuterBounds then
             pa:getOuterBounds(b)
-            if b.x < x0 + T and b.x + b.w > x0 and b.y < y0 + T and b.y + b.h > y0 then return true end
+            if b.x < x + w and b.x + b.w > x and b.y < y + h and b.y + b.h > y then return true end
         end
     end
-    for _, e in ipairs(level.liveEntities or {}) do
-        if e.alive and not e.flying and e.getOuterBounds and (e.isObstacle == nil or e:isObstacle() or e.solidFull) then
+    for _, e in ipairs(self.liveEntities or {}) do
+        if e ~= except and e.alive and not e.flying and e.getOuterBounds and e.state ~= 'carried'
+           and (e.solidFull or (e.isObstacle and e:isObstacle())) then
             e:getOuterBounds(b)
-            if b.x < x0 + T and b.x + b.w > x0 and b.y < y0 + T and b.y + b.h > y0 then return true end
+            if b.x < x + w and b.x + b.w > x and b.y < y + h and b.y + b.h > y then return true end
         end
     end
     return false
+end
+function Level:cellTaken(c, r, except)
+    return self:boxTaken((c - 1) * TILE_PX, (r - 1) * TILE_PX, TILE_PX, TILE_PX, except)
 end
 function Level:updateIceRegrow(dt)
     if self.canBreak == false or not self.iceRegrow then return end
@@ -272,7 +277,7 @@ function Level:updateIceRegrow(dt)
             self.iceRegrow[k] = nil                              -- (otra cosa ocupó la casilla: ya no se rehace)
         else
             e[3] = e[3] + dt
-            if e[3] >= Level.THIN_ICE_REGROW and not cellTaken(self, e[1], e[2]) then
+            if e[3] >= Level.THIN_ICE_REGROW and not self:cellTaken(e[1], e[2]) then
                 self.iceRegrow[k] = nil
                 self:setTileRaw(e[1], e[2], e[4])
                 self.brokenQueue = self.brokenQueue or {}

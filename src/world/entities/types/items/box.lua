@@ -188,13 +188,10 @@ function Box:shove(pa, level, dx)
     pa:moveSteps(level, dx, 0)
     pa.onGround, pa.groundDef, pa.standBody, pa.bodyHit, pa.vx = g, gd, sb, bh, vx
 end
+-- (¿su sitio de salida está ocupado? La regla común: Level:boxTaken — un jugador, un obstáculo o un sólido —)
 function Box:homeBlocked(level)
-    if self:playerIn(level, self.home.x, self.home.y) then return true end
     local h = self.home
-    for _, px in ipairs({ h.x - self.outerW / 2 + 2, h.x, h.x + self.outerW / 2 - 2 }) do
-        if level:bodyAt(px, h.y, self) then return true end
-    end
-    return false
+    return level:boxTaken(h.x - self.outerW / 2 + 2, h.y - self.outerH / 2 + 2, self.outerW - 4, self.outerH - 4, self)
 end
 function Box:updateCommonStates(dt, level)
     if self.state == 'gone' and self.deadTimer + dt >= (self.props.respawn or 0) and self:homeBlocked(level) then

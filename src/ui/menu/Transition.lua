@@ -50,10 +50,7 @@ function Transition.update(dt)
 end
 
 -- ── El iris ─────────────────────────────────────────────────────────────────
-local irisShader
-local function shader()
-    if irisShader == nil then
-        local ok, sh = pcall(love.graphics.newShader, [[
+require('src/fx/Shaders').define('iris', [[
             extern vec2 center;     // en píxeles de pantalla
             extern number radius;
             extern number cell;
@@ -63,10 +60,7 @@ local function shader()
                 return c;
             }
         ]])
-        irisShader = ok and sh or false
-    end
-    return irisShader or nil
-end
+local function shader() return require('src/fx/Shaders').get('iris') end
 
 -- 0..1 → 0..1 suave al principio y al final
 local function smooth(k) k = math.max(0, math.min(1, k)); return k * k * (3 - 2 * k) end

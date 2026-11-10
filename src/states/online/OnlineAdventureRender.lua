@@ -108,7 +108,10 @@ end
 function OnlineAdventureState:_renderScene()
     -- ── La escena entera al lienzo, y al volver, el efecto del agua (src/world/level/SceneLayers.lua) ──
     self._actorsFn = self._actorsFn or function(cx, cy) self:_drawActors(cx, cy) end     -- (uno por estado: sin basura)
-    SceneLayers.draw(self.level, self.camX, self.camY, self.sceneCanvas, self.enemyRenderers, self._actorsFn)
+    -- (hit-stop: la escena del fotograma anterior — src/ui/HitStop.lua —)
+    local reuse = self._hsFrozen and self._sceneDrawn
+    SceneLayers.draw(self.level, self.camX, self.camY, self.sceneCanvas, self.enemyRenderers, self._actorsFn, nil, reuse)
+    self._sceneDrawn = true
 
     -- A oscuras: las linternas de todos los jugadores; encima, los puntos luminosos
     -- (y la luz ambiente de cada nivel: atardecer, noche, cueva en penumbra — src/fx/Darkness.lua)

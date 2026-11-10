@@ -1049,6 +1049,78 @@ function cases.mirar()
         :format(CameraLook.HOLD - 0.1, early, down, want, back, up, walking))
 end
 
+-- SALTO VARIABLE (0.5.188): mantener = salto entero; soltar a los pocos fotogramas = salto corto; quien solo PULSA (sin
+-- mantener nunca: cinemáticas, bots) salta entero como antes
+function cases.salto_variable()
+    local function height(holdFrames, tapOnly)
+        local level = room(12, 16)
+        local pa = playerAt(level, 6, 15)
+        local y0, minY = pa.y, pa.y
+        clear()
+        stub.state.jump_pressed, stub.state.jump = true, not tapOnly
+        for f = 1, 90 do
+            if f > holdFrames then stub.state.jump = false end
+            pa:update(1 / 60, level)
+            minY = math.min(minY, pa.y)
+        end
+        clear()
+        return (y0 - minY) / T
+    end
+    local full, short, tap = height(90), height(4), height(0, true)
+    check('salto_variable', short < full * 0.6 and short > 0.3 and math.abs(tap - full) < 0.05,
+        ('mantenido %.2f casillas · soltado a los 4 fotogramas %.2f · solo pulsado %.2f (= mantenido)'):format(full, short, tap))
+end
+
+-- CORRECCIÓN DE ESQUINAS (0.5.188): saltando con la cabeza 6 px bajo la esquina de un bloque, se corre y pasa (antes se
+-- daba de cabeza); con el bloque encima de toda la cabeza, se da como siempre
+function cases.esquina()
+    local function try(over)
+        local level = room(12, 16, { { 7, 13, 'solid' } })
+        local pa = playerAt(level, 6, 15)
+        local hw = pa.w / 2
+        pa.x = 6 * T - (hw - 4) + over          -- (el borde derecho de la cabeza mete `over` px bajo el bloque)
+        local x0, y0, minY = pa.x, pa.y, pa.y
+        clear()
+        stub.state.jump_pressed, stub.state.jump = true, true
+        for _ = 1, 50 do pa:update(1 / 60, level); minY = math.min(minY, pa.y) end
+        clear()
+        return (y0 - minY) / T, pa.x - x0
+    end
+    local hClip, dxClip = try(6)
+    local hUnder, dxUnder = try(40)
+    check('esquina', hClip > 1.3 and dxClip < 0 and dxClip >= -12 and hUnder < 0.9 and dxUnder == 0,
+        ('rozando la esquina 6 px: sube %.2f casillas, se corre %.0f px · bajo el bloque: sube %.2f (se da), corre %.0f')
+        :format(hClip, dxClip, hUnder, dxUnder))
+end
+
+-- HIT-STOP (src/ui/HitStop.lua, 0.5.188): 3 fotogramas congelados y luego no; otro dentro del COOLDOWN no entra; con la
+-- opción apagada, nada
+function cases.hitstop()
+    local HS = require 'src/ui/HitStop'
+    local Settings = require 'src/core/Settings'
+    HS.reset()
+    HS.trigger(3)
+    local frozen = 0
+    for _ = 1, 10 do if HS.step(1 / 60) then frozen = frozen + 1 end end
+    HS.reset(); HS.trigger(3)
+    for _ = 1, 3 do HS.step(1 / 60) end
+    HS.trigger(5)                                            -- (justo después: en el cooldown)
+    local blocked = not HS.frozen()
+    for _ = 1, math.ceil(HS.COOLDOWN * 60) + 1 do HS.step(1 / 60) end
+    HS.trigger(5)
+    local after = HS.frozen()
+    HS.reset()
+    local was = Settings.hitStop
+    Settings.hitStop = false
+    HS.trigger(5)
+    local off = HS.frozen()
+    Settings.hitStop = was
+    HS.reset()
+    check('hitstop', frozen == 3 and blocked and after and not off,
+        ('3 fotogramas pedidos: %d congelados · otro en el cooldown entra %s (no) · tras el cooldown %s · opción apagada %s (no)')
+        :format(frozen, tostring(not blocked), tostring(after), tostring(off)))
+end
+
 function cases.hielo_gp()
     local level, fx = iceRoom()
     local function gp(col)
@@ -4110,7 +4182,7 @@ function love.load()
                          'puffer_through', 'puffer_concave', 'puffer_cycle', 'puffer_dry', 'flyer_anim', 'vuelo_libre', 'boxed_in',
                          'bloque_roto', 'activador', 'tramp_avanza', 'tramp_pinchos', 'ping_icono',
                          'bomba_activa', 'bomba_pisada', 'bomba_radios', 'bomba_mundo', 'bomba_objeto',
-                         'hielo_solido', 'hielo_desgaste', 'hielo_nivel', 'hielo_vuelve', 'mirar', 'hielo_gp', 'hielo_bomba', 'encerrado', 'trepador_canto', 'hielo_resbala', 'filo_propio', 'saltarin', 'saltarin_cueva', 'persecucion', 'persecucion_cuerpo', 'inofensivos', 'tapa_base', 'manzana',
+                         'hielo_solido', 'hielo_desgaste', 'hielo_nivel', 'hielo_vuelve', 'mirar', 'salto_variable', 'esquina', 'hitstop', 'hielo_gp', 'hielo_bomba', 'encerrado', 'trepador_canto', 'hielo_resbala', 'filo_propio', 'saltarin', 'saltarin_cueva', 'persecucion', 'persecucion_cuerpo', 'inofensivos', 'tapa_base', 'manzana',
                          'cryo_jugador', 'cryo_enemigo', 'cryo_activador', 'cryo_corte', 'lava', 'pocos_fps', 'ahogo_ganado', 'techo_pinchos',
                          'caja_empuje', 'caja_rota', 'caja_borde', 'cargar', 'bomba_reaparece', 'islas', 'islas_arte', 'viento', 'cuerpo_mueve', 'cajas_golpes', 'balanza', 'soplon', 'semilla', 'ventisca', 'geiser', 'balanza_tope', 'caja_choques', 'cargar_gp', 'gp_radio', 'dejar_encima', 'jump_buffer', 'jefe_puntos', 'persecucion_toque', 'secreto_reina', 'secreto_tifon', 'paredes_falsas', 'aire_caja', 'geiser_peso', 'bomba_cajas', 'cajas_fila', 'balanza_impacto', 'balanza_salto', 'balanza_techo', 'escarabajo', 'escarabajo_lanzado', 'escarabajo_ruta', 'escarabajo_manos', 'escarabajo_arrolla',
                          'topo', 'topo_culetazo', 'topo_suelo', 'topo_borde', 'pirana', 'pirana_pisar', 'pirana_rebota', 'pirana_nada', 'planta', 'planta_pisar', 'planta_traga', 'planta_colgada', 'planta_come', 'planta_bomba' }) do

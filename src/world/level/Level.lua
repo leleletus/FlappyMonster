@@ -626,7 +626,7 @@ end
 -- ── Partes (el resto de Level.lua, por sistemas) ────────────────────
 P.TileCodec = TileCodec; P.TileTypes = TileTypes; P.DIR_UP = DIR_UP; P.DIR_DOWN = DIR_DOWN; P.DIR_LEFT = DIR_LEFT
 P.DIR_RIGHT = DIR_RIGHT; P.decTile = decTile; P.tileBaseId = tileBaseId; P.hasSpikes = hasSpikes; P.liquidOfRaw = liquidOfRaw
-P.spikeHitbox = spikeHitbox
+P.spikeHitbox = spikeHitbox; P.defOfRaw = defOfRaw
 require('src/world/level/LevelTiles')(Level, P)
 require('src/world/level/LevelWater')(Level, P)
 require('src/world/level/LevelRender')(Level, P)

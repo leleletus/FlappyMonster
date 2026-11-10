@@ -56,13 +56,17 @@ function PlayerAdventure:render(camX, camY)
         -- CADA monstruo lo decide por SU sitio: quien dibuja solo dice en qué nivel (`PlayerAdventure.lightLevel`);
         -- antes era un sí/no común y el del jugador local encendía o apagaba el de todos los demás
         Silhouette = Silhouette or require 'src/fx/Silhouette'
+        -- (al aterrizar fuerte: un achatado corto, con los pies en su sitio — landSq, PlayerAdventure —)
+        local q = (not self.dying and self.landSq or 0)
+        local sx, sy = s * (1 + 0.14 * q), s * (1 - 0.16 * q)
+        local dy = (s - sy) * ih / 2
         if PlayerAdventure.lightLevel and not iced and Silhouette.on(PlayerAdventure.lightLevel, self.y) then
             local _, _, _, al = love.graphics.getColor()
-            Silhouette.draw(img, self.x-camX, self.y-camY, 0, s*self.facing, s, al)
+            Silhouette.draw(img, self.x-camX, self.y-camY+dy, 0, sx*self.facing, sy, al)
         end
         PS.draw(img,
-            math.floor(self.x-camX), math.floor(self.y-camY),
-            0, s*self.facing, s, iw/2, ih/2)
+            math.floor(self.x-camX), math.floor(self.y-camY+dy),
+            0, sx*self.facing, sy, iw/2, ih/2)
     end
     if iced then love.graphics.setShader() end
     if self.dying then

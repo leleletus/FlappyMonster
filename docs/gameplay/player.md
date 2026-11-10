@@ -22,6 +22,37 @@ The part files are loaded by `PlayerAdventure.lua` and add methods to the same c
 
 **Moves:** walk, jump + double jump, crouch (and crouch jump), ground pound (crouch in the air), swimming, the
 flashlight in dark levels, carrying (UP: pick up / throw; crouch + UP: put down carefully — [carry-and-push](carry-and-push.md)).
+**Game feel (0.5.188, the user approved the round in [gamefeel-round-2026-11](../design/gamefeel-round-2026-11.md)):**
+- **Variable jump height:** releasing JUMP while rising cuts the jump to `JUMP_CUT` (0.45) × its take-off speed
+  (held 1.5 tiles, released after 4 frames 0.8). Only when the button was SEEN held after the jump
+  (`jumpHeldSeen`): what only "presses" (cutscene actors, bots that press for a frame) jumps in full as before. Online
+  the held bit already travels in the input; `jumpV0` / `jumpHeldSeen` are own-state indices 43-44 (protocol 114).
+- **Corner correction:** rising, if only one edge of the head would hit a ceiling corner and the centre is free, the
+  player slides up to `CORNER_PX` (12) sideways and keeps rising (`cornerNudge` in `PlayerCollision.lua`).
+- **Coyote time: not needed.** Walking off a ledge keeps both jumps (`jumpsLeft` is only reset on the ground, falling
+  does not spend it), so a late jump already works.
+- **Landing / skid:** landing faster than `LAND_DUST_VY` (420 px/s) raises `land_dust` (the floor's colour); faster
+  than `LAND_SQ_VY` (650) a short squash (`landSq`, 0.16 s, feet kept on the ground: `PlayerRender`); turning round at
+  speed on the ground, `skid_dust`. Drawing only.
+- **Camera lead:** running, the camera moves `CameraLook.LEAD` (0.1 × the screen width) ahead in the running
+  direction and eases back when stopped (`CameraLook.lead`, single player and online; not in boss zones, Flappy levels,
+  the menu demo).
+- **Rumble:** see `src/core/Rumble.lua` — the controller vibrates on the player's ground-pound landing, on damage and
+  with every screen shake (explosions, boss stomps, roars; the same distance fall-off as the shake); a phone without
+  a controller vibrates for the strong ones. Option Settings → VIBRATION (on by default, `Settings.rumble`).
+- **Hit-stop** (`src/ui/HitStop.lua`; the user, 2026-11-10: "not when stomping an enemy, it would feel stuck; only a
+  ground pound on an enemy or the ground, a boss and taking damage / dying"; online too, "as long as nothing breaks"):
+  the game freezes `HitStop.GP` 3 frames (the player's ground-pound landing, or a ground pound on an enemy),
+  `BOSS` 4 (hitting a boss that can be hit), `HURT` 3 (losing health), `DEATH` 5 (dying); never on a plain stomp; at
+  least `COOLDOWN` (0.15 s) between two. Music and sound keep playing. Single player: `AdventureState:update` does not
+  advance. Online it is VISUAL ONLY, on the screen of whoever caused it: the client keeps simulating and talking to the
+  server, but its camera stays put and `SceneLayers.draw(..., reuse)` shows the previous frame's scene for those frames,
+  then it catches up — nothing in the simulation changes (not the SMBU-style pause for every client). Option Settings
+  → HIT-STOP (`Settings.hitStop`, on by default).
+- Bots and the credits fight hold JUMP through the whole rise (`Bot.holdJump`): their moves and the saved navigation
+  graphs (`assets/nav/`) were recorded when the hold length did not matter, so their jumps stay exactly as before.
+- Harness `mechanics` `salto_variable`, `esquina`, `mirar`, `hitstop`. Not judged by a person: every number above (feel).
+
 **Looking up / down** (0.5.187, the user: "a player does not know what is above or below a blind jump; like Sonic 1,
 holding crouch a while moves the camera down A LITTLE, without overdoing it; the same with up"): standing still on the
 ground and holding CROUCH (or UP, the `grab` action) for `CameraLook.HOLD` (0.6 s), the camera glides

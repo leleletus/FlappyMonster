@@ -46,15 +46,9 @@ local function frameQ(im, fw, i)
     return quads[key]
 end
 
-local invertShader
-local function invert(on)
+local function invert(on)                -- (el shader compartido: src/fx/Shaders.lua)
     if not on then love.graphics.setShader(); return end
-    if invertShader == nil then
-        local ok, sh = pcall(love.graphics.newShader, [[
-            vec4 effect(vec4 c, Image t, vec2 uv, vec2 sc) { vec4 p = Texel(t, uv); return vec4(1.0 - p.rgb, p.a) * c; }
-        ]])
-        invertShader = ok and sh or false
-    end
+    local invertShader = require('src/fx/Shaders').get('invert')
     if invertShader then love.graphics.setShader(invertShader) end
 end
 

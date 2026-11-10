@@ -25,6 +25,8 @@ local StartCountdown  = require 'src/world/systems/StartCountdown'
 local Sim             = require 'src/world/systems/Sim'
 local SceneLayers     = require 'src/world/level/SceneLayers'
 local CameraLook      = require 'src/ui/CameraLook'
+local Rumble          = require 'src/core/Rumble'
+local HitStop         = require 'src/ui/HitStop'
 
 local AdventureState = BaseState:new()
 
@@ -74,6 +76,7 @@ function AdventureState:_saveLostLives()
 end
 
 function AdventureState:enter(args)
+    HitStop.reset()                                -- (sin un hit-stop a medias de otra partida)
     args = args or {}
     self.enterArgs = args                         -- (REINTENTAR desde la pausa: el mismo nivel con lo mismo — retryNow —)
     -- DEMO (el fondo de los menús, src/ui/menu/MenuScene.lua): el nivel de verdad, jugado por un bot
@@ -151,8 +154,12 @@ function AdventureState:enter(args)
     Particles.setLevel(self.level)                 -- (las partículas físicas chocan con él)
     require('src/fx/NoiseMarks').clear()
     require('src/world/systems/Noise').bind(self.level)         -- (ruidos que oyen los enemigos)
-    PlayerAdventure.fx = function(kind, x, y)
+    PlayerAdventure.fx = function(kind, x, y, pa)
         Particles.emit(kind, x, y)
+        if pa == self.player and not self.demo then
+            Rumble.onPlayerFx(kind)                                     -- (vibración: src/core/Rumble.lua)
+            if kind == 'gp_land' then HitStop.trigger(HitStop.GP) end   -- (ground pound al suelo: src/ui/HitStop.lua)
+        end
         if kind == 'block_break' then Sound.play('blockBreak') end
         if kind == 'switch_hit' then               -- (el bloque ya cambió: suena su estado nuevo)
             local on = self.level:getDefAt(x + 1, y + 1).name == 'switch_on'
@@ -388,6 +395,7 @@ function AdventureState:updateCamera(dt)
     self._look = self._look or {}
     local zoneCam = BossZones.cameraTarget(self.level, self.player.x, self.player.y)
     targetY = targetY + CameraLook.offset(self._look, self.player, dt, not self.demo and not self.level.flappy and not zoneCam)
+    targetX = targetX + CameraLook.lead(self._look, self.player, dt, not self.demo and not self.level.flappy and not zoneCam)
 
     targetX = math.max(0, math.min(self.level.widthPx  - WINDOW_W, targetX))
     targetY = math.max(0, math.min(self.level.heightPx - WINDOW_H, targetY))
@@ -415,6 +423,11 @@ function AdventureState:checkEnemyCollisions()
     local player = self.player
     Entities.interactions.run(player, self.enemies, {
         stomp = function(g, pts)
+            -- (HIT-STOP: a un jefe; a un enemigo solo con ground pound — pisarlo no: se sentiría trabado —)
+            if not self.demo then
+                if g.def.boss then HitStop.trigger(HitStop.BOSS)
+                elseif player.gpPhase or player.gpLanded then HitStop.trigger(HitStop.GP) end
+            end
             self.score = self.score + (pts or 0)
             if not g.def.boss and g.state == 'dead' then self.stats.kills = self.stats.kills + 1 end
             local popY = g.flipped and (g.y + g.outerH / 2) or (g.y - g.outerH / 2)
@@ -529,6 +542,8 @@ end
 
 -- ── Update ────────────────────────────────────────────────────────────────────
 function AdventureState:update(dt)
+    -- HIT-STOP: unos fotogramas congelado tras un golpe fuerte (src/ui/HitStop.lua); la música sigue
+    if HitStop.step(dt) and not self.demo then return end
     -- El duelo de ritmo del Cangrejo Groove (lo juega el jugador; el jefe decide el resto)
     RhythmDuel.update(dt, self.level, self.player, function(bar, acc, failed)
         for _, e in ipairs(self.level.liveEntities or {}) do
@@ -684,9 +699,14 @@ function AdventureState:update(dt)
     if self.rec then self.rec:step(dt, self) end
 
     -- (golpes recibidos: cada vez que baja la vida sin morir)
-    if self.player.hp < self.prevHp and not self.player.dying then self.stats.hits = self.stats.hits + (self.prevHp - self.player.hp) end
+    if self.player.hp < self.prevHp and not self.player.dying then
+        self.stats.hits = self.stats.hits + (self.prevHp - self.player.hp)
+        if not self.demo then Rumble.hurt(); HitStop.trigger(HitStop.HURT) end
+    end
     self.prevHp = self.player.hp
 
+    if self.player.dying and not self._hsDying and not self.demo then HitStop.trigger(HitStop.DEATH) end   -- (al morir)
+    self._hsDying = self.player.dying
     -- ── Detectar muerte del jugador ───────────────────────────────────────────
     if self.player.dying and not self.player.alive then
         self.player.lives = self.demo and 99 or (self.player.lives - 1)      -- (la demo: vidas sin fin)

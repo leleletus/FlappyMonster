@@ -271,6 +271,25 @@ local function tabGeneral(x, y, w, h)
     if (S.hp or 1) > 1 then
         py = field({ key = 'hurtTime', kind = 'number', label = 'Dolido (s, intocable) tras cada golpe', min = 0.1, max = 3, step = 0.05 }, S, px, py, pw)
     end
+    -- (DEJA ALGO AL MORIR — `leaves`, DataEnemy —: lo que sale donde muere pisada; cada colocación elige con su prop)
+    py = ui.caption('Al morir', px, py, pw)
+    local lv, lc = ui.toggle('Deja algo al morir (pisada o ground pound)', S.leaves ~= nil, px, py, pw); py = py + 28
+    if lc then S.leaves = lv and { type = 'snowball_ball', chance = 0.34 } or nil; touch() end
+    if S.leaves then
+        local items = {}
+        for _, t in ipairs(EntityTypes.list or {}) do
+            if t.category == 'Objetos' and t.name ~= E.id then items[#items + 1] = { value = t.name, label = t.label or t.name } end
+        end
+        if #items == 0 then
+            for name, t in pairs(EntityTypes.byName) do
+                if t.category == 'Objetos' then items[#items + 1] = { value = name, label = t.label or name } end
+            end
+            table.sort(items, function(a, b) return a.label < b.label end)
+        end
+        py = field({ key = 'type', kind = 'enum', label = 'Qué deja', options = items }, S.leaves, px, py, pw)
+        py = field({ key = 'chance', kind = 'number', label = 'Probabilidad con «A veces» (0 a 1)', min = 0.05, max = 1, step = 0.05 }, S.leaves, px, py, pw)
+        py = py + ui.hint('En cada nivel, su prop «Deja al morir» elige: a veces (esta probabilidad), siempre o nunca. Lo que deja es una entidad de reserva: nunca hay dos a la vez de la misma.', px, py, pw) + 6
+    end
     py = ui.caption('Cómo se mueve', px, py, pw)
     local mv = (S.defaults.movement or 'walk')
     if mv == 'walk' then

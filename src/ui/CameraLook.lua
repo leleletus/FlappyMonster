@@ -32,7 +32,21 @@ function CameraLook.offset(st, pa, dt, enabled)
     return st.dy
 end
 
+-- MIRAR ADELANTE (0.5.188): corriendo, la cámara se adelanta LEAD × el ancho de la pantalla hacia donde va (se ve más
+-- de lo que viene); parado vuelve despacio al centro. Suave (LEAD_EASE): no se nota el tirón al dar la vuelta.
+CameraLook.LEAD      = 0.1         -- × el ancho de la pantalla
+CameraLook.LEAD_EASE = 1.6         -- 1/s
+CameraLook.RUN       = 0.6         -- × ADV_MOVE_SPD: más rápido que esto es "corriendo"
+function CameraLook.lead(st, pa, dt, enabled)
+    local target = 0
+    if enabled and pa and not pa.dying and math.abs(pa.vx or 0) > ADV_MOVE_SPD * CameraLook.RUN then
+        target = ((pa.vx > 0) and 1 or -1) * WINDOW_W * CameraLook.LEAD
+    end
+    st.lx = (st.lx or 0) + (target - (st.lx or 0)) * math.min(1, CameraLook.LEAD_EASE * dt)
+    return st.lx
+end
+
 -- Al reaparecer, al cambiar de escena...: sin desplazamiento
-function CameraLook.reset(st) st.holdT, st.dir, st.dy = 0, 0, 0 end
+function CameraLook.reset(st) st.holdT, st.dir, st.dy, st.lx = 0, 0, 0, 0 end
 
 return CameraLook

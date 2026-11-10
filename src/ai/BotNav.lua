@@ -50,6 +50,7 @@ end
 -- ── Movimientos (bits por fotograma) ──────────────────────────────────────────
 local L, R, J, JP, C, CP = P.IN_LEFT, P.IN_RIGHT, P.IN_JUMP, P.IN_JUMP_P, P.IN_CROUCH, P.IN_CROUCH_P
 local MAXF = 150
+local FULL_HOLD = 60             -- fotogramas: más que lo que dura la subida de un salto (salto entero)
 
 -- d = -1/0/1, hold = fotogramas con el salto pulsado, dirFrom/dirTo = cuándo se mantiene la dirección,
 -- dbl = fotograma del 2º salto (nil = sin), dropThrough = agacharse para bajar de una plataforma
@@ -62,8 +63,10 @@ local function macro(d, hold, dirFrom, dirTo, dbl, kind)
         elseif kind == 'drop' then
             b = C + (f == 0 and CP or 0)
         else
-            if f < hold then b = b + J + (f == 0 and JP or 0) end
-            if dbl and f >= dbl and f < dbl + 24 then b = b + J + (f == dbl and JP or 0) end
+            -- (el salto se MANTIENE al menos FULL_HOLD fotogramas: desde el salto variable — 0.5.188 — soltarlo antes lo
+            -- corta, y los grafos guardados — assets/nav/ — se hicieron con saltos enteros; así salen idénticos)
+            if f < math.max(hold, FULL_HOLD) then b = b + J + (f == 0 and JP or 0) end
+            if dbl and f >= dbl and f < dbl + FULL_HOLD then b = b + J + (f == dbl and JP or 0) end
             if d ~= 0 and f >= dirFrom and f < dirTo then b = b + ((d < 0) and L or R) end
         end
         bits[f + 1] = b

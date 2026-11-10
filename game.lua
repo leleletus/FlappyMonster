@@ -125,6 +125,11 @@ function love.load()
         online_results     = function() return OnlineResultsState:new() end,
         online_records     = function() return require('src/states/online/OnlineRecordsState'):new() end,   -- récords y desafío del día
     })
+    -- (los SHADERS, compilados ya — src/fx/Shaders.lua —: antes la primera vez que salían, en plena partida; los módulos
+    -- que los definen se cargan aquí si aún no lo estaban)
+    for _, m in ipairs({ 'src/fx/Silhouette', 'src/fx/Darkness', 'src/fx/IceEncase', 'src/fx/BossFx', 'src/world/level/Level',
+                         'src/ui/menu/Transition', 'src/world/entities/Entities' }) do require(m) end
+    require('src/fx/Shaders').warm()
     -- busca versión nueva, luego el logo y el título (`make … NO_INTRO=1` mete nointro.flag en el .love: sin el logo)
     gStateMachine:change('update', { after = love.filesystem.getInfo('nointro.flag') and 'title' or 'startup' })
 end

@@ -79,6 +79,27 @@ end
 -- Mover en TROZOS de como mucho MOVE_STEP px: a pocos FPS (dt hasta 0.05) un paso de 75 px (ground pound) metía los
 -- pies en la celda de DEBAJO de un suelo de una casilla y se atravesaba. Tras chocar en un eje, ese eje ya no sigue
 -- (no rompe dos bloques de cabeza ni empuja la pared otra vez). A 60 FPS (y en el servidor) es un solo trozo.
+-- (corrección de esquinas: ¿solo un borde de la cabeza toca techo, el centro no, y corriéndose hasta CORNER_PX hacia el
+-- otro lado ya no toca nada — ni con la cabeza ni de lado —? → cuánto correrse; si no, nil)
+local CORNER_PX = 12
+local function cornerNudge(level, x, top, foot, hw)
+    local L, R = x - hw + 4, x + hw - 4
+    if level:collisionAt(x, top) then return nil end
+    local hitL, hitR = level:collisionAt(L, top) ~= nil, level:collisionAt(R, top) ~= nil
+    if hitL == hitR then return nil end
+    local dir = hitL and 1 or -1
+    for d = 2, CORNER_PX, 2 do
+        local nx = x + dir * d
+        local free = not level:collisionAt(nx - hw + 4, top) and not level:collisionAt(nx + hw - 4, top)
+        local side = nx + dir * hw
+        if free and not level:collisionAt(side, top + 4) and not level:collisionAt(side, (top + foot) / 2)
+           and not level:collisionAt(side, foot - 4) then
+            return dir * d
+        end
+    end
+    return nil
+end
+
 local MOVE_STEP = 30
 function PlayerAdventure:moveSteps(level, dx, dy)
     local n = math.ceil(math.max(math.abs(dx), math.abs(dy)) / MOVE_STEP)
@@ -262,6 +283,12 @@ function PlayerAdventure:moveAndCollide(level, dx, dy)
             groundTop = best
         end
     elseif dy < 0 then
+        -- CORRECCIÓN DE ESQUINAS (0.5.188): subiendo, si la cabeza solo roza una esquina de techo con un borde (el centro
+        -- libre), se corre hasta CORNER_PX hacia el lado libre y sigue subiendo, en vez de darse de cabeza
+        if not self.crouching then
+            local nx = cornerNudge(level, x, y - hh, y + hh, hw)
+            if nx then x = x + nx end
+        end
         -- El centro primero: si hay un bloque rompible sobre la cabeza, es el que se rompe
         local heads = {x, x-hw+4, x+hw-4}
         if level.subSolid then for _, px in ipairs(chx) do heads[#heads+1] = px end end

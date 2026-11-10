@@ -12,6 +12,8 @@
 --             fantasma, los bots, el progreso de las zonas de puntos — ya con el filo de lo oscuro de los monstruos
 --             (PlayerAdventure.lightLevel)
 --     noSky   sin cielo: fondo transparente (los créditos, que dibujan su escena detrás)
+--     reuse   no redibuja el lienzo: vuelve a poner la escena del fotograma anterior (el hit-stop online: solo en esta
+--             pantalla, la partida sigue — src/ui/HitStop.lua —)
 -- La oscuridad, los fragmentos, las ayudas y el HUD van DESPUÉS, fuera del lienzo: los pone cada estado.
 local IceDrips        = require 'src/fx/IceDrips'
 local LavaFx          = require 'src/fx/LavaFx'
@@ -32,7 +34,12 @@ local function drawEntities(ents, front, camX, camY)
     end
 end
 
-function SceneLayers.draw(level, camX, camY, canvas, ents, actors, noSky)
+function SceneLayers.draw(level, camX, camY, canvas, ents, actors, noSky, reuse)
+    if reuse then
+        love.graphics.setColor(1, 1, 1, 1)
+        level:renderWaterEffect(camX, camY, canvas)
+        return
+    end
     PlayerAdventure = PlayerAdventure or require 'src/player/PlayerAdventure'
     Entities = Entities or require 'src/world/entities/Entities'
     ents = ents or {}

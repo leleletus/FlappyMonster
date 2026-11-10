@@ -29,19 +29,13 @@ local function load()
 end
 
 -- Shader que tiñe de hielo lo que se dibuje con él (el cuerpo congelado). nil si no hay shaders
-local tint
-function IceEncase.tint()
-    if tint == nil then
-        local ok, sh = pcall(love.graphics.newShader, [[
-            vec4 effect(vec4 c, Image tex, vec2 uv, vec2 sc) {
-                vec4 p = Texel(tex, uv) * c;
-                float l = dot(p.rgb, vec3(0.3, 0.59, 0.11));
-                return vec4(mix(p.rgb, vec3(0.55, 0.8, 1.0) * (0.45 + 0.7 * l), 0.6), p.a);
-            }]])
-        tint = ok and sh or false
-    end
-    return tint or nil
-end
+require('src/fx/Shaders').define('ice_tint', [[
+    vec4 effect(vec4 c, Image tex, vec2 uv, vec2 sc) {
+        vec4 p = Texel(tex, uv) * c;
+        float l = dot(p.rgb, vec3(0.3, 0.59, 0.11));
+        return vec4(mix(p.rgb, vec3(0.55, 0.8, 1.0) * (0.45 + 0.7 * l), 0.6), p.a);
+    }]])
+function IceEncase.tint() return require('src/fx/Shaders').get('ice_tint') end
 
 -- Dibuja fn() teñido de hielo
 function IceEncase.tinted(fn)

@@ -781,6 +781,22 @@ local SILENT = setmetatable({}, { __index = function() return noop end })
 -- ¿Es SEGURO hacer `bits`? Lo simula en un fantasma (una copia del jugador con su mismo estado: P.packOwnState) con la
 -- física de verdad: falla si muere o pierde vida (pinchos, lava, caerse) o si toca a un enemigo (que se supone que
 -- sigue andando como va) sin ser pisándolo desde arriba. Sin tocar el nivel (nada se rompe ni se pulsa).
+-- (SALTO ENTERO: tras pulsar saltar, el bot lo MANTIENE mientras sube. Desde el salto variable — 0.5.188 — soltarlo
+-- antes lo corta, y sus movimientos y los grafos guardados — assets/nav/ — se grabaron cuando daba igual cuánto se
+-- mantenía: así sus saltos son los de siempre)
+-- st: la tabla que lleva la cuenta (el bot, o su fantasma en _safe)
+local function holdJump(st, bits, pa)
+    if P.band(bits, JP) ~= 0 then
+        st._holdJumpF = 0
+    elseif st._holdJumpF then
+        st._holdJumpF = st._holdJumpF + 1
+        if st._holdJumpF > 2 and (pa.onGround or pa.vy >= 0) then st._holdJumpF = nil
+        elseif P.band(bits, J) == 0 then bits = bits + J end
+    end
+    return bits
+end
+Bot.holdJump = holdJump
+
 local SAFE_GB, SAFE_BOX = {}, {}       -- (cajas del fantasma y del enemigo de cada prueba, reutilizadas)
 function Bot:_safe(level, bits)
     local PlayerAdventure = require 'src/player/PlayerAdventure'
@@ -815,8 +831,9 @@ function Bot:_safe(level, bits)
     local hp0, safe = g.hp, true
     local n = #bits + 30                                     -- (y un rato más, sin tocar nada: que caiga donde caiga)
     local ok, err = pcall(function()
+        local hold = {}
         for f = 1, n do
-            P.decodeInput(bits[f] or 0, stub.state)
+            P.decodeInput(holdJump(hold, bits[f] or 0, g), stub.state)
             g:update(Bot.DT, level)
             if g.dying or g.hp < hp0 or g.y > level.tileH * TILE_PX then safe = false; return end
             local gb = g:getOuterBounds(SAFE_GB)
@@ -853,7 +870,9 @@ function Bot:_fail(u, e)
     if self.fails[k] >= 2 then self.banned[k], self.fails[k] = self.clock + 15, 0 end
 end
 
+
 function Bot:_emit(bits)
+    bits = holdJump(self, bits, self.pa)      -- (salto entero: holdJump, arriba)
     self.prevBits = bits
     P.decodeInput(bits, self.stub.state)
     return bits

@@ -12,6 +12,7 @@ and describe the real thing in the system's page.
 
 | What | Page |
 |---|---|
+| **Game feel, structure and performance round (2026-11-10):** variable jump, coyote time, rumble, dust, camera lead, boss file split… (hit-stop waiting, off-screen arrow rejected) | [gamefeel-round-2026-11](gamefeel-round-2026-11.md) |
 | **Menu background:** when there are many Flappy levels, the menu bot should also play Flappy levels (the user, 2026-11-08) | [flappy-prequel](flappy-prequel.md) |
 | **Flappy Plan 4b (2026-11-08):** power-ups, inventory per slot, the quick wheel, cages give power-ups | [flappy-plan-4b-powerups](flappy-plan-4b-powerups.md) |
 | **Flappy Plan 4 (2026-11-08):** charge, special attack, caged flappies, cracked walls, zone food, Flappy HUD | [flappy-plan-4-attack-and-cages](flappy-plan-4-attack-and-cages.md) |

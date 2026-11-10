@@ -77,6 +77,8 @@ functions). Call sites never changed.
 | `src/player/PlayerAdventure.lua` | `PlayerCollision`, `PlayerAir`, `PlayerGroundPound`, `PlayerRender` |
 | `src/states/online/OnlineAdventureState.lua` | `OnlineAdventureNet` (init data, snapshots, events), `OnlineAdventureRender`, `OnlineAdventureHud` |
 | `src/editor/Editor.lua` | `EditorCanvas`, `EditorPalette`, `EditorInspector`, `EditorDialogs` |
+| `src/world/entities/types/bosses/snowboss.lua` | `SnowbossRender` (0.5.188: the drawing) |
+| `src/world/entities/types/bosses/megacrabby.lua` | `MegacrabbyDeath` (kicking, getting up, fleeing), `MegacrabbyRender` (the drawing; also the Icy and Gloomy Mega Crabbies, which extend it) |
 | `src/states/story/StoryMapState.lua` | `StoryMapCannons` (the cannons between islands: data, the load-aim-fire-fly sequence, drawing) |
 
 Rules when editing a split file: a new method goes in the part of its system; a new file-level local that two parts

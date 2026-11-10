@@ -127,17 +127,12 @@ end
 -- Rojizo: un sombreador que multiplica el color de todo lo que dibuja el jefe (sus setColor siguen valiendo); si el
 -- equipo no lo tiene, sin rojizo. Temblor: 1 px de vez en cuando (como el Mega Crabby enfadado: el usuario quitó
 -- uno mayor, demasiado).
-local tint, tintTried
-local TINT_GLSL = [[
+require('src/fx/Shaders').define('boss_tint', [[
 extern vec4 tint;
 vec4 effect(vec4 color, Image tex, vec2 uv, vec2 sc) { return Texel(tex, uv) * color * tint; }
-]]
+]])
 function BossFx.fury(boss, camX, camY, render)
-    if not tintTried then
-        tintTried = true
-        local ok, sh = pcall(love.graphics.newShader, TINT_GLSL)
-        tint = ok and sh or nil
-    end
+    local tint = require('src/fx/Shaders').get('boss_tint')
     local now = love.timer.getTime()
     local k = 0.07 + 0.05 * math.sin(now * 9)
     local shx = math.floor(math.sin(now * 41) * 0.9 + 0.5)

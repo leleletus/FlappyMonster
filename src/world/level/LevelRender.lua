@@ -11,15 +11,17 @@ local BackPlane    = require 'src/world/level/BackPlane'
 
 return function(Level, P)
 local TileTypes, DIR_UP, DIR_DOWN, DIR_LEFT, DIR_RIGHT, decTile = P.TileTypes, P.DIR_UP, P.DIR_DOWN, P.DIR_LEFT, P.DIR_RIGHT, P.decTile
-local tileBaseId, liquidOfRaw = P.tileBaseId, P.liquidOfRaw
+local tileBaseId, liquidOfRaw, hasSpikes, defOfRaw = P.tileBaseId, P.liquidOfRaw, P.hasSpikes, P.defOfRaw
 
 -- ── Shader de agua ────────────────────────────────────────────────────────────
 local waterShader = nil
 local shaderOk    = false
+require('src/fx/Shaders').define('water', 'assets/shaders/water.glsl')
 local function loadWaterShader()
     if waterShader ~= nil then return end
-    local ok, sh = pcall(love.graphics.newShader, 'assets/shaders/water.glsl')
-    if ok then waterShader=sh; shaderOk=true else shaderOk=false end
+    waterShader = require('src/fx/Shaders').get('water') or false
+    shaderOk = waterShader ~= false
+    if not shaderOk then waterShader = nil end
 end
 
 -- ── Render ────────────────────────────────────────────────────────────────────
@@ -77,7 +79,7 @@ function Level:render(camX, camY, noPlane)
             -- bloques cuyo trigger no usa el modo en juego (hiddenTriggers, p. ej.
             -- la meta en Cacería) no se dibujan: no tienen colisión.
             ctx.x, ctx.y, ctx.col, ctx.row, ctx.raw = px, py, col, row, raw
-            local def = TileTypes.get(tileBaseId(raw))
+            local def = defOfRaw(raw)                  -- (cacheado por valor: Level.lua)
             if def.fake and self.fakeLook then def = self.fakeLook[row * 65536 + col] or def end   -- (pared falsa: su aspecto, FakeLooks)
             local anim = self.tileAnim and self.tileAnim[row * 65536 + col]
             if anim then
@@ -102,11 +104,14 @@ function Level:render(camX, camY, noPlane)
             if self.subCells then SubTiles.renderCell(self, col, row, px, py, ctx) end
 
             -- Pinchos (subceldas)
-            local _, _, spikes = decTile(raw)
-            for i = 1, 4 do
-                if spikes[i].present then
-                    local ox,oy = subOff[i][1], subOff[i][2]
-                    drawMiniSpike(spikes[i].dir, px+ox, py+oy, HALF_PX, self.spikeSkin)
+            -- (la mayoría no tiene: se mira el bit antes de descodificar)
+            if hasSpikes(raw) then
+                local _, _, spikes = decTile(raw)
+                for i = 1, 4 do
+                    if spikes[i].present then
+                        local ox,oy = subOff[i][1], subOff[i][2]
+                        drawMiniSpike(spikes[i].dir, px+ox, py+oy, HALF_PX, self.spikeSkin)
+                    end
                 end
             end
             end

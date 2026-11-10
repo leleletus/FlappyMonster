@@ -13,6 +13,13 @@ local dropPlatformTop, ICE_FREE_INV, ICE_MASH, loadSprites      -- (de las parte
 
 local WALK_FPS   = 8
 local FALL_FPS   = 6
+-- SALTO VARIABLE (0.5.188): soltar SALTAR mientras sube corta el salto a JUMP_CUT × la velocidad de salida (un salto
+-- corto para afinar). Solo si se vio el botón MANTENIDO tras saltar: lo que solo "pulsa" (cinemáticas, bots que pulsan
+-- un fotograma) salta entero como siempre. Online: el bit de mantener viaja en el input (cliente = servidor).
+local JUMP_CUT = 0.45
+-- POLVO y APLASTARSE al caer (solo dibujo): aterrizar más rápido que LAND_DUST_VY levanta polvo; LAND_SQ_VY o más, un
+-- achatado corto (landSq: 1 → 0 en LAND_SQ_T s). Dar la vuelta corriendo en el suelo: polvo de derrape.
+local LAND_DUST_VY, LAND_SQ_VY, LAND_SQ_T = 420, 650, 0.16
 local PUFF_SCALE = 1.15
 local PUFF_SPD   = 14
 
@@ -229,6 +236,7 @@ function PlayerAdventure:jump()
         local vel = ADV_JUMP_VEL * (self.inWater and self.liquid.jumpMult or 1.0) * (self.jumpMult or 1)
         self.vy=vel; self.jumpsLeft=self.jumpsLeft-1
         self.puff=PUFF_SCALE; Sound.play('jump')
+        self.jumpV0, self.jumpHeldSeen = vel, false              -- (SALTO VARIABLE: ver update)
     end
 end
 
@@ -535,6 +543,18 @@ function PlayerAdventure:_update(dt, level)
         if Input.down('move_right') then moveX=1 end
         if Input.down('move_left')  then moveX=-1 end
     end
+    -- SALTO VARIABLE: soltar mientras sube corta el salto (solo si se vio mantenido tras saltar)
+    if self.jumpV0 and not self.onGround and self.vy < 0 then
+        if Input.down('jump') then
+            self.jumpHeldSeen = true
+        elseif self.jumpHeldSeen then
+            local cut = self.jumpV0 * JUMP_CUT
+            if self.vy < cut then self.vy = cut end
+            self.jumpV0 = nil
+        end
+    elseif self.onGround or self.vy >= 0 then
+        self.jumpV0 = nil
+    end
     -- JUMP BUFFER (~0,1 s): saltar justo antes de tocar el suelo, sin saltos en el aire que gastar, salta al aterrizar
     local wantJump = pJump
     if pJump and not stunned and self.jumpsLeft <= 0 and not self.onGround then
@@ -583,8 +603,19 @@ function PlayerAdventure:_update(dt, level)
     if ride and ride.alive ~= false and ride.moves then rdx, rdy = ride.stepDx or 0, ride.stepDy or 0 end
     self.rideBody, self.standBody = ride, nil
     local wind = Push.player(self, level, dt)       -- (el aire que sopla: Soplón, Ventisca, Géiser — systems/Push)
-    local vyMove = self.vy
+    local vyMove, wasGround = self.vy, self.onGround
     self:moveSteps(level, (self.vx + convey + current + wind)*dt + rdx, self.vy*dt + rdy)
+    -- (solo dibujo: polvo al aterrizar fuerte y un achatado corto; polvo al derrapar dando la vuelta)
+    local feetY = self.y + OUTER_YOFF * (self.sizeK or 1) + self.h / 2
+    if self.onGround and not wasGround and not self.inWater then
+        if vyMove > LAND_DUST_VY then fx(self, 'land_dust', self.x, feetY) end
+        if vyMove > LAND_SQ_VY then self.landSq = 1 end
+    end
+    if self.onGround and moveX ~= 0 and self.vx * moveX < -ADV_MOVE_SPD * 0.5 and not self.inWater then
+        self.skidT = (self.skidT or 0) - dt
+        if self.skidT <= 0 then self.skidT = 0.07; fx(self, 'skid_dust', self.x - moveX * 10, feetY) end
+    end
+    if (self.landSq or 0) > 0 then self.landSq = math.max(0, self.landSq - dt / LAND_SQ_T) end
     self.rideBody = nil
     -- (disparado fuerte por una catapulta contra el techo: pierde 1 y queda aturdido — systems/HardLaunch)
     if self.hardLaunch then HardLaunch.player(self, level, vyMove) end

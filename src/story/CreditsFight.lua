@@ -165,6 +165,7 @@ function CreditsFight:step(dt, level)
         local bits = self:think(level)
         if has(bits, J) and not has(self.prevBits, J) and not has(bits, JP) then bits = bits + JP end
         if has(bits, C) and not has(self.prevBits, C) and not has(bits, CP) then bits = bits + CP end
+        bits = require('src/ai/Bot').holdJump(self, bits, self.pa)     -- (salto entero, como siempre: el salto variable no le toca)
         self.prevBits = bits
         P.decodeInput(bits, self.stub.state)
         local real = Input

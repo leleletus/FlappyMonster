@@ -124,18 +124,15 @@ end
 -- cortan (castLight: la misma que "ve" la simulación con Lights.clear)
 -- Repone, sin oscurecer, los píxeles de la escena marcados con alfa 0 (lo incandescente del fondo que NO quedó tapado
 -- por nada: src/fx/Sky.lua). Se dibuja con la transformación y el recorte de ahora: nunca sale de la zona de juego.
-local glowShader
+require('src/fx/Shaders').define('glow_restore', [[
+    vec4 effect(vec4 color, Image tex, vec2 uv, vec2 sc) {
+        vec4 p = Texel(tex, uv);
+        if (p.a > 0.5) discard;
+        return vec4(p.rgb, 1.0);
+    }
+]])
 local function restoreGlow(scene)
-    if glowShader == nil then
-        local ok, sh = pcall(love.graphics.newShader, [[
-            vec4 effect(vec4 color, Image tex, vec2 uv, vec2 sc) {
-                vec4 p = Texel(tex, uv);
-                if (p.a > 0.5) discard;
-                return vec4(p.rgb, 1.0);
-            }
-        ]])
-        glowShader = ok and sh or false
-    end
+    local glowShader = require('src/fx/Shaders').get('glow_restore')
     if not glowShader then return end
     love.graphics.setColor(1, 1, 1, 1)
     love.graphics.setShader(glowShader)

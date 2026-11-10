@@ -951,17 +951,8 @@ function Mirror:netApplyExtra(a, b, f)
 end
 
 -- ── Dibujo ────────────────────────────────────────────────────────────────────
-local INVERT_GLSL = [[
-vec4 effect(vec4 color, Image tex, vec2 tc, vec2 sc) {
-    vec4 c = Texel(tex, tc);
-    return vec4(1.0 - c.rgb, c.a) * color;
-}]]
-
 local function useInvert()
-    if invShader == nil then
-        local ok, sh = pcall(love.graphics.newShader, INVERT_GLSL)
-        invShader = ok and sh or false
-    end
+    if invShader == nil then invShader = require('src/fx/Shaders').get('invert') or false end   -- (compartido: src/fx/Shaders.lua)
     if invShader then love.graphics.setShader(invShader) end
 end
 
