@@ -209,7 +209,7 @@ Ground turret of the Evil Monster: glows 0.6 s, then fires a straight net upward
   TOP-LEFT cell of the chute, right under the ledge its CORNICE hangs from.
 - A CLOCK (pure function of its own `clock`, so staggered chutes stay in step): calm until `delay` s, then every
   `period` s (raised to fit warn + pour + drain if too short): `warn` s WARNING (`avalancheRumble` once, flakes falling
-  from the cornice, the cornice shaking with cracks) → `pour` s TORRENT (`avalanchePour` every 1.2 s, `snow_burst`
+  from the cornice, the cornice shaking with cracks) → `pour` s TORRENT (`avalanchePour` every 2.6 s — so once in a normal 2.5 s pour; both sounds at gain 0.6 / 0.45 and 0.7× range since 0.5.184, the user: "too many and too loud" —, `avalanche_dust`
   particles at the top and where the front lands) → `drain` (the tail falls off at the same 900 px/s) → calm, the
   cornice grows back. A line of chutes with `delay` 1, 2, 3 is a staggered line.
 - THE SNOW AGAINST THE LEVEL: in each column the stream stops at the first block or one-way platform

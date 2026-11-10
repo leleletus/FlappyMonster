@@ -1,5 +1,5 @@
 -- tools/tests/avalanche_rules — reglas del ALUD (types/traps/avalanche.lua), caso a caso en salas hechas a mano:
---   reloj        el ciclo: calma hasta `delay`, aviso (`warn` s, suena avalancheRumble), torrente (`pour` s, suena
+--   reloj        el ciclo: calma hasta `delay`, aviso (`warn` s, suena avalancheRumble), torrente (`pour` s, suena una vez
 --                avalanchePour), se vacía y calma; vuelve a avisar cada `period` s
 --   dano         de pie dentro del canal: el torrente quita 1 de vida y lo aparta de lado; invulnerable no vuelve a doler
 --   empuje       en el aire dentro del torrente cae más deprisa que fuera (empuja hacia abajo); sin daño (`damage` no)
@@ -106,8 +106,10 @@ function cases.reloj()
     check('reloj', math.abs((first.warn or 0) - 1) < 0.03 and math.abs((first.pour or 0) - 2.2) < 0.03
           and math.abs((first.drain or 0) - 4.7) < 0.03,
           ('aviso a %.2f s (1), torrente a %.2f (2,2), se vacía a %.2f (4,7)'):format(first.warn or -1, first.pour or -1, first.drain or -1))
-    check('reloj', (played.avalancheRumble or 0) == 3 and (played.avalanchePour or 0) >= 3,
-          ('sonidos en 13 s: aviso %d (3), torrente %d (≥ 3)'):format(played.avalancheRumble or 0, played.avalanchePour or 0))
+    -- (0.5.184: el torrente suena UNA vez por torrente — antes se repetía cada 1,2 s y se pisaba: el usuario, «suenan
+    -- demasiado» —; en 13 s empiezan dos torrentes, a 2,2 y 8,5 s)
+    check('reloj', (played.avalancheRumble or 0) == 3 and (played.avalanchePour or 0) == 2,
+          ('sonidos en 13 s: aviso %d (3), torrente %d (2: uno por torrente)'):format(played.avalancheRumble or 0, played.avalanchePour or 0))
     -- el frente baja a SPEED px/s y se para en el suelo (fila 14: la nieve llega a 12 casillas desde arriba como mucho)
     local level2, es2 = room(12, 14, { aval(5, 2, { length = 20 }) })
     local b = es2[1]

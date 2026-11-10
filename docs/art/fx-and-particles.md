@@ -56,6 +56,7 @@ variant needs its own kind name). **From drawing** call `Particles.emit` directl
   written TWICE. The first one (the Big Snowball's huge burst: a shockwave and ~64 particles) always won; the second,
   the light snow-dust cloud written for the **Avalanche** (14 particles), never ran. The Avalanche emits `snow_burst`
   on release and once per column at the bottom, so it has always shown the Snowball's burst. Behaviour was kept; the
-  Avalanche cloud is now kind `avalanche_dust` (unused). **Waiting for the user:** switching `avalanche.lua` to
-  `avalanche_dust` is one word in two lines (looks lighter, far fewer particles on impact).
+  Avalanche cloud is now kind `avalanche_dust`.
+- 0.5.184: the user chose the Avalanche's own cloud: `avalanche.lua` emits `avalanche_dust` (lighter, 14 particles
+  instead of ~64 and a shockwave per column).
 

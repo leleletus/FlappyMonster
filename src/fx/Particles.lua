@@ -8,7 +8,7 @@
 --        'mega_slam', 'mega_land', 'mega_poof', 'mega_roar' (Mega Crabby), 'switch_hit' (bloque ON/OFF),
 --        'helmet_break' (casco de Gummy), 'puffer_pop' (pez globo), 'water_splash' (salta del agua), 'cryo_puff' / 'cryo_mist' /
 --        'cryo_blast' (congelador), 'ice_freeze' / 'ice_shatter' (bloque de hielo de lo congelado),
---        'snow_burst' (el Alud: polvo de nieve al soltarse y al chocar abajo),
+--        'snow_burst' (la Bola de Nieve revienta), 'avalanche_dust' (el Alud: polvo de nieve al soltarse y al chocar abajo),
 --        'shake_small', 'shake_tick' (0,15 s), 'shake_big', 'shake_roar' (suave y largo) (temblor de pantalla:
 --        Particles.shakeOffset() se suma a la cámara al dibujar)
 -- (otros nombres no hacen nada)
@@ -796,9 +796,8 @@ EMIT['frost_breath'] = function(kind, x, y, opts)
     end
 end
 
--- (ESTE era un segundo `elseif kind == 'snow_burst'` y nunca se ejecutaba: el primero ganaba. Es la nube que se
--- escribió para el Alud; el Alud sigue emitiendo 'snow_burst' — la de la Bola de Nieve — como hasta ahora.
--- Cambiarlo es decisión del usuario: docs/art/fx-and-particles.md)
+-- (era un segundo `elseif kind == 'snow_burst'` que nunca se ejecutaba: el Alud sacaba la nube de la Bola de Nieve.
+-- Desde 0.5.184 el Alud emite la suya: el usuario)
 EMIT['avalanche_dust'] = function(kind, x, y, opts)
     -- El Alud: nube de polvo de nieve (al soltarse la cornisa y al chocar el frente abajo): se abre a los lados y cae
     for i = 1, 14 do

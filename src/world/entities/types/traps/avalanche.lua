@@ -4,7 +4,7 @@
 --   * Se coloca en la casilla de ARRIBA a la izquierda del canal (justo debajo del saliente del que cuelga la
 --     cornisa); `width` columnas a la derecha y hasta `length` casillas hacia abajo.
 --   * La nieve NO atraviesa bloques: en cada columna se para en el primer bloque o plataforma (se mira el nivel, así
---     que los jugadores se ponen a cubierto bajo un saliente). Abajo salpica (`snow_burst`).
+--     que los jugadores se ponen a cubierto bajo un saliente). Abajo salpica (`avalanche_dust`).
 --   * Empuja hacia ABAJO todo lo que tiene física (systems/Push: jugadores, enemigos, cajas, bombas…) y, con `damage`,
 --     hace daño a los jugadores con las reglas de la base (caja de peligro `effect = 'hurt'`: 1 de vida e
 --     invulnerabilidad; además los aparta de lado: `PlayerAdventure:recoil`).
@@ -12,7 +12,7 @@
 -- Es un reloj: el estado (idle → warn → pour → drain → idle) sale de `clock` (un jugador / el servidor) y viaja con
 -- el estado y deadTimer de siempre; el cliente dibuja y predice el empujón con ellos. En reposo no se envía.
 -- Arte (tools/art/world/make_avalanche_cablecar.py): assets/images/traps/avalanche/*.png. Sonidos avalancheRumble y
--- avalanchePour (tools/sounds/avalanche_cablecar.py). Partículas `snow_burst` (src/fx/Particles.lua).
+-- avalanchePour (tools/sounds/avalanche_cablecar.py). Partículas `avalanche_dust` (src/fx/Particles.lua: su nube ligera; hasta 0.5.183 salía la de la Bola de Nieve).
 local Entity = require 'src/world/entities/base/Entity'
 local TileTypes = require 'src/world/tiles/TileTypes'
 
@@ -23,7 +23,9 @@ local S       = GUMMY_SCALE
 local T       = TILE_PX
 local SPEED   = 900          -- px/s: lo rápido que cae el frente (y que se va la cola al acabar)
 local PUSH    = 650          -- px/s hacia abajo del empujón (× power): cuesta mucho subir contra él
-local POUR_SND = 1.2         -- s: cada cuánto se repite el sonido del torrente
+local POUR_SND = 2.6         -- s: cada cuánto se repite el sonido del torrente (dura 1,3 s; a 1,2 s se pisaba a sí
+                             -- mismo todo el rato: el usuario, 0.5.184, «suenan demasiado y fuerte». Con el torrente
+                             -- normal, 2,5 s, suena una sola vez)
 local INSET   = 4            -- px: el daño, un poco por dentro de cada columna (rozar el borde no duele)
 Aval.SPEED, Aval.PUSH = SPEED, PUSH
 
@@ -189,7 +191,7 @@ function Aval:updateCustom(dt, level)
         elseif st == 'pour' then
             Sound.playAt('avalanchePour', sx, sy)
             self.sndT, self.landed = POUR_SND, false
-            Entity.emitFx('snow_burst', (self.x0 + self.x1) / 2, self.top + 8)
+            Entity.emitFx('avalanche_dust', (self.x0 + self.x1) / 2, self.top + 8)
         end
     end
     if st == 'pour' then
@@ -206,7 +208,7 @@ function Aval:updateCustom(dt, level)
             if lo and front >= lo then
                 self.landed = true
                 for i, b in ipairs(bots) do
-                    if b < self.len then Entity.emitFx('snow_burst', self.x0 + (i - 0.5) * T, self.top + b) end
+                    if b < self.len then Entity.emitFx('avalanche_dust', self.x0 + (i - 0.5) * T, self.top + b) end
                 end
             end
         end
