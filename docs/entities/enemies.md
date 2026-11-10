@@ -593,8 +593,14 @@ only needs its art and a JSON.
   roll, idle, windup, recoil, dazed, hurt, dead).
 - **Behaviour (defaults):** rolls along (speed 70, no pauses, turns at edges). Sees a player within 6 tiles (2.5 high,
   no wall between) → `windup` 0.55 s (squashed, trembling, angry) → `charge` at 430 px/s for up to 6 tiles: at an edge
-  it hops the gap if there is floor at its height beyond within one jump (`Entity:landingAhead`), otherwise it stops
-  there (it never throws itself into a pit); if the player stands higher it jumps up to that ledge. Its front SHOVES
+  it hops the gap if there is floor at its height beyond within one jump (`Entity:landingAhead`); a STEP or a lower
+  platform (floor within `CLIFF` = 3 tiles below, `Entity:dropBelow`) it rolls down without braking and keeps charging;
+  facing a CLIFF (deeper, or the void) it tries to BRAKE as soon as it sees the edge (`Entity:edgeAhead`, `BRAKE_LOOK`
+  2.5 tiles ahead, `BRAKE_DECEL` 700 px/s² on the snow — about 2 tiles from full speed — with a snow trail): if it
+  stops before the edge, fine; if not, it goes over and whatever is below decides, as always (bursts in the void, on
+  spikes, in lava; survives a landing). 0.5.186, the user: "they could only go down a step by jumping; make them
+  charge down, and at a cliff try to brake: if they manage, fine, if not they fall" (before: any edge without floor
+  across stopped it dead). If the player stands higher it jumps up to that ledge. Its front SHOVES
   whoever it meets: 640 px/s sideways + 330 up, NO damage (the player keeps one air jump to try to recover). A wall →
   `dazed` (1 s), a shove → `recoil` (bounces back and laughs, 0.7 s); 1.6 s before it launches again.
 - **Why no damage on the shove (chosen):** its danger is the TERRAIN — a ledge, a pit, water. Damage on top would
@@ -603,6 +609,17 @@ only needs its art and a JSON.
   pure prop). The behaviour's `damage` param (0-3) adds damage to the shove when a level wants it.
 - **Killing it:** stomp (also while charging: falling on it from above never shoves, `stompable` on the shove box) or
   ground pound → it squashes into a snow pile (20 points). Spikes, lava, the void: bursts.
+- **It leaves a CARRYABLE SNOWBALL (some of them; 0.5.186, the user: "killing one should turn it into a snowball you
+  can carry and throw; not all, only some"):** `"leaves": { "type": "snowball_ball", "chance": 0.34 }` in its JSON
+  (generic for any data enemy: DataEnemy `leaves`) and the placement prop `leaves` ("Deja al morir": sometimes — 34 % —,
+  always, never). The level creates the ball as its RESERVE at load (`summons`, same indices on server and clients);
+  killed by a stomp / ground pound, if it is its turn, the ball pops up where it died and the snowball leaves no pile
+  (death `dead_burst` + a snow puff). The ball (`types/items/snowball_ball.lua`, built on the small box): carried with
+  UP, thrown with UP; thrown, the first thing it touches turns it to snow — a stompable enemy (not bosses) goes down as
+  if stomped, the ground or a wall —; put down carefully it stays. Spikes, lava, out of the level: snow too. Then it
+  goes back to its snowball's reserve (a later death can leave another; never two at once). Art
+  `assets/images/items/snowball/ball.png` (`tools/art/items/make_snowball_ball.py`, the snowball's palette). Harness
+  `snowball_rules deja_bola`. Not judged by a person: the look and the feel of the throw.
 - **Others:** charging, it knocks down the enemies it meets (stunned, `knockback`) and flings light carryables (small
   box, bomb object) — the Beetle's sweep, now the base `Entity:sweepAhead`; a big box stops it like a wall.
 - **Online:** server-authoritative; the shove box comes from `state` + `deadTimer` + position (already in snapshots)
@@ -612,7 +629,7 @@ only needs its art and a JSON.
 - **Sounds:** `tools/sounds/snowball.py` → `enemies/snowball/{windup,launch,shove,bonk}.wav` (`snowballWindup`…), played
   on entering windup / charge / recoil / dazed. Not listened to by anyone.
 - Placed in the Frozen Mountains levels (0.5.102: `el_teleferico`, `ladera_del_alud`, the bonus `la_cima`). Not judged by a person: feel (push strength, wind-up), sounds, the look at game scale.
-- Tests: `snowball_rules` (every rule above, the Beetle's sweep, client = server parity; `LOOK=1` → `snowball_look.png`);
+- Tests: `snowball_rules` (every rule above — `escalon`, `acantilado` and `deja_bola` since 0.5.186 —, the Beetle's sweep, client = server parity; `LOOK=1` → `snowball_look.png`);
   `online_smoke LEVEL=tools/tests/online_smoke/bola_de_nieve.json MODE=hunt WATCH=snowball WANT=windup,charge WANTSHOVE=1`.
 
 ## History and decisions (dated notes)

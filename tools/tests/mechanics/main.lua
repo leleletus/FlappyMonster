@@ -935,11 +935,71 @@ function cases.hielo_desgaste()
     local kinds = {}
     for _, b in ipairs(q) do kinds[#kinds + 1] = b[4] end
     local want = { 'thin_ice', 'thin_ice_1', 'thin_ice_2', 'thin_ice_3', 'empty' }
-    local ok = #seen == 5 and fell and brokeAt and brokeAt > 3 and brokeAt < 3.6
+    -- (0.5.186: aterrizar ya agrieta un estado y el desgaste es de 0,4 s por estado: se rompe en ~1,6 s; antes 3,2)
+    local ok = #seen == 5 and fell and brokeAt and brokeAt > 1.3 and brokeAt < 1.9
     for i = 1, 5 do ok = ok and seen[i] == want[i] end
     check('hielo_desgaste', ok and #fx >= 4,
         ('estados: %s · roto a los %.1f s · el jugador cae=%s · efectos %s'):format(table.concat(seen, ' → '),
             brokeAt or -1, tostring(fell), table.concat(fx, ',')))
+end
+
+-- En un NIVEL DE VERDAD (lago_de_cristal, su primer hielo fino): cae encima desde un poco más arriba, se queda quieto
+-- y en pocos segundos se rompe. Cada estado, cuándo.
+function cases.hielo_nivel()
+    local json = require 'libs/json'
+    local data = json.decode(love.filesystem.read('assets/levels/lago_de_cristal.json'))
+    local level = Level.fromData(data)
+    local c0, r0
+    for r = 1, level.tileH do
+        for c = 1, level.tileW do
+            if not c0 and level:getDef(c, r).thinIce and not level:getDef(c, r - 1).thinIce
+               and level:getDef(c, r - 1).collision == 'none' and level:getDef(c, r - 2).collision == 'none' then c0, r0 = c, r end
+        end
+    end
+    local pa = PlayerAdventure:new((c0 - 0.5) * T, (r0 - 3) * T)
+    level.players = { pa }
+    local seen, t, landAt = { name(level, c0, r0) .. '@0.0' }, 0, nil
+    for _ = 1, 60 * 6 do
+        pa:update(1 / 60, level)
+        level:update(1 / 60)
+        t = t + 1 / 60
+        if pa.onGround and not landAt then landAt = t end
+        local n = name(level, c0, r0)
+        if not seen[#seen]:find(n .. '@', 1, true) then seen[#seen + 1] = ('%s@%.1f'):format(n, t) end
+    end
+    local broke = name(level, c0, r0) == 'empty'
+    check('hielo_nivel', broke,
+        ('lago_de_cristal, casilla %d,%d: aterriza a %.1f s · %s'):format(c0, r0, landAt or -1, table.concat(seen, ' → ')))
+end
+
+-- El hielo fino roto VUELVE a los Level.THIN_ICE_REGROW s (como el lago de la Gran Bola de Nieve), pero no con alguien
+-- dentro de la casilla: espera a que se aparte; el cambio sale como un tile 'set' (lo reciben los clientes)
+function cases.hielo_vuelve()
+    local level = iceRoom()
+    level.players = {}
+    for _ = 1, 4 do level:crackIce(8, 5, 1, 'wear') end
+    local broke = name(level, 8, 5)
+    local t = 0
+    while t < Level.THIN_ICE_REGROW - 0.2 do level:update(1 / 60); t = t + 1 / 60 end
+    local early = name(level, 8, 5)
+    for _ = 1, 30 do level:update(1 / 60) end
+    local back = name(level, 8, 5)
+    local sent = false
+    for _, b in ipairs(level.brokenQueue or {}) do if b[1] == 8 and b[2] == 5 and b[4] == 'set' then sent = true end end
+    -- con un jugador dentro de la casilla no vuelve hasta que se va
+    for _ = 1, 4 do level:crackIce(9, 5, 1, 'wear') end
+    local pa = PlayerAdventure:new(8.5 * T, 4.5 * T)
+    pa.onGround = false
+    level.players = { pa }
+    for _ = 1, 60 * 5 do level:update(1 / 60) end
+    local blocked = name(level, 9, 5)
+    level.players = {}
+    level:update(1 / 60)
+    local after = name(level, 9, 5)
+    check('hielo_vuelve', broke == 'empty' and early == 'empty' and back == 'thin_ice' and sent
+                          and blocked == 'empty' and after == 'thin_ice',
+        ('roto: %s · a los %.1f s: %s · a los %.1f s: %s (evento set=%s) · con alguien dentro: %s, al irse: %s'):format(
+            broke, Level.THIN_ICE_REGROW - 0.2, early, Level.THIN_ICE_REGROW + 0.3, back, tostring(sent), blocked, after))
 end
 
 function cases.hielo_gp()
@@ -1206,6 +1266,8 @@ function cases.saltarin()
         end
         return lo, hi, faceOk
     end
+    -- (pasear es al azar: semilla fija, que no dependa de cuántos números gastaron los casos de antes)
+    math.randomseed(1)
     local r0, r1, f1 = roam({ left = 16, right = 24 })
     local w0, w1, f2 = roam(false)
     local roams = r0 >= 15 and r1 <= 24 and r1 - r0 > 4 and w1 - w0 > 9 and f1 and f2
@@ -4001,7 +4063,7 @@ function love.load()
                          'puffer_through', 'puffer_concave', 'puffer_cycle', 'puffer_dry', 'flyer_anim', 'vuelo_libre', 'boxed_in',
                          'bloque_roto', 'activador', 'tramp_avanza', 'tramp_pinchos', 'ping_icono',
                          'bomba_activa', 'bomba_pisada', 'bomba_radios', 'bomba_mundo', 'bomba_objeto',
-                         'hielo_solido', 'hielo_desgaste', 'hielo_gp', 'hielo_bomba', 'encerrado', 'trepador_canto', 'hielo_resbala', 'filo_propio', 'saltarin', 'saltarin_cueva', 'persecucion', 'persecucion_cuerpo', 'inofensivos', 'tapa_base', 'manzana',
+                         'hielo_solido', 'hielo_desgaste', 'hielo_nivel', 'hielo_vuelve', 'hielo_gp', 'hielo_bomba', 'encerrado', 'trepador_canto', 'hielo_resbala', 'filo_propio', 'saltarin', 'saltarin_cueva', 'persecucion', 'persecucion_cuerpo', 'inofensivos', 'tapa_base', 'manzana',
                          'cryo_jugador', 'cryo_enemigo', 'cryo_activador', 'cryo_corte', 'lava', 'pocos_fps', 'ahogo_ganado', 'techo_pinchos',
                          'caja_empuje', 'caja_rota', 'caja_borde', 'cargar', 'bomba_reaparece', 'islas', 'islas_arte', 'viento', 'cuerpo_mueve', 'cajas_golpes', 'balanza', 'soplon', 'semilla', 'ventisca', 'geiser', 'balanza_tope', 'caja_choques', 'cargar_gp', 'gp_radio', 'dejar_encima', 'jump_buffer', 'jefe_puntos', 'persecucion_toque', 'secreto_reina', 'secreto_tifon', 'paredes_falsas', 'aire_caja', 'geiser_peso', 'bomba_cajas', 'cajas_fila', 'balanza_impacto', 'balanza_salto', 'balanza_techo', 'escarabajo', 'escarabajo_lanzado', 'escarabajo_ruta', 'escarabajo_manos', 'escarabajo_arrolla',
                          'topo', 'topo_culetazo', 'topo_suelo', 'topo_borde', 'pirana', 'pirana_pisar', 'pirana_rebota', 'pirana_nada', 'planta', 'planta_pisar', 'planta_traga', 'planta_colgada', 'planta_come', 'planta_bomba' }) do

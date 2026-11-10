@@ -34,7 +34,7 @@ concrete type.
   kicking and counting in the hands and breaks free). While carried: state `'carried'`, `e.carriedBy` (sim),
   `e.carrierIdx` (network), `Entity:update` only follows the carrier, no interactions, the air ignores it. A thrown
   object does not hit its thrower for 0.5 s (`thrownBy` / `thrownT`, checked in `Interactions.check`).
-- **Carryable today:** the bomb object (picked up UNLIT, lit when thrown; put down carefully it stays unlit) and the
+- **Carryable today:** the snowball a Snowball leaves when it dies (`snowball_ball`, thrown it turns to snow on the first thing it touches and knocks down a stompable enemy: [enemies](../entities/enemies.md)), the bomb object (picked up UNLIT, lit when thrown; put down carefully it stays unlit) and the
   small box and the Seed (`types/items/seed.lua`): carried, it is PLANTED with a ground pound on firm ground; a plant
   of its island grows in 1 s (4-6 tiles: what fits; fewer than 4, nothing) with big leaves and a crown to stand on
   (one-way body parts, positions measured on the drawing by `make_seed_plants.py` into `<isle>-plant<h>.json`); it wilts

@@ -157,7 +157,8 @@ end
 -- 'icebreak') y los clientes ponen el tile, la animación, partículas y sonido.
 -- En un jugador, `self.tileFx(kind, c, r)` (lo pone AdventureState) hace esos
 -- efectos. Devuelve 'crack' | 'break' | nil.
-Level.THIN_ICE_WEAR = 0.8          -- s de pie encima por estado
+Level.THIN_ICE_WEAR = 0.4          -- s de pie encima por estado (0.8 hasta 0.5.185: el usuario, «más fácil de romper»)
+local ICE_B = {}                   -- (la caja de cada jugador al mirar sus pies: reutilizada)
 function Level:crackIce(col, row, n, from)
     if self.canBreak == false then return nil end
     local def = self:getDef(col, row)
@@ -170,6 +171,12 @@ function Level:crackIce(col, row, n, from)
         self:rememberTile(col, row, raw)
         new = water and TILE_WATER or TILE_EMPTY
         kind = 'icebreak'                                      -- (los de encima simplemente caen)
+        -- (vuelve a helarse sola: Level:updateIceRegrow; las del lago de un jefe las rehace él)
+        local k = row * 65536 + col
+        if not (self.iceManaged and self.iceManaged[k]) then
+            self.iceRegrow = self.iceRegrow or {}
+            self.iceRegrow[k] = { col, row, 0, TileCodec.encode(TileTypes.byName.thin_ice.id, water, spikes) }
+        end
     else
         local name = ({ 'thin_ice', 'thin_ice_1', 'thin_ice_2', 'thin_ice_3' })[stage + 1]
         new = TileCodec.encode(TileTypes.byName[name].id, water, spikes)
@@ -189,25 +196,90 @@ function Level:crackIce(col, row, n, from)
 end
 
 -- Desgaste: cada jugador de pie encima de hielo fino lo va agrietando
+-- (0.5.186, el usuario: «al caer sobre ellos, e incluso quedándote un rato, no se agrietan»): ATERRIZAR encima tras
+-- un salto o una caída (`THIN_ICE_LAND_AIR` s en el aire o más) ya lo agrieta un estado; el desgaste de estar encima,
+-- más rápido. Un ground pound tiene su propia regla (3 estados): no suma también el aterrizaje.
+Level.THIN_ICE_LAND_AIR = 0.2
+local ICE_FEET = { 0, 0, 0 }
 function Level:updateThinIce(dt)
     if self.canBreak == false or not self.players then return end
     local T = TILE_PX
-    local touched = {}
+    local touched, landed
     for _, pa in ipairs(self.players) do
-        if pa.onGround and not pa.dying and pa.alive ~= false and pa.getOuterBounds then
-            local b = pa:getOuterBounds()
+        local live = not pa.dying and pa.alive ~= false and pa.getOuterBounds
+        if live and not pa.onGround then pa._iceAirT = (pa._iceAirT or 0) + dt end
+        if pa.onGround and live then
+            local lands = (pa._iceAirT or 0) >= Level.THIN_ICE_LAND_AIR and not pa.gpLanded and pa.gpPhase == nil
+            pa._iceAirT = 0
+            local b = pa:getOuterBounds(ICE_B)
             local fy = b.y + b.h + 2
-            for _, fx in ipairs({ b.x + 3, b.x + b.w / 2, b.x + b.w - 3 }) do
-                local c, r = math.floor(fx / T) + 1, math.floor(fy / T) + 1
+            ICE_FEET[1], ICE_FEET[2], ICE_FEET[3] = b.x + 3, b.x + b.w / 2, b.x + b.w - 3
+            for i = 1, 3 do
+                local c, r = math.floor(ICE_FEET[i] / T) + 1, math.floor(fy / T) + 1
                 local d = self:getDef(c, r)
-                if d.thinIce and math.abs(fy - 2 - (r - 1) * T) <= 4 then touched[r * 65536 + c] = { c, r } end
+                if d.thinIce and math.abs(fy - 2 - (r - 1) * T) <= 4 then
+                    touched = touched or {}
+                    touched[r * 65536 + c] = { c, r }
+                    if lands then landed = landed or {}; landed[r * 65536 + c] = true end
+                end
             end
+        elseif not live then
+            pa._iceAirT = 0
         end
     end
+    if not touched then return end
     for k, cr in pairs(touched) do
-        self.iceWear = self.iceWear or {}
-        self.iceWear[k] = (self.iceWear[k] or 0) + dt
-        if self.iceWear[k] >= Level.THIN_ICE_WEAR then self:crackIce(cr[1], cr[2], 1, 'wear') end
+        if landed and landed[k] then
+            self:crackIce(cr[1], cr[2], 1, 'land')              -- (el golpe de caer encima: cruje y se oye)
+        else
+            self.iceWear = self.iceWear or {}
+            self.iceWear[k] = (self.iceWear[k] or 0) + dt
+            if self.iceWear[k] >= Level.THIN_ICE_WEAR then self:crackIce(cr[1], cr[2], 1, 'wear') end
+        end
+    end
+end
+
+-- EL HIELO FINO ROTO VUELVE (0.5.186, el usuario: «así como se rompen, todos deben poder reaparecer, como en la pelea
+-- de la Gran Bola de Nieve»): a los THIN_ICE_REGROW s se hiela otra vez entero, si no hay nadie en la casilla (un
+-- jugador o una entidad con cuerpo: espera a que se aparte). Solo quien decide los tiles (un jugador, el servidor);
+-- a los clientes les llega como cualquier tile cambiado ('set'). Las celdas del lago de un jefe (`iceManaged`, la
+-- Gran Bola de Nieve) no: tienen sus propias reglas.
+Level.THIN_ICE_REGROW = 4
+local REGROW_BOX = {}
+local function cellTaken(level, c, r)
+    local T = TILE_PX
+    local x0, y0 = (c - 1) * T, (r - 1) * T
+    local b = REGROW_BOX
+    for _, pa in ipairs(level.players or {}) do
+        if not pa.dying and pa.getOuterBounds then
+            pa:getOuterBounds(b)
+            if b.x < x0 + T and b.x + b.w > x0 and b.y < y0 + T and b.y + b.h > y0 then return true end
+        end
+    end
+    for _, e in ipairs(level.liveEntities or {}) do
+        if e.alive and not e.flying and e.getOuterBounds and (e.isObstacle == nil or e:isObstacle() or e.solidFull) then
+            e:getOuterBounds(b)
+            if b.x < x0 + T and b.x + b.w > x0 and b.y < y0 + T and b.y + b.h > y0 then return true end
+        end
+    end
+    return false
+end
+function Level:updateIceRegrow(dt)
+    if self.canBreak == false or not self.iceRegrow then return end
+    for k, e in pairs(self.iceRegrow) do
+        local d = self:getDef(e[1], e[2])
+        if d.thinIce or d.collision ~= 'none' then
+            self.iceRegrow[k] = nil                              -- (otra cosa ocupó la casilla: ya no se rehace)
+        else
+            e[3] = e[3] + dt
+            if e[3] >= Level.THIN_ICE_REGROW and not cellTaken(self, e[1], e[2]) then
+                self.iceRegrow[k] = nil
+                self:setTileRaw(e[1], e[2], e[4])
+                self.brokenQueue = self.brokenQueue or {}
+                table.insert(self.brokenQueue, { e[1], e[2], e[4], 'set' })
+                require('src/world/entities/base/Entity').emitFx('ice_freeze', (e[1] - 0.5) * TILE_PX, (e[2] - 0.5) * TILE_PX)
+            end
+        end
     end
 end
 

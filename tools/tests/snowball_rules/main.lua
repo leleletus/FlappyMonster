@@ -8,6 +8,9 @@
 --   invulnerable  recién golpeado (invulnerable) también se le empuja: no es daño
 --   repisa        el jugador en una repisa 2 casillas más alta: salta hasta ella y lo empuja
 --   hueco         a su altura al otro lado de un hueco de 2 casillas: lo cruza de un salto
+--   escalon       lanzada baja un escalón de 2 casillas rodando (sin frenar) y sigue lanzada abajo
+--   acantilado    ante un acantilado frena: desde lejos se queda arriba; lanzada muy cerca del borde cae
+--   deja_bola     pisada, deja una bola que se carga (prop `leaves`); lanzada derriba a otra Bola de Nieve y se deshace
 --   pared         lanzada contra una pared: rebota mareada ('dazed') y luego vuelve a andar
 --   pisoton       caerle encima la deshace (también lanzada: encima no empuja) y da sus puntos
 --   ground_pound  un ground pound la deshace
@@ -127,14 +130,15 @@ function cases.borde()
     local pa = player(level, 10.6 * T, 5 * T)                     -- a media casilla del borde (el borde: x = 11 T)
     local log = spyLaunch(pa)
     local hp0 = pa.hp
-    step(level, es, 3)
+    -- (0.5.186: con el acantilado detrás del jugador la bola FRENA al lanzarse: el empujón llega algo más tarde)
+    step(level, es, 4, os.getenv('TRACE') and function() print(('  pa x=%.2f y=%.2f vy=%.0f suelo=%s · bola %s x=%.2f'):format(pa.x / T, pa.y / T, pa.vy, tostring(pa.onGround), e.state, e.x / T)) end)
     local l = log[1]
     local fell = pa.y > 6 * T and pa.x > 11 * T
     local dx = l and (pa.x - l.x) or 0
     check('borde', l ~= nil and l.vx > 0 and l.vy < 0 and fell and pa.hp == hp0 and dx > 2.5 * T and e.alive
         and e.y < 6 * T and e.x < 11 * T,
-        ('empujón vx %d vy %d; jugador cayó del borde a x %.1f casillas (%.1f desde el golpe), vida %d→%d; bola en la repisa (x %.1f)')
-        :format(l and l.vx or 0, l and l.vy or 0, pa.x / T, dx / T, hp0, pa.hp, e.x / T))
+        ('empujón vx %d vy %d; jugador cayó del borde a x %.1f casillas (%.1f desde el golpe), vida %d→%d; bola en la repisa (x %.1f, y %.1f, viva %s) · jugador y %.1f')
+        :format(l and l.vx or 0, l and l.vy or 0, pa.x / T, dx / T, hp0, pa.hp, e.x / T, e.y / T, tostring(e.alive), pa.y / T))
 end
 
 function cases.una_vez()
@@ -203,7 +207,7 @@ function cases.pisoton()
     for _ = 1, 90 do
         pa:update(1 / 60, level); e:update(1 / 60, level)
         Interactions.run(pa, es, { stomp = function(_, p) pts = pts + (p or 0) end })
-        if e.state == 'dead' then died = true; break end
+        if e.state == 'dead' or e.state == 'dead_burst' then died = true; break end
     end
     -- lanzada: caerle encima tampoco empuja, la pisa
     local level2, es2, e2 = room(30, 8, { ent('snowball', 4, 7) })
@@ -215,7 +219,7 @@ function cases.pisoton()
     for _ = 1, 30 do
         pa2:update(1 / 60, level2); e2:update(1 / 60, level2)
         Interactions.run(pa2, es2, {})
-        if e2.state == 'dead' then died2 = true; break end
+        if e2.state == 'dead' or e2.state == 'dead_burst' then died2 = true; break end
     end
     check('pisoton', died and pts == 20 and died2 and #log == 0,
         ('andando: deshecha %s (%d puntos); lanzada: deshecha %s, empujones %d (0)'):format(tostring(died), pts, tostring(died2), #log))
@@ -226,7 +230,7 @@ function cases.ground_pound()
     local pa = player(level, e.x, 3 * T)
     pa.gpPhase, pa.vy = 'fall', 900
     step(level, es, 0.6)
-    check('ground_pound', e.state == 'dead' or not e.alive, ('ground pound encima: bola %s'):format(e.state))
+    check('ground_pound', e.state == 'dead' or e.state == 'dead_burst' or not e.alive, ('ground pound encima: bola %s'):format(e.state))
 end
 
 function cases.tocar()
@@ -257,6 +261,106 @@ function cases.ruta()
 end
 
 -- Lo que viaja en una instantánea (como server/main.lua y OnlineAdventureState): campos comunes + netPack
+-- (lanzarla YA hacia `dir`, sin jugador a la vista: el aviso acabado; el siguiente paso despega)
+local function launchNow(e, dir)
+    e.facing, e.vx, e.ramRise = dir, 0, 0
+    for _, b in ipairs(e.beh) do if b.def.name == 'ram' then e.owner = b end end   -- (el comportamiento manda en su estado)
+    e:enter('windup')
+    e.deadTimer = 99
+end
+
+-- 0.5.186: lanzada baja un ESCALÓN (2 casillas) rodando, sin frenar, y sigue lanzada abajo
+function cases.escalon()
+    local blocks = {}
+    for c = 2, 9 do blocks[#blocks + 1] = { c, 8 }; blocks[#blocks + 1] = { c, 9 } end
+    local level, es, e = room(24, 10, { ent('snowball', 4, 7) }, blocks)
+    level.players = {}
+    step(level, es, 0.3)
+    launchNow(e, 1)
+    local overState, braked
+    step(level, es, 2.5, function()
+        if e.ramBrake then braked = true end
+        if not overState and e.x > 10 * T then overState = e.state end
+        if os.getenv('TRACE') then print(('  %s x=%.2f y=%.2f vx=%.0f suelo=%s'):format(e.state, e.x / T, e.y / T, e.vx or 0, tostring(e.onGround))) end
+    end)
+    check('escalon', e.alive and overState == 'charge' and not braked and e.y > 8 * T,
+        ('baja el escalón lanzada: al pasar el borde %s (charge) · frenó %s (no) · viva %s abajo (y %.1f casillas)')
+        :format(tostring(overState), tostring(braked), tostring(e.alive), e.y / T))
+end
+
+-- 0.5.186: ante un ACANTILADO (la repisa de ledgeRoom: 4 casillas de caída hasta el suelo, más que CLIFF) intenta frenar:
+-- desde lejos lo logra y se queda arriba; lanzada muy cerca del borde no le da tiempo y cae
+function cases.acantilado()
+    local function try(col)
+        local blocks = {}
+        for c = 2, 11 do blocks[#blocks + 1] = { c, 6 } end
+        local level, es, e = room(22, 12, { ent('snowball', col, 5) }, blocks)
+        level.players = {}
+        step(level, es, 0.3)
+        launchNow(e, 1)
+        local braked, endX, endY = false, nil, nil
+        step(level, es, 3, function()
+            braked = braked or e.ramBrake == true
+            if os.getenv('TRACE') then print(('  %s x=%.2f y=%.2f vx=%.0f sp=%s frena=%s suelo=%s'):format(e.state, e.x / T, e.y / T, e.vx or 0, tostring(e.ramSpeed), tostring(e.ramBrake), tostring(e.onGround))) end
+            if not endX and e.state ~= 'charge' and e.state ~= 'windup' then endX, endY = e.x, e.y end   -- (dónde acabó el lanzamiento)
+        end)
+        return e, braked, endX or e.x, endY or e.y
+    end
+    local far, fb, fx, fy = try(6)
+    local near, nb = try(10)
+    local farOk = far.alive and fb and fy < 6 * T and fx < 11 * T
+    local nearOk = nb and (not near.alive or near.y > 7 * T)
+    check('acantilado', farOk and nearOk,
+        ('desde lejos: frena %s, se queda arriba %s (x %.1f, borde 11) · muy cerca: frena %s, cae %s (y %.1f, viva %s)')
+        :format(tostring(fb), tostring(fy < 6 * T and fx < 11 * T), fx / T, tostring(nb),
+                tostring(not near.alive or near.y > 7 * T), near.y / T, tostring(near.alive)))
+end
+
+-- 0.5.186: DEJA UNA BOLA al morir (`leaves`; la prop: 'always' aquí) que se carga y se lanza: pisada, en su sitio sale la
+-- bola (su reserva) y ella no deja montón ('dead_burst'); la bola se coge, se lanza contra otra Bola de Nieve, la derriba
+-- y se deshace (vuelve a la reserva). Con 'never' no deja nada (ni reserva)
+function cases.deja_bola()
+    local Carry = require 'src/world/systems/Carry'
+    local level, es, e = room(26, 8, { ent('snowball', 6, 7, { leaves = 'always', movement = 'static' }),
+                                       ent('snowball', 9, 7, { leaves = 'never', movement = 'static' }) })
+    local ball
+    for _, x in ipairs(es) do if x.def.name == 'snowball_ball' then ball = x end end
+    local reserved = ball ~= nil and ball.state == 'reserve' and not ball.alive
+    local nBalls = 0
+    for _, x in ipairs(es) do if x.def.name == 'snowball_ball' then nBalls = nBalls + 1 end end
+    local pa = player(level, e.x, 3 * T)
+    pa.vy = 300
+    for _ = 1, 90 do
+        pa:update(1 / 60, level)
+        for _, x in ipairs(es) do x:update(1 / 60, level) end
+        Interactions.run(pa, es, {})
+        if e.state ~= 'walk' and e.state ~= 'idle' then break end
+    end
+    local leftIt = ball and ball.alive and ball.state == 'rest' and math.abs(ball.x - e.x) < 2
+    local noPile = e.state == 'dead_burst'
+    step(level, es, 0.5)
+    -- cogerla y lanzarla hacia la otra
+    pa.x, pa.y = ball.x - 30, ball.y
+    Carry.pickUp(pa, ball)
+    local carried = ball.state == 'carried'
+    pa.facing = 1
+    Carry.throw(pa, ball)
+    local thrown = ball.thrown == true and ball.vx > 0
+    -- (el tiro, a la altura de la otra y con el jugador lejos — que no se lance contra él —: lo que se mira es el choque)
+    local other = es[2]
+    pa.x, pa.y = 2 * T, 7 * T - 50
+    ball.x, ball.y, ball.vx, ball.vy = other.x - 70, other.y, 430, 0
+    local hitOther = false
+    step(level, es, 2, function()
+        hitOther = hitOther or other.state == 'dead' or other.state == 'dead_burst'
+        if os.getenv('TRACE') then print(('  bola %s x=%.2f y=%.2f vx=%.0f vy=%.0f · otra %s x=%.2f'):format(ball.state, ball.x / T, ball.y / T, ball.vx or 0, ball.vy or 0, other.state, other.x / T)) end
+    end)
+    local backToReserve = ball.state == 'reserve' and not ball.alive
+    check('deja_bola', reserved and nBalls == 1 and leftIt and noPile and carried and thrown and hitOther and backToReserve,
+        ('reserva al cargar %s (1 bola: %d, la de «nunca» no tiene) · pisada: sale la bola %s, sin montón %s (%s) · cargada %s · lanzada derriba a la otra %s · vuelve a la reserva %s')
+        :format(tostring(reserved), nBalls, tostring(leftIt), tostring(noPile), e.state, tostring(carried), tostring(hitOther), tostring(backToReserve)))
+end
+
 local function snapshotTo(srv, cli)
     cli.x, cli.y, cli.facing, cli.state, cli.frame, cli.alive = srv.x, srv.y, srv.facing, srv.state, srv.frame, srv.alive
     cli.deadTimer, cli.flipped = math.floor(srv.deadTimer * 100 + 0.5) / 100, srv.flipped
@@ -324,7 +428,7 @@ end
 function love.load()
     if os.getenv('LOOK') then look() end
     local only = os.getenv('CASE')
-    for _, n in ipairs({ 've', 'borde', 'una_vez', 'invulnerable', 'repisa', 'hueco', 'pared', 'pisoton', 'ground_pound',
+    for _, n in ipairs({ 've', 'borde', 'escalon', 'acantilado', 'deja_bola', 'una_vez', 'invulnerable', 'repisa', 'hueco', 'pared', 'pisoton', 'ground_pound',
                          'tocar', 'arrolla', 'ruta', 'red', 'escarabajo' }) do
         if not only or only == n then
             local ok, err = pcall(cases[n])

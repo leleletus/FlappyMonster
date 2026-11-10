@@ -83,6 +83,11 @@ network does not carry. Optional hooks: `onLaunch(e, cfg, pa)` (a hazard box of 
   `netPack` adds health and projectiles (with stable ids for interpolation).
 - **Player rules:** the defaults of `Interactions` (touch by `onTouch`, stomp, ground pound); behaviours add hazard
   boxes (`effect = 'hurt'`). With `hp` > 1 a stomp takes 1 and the enemy is untouchable while `hurt`.
+- **Leaving something when it dies** (0.5.186): `"leaves": { "type": "<entity id>", "chance": 0.34 }` in the JSON (no
+  editor field yet: written by hand; the editor keeps it when saving). The type gets the placement prop `leaves`
+  (sometimes / always / never) and `summons` (the level creates that entity as its reserve at load, so the online
+  lists match); killed by a stomp or a ground pound, `DataEnemy:onStomp` brings it out where it died
+  (`Entity:appearAt`) and the enemy dies without its pile (`dead_burst`). Used by the Snowball (its carryable snowball).
 
 ## Enemies shipped as data
 

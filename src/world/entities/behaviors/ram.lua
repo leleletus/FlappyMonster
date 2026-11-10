@@ -14,6 +14,13 @@ local MAX_T = 3.0                     -- s como mucho lanzado (por si algo lo de
 local GAP_H = 1.0                     -- casillas: el salto con que cruza un hueco (Entity:landingAhead dice si llega)
 local SWEEP_VX, SWEEP_VY = 420, -260  -- px/s: lo ligero que arrolla sale despedido así
 local RECOIL_VX, RECOIL_VY = 150, -260
+-- BORDES lanzada (0.5.186, el usuario): un ESCALÓN o una plataforma más abajo (suelo a CLIFF casillas o menos) los
+-- baja rodando sin frenar; ante un ACANTILADO (más hondo, o el vacío) intenta FRENAR en cuanto lo ve (BRAKE_LOOK por
+-- delante; en la nieve frena BRAKE_DECEL px/s²): si para antes del borde, bien; si no, cae y ya — lo de abajo decide si
+-- sobrevive o revienta, como siempre —. Antes solo bajaba saltando y en cualquier borde se paraba en seco.
+local CLIFF = 3                       -- casillas
+local BRAKE_LOOK = 2.5                -- casillas
+local BRAKE_DECEL = 700               -- px/s² (desde 430 px/s para en ~2 casillas)
 
 local function finish(e, cfg)
     e.cd_ram = cfg.cooldown
@@ -62,20 +69,49 @@ return {
                 e.vx, e.vy = dir * cfg.speed, (h > 0) and -math.sqrt(2 * ADV_GRAVITY * h) or 0
                 e.onGround = false
                 e.ramX0, e.ramSwept = e.x, {}
+                e.ramSpeed, e.ramBrake, e.ramFell = cfg.speed, nil, nil
+                e.ramJump = true                 -- (el despegue cuenta como salto: no es caerse por un borde)
                 e:enter('charge')
                 Entity.emitFx('gp_land', e.x - dir * e.outerW / 2, e.y + e.outerH / 2)
             end
         elseif st == 'charge' then
-            if e.onGround and not e:groundAhead(level, dir) then
-                -- en un BORDE: si al otro lado hay suelo a su altura al alcance de un salto, lo cruza; si no, frena
+            local speed = e.ramSpeed or cfg.speed
+            if e.onGround and not e.ramBrake then
+                -- ¿un acantilado por delante? (un escalón o una plataforma más abajo, no: esos se bajan rodando)
+                local d = e:edgeAhead(level, dir, BRAKE_LOOK * T)
+                if d then
+                    local x = e.x + dir * (e.outerW / 2 + d + 8)
+                    -- (¿suelo a su altura al otro lado, al alcance del salto con que cruza huecos? — mirado DESDE el borde —)
+                    local reach = cfg.speed * 2 * math.sqrt(2 * ADV_GRAVITY * GAP_H * T) / ADV_GRAVITY - e.outerW * 0.5 - 8
+                    local gap = e:landingFrom(level, dir, x, reach)
+                    if not gap and not e:dropBelow(level, x, CLIFF * T) then e.ramBrake = true end
+                end
+            end
+            if e.ramBrake and e.onGround then
+                speed = math.max(0, speed - BRAKE_DECEL * dt)
+                e.ramSpeed = speed
+                e.ramSnowT = (e.ramSnowT or 0) - dt
+                if e.ramSnowT <= 0 then                                 -- (frenando: levanta nieve)
+                    e.ramSnowT = 0.06
+                    Entity.emitFx('snow_trail', e.x + dir * e.outerW * 0.3, e.y + e.outerH / 2)
+                end
+                if speed <= 0 then return finish(e, cfg) end            -- (lo logró: se queda al borde)
+            end
+            if not e.onGround and not e.ramJump then e.ramFell = true end   -- (se fue por el borde)
+            if e.ramFell and e.onGround then return finish(e, cfg) end    -- (aterrizó vivo abajo: se acabó el lanzamiento)
+            if e.onGround and not e:groundAhead(level, dir) and not e.ramBrake then
+                -- en un BORDE: si al otro lado hay suelo a su altura al alcance de un salto, lo cruza; si no, sigue rodando
+                -- y baja (un escalón o una plataforma de más abajo)
                 local vy = math.sqrt(2 * ADV_GRAVITY * GAP_H * T)
                 local reach = cfg.speed * 2 * vy / ADV_GRAVITY - e.outerW * 0.5 - 8
-                local d = e:landingAhead(level, dir, reach)
-                if not d then return finish(e, cfg) end
-                e.vy, e.onGround = -vy, false
+                if e:landingAhead(level, dir, reach) then
+                    e.vy, e.onGround = -vy, false
+                    e.ramJump = true
+                end
             end
+            if e.onGround then e.ramJump = nil end
             local x0 = e.x
-            e.vx = dir * cfg.speed
+            e.vx = dir * speed
             e:fall(level, dt, e.vx)
             e.facing = dir
             -- arrolla a los enemigos y lo ligero que pilla delante (una vez a cada uno por lanzamiento)
@@ -83,7 +119,7 @@ return {
             local front = { x = (dir > 0) and ob.x + ob.w * 0.5 or ob.x - 8, y = ob.y, w = ob.w * 0.5 + 8, h = ob.h }
             e:sweepAhead(level, front, dir, e.ramSwept or {}, SWEEP_VX, SWEEP_VY)
             if e:fellOut(level) or e:inVoid(level) or e:onDeadlyGround(level) then e:dieBurst(); return end
-            if math.abs(e.x - x0) < cfg.speed * dt * 0.4 then       -- (contra una pared: rebota y se marea)
+            if speed > cfg.speed * 0.5 and math.abs(e.x - x0) < speed * dt * 0.4 then   -- (contra una pared: rebota y se marea)
                 e.vx, e.vy, e.onGround = -dir * RECOIL_VX * 0.6, -180, false
                 e.cd_ram = cfg.cooldown
                 e:enter('dazed')

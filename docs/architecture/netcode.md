@@ -214,6 +214,7 @@ piece took damage, immortal online), and a rewound "stomp" may hit a boss that i
 
 ## Protocol version history
 
+v113 the carryable snowball (`snowball_ball`, new type: a reserve of every Snowball, so another entity list) and broken thin ice that grows back (a `set` tile event).
 v111 Tifón (`tifon`, new type: the fortress secret boss; wind side, swap, zone bounds, marks, arcs and hail in its netPack; its `pushAt` runs on the client too) and the level `tejados_del_tifon`.
 v110 records and the daily challenge (`get_records` → `records`, `join_daily`, `daily` in room updates and the room list).
 v112 the daily challenge solo (`join_daily` = a room of one, `solo` in room updates) and the daily club (`create_room` /

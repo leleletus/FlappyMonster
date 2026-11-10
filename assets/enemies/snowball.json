@@ -25,6 +25,7 @@
   },
   "traits": {},
   "states": {},
+  "leaves": { "type": "snowball_ball", "chance": 0.34 },
   "behaviors": [
     { "type": "ram" }
   ],

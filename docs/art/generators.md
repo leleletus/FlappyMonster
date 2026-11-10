@@ -85,6 +85,7 @@ the diff before committing anything they write.
   ridden, getup, dead), two designs A «Torpedo» / B «Zancos» drawn with `make_jungle_enemies.py`'s piece engine; no flags =
   previews in `FlappyMonster_pruebas/pinguino/`; `--apply A|B [--force]` writes `enemies/penguin/penguin-Sheet.png` and
   (only if missing) `assets/anim/enemies/penguin.json`. B applied 2026-10-29 without the user (away): to switch, `--apply A --force`.
+- `tools/art/items/make_snowball_ball.py` (0.5.186): the carryable snowball `assets/images/items/snowball/ball.png` (10x10, hand-drawn map in the script with the Snowball's palette; plain Python, no PIL).
 - `tools/art/enemies/make_snowball.py`: the Snowball (`snowball`, the Giant Snowball's little sister; 14x12 frames: happy
   roll, angry roll, idle + blink, windup, laugh, dazed, squash → snow pile), derived from the user's boss design (it only
   READS `bosses/snowboss/`: palette, face language); two designs A «Hermanita» (the boss's ball in small) / B «Carnero» (a

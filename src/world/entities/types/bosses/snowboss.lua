@@ -603,7 +603,12 @@ function Snow:findLake(level)
     local zx0, zx1, zy0, zy1 = self:zoneBounds()
     for r = math.floor(zy0 / T) + 1, math.floor((zy1 - 1) / T) + 2 do
         for c = math.floor(zx0 / T) + 1, math.floor((zx1 - 1) / T) + 1 do
-            if level:getDef(c, r).thinIce then self.lake[#self.lake + 1] = { c, r, 0 } end
+            if level:getDef(c, r).thinIce then
+                self.lake[#self.lake + 1] = { c, r, 0 }
+                -- (su lago lo rehace ella — regrowLake —, no la regla general del nivel: Level:updateIceRegrow)
+                level.iceManaged = level.iceManaged or {}
+                level.iceManaged[r * 65536 + c] = true
+            end
         end
     end
 end

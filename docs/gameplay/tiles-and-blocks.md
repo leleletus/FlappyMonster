@@ -162,9 +162,16 @@ brick and a fake one draw no edge between them. The other fakes keep their own l
 - **Thin ice** (`thin_ice.lua`, 4 tiles 31-34: normal → `_1` damaged → `_2` → `_3` about to
   break; later stages `editorHide`): SOLID on every side, half a cell tall (hitbox top half),
   0.8 alpha, textures `thin_ice_0..3.png`. `Level:crackIce(c, r, n, from)` advances n stages
-  (≥4 → breaks to empty/water): standing on it `Level.THIN_ICE_WEAR` (0.8 s) per stage
-  (`Level:updateThinIce`, SP/server only), head bump 1, GP 3 (the player keeps falling if it
-  breaks), explosion 4. Tile events `k='crack'|'icebreak'` → client `tileBump('crack')` (shake),
+  (≥4 → breaks to empty/water): LANDING on it after `Level.THIN_ICE_LAND_AIR` (0.2 s) in the air
+  1 at once, standing on it `Level.THIN_ICE_WEAR` (0.4 s) per stage (`Level:updateThinIce`, SP/server only), head
+  bump 1, GP 3 (the player keeps falling if it breaks; a GP landing does not add the landing crack), explosion 4.
+  **It grows back** (`Level:updateIceRegrow`): every broken cell becomes whole thin ice again after
+  `Level.THIN_ICE_REGROW` (4 s), waiting while a player or an entity with a body is in the cell; it reaches clients as a
+  `set` tile event, with the `ice_freeze` fx. The cells of a boss's lake (`level.iceManaged`, the Giant Snowball's
+  `findLake`) are left to the boss's own rules. 0.5.186, the user: "make thin ice easier to break: landing and even
+  standing a long time did not crack it" and "like they break, they must all come back, as in the Giant Snowball
+  fight" (before: 0.8 s per stage, no landing crack, broken for good outside that fight). Harness `mechanics`
+  `hielo_desgaste`, `hielo_nivel` (in a real level, lago_de_cristal), `hielo_vuelve`. Tile events `k='crack'|'icebreak'` → client `tileBump('crack')` (shake),
   fx `ice_crack` / `ice_break`, sounds iceCrack / iceBreak (`tools/sounds/ice.py`); SP gets the
   same through the `level.tileFx(kind, c, r)` hook.
 

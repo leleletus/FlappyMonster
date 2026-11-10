@@ -1149,8 +1149,11 @@ end
 -- frente)? → distancia hasta ese suelo (nil = no hay, o hay pared, pinchos o una zona de peligro antes). Para lo que
 -- salta huecos (el comportamiento `ram`: lanzada, la Bola de Nieve cruza de una repisa a otra)
 function Entity:landingAhead(level, dir, maxGap)
+    return self:landingFrom(level, dir, self.x + dir * self.outerW / 2, maxGap)
+end
+-- Lo mismo, contado desde la x `front` (p. ej. un borde que aún está por delante: frenar a tiempo)
+function Entity:landingFrom(level, dir, front, maxGap)
     local feet = self.y + self.outerH / 2
-    local front = self.x + dir * self.outerW / 2
     for d = 8, maxGap, 8 do
         local x = front + dir * d
         if solidAt(level, x, self.y) or solidAt(level, x, feet - 8) then return nil end     -- (una pared: no es un hueco)
@@ -1159,6 +1162,30 @@ function Entity:landingAhead(level, dir, maxGap)
             if self:dangerAt(level, x - self.outerW / 2, feet - self.outerH, self.outerW, self.outerH) then return nil end
             return d
         end
+    end
+    return nil
+end
+
+-- Un BORDE por delante (suelo que se acaba), a menos de `look` px de su frente → distancia hasta él (nil = el suelo
+-- sigue; una pared antes también es nil). Para frenar a tiempo (el comportamiento `ram`)
+function Entity:edgeAhead(level, dir, look)
+    local feet = self.y + self.outerH / 2
+    local front = self.x + dir * self.outerW / 2
+    for d = 0, look, 8 do
+        local x = front + dir * d
+        if solidAt(level, x, self.y) or solidAt(level, x, feet - 8) then return nil end     -- (una pared: no es un borde)
+        if not solidAt(level, x, feet + 4) then return d end
+    end
+    return nil
+end
+
+-- Lo que hay DEBAJO de la columna `x`, desde sus pies hacia abajo: px hasta el primer suelo, como mucho `maxPx` (nil =
+-- más hondo, o el vacío). Un escalón o una plataforma de más abajo frente a un acantilado
+function Entity:dropBelow(level, x, maxPx)
+    local feet = self.y + self.outerH / 2
+    for d = 4, maxPx, 8 do
+        if solidAt(level, x, feet + d) then return d - 4 end
+        if level.heightPx and feet + d > level.heightPx then return nil end
     end
     return nil
 end

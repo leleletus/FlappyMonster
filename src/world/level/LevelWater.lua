@@ -205,6 +205,7 @@ function Level:update(dt)
     end
     -- Hielo fino que se desgasta con alguien encima
     self:updateThinIce(dt)
+    self:updateIceRegrow(dt)                -- (el hielo fino roto vuelve a helarse)
     -- Bloques golpeados (saltito / aplastarse)
     for k, a in pairs(self.tileAnim or {}) do
         a.t = a.t + dt

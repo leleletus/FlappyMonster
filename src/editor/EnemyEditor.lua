@@ -25,7 +25,7 @@ local Scene = require 'src/editor/ScenePreview'
 local E = { ids = {}, id = nil, spec = nil, animDoc = nil, panel = AnimPanel.new(), tab = 'anim', unsaved = false,
             newId = '', previewState = 'idle', pt = 0 }
 E.ORDER = { 'id', 'label', 'category', 'description', 'boss', 'anim', 'variant', 'scale', 'facesLeft', 'breathe', 'crawl', 'hitbox', 'hp', 'hurtTime',
-            'defaults', 'traits', 'darkEdge', 'states', 'behaviors', 'sounds' }
+            'defaults', 'traits', 'darkEdge', 'states', 'leaves', 'behaviors', 'sounds' }
 local DataEnemy, DataBoss, Behaviors, EntityTypes       -- (se cargan en load: necesitan los globales del juego)
 
 local TRAITS = {

@@ -97,6 +97,7 @@ function DataEnemy:set() return self.animSet end
 
 function DataEnemy:init()
     local spec = self.spec
+    if spec.leaves then self.summonKey = 'lv' .. self.col .. ',' .. self.row end   -- (lo que deja al morir: su reserva)
     self.animSet = Anim.load(spec.anim, spec.variant)
     self.hp = math.max(1, math.floor(spec.hp or 1))
     self.shots, self.shotId = {}, 0
@@ -125,6 +126,21 @@ function DataEnemy.Core.ownerNow(self)
     for _, b in ipairs(self.beh or {}) do
         for _, st in ipairs(b.def.states) do if st == self.state then return b end end
     end
+end
+
+-- Muere pisada (o con un ground pound): si deja algo (`leaves`) y le toca, sale donde murió y ella no deja su montón
+-- (muerte 'dead_burst': sin cuerpo; una nube de nieve en su lugar)
+function DataEnemy:onStomp()
+    local lv = self.spec.leaves
+    local level = self.levelRef
+    if not (lv and level) then return end
+    local mode = self.props.leaves or 'random'
+    if mode == 'never' or (mode == 'random' and math.random() >= (lv.chance or 0.34)) then return end
+    local item = self:freeMinion(level, lv.type)
+    if not item then return end                          -- (la anterior sigue en juego)
+    item:appearAt(self.x, self.y)
+    self.state, self.deadTimer = 'dead_burst', 0
+    Entity.emitFx('snow_puff', self.x, self.y)
 end
 
 function DataEnemy:enter(state)
@@ -181,6 +197,7 @@ DataEnemy.Core.stepShots = stepShots
 function DataEnemy:stepAlways(dt, level) stepShots(self, dt, level) end
 
 function DataEnemy:updateCustom(dt, level)
+    self.levelRef = level                                -- (onStomp: dónde dejar lo que deja al morir)
     if self.state == 'reserve' then return true end
     for _, b in ipairs(self.beh) do                      -- esperas de cada comportamiento (cd_<nombre>)
         local key = 'cd_' .. b.def.name
@@ -432,13 +449,29 @@ function DataEnemy.typeDef(spec)
     local f1 = set:frame(1)
     local defaults = {}
     for k, v in pairs(spec.defaults or {}) do defaults[k] = v end
-    return {
+    local def = {
         name = spec.id, label = spec.label or spec.id, category = spec.category or 'Enemigos',
         description = spec.description ~= '' and spec.description or nil,
         class = cls, defaults = defaults, traits = next(traits) and traits or nil,
         dataEnemy = true,
         editor = f1 and { sprite = f1.path, frameW = (f1.w ~= f1.iw) and f1.w or nil } or nil,
     }
+    -- DEJA ALGO AL MORIR (`leaves = { type, chance }` en su JSON; 0.5.186, la Bola de Nieve deja una bola que se carga):
+    -- el nivel le crea esa entidad de RESERVA al cargar (`summons`: mismos índices en servidor y clientes) y, al morir
+    -- pisada o con un ground pound, sale donde murió (DataEnemy:onStomp). La prop `leaves` de cada una decide: al azar
+    -- (`chance`), siempre o nunca.
+    local lv = spec.leaves
+    if type(lv) == 'table' and type(lv.type) == 'string' then
+        def.props = { { key = 'leaves', kind = 'enum', label = 'Deja al morir', group = 'Al morir', default = 'random',
+                        options = { { value = 'random', label = ('A veces (%d %%)'):format(math.floor((lv.chance or 0.34) * 100 + 0.5)) },
+                                    { value = 'always', label = 'Siempre' }, { value = 'never', label = 'Nunca' } },
+                        help = 'Al morir pisada o con un ground pound deja: ' .. lv.type } }
+        def.summons = function(n)
+            if (n.props or {}).leaves == 'never' then return {} end
+            return { { type = lv.type, col = n.col, row = n.row, summonKey = 'lv' .. n.col .. ',' .. n.row } }
+        end
+    end
+    return def
 end
 
 -- Los ids del índice (assets/enemies/index.json), en su orden

@@ -44,7 +44,7 @@ and the network use; **Label** is the (Spanish) name in the editor. Own props = 
 | `piranha` | Piraña | `types/enemies/piranha.lua` | wantsLevel | `area`: points = … · `range`: number = 4.5 · `cooldown`: number = 1.4 · `dryTime`: number = 5 |
 | `pufferfish` | Pez globo | `types/enemies/pufferfish.lua` |  | `area`: points = … · `range`: number = 2.5 · `warnTime`: number = 0.6 · `inflateTime`: number = 2.5 · `cooldown`: number = 1.5 · `swimBob`: number = 6 · `dryTime`: number = 5 |
 | `scorpion` | Escorpión | `types/enemies/scorpion.lua` |  |  |
-| `snowball` | Bola de Nieve | `?` |  |  |
+| `snowball` | Bola de Nieve | `?` |  | `leaves`: enum = random |
 
 ## Jefes
 
@@ -106,6 +106,7 @@ and the network use; **Label** is the (Spanish) name in the editor. Own props = 
 | `extralife` | Vida extra | `types/items/extralife.lua` | pickup |  |
 | `seed` | Semilla | `types/items/seed.lua` |  | `height`: int = 6 · `life`: number = 20 |
 | `smallbox` | Caja pequeña | `types/items/box.lua` |  | `respawn`: number = 5 |
+| `snowball_ball` | Bola de nieve (cargable) | `types/items/snowball_ball.lua` |  |  |
 | `star` | Estrella | `types/items/star.lua` | pickup |  |
 
 ## Directores
