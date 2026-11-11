@@ -468,35 +468,88 @@ local function run()
              #missing > 0 and table.concat(missing, ',') or 'ninguna', #bad > 0 and table.concat(bad, ',', 1, math.min(#bad, 6)) or 'ninguno'))
     end
     go('settings', 'SettingsState', 'settings')
-    local lang0 = L.current()
-    press('nav_right', 0.3)
-    local lang1 = L.current()
-    shot('settings_lang')
-    -- LAS OPCIONES: volumen de la música y de los sonidos (se aplican y se guardan), silencio, A / B; la lista se desplaza
+    -- LA CONFIGURACIÓN rehecha (docs/design/settings-menu-rework.md): pestañas, filas, interruptores, barras
     do
         local S = require 'src/core/Settings'
+        local Rows = require 'src/ui/menu/SettingsRows'
         local st = top()
+        local function tabId() return Rows.TABS[st.tab] and Rows.TABS[st.tab].id end
+        local function rowId() local t = Rows.TABS[st.tab]; local r = t and t.rows[st.row]; return r and r.id end
+        shot('settings_audio')
+        -- pestañas: siguiente ×4 da la vuelta; anterior vuelve
+        local seq = {}
+        for _ = 1, 4 do seq[#seq + 1] = tabId(); press('tab_next', 0.05) end
+        local wrapped = tabId()
+        press('tab_prev', 0.05)
+        local back1 = tabId()
+        press('tab_next', 0.05)
+        check('cfg_pestanas', table.concat(seq, ',') == 'audio,controls,game,other' and wrapped == 'audio' and back1 == 'other',
+            ('siguiente: %s → %s · anterior: %s'):format(table.concat(seq, ','), tostring(wrapped), tostring(back1)))
+        -- volumen de la música (se aplica y se guarda), silencio, A / B
         Sound.playMusic('menus'); wait(0.05)
         local v0 = Sound.musicVolume()
-        press('nav_down', 0.05); press('nav_left', 0.05); press('nav_left', 0.05)
-        local volOk = S.musicVol == 8 and math.abs(Sound.musicVolume() - v0) < 0.01       -- (lo pedido no cambia…)
+        local onMusic = rowId() == 'musicVol'
+        press('nav_left', 0.05); press('nav_left', 0.05)
+        local volOk = onMusic and S.musicVol == 8 and math.abs(Sound.musicVolume() - v0) < 0.01
         S.set('muted', true); local muteOk = love.audio.getVolume() == 0
         S.set('muted', false); muteOk = muteOk and love.audio.getVolume() == 1
-        S.set('swapAB', true)
-        Input.load()
-        S.set('swapAB', false); Input.load()
-        local readBack = love.filesystem.read('options.cfg') or ''
-        local saved = readBack:find('musicVol = 8', 1, true) ~= nil
-        for _ = 1, #st.ROWS - 1 do press('nav_down', 0.03) end               -- (hasta el último y da la vuelta)
-        local scrolled = st.row == 1 and st.first == 1
-        for _ = 1, #st.ROWS - 1 do press('nav_up', 0.03) end
-        shot('settings_rows')
-        press('nav_up', 0.03)                                               -- (de vuelta en el idioma)
+        S.set('swapAB', true); Input.load(); S.set('swapAB', false); Input.load()
+        local saved = (love.filesystem.read('options.cfg') or ''):find('musicVol = 8', 1, true) ~= nil
+        -- abajo y arriba por las filas; arriba desde la primera = la barra de pestañas
+        local n = #Rows.TABS[st.tab].rows
+        for _ = 1, n - 1 do press('nav_down', 0.03) end
+        local last = st.row == n
+        for _ = 1, n do press('nav_up', 0.03) end
+        local onBar = st.row == 0
+        press('nav_down', 0.03)
         S.set('musicVol', 10)
-        check('opciones_son', volOk and muteOk and saved and scrolled, ('música 8=%s · silencio=%s · guardado=%s · la lista da la vuelta=%s'):format(tostring(volOk), tostring(muteOk), tostring(saved), tostring(scrolled)))
+        check('opciones_son', volOk and muteOk and saved and last and onBar and st.row == 1,
+            ('música 8=%s · silencio=%s · guardado=%s · última fila=%s · arriba = pestañas=%s'):format(tostring(volOk), tostring(muteOk),
+             tostring(saved), tostring(last), tostring(onBar)))
+        -- idioma: en JUEGO, izquierda / derecha; los textos cambian al momento
+        press('tab_next', 0.05); press('tab_next', 0.05)
+        local lang0, tab0 = L.current(), L('settings.tab_game')
+        local onLang = rowId() == 'language'
+        press('nav_right', 0.3)
+        local lang1, tab1 = L.current(), L('settings.tab_game')
+        shot('settings_game')
+        press('nav_left', 0.3)
+        check('idioma', onLang and lang1 ~= lang0 and tab1 ~= tab0 and L.current() == lang0,
+            ('%s → %s → %s (pestaña «%s» → «%s»)'):format(lang0, lang1, L.current(), tab0, tab1))
+        -- táctil: tocar una pestaña la elige; tocar una fila sin elegir solo la elige; otra vez, cambia
+        local Lt = st:layout()
+        local tb = Lt.tabs[2]
+        st:touchpressed('t', tb.x + tb.w / 2, tb.y + tb.h / 2); wait(0.05)
+        local tabOk = tabId() == 'controls'
+        local rum0 = S.rumble
+        local rr = st:layout().rows[2]
+        st:touchpressed('t', rr.x + rr.w - 30, rr.y + rr.h / 2); wait(0.05)
+        local selOnly = rowId() == 'rumble' and S.rumble == rum0
+        st:touchpressed('t', rr.x + rr.w - 30, rr.y + rr.h / 2); wait(0.05)
+        local toggled = S.rumble ~= rum0
+        S.set('rumble', rum0)
+        check('cfg_tactil', tabOk and selOnly and toggled,
+            ('tocar la pestaña=%s · 1er toque solo elige=%s · 2º cambia=%s'):format(tostring(tabOk), tostring(selOnly), tostring(toggled)))
+        -- una pestaña que no cabe: barra de desplazamiento y la elegida siempre dentro del panel (960 de ancho)
+        resize(960, 720); wait(0.2)
+        shot('settings_960')
+        local tab = Rows.TABS[1]
+        local keep = tab.rows
+        local many = {}
+        for k = 1, 14 do many[k] = keep[(k - 1) % #keep + 1] end
+        tab.rows = many
+        st.tab, st.row, st.first = 1, 1, 1
+        for _ = 1, 13 do press('nav_down', 0.02) end
+        local L2 = st:layout()
+        local sr, pn = L2.rows[st.row], L2.panel
+        local inside = sr and sr.y >= pn.y and sr.y + sr.h <= pn.y + pn.h
+        tab.rows = keep
+        st.tab, st.row, st.first = 1, 1, 1
+        resize(1280, 720); wait(0.2)
+        local L3 = st:layout()
+        check('cfg_scroll', L2.scroll ~= nil and inside and L3.scroll == nil,
+            ('14 filas: barra=%s, la elegida dentro=%s · 4 filas: barra=%s'):format(tostring(L2.scroll ~= nil), tostring(inside), tostring(L3.scroll ~= nil)))
     end
-    press('nav_left', 0.3)
-    check('idioma', lang1 ~= lang0 and L.current() == lang0, ('%s → %s → %s'):format(lang0, lang1, L.current()))
     press('back', 0.6)
     check('vuelve cfg', selId(top()) == 'settings', 'atrás → menú con CONFIGURACIÓN elegido: ' .. tostring(selId(top())))
 

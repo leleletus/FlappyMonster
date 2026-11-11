@@ -121,6 +121,13 @@ end
 
 -- El RÓTULO de arriba: un botón grande (sin seleccionar) con el título; entra desde arriba
 -- (maxS: escala máxima del texto; 7 si no se dice)
+-- Dónde acaba el rótulo (la misma cuenta que MenuList.header, sin dibujarlo)
+function MenuList.headerBottom(text, maxS)
+    local s = maxS or 7
+    while s > 3 and PixelFont.width(text, s) > WINDOW_W - 260 do s = s - 1 end
+    return 36 + PixelFont.height(s) + 14 * MenuButton.S
+end
+
 function MenuList.header(text, color, A, i, maxS)
     local s = maxS or 7
     while s > 3 and PixelFont.width(text, s) > WINDOW_W - 260 do s = s - 1 end

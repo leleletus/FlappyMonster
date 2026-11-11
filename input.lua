@@ -37,6 +37,9 @@ local controls = {
     -- La RUEDA RÁPIDA de los power-ups (src/states/adventure/WheelState.lua): mantener, apuntar y soltar; 1–6 = el tipo de
     -- esa posición de la rueda directamente
     wheel      = {'key:q', 'key:tab', 'button:leftshoulder'},
+    -- PESTAÑAS de la configuración (src/states/menu/SettingsState.lua): usan teclas del juego, pero en un menú no chocan
+    tab_prev   = {'key:q', 'button:leftshoulder'},
+    tab_next   = {'key:e', 'key:tab', 'button:rightshoulder'},
     wheel_1 = {'key:1'}, wheel_2 = {'key:2'}, wheel_3 = {'key:3'}, wheel_4 = {'key:4'}, wheel_5 = {'key:5'}, wheel_6 = {'key:6'},
     -- El duelo de ritmo (src/ui/RhythmDuel.lua): cruceta o botones; en teclado, flechas, WASD o DFJK. Sin la repetición de los menús
     rhythm_left  = {'key:left',  'key:a', 'key:d', 'button:dpleft',  'button:x', 'axis:leftx-'},
@@ -53,6 +56,7 @@ local labelsConsole = {
     move_left  = "[<]",    move_right= "[>]",     jump      = "[A]",
     crouch     = "[v]",    light     = "[Y]",    grab      = "[^]",
     special    = "[R]",      wheel     = "[L]",      run       = "[X]",
+    tab_prev   = "[L]",      tab_next  = "[R]",
 }
 local labelsPC = {
     flap       = "[Space]", pause  = "[Esc]",   resume = "[Enter]",
@@ -61,6 +65,7 @@ local labelsPC = {
     move_left  = "[<]",     move_right= "[>]",  jump      = "[Space]",
     crouch     = "[Down]",  light = "[F]",      grab      = "[Up]",
     special    = "[X]",     wheel  = "[Q]",     run   = "[Shift]",
+    tab_prev   = "[Q]",     tab_next = "[E]",
 }
 
 -- ¿Se está usando un mando? (el último aparato tocado; en la Switch, siempre que no sea el táctil)
