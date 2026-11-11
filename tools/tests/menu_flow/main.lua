@@ -446,6 +446,27 @@ local function run()
         for i = 1, FlappySave.SLOTS do FlappySave.delete(i) end
         gStateMachine:change('main_menu', { select = 'classic' }); wait(0.6)
     end
+    -- LAS OPCIONES como datos (src/ui/menu/SettingsRows.lua): cada una una vez, con sus textos en todos los idiomas
+    do
+        local okR, Rows = pcall(require, 'src/ui/menu/SettingsRows')
+        local want = { 'musicVol', 'sfxVol', 'muted', 'rhythmOffset', 'swapAB', 'rumble', 'wheelToggle', 'language', 'hitStop', 'showPerf', 'credits' }
+        local seen, missing, bad = {}, {}, {}
+        if okR then
+            for _, tab in ipairs(Rows.TABS) do
+                for _, lg in ipairs(L.LANGUAGES) do if not L.keys(lg.id)[tab.label] then bad[#bad + 1] = tab.label end end
+                for _, r in ipairs(tab.rows) do
+                    seen[r.id] = (seen[r.id] or 0) + 1
+                    for _, k in ipairs({ r.label, r.desc }) do
+                        for _, lg in ipairs(L.LANGUAGES) do if not L.keys(lg.id)[k] then bad[#bad + 1] = k .. '/' .. lg.id end end
+                    end
+                end
+            end
+        end
+        for _, id in ipairs(want) do if seen[id] ~= 1 then missing[#missing + 1] = id .. '×' .. tostring(seen[id] or 0) end end
+        check('cfg_datos', okR and #missing == 0 and #bad == 0 and #Rows.TABS == 4,
+            ('pestañas %s · opciones que faltan o se repiten: %s · textos que faltan: %s'):format(okR and #Rows.TABS or 'sin módulo',
+             #missing > 0 and table.concat(missing, ',') or 'ninguna', #bad > 0 and table.concat(bad, ',', 1, math.min(#bad, 6)) or 'ninguno'))
+    end
     go('settings', 'SettingsState', 'settings')
     local lang0 = L.current()
     press('nav_right', 0.3)
