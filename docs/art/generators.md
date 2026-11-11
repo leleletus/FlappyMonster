@@ -94,6 +94,7 @@ the diff before committing anything they write.
   monster for scale, the 8 cages, open ones with 1-5 lamps, the loose flappies, a ×8 zoom); `--apply` writes the
   three PNGs. Variants are appended at the END of `VARIANTS` (the order is the variant number). Not hand-edited: safe to re-run.
 - `tools/art/items/make_hint_sign.py` (0.5.190): the help SIGN `assets/images/items/hint/sign-Sheet.png` (12x16 ×2: lit «?», read «?»; wood of the boxes, the game's navy outline; plain Python, safe to re-run).
+- `tools/art/ui/make_settings_ui.py` (0.5.197): the settings screen art in `assets/images/ui/settings/` (checker background tile, the main menu's gear, the switch, the volume bar block). Not hand-edited.
 - `tools/art/ui/make_input_glyphs.py` (0.5.195): the button ICONS of the help signs, `assets/images/ui/glyphs/<name>.png` (11 px high: keyboard keys `key_*`, controller buttons and d-pad `pad_*`; 0.5.196: `key_x` and the shoulder buttons `pad_l` / `pad_r`, for the cage's special-attack prompt), chosen by `src/ui/InputGlyphs.lua`. Not hand-edited.
 - `tools/art/ui/make_run_button.py` (0.5.190): the touch RUN button `assets/images/ui/touch/run-Sheet.png` (24x24 ×2, the round style of the flashlight / special buttons with a » inside; plain Python, safe to re-run).
 - `tools/art/items/make_snowball_ball.py` (0.5.186): the carryable snowball `assets/images/items/snowball/ball.png` (10x10, hand-drawn map in the script with the Snowball's palette; plain Python, no PIL).

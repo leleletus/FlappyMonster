@@ -35,3 +35,4 @@ __pycache__/
 # Archivos de Aseprite (fuentes del arte): van FUERA del repo, junto a los originales
 *.aseprite
 *.ase
+.superpowers/
