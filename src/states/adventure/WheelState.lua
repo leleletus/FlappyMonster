@@ -13,6 +13,9 @@
 -- Revisión final del Plan 4b: tocar la bolsa y levantar el MISMO dedo ya no la cierra; el ratón (game.lua lo manda como
 -- touchpressed 'mouse', sin soltar) usa la casilla al hacer clic; soltar con la dirección (palanca / flechas) en el
 -- centro CANCELA (el diseño: "soltar L con la palanca centrada")
+-- 0.5.196 (el usuario: «una vez entras y te mueves para ver lo que tienes, no sé cómo salir y casi siempre termino
+-- gastando uno sin querer»): abajo, SIEMPRE, cómo se usa y cómo se sale sin gastar; volver al CENTRO (ratón también)
+-- deja de elegir; y al soltar solo se usa lo que lleva elegido al menos PICK_HOLD s (pasar por encima no gasta nada)
 local BaseState = require 'src/core/BaseState'
 local MenuKit   = require 'src/ui/menu/MenuKit'
 local PixelFont = require 'src/ui/PixelFont'
@@ -22,6 +25,7 @@ local WheelState = BaseState:new()
 
 local CELL, R = 104, 222                 -- casilla (px) y radio del anillo (el centro cabe dentro sin tapar casillas)
 local ICON_S = 4                         -- iconos de 12x12 ×4 (la densidad de los objetos)
+local PICK_HOLD = 0.3                    -- s apuntando a la misma casilla para que soltar la use
 local img, quads
 
 local function loadArt()
@@ -75,8 +79,17 @@ end
 
 function WheelState:_close() gStateMachine:pop() end
 
-function WheelState:_choose()
+function WheelState:_setSel(i, src)
+    if i ~= self.sel then
+        if i then Sound.play('select') end
+        self.selT = 0
+    end
+    self.sel, self.lastSrc = i, src or self.lastSrc
+end
+
+function WheelState:_choose(fromRelease)
     local i = self.sel
+    if fromRelease and i and (self.selT or 0) < PICK_HOLD then i = nil end      -- (pasaba por encima: no se gasta)
     if i and self:_usable(i) and self.inv.spend(self.items[i].id) then
         self.pa:usePowerup(self.items[i].id)
     elseif i then
@@ -87,6 +100,7 @@ end
 
 function WheelState:update(dt)
     self.t = self.t + dt
+    self.selT = (self.selT or 0) + dt
     if Input.pressed('pause') or Input.pressed('back') then Sound.play('select', 0.85); return self:_close() end
     -- apuntar: palanca o flechas / WASD
     local sx, sy = Input.stick()
@@ -94,13 +108,12 @@ function WheelState:update(dt)
     local ky = (Input.down('crouch') and 1 or 0) - (Input.down('grab') and 1 or 0)
     local p = self:_pick(sx, sy) or self:_pick(kx, ky)
     if p then
-        if p ~= self.sel then Sound.play('select') end
-        self.sel, self.lastSrc = p, 'dir'
+        self:_setSel(p, 'dir')
     elseif self.lastSrc == 'dir' then
-        self.sel = nil                              -- (la palanca / las flechas vuelven al centro: nada elegido)
+        self:_setSel(nil)                           -- (la palanca / las flechas vuelven al centro: nada elegido)
     end
     if self.mode == 'hold' then
-        if not Input.down('wheel') then return self:_choose() end
+        if not Input.down('wheel') then return self:_choose(true) end
     elseif self.mode == 'toggle' then
         if self.t > 0.05 and (Input.pressed('wheel') or Input.pressed('confirm')) then return self:_choose() end
     end
@@ -132,6 +145,12 @@ function WheelState:render()
         MenuKit.text(FONT_SMALL, #self.items == 0 and L('wheel.empty') or L(hint), Ly.cx - W / 2 + 10, Ly.cy - 6,
                      W - 20, 'center', { 1, 1, 1 }, a)
     end
+    -- abajo, siempre: cómo se usa y cómo se sale sin gastar nada
+    local foot = (self.mode == 'tap' and 'wheel.foot_tap') or (self.mode == 'toggle' and 'wheel.foot_toggle') or 'wheel.foot'
+    local ft = L(foot, { wheel = Input.label('wheel') })
+    local fw = math.min(WINDOW_W - 32, FONT_SMALL:getWidth(ft) + 40)
+    MenuKit.box('window', math.floor((WINDOW_W - fw) / 2), WINDOW_H - 84, fw, 52, a)
+    MenuKit.text(FONT_SMALL, ft, math.floor((WINDOW_W - fw) / 2) + 20, WINDOW_H - 66, fw - 40, 'center', { 1, 1, 1 }, a)
     love.graphics.setColor(1, 1, 1, 1)
 end
 
@@ -142,11 +161,8 @@ function WheelState:_cellAt(x, y)
 end
 function WheelState:mousemoved(x, y)
     local Ly = self:_layout()
-    local p = self:_pick((x - Ly.cx) / 60, (y - Ly.cy) / 60)
-    if p then
-        if p ~= self.sel then Sound.play('select') end
-        self.sel, self.lastSrc = p, 'mouse'
-    end
+    -- (en el centro: nada elegido, también con el ratón — antes se quedaba lo último que tocó y se gastaba al soltar —)
+    self:_setSel(self:_pick((x - Ly.cx) / 60, (y - Ly.cy) / 60), 'mouse')
 end
 function WheelState:touchpressed(id, x, y)
     self.openTouch = nil                            -- (un toque nuevo: el dedo que la abrió ya se levantó — en Android el id se reusa —)

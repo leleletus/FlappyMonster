@@ -8,8 +8,8 @@
 # hecha de TRAMOS que no se repiten (cada etapa con su idea, y los tramos la van apretando), con una curva de dificultad:
 #   1 «Los pilares» (200 px/s): huecos de 4 que pasan a 3; escalera, el primer pasillo, una jaula colgada de un pilar
 #     (la ráfaga atraviesa los pilares) y otra abajo del todo, junto al borde; acaba en un zigzag
-#   2 «Grietas y cornisas» (210 px/s): huecos de 3; jaula a la vista, escondite tras un muro con la carga justo delante,
-#     un cañón (pasillo sinuoso), pilares dobles, una CORNISA (arriba, ruta estrecha con premio; abajo, la segura), ritmo
+#   2 «Grietas y cornisas» (210 px/s): huecos de 3; jaula a la vista, una galería tras un muro con la carga para la
+#     jaula dentro, un cañón (pasillo sinuoso), pilares dobles, una CORNISA (arriba, ruta estrecha con premio; abajo, la segura), ritmo
 #     de 5 columnas, una bajada de pilares pegados (cada 4) y un segundo cañón
 #   3 «La máquina del Malvado» (225 px/s): huecos de 3 y AGUJAS de 2; lanzarredes solos, en BATERÍA (tres seguidos) y
 #     debajo de una cornisa (arriba, sin redes pero con estalactitas; abajo, con redes), el atajo del túnel sobre dos
@@ -18,12 +18,14 @@
 # ruta principal (los huecos) nunca necesita romper un muro ni coger la ruta de arriba de una cornisa (el piloto sin carga
 # de flappy_flight `etapa` las pasa); un lanzarredes, a 3 columnas o más de los pilares de los lados (sitio para esperar
 # la red); las jaulas de antes siguen en el MISMO índice de la lista de entidades (`rescued` de las partidas guarda el
-# índice: legacy=), con su regalo.
+# índice: legacy=), con su regalo; toda ruta de arriba (cornisa, túnel, galería) tiene 4 filas libres sobre la piedra
+# (tocarla quita 1: con menos no se vuela) y flappy_flight `etapa_arriba` la vuela; cada jaula y muro se puede abrir con las
+# cargas que hay antes de él aunque se haya disparado a todo lo anterior (flappy_flight `cargas`).
 #   python3 tools/levelgen/levels_flappy_valle.py
 import os, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import flappy_lib
-from flappy_lib import ent, launcher, corridor, ledge, cubby, tunnel
+from flappy_lib import ent, launcher, corridor, ledge, tunnel
 
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..')
 BG = 'valley'
@@ -152,16 +154,23 @@ s = Course()
 # A calentamiento: cada 7; dos cargas
 a = s.pillars(7, [(4, 4), (2, 3), (5, 3), (3, 3), (6, 3)])
 s.mid('flapcharge', a[0]); s.mid('flapcharge', a[3])
-# B grietas: la jaula a la vista (fila 2, carga 2) y el escondite (muro de carga 2, jaula de carga 1 detrás) con una
-#   carga justo delante del muro, debajo: romper, coger la carga y disparar otra vez en un par de segundos
-b = s.pillars(7, [(3, 3), (5, 3), (2, 3), (5, 3)])
+# B grietas: la jaula a la vista (fila 2, carga 2) y la GALERÍA: un túnel de 4 filas (suelo de piedra en la 5) tras un
+#   muro de carga 2; DENTRO, primero una carga y luego la jaula (carga 1): la ráfaga que rompe el muro lo gasta todo, y
+#   la carga para la jaula solo se coge después (antes, un escondite de una casilla con la carga delante: el usuario
+#   rompió el muro y se quedó sin carga para la jaula). Debajo, la ruta de los huecos
+b = s.pillars(7, [(3, 3), (5, 3), (3, 3)])          # (el 3º, alto: desde su hueco se entra en la galería)
 s.mid('flapcharge', b[0])
 s.cage(b[0][0] + 4, 2, 2, 'heart', legacy=11)
 s.mid('flapcharge', b[1]); s.mid('flapcharge', b[2])
-wc = b[2][0] + 3
-ce, cs = cubby(wc, 'cage', min_charge=2, minCharge=1, gift='magnet_points')
-s.ents.append(ce[0]); s.cages.append((ce[1], 10)); s.solids += cs
-s.put('flapcharge', wc - 1, 3)
+G0 = b[2][0] + 4
+G1 = G0 + 12
+under = s.at([(G0 + 4, 7, 3), (G0 + 10, 8, 3)])
+ge, gs, ga = tunnel(G0, G1, under, min_charge=2, floor=5)
+s.ents += ge; s.solids += gs; s.air += ga
+s.put('flapcharge', G0 + 2, 3)
+s.cage(G0 + 8, 2, 1, 'magnet_points', legacy=10)
+s.put('flapcharge', G1 - 1, 3)
+s.c = G1 + 5
 # C el cañón: 20 columnas de pasillo de 3 que serpentea (cuestas de una fila cada dos o tres columnas)
 s.skip(2)
 c = s.corridor([5, 5, 4, 4, 3, 3, 3, 3, 4, 4, 4, 5, 5, 6, 6, 6, 5, 5, 4, 4], 3)
@@ -173,14 +182,13 @@ d = s.at([(s.c, 3, 3), (s.c + 3, 4, 3), (s.c + 10, 6, 3), (s.c + 13, 5, 3),
           (s.c + 20, 2, 3), (s.c + 23, 3, 3), (s.c + 30, 6, 3), (s.c + 33, 7, 3)])
 s.mid('flapcharge', d[5])
 s.skip(7)
-# E la cornisa: un suelo de piedra en la fila 4 parte la pantalla. Abajo, la ruta segura (huecos de 3); arriba, una ruta
-#   de 3 filas con estalactitas (filas 2-3 libres) que lleva dos cargas y una jaula
+# E la cornisa: un suelo de piedra en la fila 5 parte la pantalla. Abajo, la ruta segura (huecos de 3); arriba, una ruta
+#   de 4 filas libres (sin estalactitas: tocar la piedra quita 1) que lleva dos cargas y una jaula
 L0 = s.c + 2
-low = [(L0 + 2, 6, 3), (L0 + 8, 7, 3), (L0 + 14, 6, 3), (L0 + 20, 7, 3), (L0 + 26, 6, 3)]
-stal = [(L0 + 5, 2, 10), (L0 + 11, 2, 10), (L0 + 17, 2, 10), (L0 + 23, 2, 10)]
-s.at(low + stal)
+low = [(L0 + 2, 7, 3), (L0 + 8, 8, 3), (L0 + 14, 7, 3), (L0 + 20, 8, 3), (L0 + 26, 7, 3)]
+s.at(low)
 L1 = L0 + 26
-ls, la = ledge(L0, L1, low + stal, 4)
+ls, la = ledge(L0, L1, low, 5)
 s.solids += ls; s.air += la
 s.put('flapcharge', L0 + 7, 2); s.put('flapcharge', L0 + 19, 2)
 s.cage(L0 + 25, 2, 2, 'ghost')
@@ -216,12 +224,12 @@ s.put('apple', b[2][0] + 3, 5)
 # C el atajo: un túnel arriba tras un muro (carga 2) por encima de DOS lanzarredes (sus redes se quedan en su suelo);
 #   por debajo, la ruta de los huecos
 s.skip(2)
-c = s.pillars(7, [(5, 3), (6, 3), (5, 4), (6, 3), (5, 3)])
+c = s.pillars(7, [(3, 3), (7, 3), (8, 3), (7, 3), (5, 3)])     # (el 1º, alto: desde su hueco se entra en el túnel)
 T0, T1 = c[0][0] + 3, c[4][0] - 3
-te, ts, ta = tunnel(T0, T1, c, min_charge=2)
+te, ts, ta = tunnel(T0, T1, c, min_charge=2, floor=5)       # (4 filas libres: se vuela; con 2, imposible)
 s.ents += te; s.solids += ts; s.air += ta
-s.launcher(c[1][0] + 3); s.launcher(c[3][0] + 3)
-s.put('flapcharge', T0 + 6, 2); s.put('flapcharge', T0 + 15, 1)
+s.launcher(c[1][0] + 3, 10); s.launcher(c[3][0] + 3, 10)
+s.put('flapcharge', T0 + 6, 2); s.put('flapcharge', T0 + 15, 3)
 s.mid('flapcharge', c[2])
 # D agujas: huecos de 2 (de una columna) entre huecos de 3
 d = s.pillars(6, [(4, 3), (5, 2), (3, 3), (4, 2), (6, 3), (5, 2)])
@@ -234,21 +242,22 @@ for k in range(3):
     s.launcher(e[k][0] + 3)
 s.mid('flapcharge', e[0]); s.mid('flapcharge', e[1])
 s.cage(e[3][0], 10, 1, 'shield')
-# F la cornisa del Malvado: piedra en la fila 4. Abajo, huecos de 3 con dos lanzarredes (las redes paran en la piedra);
-#   arriba, sin redes pero con estalactitas (filas 2-3) y una carga
+# F la cornisa del Malvado: piedra en la fila 5. Abajo, huecos de 3 con dos lanzarredes (fila 10; las redes paran en
+#   la piedra); arriba, sin redes pero con estalactitas de una fila (filas 2-4 libres: 130 px para el centro del
+#   monstruo, un aleteo sube 75) y una carga
 s.skip(2)
 L0 = s.c
-low = [(L0 + 2, 6, 3), (L0 + 8, 7, 3), (L0 + 14, 6, 3), (L0 + 20, 7, 3), (L0 + 26, 6, 3)]
+low = [(L0 + 2, 7, 3), (L0 + 8, 7, 3), (L0 + 14, 8, 3), (L0 + 20, 7, 3), (L0 + 26, 7, 3)]
 stal = [(L0 + 5, 2, 10), (L0 + 11, 2, 10), (L0 + 17, 2, 10), (L0 + 23, 2, 10)]
 s.at(low + stal)
-ls, la = ledge(L0, L0 + 26, low + stal, 4)
+ls, la = ledge(L0, L0 + 26, low + stal, 5)
 s.solids += ls; s.air += la
-s.launcher(L0 + 5); s.launcher(L0 + 17)
+s.launcher(L0 + 5, 10); s.launcher(L0 + 17, 10)
 s.put('flapcharge', L0 + 14, 2)
 s.mid('apple', low[3])
-s.c = L0 + 32
+s.c = L0 + 34
 # G el pasillo vigilado: un pasillo de 3 que baja y sube despacio y un lanzarredes a la salida
-p = s.corridor([4, 4, 4, 5, 5, 5, 6, 6, 6, 5, 5, 5, 4, 4, 4], 3)
+p = s.corridor([3, 3, 4, 4, 4, 5, 5, 5, 6, 6, 6, 5, 5, 5, 4, 4, 4], 3)
 s.mid('flapcharge', p[7])
 s.launcher(p[-1][0] + 3)
 s.put('flapcharge', p[-1][0] + 4, 4)

@@ -4,8 +4,7 @@
 # a tamaño de arte (16 px de lado, se dibujan ×4). Sin alas en nada (golden rule 6).
 #   assets/images/items/flapcharge.png       la CARGA DE ALETEO: un remolino de magia de aleteo
 #   assets/images/fx/flapburst-Sheet.png     la RÁFAGA del ataque especial: una media luna de magia que avanza (4 cuadros)
-#   assets/images/items/cage-Sheet.png       el FLAPPY ENJAULADO: jaula cerrada con un flappy dentro · jaula abierta · el
-#                                            flappy libre (de otro color que el monstruo: rosa, con cuernitos; SIN alas)
+#   (la jaula del flappy enjaulado salía de aquí hasta 0.5.195: ahora tools/art/items/make_cage.py)
 #   assets/images/world/flappy/crackwall.png el MURO AGRIETADO: un bloque de piedra del Valle con grietas (se repite)
 #   /usr/bin/python3 tools/art/items/make_flappy_items.py
 #   (nada de esto está retocado a mano: se puede volver a generar)
@@ -22,9 +21,6 @@ PAL = {
     'g': (150, 150, 165, 255),     # barrotes
     'G': (200, 200, 215, 255),     # brillo de los barrotes
     'd': (70, 70, 85, 255),        # sombra de los barrotes
-    'p': (240, 120, 170, 255),     # flappy enjaulado (rosa)
-    'P': (255, 190, 215, 255),     # su brillo
-    'k': (30, 16, 26, 255),        # sus ojos
     's': (150, 135, 120, 255),     # piedra
     'S': (185, 170, 150, 255),     # su brillo
     'r': (100, 88, 78, 255),       # su sombra
@@ -84,45 +80,7 @@ frames = [BURST[0], shift_trail(BURST[0], 1), shift_trail(BURST[0], 2), shift_tr
 sheet = [''.join(f[y] for f in frames) for y in range(12)]
 save(sheet, 'assets/images/fx/flapburst-Sheet.png')
 
-# El flappy enjaulado: jaula de barrotes con cúpula y un flappy rosa dentro · la misma abierta (puerta a un lado) · el
-# flappy suelto (sale volando por magia hacia arriba)
-CAGE_CLOSED = [
-    '................', '................', '................',
-    '......dddd......',
-    '.....dGGGGd.....',
-    '....dg.gg.gd....',
-    '....dgpppp.d....',
-    '....dgpkpkgd....',
-    '....dgppppgd....',
-    '....dg.gg.gd....',
-    '...dGGGGGGGGd...',
-    '...dddddddddd...',
-    '................', '................', '................', '................',
-]
-CAGE_OPEN = [
-    '................', '................', '................',
-    '......dddd......',
-    '.....dGGGGd.....',
-    '....dg.gg..d....',
-    '....dg.gg.......',
-    '....dg.gg...d...',
-    '....dg.gg...g...',
-    '....dg.gg...g...',
-    '...dGGGGGGGGd...',
-    '...dddddddddd...',
-    '................', '................', '................', '................',
-]
-FREED = [
-    '................', '................', '................', '................',
-    '.....p..p.......',
-    '.....pppp.......',
-    '....pPkPkp......',
-    '....pPPPPp......',
-    '.....pppp.......',
-    '.....p..p.......',
-    '................', '................', '................', '................', '................', '................',
-]
-save([CAGE_CLOSED[y] + CAGE_OPEN[y] + FREED[y] for y in range(16)], 'assets/images/items/cage-Sheet.png')
+# (el FLAPPY ENJAULADO ya no sale de aquí: tools/art/items/make_cage.py, 0.5.196)
 
 CRACKWALL = [
     'rrrrrrrrrrrrrrrr',

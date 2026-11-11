@@ -11,6 +11,9 @@
 --           bajo tierra con SECS=1, sobre el agua fija con SECS=8)
 --   FIXED=1  foto REPETIBLE (azar con semilla fija y reloj parado): dos ejecuciones dan el mismo PNG, para
 --            comparar antes / después de mover o rehacer algo que no debe cambiar el dibujo
+--   VIEWER=col,fila[,carga]  un JUGADOR en esa casilla (con esa carga): se dibuja encima lo que cada entidad enseña a
+--           su jugador (renderOverlay: el bocadillo de los carteles de ayuda y de las jaulas Flappy). DEVICE=keyboard|
+--           gamepad|touch = el aparato (los iconos de los botones; por defecto keyboard)
 -- Sin suelo (niveles Flappy, `openBottom`): la foto lleva también la franja que el juego ve por debajo del nivel.
 -- Salida: <save>/shot_<nivel>.png  (~/.local/share/love/fm_test_levelshots/)
 io.stdout:setvbuf('no')
@@ -68,6 +71,17 @@ local function shot(path)
     if level.openBottom and y0 + H >= level.heightPx then H = H + math.max(0, 720 - level.heightPx) end
     local out = love.graphics.newCanvas(math.ceil(W * k), math.ceil(H * k))
     WINDOW_W, WINDOW_H = 1280, 720
+    -- (VIEWER: un jugador de mentira para los renderOverlay, con el Input de verdad para los botones del aparato)
+    local viewer
+    local vs = os.getenv('VIEWER')
+    if vs and vs ~= '' then
+        local vc, vr, vq = vs:match('^(%d+),(%d+),?(%d*)$')
+        assert(vc, 'VIEWER=col,fila[,carga]')
+        viewer = { x = (tonumber(vc) - 0.5) * TILE_PX, y = (tonumber(vr) - 0.5) * TILE_PX, charge = tonumber(vq) or 0 }
+        Input = require 'input'
+        Input.lastDevice = os.getenv('DEVICE') or 'keyboard'
+        FONT_SMALL = FONT_SMALL or love.graphics.newFont('assets/fonts/PressStart2P.ttf', 16)
+    end
     local view = love.graphics.newCanvas(WINDOW_W, WINDOW_H)
     local water = love.graphics.newCanvas(WINDOW_W, WINDOW_H)
     local warned
@@ -102,6 +116,10 @@ local function shot(path)
                 local sx, sy = level:getSpawnPx()
                 Darkness.render(level, cx, cy, { { x = sx, y = sy, facing = 1, on = true } })
                 Darkness.renderGlow(level, es, cx, cy)
+            end
+            if viewer then
+                love.graphics.setCanvas(view)
+                Entities.renderOverlays(es, cx, cy, viewer, 1)
             end
             love.graphics.setCanvas(out)
             love.graphics.setColor(1, 1, 1, 1)

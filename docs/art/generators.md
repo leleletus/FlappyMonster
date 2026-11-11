@@ -57,7 +57,8 @@ the diff before committing anything they write.
   material's dark tone. Without flags = previews in `FlappyMonster_pruebas/coleccion/`; `--apply` writes only its own
   files. Safe to re-run (nothing of it is hand-edited yet). See [story-mode](../story/story-mode.md#the-collection).
 - `tools/art/items/make_flappy_items.py` (0.5.169): the Flappy charge item (`items/flapcharge.png`), the burst
-  (`fx/flapburst-Sheet.png`), the cage (`items/cage-Sheet.png`) and the cracked wall (`world/flappy/crackwall.png`).
+  (`fx/flapburst-Sheet.png`) and the cracked wall (`world/flappy/crackwall.png`) (until 0.5.195 also the old 16x16 cage,
+  now `make_cage.py`).
   `tools/art/ui/make_flappy_hud.py`: the Flappy HUD (`ui/flappy/hud-Sheet.png`) and the touch special button
   (`ui/touch/special-Sheet.png`). `make_food_sprites.py --apply --only valle` writes only the Valley peach. Safe to
   re-run (nothing hand-edited yet).
@@ -86,8 +87,14 @@ the diff before committing anything they write.
   previews in `FlappyMonster_pruebas/pinguino/`; `--apply A|B [--force]` writes `enemies/penguin/penguin-Sheet.png` and
   (only if missing) `assets/anim/enemies/penguin.json`. B applied 2026-10-29 without the user (away): to switch, `--apply A --force`.
 - `tools/art/player/make_monster_actions.py` (0.5.190): the monster's ACTION poses (`assets/images/player/actions/<pose>.png`, 9x16 / 13x16, plain face) and their EYE overlays (`actions/eyes/`), hand-written pixel maps; with no flags only previews (`FlappyMonster_pruebas/monstrito_animaciones/vista_previa_v4.png`, `escala_juego_v4.png`); `--apply` writes new files only (`--force` overwrites: the user may retouch them by hand). Prints each pose's eye table (the `eye`, `ex`, `ey`, `esep` of `assets/anim/player.json`). Plain Python.
+- `tools/art/items/make_cage.py` (0.5.196): the caged FLAPPY, bigger and with a different flappy in each cage
+  (`assets/images/items/cage/`: `cage-Sheet.png` 23x24 ×2 closed / open, `flappies-Sheet.png` 9x16, one row per variant
+  × arms down / up, 8 variants in the monster's style; `lamp.png` 2x2, the charge lamps). Plain Python (no PIL);
+  without flags only the preview (`FlappyMonster_pruebas/jaulas/vista_previa.png`, or `--preview DIR`: old cage, the
+  monster for scale, the 8 cages, open ones with 1-5 lamps, the loose flappies, a ×8 zoom); `--apply` writes the
+  three PNGs. Variants are appended at the END of `VARIANTS` (the order is the variant number). Not hand-edited: safe to re-run.
 - `tools/art/items/make_hint_sign.py` (0.5.190): the help SIGN `assets/images/items/hint/sign-Sheet.png` (12x16 ×2: lit «?», read «?»; wood of the boxes, the game's navy outline; plain Python, safe to re-run).
-- `tools/art/ui/make_input_glyphs.py` (0.5.195): the button ICONS of the help signs, `assets/images/ui/glyphs/<name>.png` (11 px high: keyboard keys `key_*`, controller buttons and d-pad `pad_*`), chosen by `src/ui/InputGlyphs.lua`. Not hand-edited.
+- `tools/art/ui/make_input_glyphs.py` (0.5.195): the button ICONS of the help signs, `assets/images/ui/glyphs/<name>.png` (11 px high: keyboard keys `key_*`, controller buttons and d-pad `pad_*`; 0.5.196: `key_x` and the shoulder buttons `pad_l` / `pad_r`, for the cage's special-attack prompt), chosen by `src/ui/InputGlyphs.lua`. Not hand-edited.
 - `tools/art/ui/make_run_button.py` (0.5.190): the touch RUN button `assets/images/ui/touch/run-Sheet.png` (24x24 ×2, the round style of the flashlight / special buttons with a » inside; plain Python, safe to re-run).
 - `tools/art/items/make_snowball_ball.py` (0.5.186): the carryable snowball `assets/images/items/snowball/ball.png` (10x10, hand-drawn map in the script with the Snowball's palette; plain Python, no PIL).
 - `tools/art/enemies/make_snowball.py`: the Snowball (`snowball`, the Giant Snowball's little sister; 14x12 frames: happy

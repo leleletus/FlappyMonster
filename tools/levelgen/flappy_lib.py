@@ -128,7 +128,10 @@ def corridor(c0, tops, h):
 def ledge(c0, c1, gaps, row):
     """Una CORNISA: un suelo de bloques sólidos en la fila `row` de c0 a c1 que parte la pantalla en dos rutas. La de
     ABAJO es la de los huecos (han de empezar en row + 2 o más abajo: el pilar que queda debajo de la cornisa cuelga de
-    ella); la de ARRIBA, filas 1 a row - 1, es una ruta opcional (sin muro: se entra por arriba antes de c0; los pilares
+    ella); la de ARRIBA, filas 1 a row - 1, es una ruta opcional. VOLABLE solo con row >= 5 (4 filas libres, 256 px): el
+    monstruo (caja de fuera 75 px, de su centro 27 arriba y 48 abajo) no puede tocar la piedra (posarse quita 1) y un
+    aleteo sube 75 px (FLY_FLAP 450, FLY_GRAVITY 1350) → su centro tiene 181 px (con estalactitas de una fila, 130); con
+    row = 4 y estalactitas quedaban 66 px, menos que un aleteo: imposible (el usuario, 2026-11-11) (sin muro: se entra por arriba antes de c0; los pilares
     de dentro pierden esas filas, salvo los huecos que empiecen en la fila 2 —una estalactita de una fila—). El piloto de
     flappy_flight no toma la de arriba (sus huecos tocan un bloque). → bloques sólidos, casillas vacías"""
     for c, top, h in gaps:
@@ -138,16 +141,17 @@ def ledge(c0, c1, gaps, row):
     return solids, air
 
 
-def tunnel(c0, c1, gaps, min_charge=2):
-    """Un ATAJO arriba: un túnel de las filas 1-2 de la columna c0 + 1 a la c1, con un muro agrietado en c0 (pide
-    `min_charge`) y un suelo de bloques sólidos en la fila 3 de c0 a c1; los pilares de dentro pierden sus filas 1-2. Por
-    debajo sigue la ruta de los huecos (que han de empezar en la fila 5 o más abajo); el suelo del túnel para las redes de
-    los lanzarredes de debajo. → entidades, bloques sólidos, casillas vacías"""
+def tunnel(c0, c1, gaps, min_charge=2, floor=3):
+    """Un ATAJO arriba: un túnel de las filas 1 a floor - 1 de la columna c0 + 1 a la c1, con un muro agrietado en c0 (pide
+    `min_charge`, tan alto como el túnel) y un suelo de bloques sólidos en la fila `floor` de c0 a c1; los pilares de
+    dentro pierden esas filas. Por debajo sigue la ruta de los huecos (que han de empezar en la fila floor + 2 o más
+    abajo: el pilar de debajo cuelga del suelo); el suelo para las redes de los lanzarredes de debajo. Para que se pueda
+    VOLAR dentro hacen falta 4 filas (floor = 5): ver `ledge`. → entidades, bloques sólidos, casillas vacías"""
     for c, top, h in gaps:
-        assert not (c0 <= c <= c1) or top >= 5, ('hueco bajo el túnel demasiado alto', c, top)
-    ents = [ent('crackwall', c0, 2, minCharge=min_charge, rows=2)]
-    solids = [(c, 3) for c in range(c0, c1 + 1)]
-    air = [(c, r) for c, _, _ in gaps if c0 < c <= c1 for r in (1, 2)]
+        assert not (c0 <= c <= c1) or top >= floor + 2, ('hueco bajo el túnel demasiado alto', c, top)
+    ents = [ent('crackwall', c0, floor - 1, minCharge=min_charge, rows=floor - 1)]
+    solids = [(c, floor) for c in range(c0, c1 + 1)]
+    air = [(c, r) for c, _, _ in gaps if c0 < c <= c1 for r in range(1, floor)]
     return ents, solids, air
 
 

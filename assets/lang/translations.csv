@@ -241,6 +241,8 @@ flappy.map_hint_shop,{lr} elegir    {ok} entrar    {back} partidas,{lr} choose  
 flappy.map_locked,Supera la etapa anterior para abrirla,Clear the previous stage to open it,
 flappy.map_new,Sin jugar todavía,Not played yet,
 flappy.map_cages,Flappies liberados: {n}/{m},Flappies freed: {n}/{m},
+flappy.cage_hint,¡Libéralo con el ataque especial {special}!,Free it with the special attack {special}!,"Bocadillo junto a una jaula cerrada (src/world/entities/types/items/cage.lua, src/ui/HintBubble.lua)"
+flappy.cage_need,"Necesitas {n} de carga: coge más cargas y pulsa {special}","You need {n} charge: grab more charges and press {special}",La misma jaula sin carga suficiente
 flappy.map_best,"Mejor nota: {grade}    Mejor tiempo: {t} s","Best grade: {grade}    Best time: {t} s",
 flappy.map_shop,La tienda del mercader,The merchant's shop,"Mapa de zona Flappy: el nido del mercader (src/states/flappy/FlappyMapState.lua)"
 flappy.map_shop_line,Power-ups a cambio de los puntos del monedero,Power-ups for your wallet points,
@@ -252,6 +254,9 @@ wheel.hint,Apunta y suelta,Point and release,
 wheel.hint_tap,Toca uno,Tap one,
 wheel.hint_toggle,Apunta y pulsa otra vez,Point and press again,La rueda de los power-ups (src/states/adventure/WheelState.lua)
 wheel.empty,Sin power-ups,No power-ups,
+wheel.foot,"Apunta a uno y suelta {wheel} para usarlo · Suelta en el centro o pulsa {back} para salir sin gastar nada","Point at one and release {wheel} to use it · Release in the middle or press {back} to leave without using anything",La rueda: la línea de abajo
+wheel.foot_toggle,"Apunta a uno y pulsa {wheel} para usarlo · {back} para salir sin gastar nada","Point at one and press {wheel} to use it · {back} to leave without using anything",
+wheel.foot_tap,"Toca uno para usarlo · Toca fuera para salir sin gastar nada","Tap one to use it · Tap outside to leave without using anything",
 wheel.cant,No se puede usar ahora,Can't use it now,
 powerup.shield,ESCUDO,SHIELD,"Power-ups (src/world/powerups/)"
 powerup.shield.desc,Para el siguiente golpe (no las caídas),Stops the next hit (not falls),
@@ -315,6 +320,7 @@ keys.touch_grab,[ARRIBA],[UP],
 keys.touch_light,[LINTERNA],[LIGHT],
 keys.touch_move_left,[<],[<],
 keys.touch_move_right,[>],[>],
+keys.touch_special,[ATAQUE],[ATTACK],"El botón táctil del ataque especial (niveles Flappy)"
 settings.perf_on,MEDIDOR DE RENDIMIENTO: SÍ,PERFORMANCE METER: ON,
 settings.perf_off,MEDIDOR DE RENDIMIENTO: NO,PERFORMANCE METER: OFF,
 settings.rhythm_offset,AJUSTE DEL RITMO: {ms} MS,RHYTHM SYNC: {ms} MS,

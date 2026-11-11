@@ -7,9 +7,9 @@
 --   local img = InputGlyphs.get('jump')   → Image o nil
 local G = {}
 
-local PC  = { space = 'key_space', shift = 'key_shift', f = 'key_f', up = 'key_up', down = 'key_down',
+local PC  = { space = 'key_space', shift = 'key_shift', f = 'key_f', x = 'key_x', up = 'key_up', down = 'key_down',
               ['<'] = 'key_left', ['>'] = 'key_right' }
-local PAD = { a = 'pad_a', b = 'pad_b', x = 'pad_x', y = 'pad_y', ['^'] = 'pad_up', v = 'pad_down',
+local PAD = { a = 'pad_a', b = 'pad_b', x = 'pad_x', y = 'pad_y', l = 'pad_l', r = 'pad_r', ['^'] = 'pad_up', v = 'pad_down',
               ['<'] = 'pad_left', ['>'] = 'pad_right' }
 
 local cache = {}

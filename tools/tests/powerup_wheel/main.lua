@@ -46,7 +46,8 @@ local function openWheel() pressed.wheel = true; held.wheel = true; wait(0.1) en
 local function choose(id)
     local w = top()
     if name(w) ~= 'WheelState' then return end
-    for i, s in ipairs(w.items) do if s.id == id then w.sel = i end end
+    for i, s in ipairs(w.items) do if s.id == id then w:_setSel(i, 'mouse') end end
+    wait(0.35)                                      -- (soltar solo usa lo que lleva elegido un momento: PICK_HOLD)
 end
 local function release() held.wheel = false; wait(0.03) end
 
@@ -81,6 +82,17 @@ local function run()
     openWheel(); choose('magnet_points'); release()
     check('apagado', pa:hasEffect('magnet_all') and inv('magnet_all') == 0 and inv('magnet_points') == 1,
           ('súper imán puesto=%s; imán de puntos sin gastar (%d)'):format(tostring(pa:hasEffect('magnet_all')), inv('magnet_points')))
+    -- de PASO: apuntar a uno un instante y soltar no lo gasta (el usuario: se gastaban sin querer)
+    openWheel()
+    do local w = top(); for i, s in ipairs(w.items) do if s.id == 'heart' then w:_setSel(i, 'mouse') end end end
+    release()
+    check('de_paso', name(top()) == 'AdventureState' and inv('heart') == 1, 'pasar por encima y soltar enseguida no gasta: corazones ' .. inv('heart'))
+    -- el ratón en el centro deja de elegir (antes se quedaba lo último que tocó)
+    openWheel(); choose('heart')
+    do local w = top(); local Ly = w:_layout(); w:mousemoved(Ly.cx, Ly.cy) end
+    local centred = top().sel == nil
+    release()
+    check('centro_raton', centred and inv('heart') == 1, 'ratón al centro: nada elegido=' .. tostring(centred) .. ', corazones ' .. inv('heart'))
     -- cancelar
     openWheel(); top().sel = nil; release()
     check('cancelar', name(top()) == 'AdventureState' and inv('heart') == 1 and inv('strength') == 1, 'soltar sin elegir no gasta nada')

@@ -2,6 +2,7 @@
 # tools/art/ui/make_input_glyphs.py — los ICONOS DE BOTONES de los carteles de ayuda (0.5.195; el usuario: «sprites para
 # los botones que indica, para cada aparato»): assets/images/ui/glyphs/<nombre>.png, 11 px de alto, pixel art.
 #   teclado: key_space, key_shift, key_f, key_up, key_down, key_left, key_right (una tecla con su letra o flecha)
+#   teclado (0.5.196): key_x (el ataque especial) · mando: pad_l, pad_r (los gatillos)
 #   mando:   pad_a, pad_b, pad_x, pad_y (botón redondo con la letra) · pad_up, pad_down, pad_left, pad_right (cruceta con
 #            ese brazo en amarillo)
 # Los elige src/ui/InputGlyphs.lua por el nombre del botón (Input.label). Sin PIL. No está retocado a mano.
@@ -16,7 +17,7 @@ H = 11
 FONT = {   # 3x5
     'A': ['.k.', 'k.k', 'kkk', 'k.k', 'k.k'], 'B': ['kk.', 'k.k', 'kk.', 'k.k', 'kk.'], 'C': ['.kk', 'k..', 'k..', 'k..', '.kk'],
     'E': ['kkk', 'k..', 'kk.', 'k..', 'kkk'], 'F': ['kkk', 'k..', 'kk.', 'k..', 'k..'], 'H': ['k.k', 'k.k', 'kkk', 'k.k', 'k.k'],
-    'I': ['kkk', '.k.', '.k.', '.k.', 'kkk'], 'P': ['kk.', 'k.k', 'kk.', 'k..', 'k..'], 'S': ['.kk', 'k..', '.k.', '..k', 'kk.'],
+    'I': ['kkk', '.k.', '.k.', '.k.', 'kkk'], 'L': ['k..', 'k..', 'k..', 'k..', 'kkk'], 'R': ['kk.', 'k.k', 'kk.', 'k.k', 'k.k'], 'P': ['kk.', 'k.k', 'kk.', 'k..', 'k..'], 'S': ['.kk', 'k..', '.k.', '..k', 'kk.'],
     'T': ['kkk', '.k.', '.k.', '.k.', '.k.'], 'X': ['k.k', 'k.k', '.k.', 'k.k', 'k.k'], 'Y': ['k.k', 'k.k', '.k.', '.k.', '.k.'],
 }
 ARROW = {'up': ['..k..', '.kkk.', 'kkkkk', '..k..', '..k..'], 'down': ['..k..', '..k..', 'kkkkk', '.kkk.', '..k..'],
@@ -57,6 +58,19 @@ def round_btn(ch):
     stamp(g, FONT[ch], 4, 3)
     return g
 
+def shoulder(ch):
+    # (gatillo del mando, L / R: una tecla de 13 de ancho con la esquina de arriba de su lado cortada en diagonal)
+    w = 13
+    g = grid(w)
+    for y in range(H):
+        for x in range(w):
+            cx = x if ch == 'L' else w - 1 - x
+            if cx + y < 3 or (x in (0, w - 1) and y == H - 1) or (cx == w - 1 and y == 0): continue
+            edge = x in (0, w - 1) or y in (0, H - 1) or cx + y == 3
+            g[y][x] = 'o' if edge else ('g' if y >= H - 3 else 'W')
+    stamp(g, FONT[ch], 5, 3)
+    return g
+
 def dpad(d):
     g = grid(11)
     for y in range(H):
@@ -84,3 +98,5 @@ save(text_key('SPACE'), 'key_space'); save(text_key('SHIFT'), 'key_shift'); save
 for d in ('up', 'down', 'left', 'right'):
     save(arrow_key(d), 'key_' + d); save(dpad(d), 'pad_' + d)
 for c in 'ABXY': save(round_btn(c), 'pad_' + c.lower())
+save(text_key('X'), 'key_x')                                   # (0.5.196: el ataque especial, para las jaulas)
+for c in 'LR': save(shoulder(c), 'pad_' + c.lower())

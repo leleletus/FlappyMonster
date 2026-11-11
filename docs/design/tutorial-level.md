@@ -9,7 +9,8 @@ everything or how to squeeze the obstacles, to avoid spoilers and ruining the ex
 selection); `"followScenes": true` makes its dark cave follow the player and keeps the level out of online (`"modes": []` never did: an empty list means no limit, and the editor drops it). The user reviews it in play; this page keeps the plan and decisions.
 
 **Built pieces:** the help sign `hint` (`src/world/entities/types/items/hint.lua`: props `text` = a translation key,
-`radius`; the bubble is drawn above the darkness through `Entities.renderOverlays`), its art
+`radius`; the bubble is drawn above the darkness through `Entities.renderOverlays`, by `src/ui/HintBubble.lua` since
+0.5.196, shared with the Flappy cages), its art
 (`tools/art/items/make_hint_sign.py`), the `tut.*` texts and `keys.touch_*` (the touch button names: `Input.label`
 gives them while playing with a finger), `adv.tutorial`.
 

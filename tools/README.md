@@ -66,6 +66,7 @@ and their own folder to `sys.path`; scripts that import each other sit in the sa
 | `world/make_jungle_sky.py [--apply]` | the JUNGLE sky (`world/sky/jungle_far/mid/near/top`, depth `temple_far/mid/top/wall`, 4 frames APPENDED to `gradients.png`) and tiles (`world/tiles/mud`, `jungle_grass`, `jungle_blades`, `temple_brick`, `temple_moss`, `jungle_platform`); previews in `FlappyMonster_pruebas/selva/fondo/` | yes (never overwrites; re-running `make_sky.py` drops the 4 gradient frames: run this again after it) |
 | `world/make_ice_spikes.py`, `make_cryo_sprites.py`, `make_cryo_parts.py`, `make_cryo_chain.py` | `traps/spikes/spike_ice.png`, `traps/cryo/` | spikes and chain yes (verified) |
 | `world/make_food_sprites.py` | `items/food_<island>.png` (never the user's apple) | yes (verified) |
+| `items/make_cage.py [--apply] [--preview DIR]` | the caged flappy: `items/cage/cage-Sheet.png`, `flappies-Sheet.png` (8 variants), `lamp.png`; preview `FlappyMonster_pruebas/jaulas/vista_previa.png` (plain Python) | yes |
 | `ui/make_sprites.py`, `make_story_icons.py` | `ui/touch/`, `ui/ping/`, `ui/icons/` | yes (verified) |
 | `ui/make_menu_ui.py` | `ui/menus/title_logo.png` + `.json` (from `logo.png`, never written), `ui/menus/button.png` + `.json`, `ui/menus/panel.png`, `ui/menus/box.png`, `ui/menus/cursor.png`, `ui/menus/cartridge.png` + `.json`, `ui/menus/cart_labels.png` | yes |
 | `fx/make_lights.py` | `fx/light_disc.png`, `fx/light_rings.png`, `fx/light_halo.png` (the lights of the darkness canvas, `src/fx/Darkness.lua`) | yes |

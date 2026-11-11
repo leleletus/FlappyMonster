@@ -72,7 +72,7 @@ Every file in `assets/levels/` (69). **Story** = world number, world id and posi
 | `tren_fugaz` | Tren Fugaz / Bullet Train | 170x11 | 4 fortaleza · 4 | race | `fortaleza_2` |  | fortress dusk · auto-scroll |
 | `tutorial` | Tutorial / Tutorial | 362x19 |  |  | `tutorial` |  | meadow · par 0 s |
 | `valle_pilares_1` | Valle de los Pilares 1 / Valley of the Pillars 1 | 260x11 |  |  | `flappy` |  | valley · auto-scroll |
-| `valle_pilares_2` | Valle de los Pilares 2 / Valley of the Pillars 2 | 331x11 |  |  | `flappy` |  | valley · auto-scroll |
-| `valle_pilares_3` | Valle de los Pilares 3 / Valley of the Pillars 3 | 350x11 |  |  | `flappy` |  | valley · auto-scroll |
+| `valle_pilares_2` | Valle de los Pilares 2 / Valley of the Pillars 2 | 338x11 |  |  | `flappy` |  | valley · auto-scroll |
+| `valle_pilares_3` | Valle de los Pilares 3 / Valley of the Pillars 3 | 354x11 |  |  | `flappy` |  | valley · auto-scroll |
 | `valle_redcoptero` | El Redcóptero / The Net-Copter | 95x11 |  |  | `flappy` | `netcopter` | valley · auto-scroll |
 | `valle_soleado` | Valle Soleado / Sunny Valley | 130x18 | 1 pradera · 1 | race | `pradera_1` |  | meadow |

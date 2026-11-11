@@ -30,6 +30,9 @@
 --               lanzarredes) se pueden pasar: un piloto sencillo (aletea cuando está por debajo del centro del hueco
 --               siguiente —en un pasillo, de lo común de las columnas que vienen—; esquiva las redes como un jugador;
 --               no cura con la comida: eso lo hace AdventureState) llega a la meta sin morir
+--   etapa_arriba la RUTA DE ARRIBA de cada cornisa / túnel / galería (sin los muros) se vuela por encima de la piedra,
+--               con sitio para un aleteo + 30 px, y se llega a la meta sin morir
+--   cargas      cada jaula y cada muro del Valle se abre con las cargas cogidas desde el disparo anterior
 --
 --   tools/tests/run.sh flappy_flight   (CASE=nombre: solo ese)
 io.stdout:setvbuf('no')
@@ -336,10 +339,11 @@ end
 -- La altura a la que apunta el piloto: el hueco que viene y, si hay varias columnas de pilar seguidas (un PASILLO) en lo
 -- que toca recorrer enseguida (de 40 px detrás a 110 px delante), lo que tienen en común; si no tienen nada en común, la
 -- primera (y luego la siguiente)
-local function pilotTarget(level, x)
+local function pilotTarget(level, x, skip)
     local top, bot
     for c = math.floor((x - 40) / T) + 1, math.floor((x + 110) / T) + 1 do
-        local a, b = gapAt(level, c)
+        local a, b
+        if not (skip and skip(c)) then a, b = gapAt(level, c) end
         if a then
             if not top then top, bot = a, b
             elseif math.max(top, a) < math.min(bot, b) - 70 then top, bot = math.max(top, a), math.min(bot, b) end
@@ -352,9 +356,10 @@ end
 -- ¿Una red a punto de dar? Lo que haría un jugador: un lanzarredes que BRILLA muy cerca por delante (menos de 2,6
 -- casillas) → 'go' (pasar deprisa antes de que dispare); algo más lejos (hasta 4) → 'wait' (quedarse atrás); una red que
 -- ya sube por debajo y por delante (hasta 3,5 casillas) → 'wait'; justo debajo o ya detrás → 'go' / nil
+local shielded
 local function netDanger(level, pa)
     for _, e in ipairs(level.liveEntities) do
-        if e.alive and e.def then
+        if e.alive and e.def and not shielded(level, e, pa) then
             local dx = e.x - pa.x
             if e.def.name == 'netlauncher' and e.state == 'aim' and dx > -T and dx < 4 * T then
                 return dx < 2.6 * T and 'go' or 'wait'
@@ -366,15 +371,69 @@ local function netDanger(level, pa)
     end
 end
 
-local function runStage(path)
+-- Medidas del monstruo en vuelo (px desde su centro pa.y): la caja de fuera (la que se posa en lo sólido) de -27 a +48; la
+-- de dentro (la que toca los pilares) de -14 a +35. Un aleteo sube FLY_FLAP² / (2·FLY_GRAVITY) = 75 px
+local OUT_UP, OUT_DN, IN_UP = 26.9, 48, 13.8
+local ARC = PlayerAdventure.FLY_FLAP ^ 2 / (2 * PlayerAdventure.FLY_GRAVITY)
+
+-- La fila de la PIEDRA de una cornisa / un túnel en la columna c (un bloque sólido en la fila 4 o más abajo, sin nada
+-- sólido encima; los soportes de los lanzarredes, de la fila 10 abajo, no cuentan) o nil
+local function ledgeRow(level, c)
+    for r = 4, level.tileH - 2 do
+        if level:getDef(c, r).collision == 'solid' then
+            for rr = 1, r - 1 do if level:getDef(c, rr).collision == 'solid' then return nil end end
+            return r
+        end
+    end
+end
+
+-- Los tramos de cornisa / túnel de un nivel: { c0, c1, row, band } — band = el sitio (px) que le queda al CENTRO del
+-- monstruo encima de la piedra sin posarse en ella ni tocar un pilar de arriba (el techo del nivel solo para)
+local function ledges(level)
+    local out, cur = {}, nil
+    for c = 1, level.tileW do
+        local R = ledgeRow(level, c)
+        if R and cur and cur.row == R and cur.c1 == c - 1 then cur.c1 = c
+        elseif R then cur = { c0 = c, c1 = c, row = R }; out[#out + 1] = cur
+        else cur = nil end
+    end
+    for _, L in ipairs(out) do
+        local top = OUT_UP
+        for c = L.c0, L.c1 do
+            local r = 1
+            while r < L.row and level:getTile(c, r) == PILLAR_ID do r = r + 1 end
+            if r > 1 then top = math.max(top, (r - 1) * T + IN_UP) end
+        end
+        L.top, L.bot = top, (L.row - 1) * T - OUT_DN
+        L.band = L.bot - L.top
+    end
+    return out
+end
+
+-- ¿Hay algo sólido entre la entidad y el jugador en la columna de ella? (la piedra de una cornisa para las redes)
+shielded = function(level, e, pa)
+    local c = math.floor(e.x / T) + 1
+    local r0, r1 = math.floor(math.min(e.y, pa.y) / T) + 1, math.floor(math.max(e.y, pa.y) / T) + 1
+    for r = r0 + 1, r1 - 1 do if level:getDef(c, r).collision == 'solid' then return true end end
+    return false
+end
+
+-- upper = la ruta de ARRIBA de cada cornisa / túnel (sin muros: se quitan, como si los hubiera roto la ráfaga): el
+-- piloto sube antes de llegar (mira 6 casillas por delante) y vuela por encima de la piedra, a ras de lo más bajo que
+-- puede (un aleteo le sube 75 px desde allí)
+local function runStage(path, upper)
     local level = Level.new(path)
     local es = {}
-    for _, pl in ipairs(level.entities) do es[#es + 1] = Entities.create(pl) end
+    for _, pl in ipairs(level.entities) do
+        if not (upper and pl.type == 'crackwall') then es[#es + 1] = Entities.create(pl) end
+    end
     for _, e in ipairs(es) do if e.wantsLevel then e.levelRef = level end end
     level.liveEntities, level.players = es, {}
     local sx, sy = level:getSpawnPx()
     local pa = player(level, sx, sy)
     local hp0, deaths, done, t = pa.hp, 0, false, 0
+    local Ls = upper and ledges(level) or {}
+    for _, L in ipairs(Ls) do L.inside, L.above = 0, 0 end
     -- (dónde le dan: columna y qué, para el mensaje)
     local hits, takeDamage = {}, pa.takeDamage
     pa.takeDamage = function(self, ...)
@@ -389,6 +448,23 @@ local function runStage(path)
         t = t + DT
         if pa.dying then deaths = deaths + 1; return true end
         local target = pilotTarget(level, pa.x)
+        local c = math.floor(pa.x / T) + 1
+        -- (ruta de arriba: mientras pasa un pilar que no es de la cornisa, el hueco de ese pilar; si no, a ras de la piedra
+        --  de la cornisa que viene o en la que está)
+        local pillarNear = false
+        if upper then
+            for cc = math.floor((pa.x - 40) / T) + 1, math.floor((pa.x + 110) / T) + 1 do
+                if gapAt(level, cc) and not ledgeRow(level, cc) then pillarNear = true end
+            end
+            if pillarNear then target = pilotTarget(level, pa.x, function(cc) return ledgeRow(level, cc) ~= nil end) end
+        end
+        for _, L in ipairs(Ls) do
+            if not pillarNear and c + 6 >= L.c0 and c <= L.c1 then target = L.bot - 8 end
+            if c >= L.c0 and c <= L.c1 then
+                L.inside = L.inside + 1
+                if pa.y + OUT_DN <= (L.row - 1) * T then L.above = L.above + 1 end
+            end
+        end
         if pa.y > target and pa.vy > -60 then stub.state.jump_pressed = true end
         local danger = netDanger(level, pa)
         stub.state.left = danger == 'wait'
@@ -397,10 +473,16 @@ local function runStage(path)
         if level:triggerInBox(ob.x, ob.y, ob.w, ob.h, 'finish') then done = true; return true end
     end)
     clearInput()
-    check('etapa', level.flappy and level.autoScroll and done and deaths == 0,
-          ('%s: nivel Flappy=%s con cámara=%s; llega a la meta SIN CARGA=%s en %.1f s; vida %d → %d; muertes %d; golpes en las columnas: %s'):format(
+    local over, lmsg = true, {}
+    for _, L in ipairs(Ls) do
+        local ok = L.inside > 0 and L.above == L.inside and L.band >= ARC + 30
+        over = over and ok
+        lmsg[#lmsg + 1] = ('%d-%d piedra fila %d, sitio %.0f px (aleteo %.0f), por encima %d/%d'):format(L.c0, L.c1, L.row, L.band, ARC, L.above, L.inside)
+    end
+    check(upper and 'etapa_arriba' or 'etapa', level.flappy and level.autoScroll and done and deaths == 0 and over and (not upper or #Ls > 0),
+          ('%s: nivel Flappy=%s con cámara=%s; llega a la meta SIN CARGA=%s en %.1f s; vida %d → %d; muertes %d; golpes en las columnas: %s%s'):format(
            path:match('[^/]+$'), tostring(level.flappy), tostring(level.autoScroll ~= nil), tostring(done), t, hp0, pa.hp, deaths,
-           #hits > 0 and table.concat(hits, ' ') or 'ninguno'))
+           #hits > 0 and table.concat(hits, ' ') or 'ninguno', upper and ('; rutas de arriba: ' .. (#Ls > 0 and table.concat(lmsg, ' · ') or 'NINGUNA')) or ''))
 end
 
 -- La etapa de prueba y las del Valle: el piloto sencillo, SIN usar el ataque especial, llega a la meta sin morir (la ruta
@@ -408,6 +490,68 @@ end
 function cases.etapa()
     runStage('assets/levels/_flappy_vuelo.json')
     for _, id in ipairs(require('src/flappy/Zones').get(1).stages) do runStage('assets/levels/' .. id .. '.json') end
+end
+
+-- Las RUTAS DE ARRIBA de las etapas del Valle (cornisas, túneles, galerías, con los muros ya rotos) se pueden volar: el
+-- piloto las recorre enteras por encima de la piedra, sin posarse, y llega a la meta sin morir; el sitio encima de la
+-- piedra deja al menos un aleteo + 30 px (el usuario, 2026-11-11: con la piedra en la fila 4 era imposible)
+function cases.etapa_arriba()
+    for _, id in ipairs(require('src/flappy/Zones').get(1).stages) do
+        local lv = Level.new('assets/levels/' .. id .. '.json')
+        if #ledges(lv) > 0 then runStage('assets/levels/' .. id .. '.json', true) end
+    end
+end
+
+-- CARGAS para cada jaula y cada muro de las etapas del Valle: la ráfaga gasta TODA la carga (power = la carga, hasta
+-- CHARGE_MAX) y la jaula o el muro la paran aunque no llegue (`minCharge`: jaula 1, muro 2 por defecto). Recorriendo la
+-- etapa de izquierda a derecha y disparando a TODO lo anterior que se pudiera abrir, las cargas cogidas desde el último
+-- disparo tienen que llegar a lo que pide. Con dos rutas (cornisa / túnel) se sigue una: la de arriba si lo que se mira
+-- está arriba, si no la de abajo (lo de la otra ruta no se coge ni se dispara). Empates de columna: el disparo antes
+function cases.cargas()
+    local bad, msgs = 0, {}
+    for _, id in ipairs(require('src/flappy/Zones').get(1).stages) do
+        local lv = Level.new('assets/levels/' .. id .. '.json')
+        local rangeOf = {}
+        for i, L in ipairs(ledges(lv)) do for c = L.c0, L.c1 do rangeOf[c] = { id = i, row = L.row } end end
+        local items = {}
+        for _, e in ipairs(lv.entities) do
+            local kind = e.type == 'flapcharge' and 'charge' or ((e.type == 'cage' or e.type == 'crackwall') and 'target')
+            if kind then
+                local rg = rangeOf[e.col]
+                items[#items + 1] = { kind = kind, col = e.col, type = e.type, rid = rg and rg.id,
+                                      side = rg and (e.row < rg.row and 'up' or 'down'),
+                                      need = (e.props and e.props.minCharge) or (e.type == 'cage' and 1 or 2) }
+            end
+        end
+        table.sort(items, function(a, b)
+            if a.col ~= b.col then return a.col < b.col end
+            return a.kind == 'target' and b.kind ~= 'target'
+        end)
+        local parts = {}
+        for _, tg in ipairs(items) do
+            if tg.kind == 'target' then
+                local function onPlan(e)
+                    if not e.rid then return true end
+                    if tg.rid == e.rid and tg.side == 'up' then return e.side == 'up' end
+                    return e.side == 'down'
+                end
+                local pool = 0
+                for _, e in ipairs(items) do
+                    if e == tg then break end
+                    if onPlan(e) then
+                        if e.kind == 'charge' then pool = math.min(PlayerAdventure.CHARGE_MAX, pool + 1)
+                        elseif pool >= e.need then pool = 0 end
+                    end
+                end
+                local ok = pool >= tg.need
+                if not ok then bad = bad + 1 end
+                parts[#parts + 1] = ('%s %d%s pide %d tiene %d%s'):format(tg.type == 'cage' and 'jaula' or 'muro', tg.col,
+                                                                      tg.side == 'up' and ' (arriba)' or '', tg.need, pool, ok and '' or ' FALTA')
+            end
+        end
+        msgs[#msgs + 1] = id .. ': ' .. table.concat(parts, ', ')
+    end
+    check('cargas', bad == 0, table.concat(msgs, ' | '))
 end
 
 function cases.carga()
@@ -797,7 +941,7 @@ function cases.powerups()
     check('powerups', a1 and a2 and a3 and a4 and a5 and a6 and a7 and a8 and a9 and a10 and a11, table.concat(out, '; '))
 end
 
-local ORDER = { 'aleteo', 'ventana', 'pilar', 'fondo', 'soporte', 'reaparece', 'exclusivo', 'normal', 'carga', 'ataque', 'jaula', 'lanzarredes', 'lanzarredes_techo', 'muro', 'powerups', 'etapa' }
+local ORDER = { 'aleteo', 'ventana', 'pilar', 'fondo', 'soporte', 'reaparece', 'exclusivo', 'normal', 'carga', 'ataque', 'jaula', 'lanzarredes', 'lanzarredes_techo', 'muro', 'powerups', 'etapa', 'etapa_arriba', 'cargas' }
 function love.load()
     local only = os.getenv('CASE')
     for _, name in ipairs(ORDER) do

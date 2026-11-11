@@ -57,3 +57,7 @@ in the centre CANCELS (the design); the bag sits right of 7 hearts. **Open for t
 HELD, so the meaning of a key shifts when a type runs out (the design wants stable keys but also a wheel of only the
 types held). Plan 4b rulings: the small sprite at
 ×4 (density rule of 2026-11-08); a full inventory loses a cage's gift with a notice.
+
+## History
+
+- 0.5.196, the user: "once you are in the wheel and move to see your items I have no idea how to leave, and I almost always end up spending one by accident". Now a line at the bottom always says how to use and how to leave without spending (`wheel.foot*`); moving back to the centre deselects, the mouse too (before, the last item the mouse touched stayed chosen); and releasing only uses an item pointed at for at least `PICK_HOLD` 0.3 s, so passing over one spends nothing. Harness `powerup_wheel` `de_paso`, `centro_raton`.
