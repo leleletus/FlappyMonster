@@ -1137,8 +1137,8 @@ function cases.poses()
         return pa.frame
     end
     -- dolor
-    -- aterrizar fuerte (cae 5 casillas)
-    level, pa = fresh(); pa.y = pa.y - 5 * T; pa.onGround = false
+    -- aterrizar fuerte (cae 8 casillas)
+    level, pa = fresh(); pa.y = pa.y - 8 * T; pa.onGround = false
     local landed
     for _ = 1, 120 do pa:update(1 / 60, level); if pa.onGround then landed = pa.frame; break end end
     got.land = landed
@@ -1160,7 +1160,7 @@ function cases.poses()
     level, pa = fresh(); pa.victory = true; got.victory = run(level, pa, 1)
     clear()
     local ok = got.land == PSP.LAND and got.look_up == PSP.LOOK_UP
-               and got.look_down == PSP.CROUCH_LOOK_DOWN and got.idle_long == PSP.IDLE_LONG and got.gp == PSP.GP_CURL and got.gpFall == 2
+               and got.look_down == PSP.CROUCH_LOOK_DOWN and got.idle_long == PSP.IDLE_LONG and got.gp == 2 and got.gpFall == 2
                and got.victory == PSP.VICTORY
     -- LOOK=1: una captura de todas las poses dibujadas por el juego (PlayerSprite.draw, con sus ojos) a ×6, en <save>/poses.png
     if os.getenv('LOOK') then
@@ -1215,6 +1215,41 @@ end
 
 -- El NIVEL TUTORIAL de verdad (docs/design/tutorial-level.md): lo que level_solve no puede probar — los carteles tienen su
 -- texto, el Activador abre el muro ON/OFF, el ground pound rompe la tapa, el otro Activador abre la puerta —
+-- La caída fuerte: un doble salto desde el mismo suelo no la da; desde lo alto, para al monstruo lo que dura la pose
+-- y suena un golpe, más fuerte cuanto más alta
+function cases.caida_fuerte()
+    local plays, realS = {}, Sound
+    Sound = setmetatable({ play = function(n, p, v) if n == 'landHard' then plays[#plays + 1] = { p, v } end end }, { __index = realS })
+    local function fall(tiles)
+        local level = room(16, 24)
+        local pa = playerAt(level, 8, 23)
+        pa.y, pa.onGround = pa.y - tiles * T, false
+        for k in pairs(stub.state) do stub.state[k] = false end
+        for _ = 1, 150 do pa:update(1 / 60, level); if pa.onGround then break end end
+        return level, pa
+    end
+    local _, low = fall(3.15)
+    local lowStop = (low.landStopT or 0) > 0
+    local n0 = #plays
+    local level, pa = fall(8)
+    local stop0, frame0, n1 = pa.landStopT, pa.frame, #plays
+    stub.state.right, stub.state.jump, stub.state.jump_pressed = true, true, true
+    local x0 = pa.x
+    pa:update(1 / 60, level)
+    stub.state.jump_pressed = false
+    local held = pa.x == x0 and pa.onGround
+    for _ = 1, 18 do pa:update(1 / 60, level) end
+    local moved = pa.x > x0
+    fall(14)
+    local vol8, vol14 = plays[1] and plays[1][2], plays[2] and plays[2][2]
+    for k in pairs(stub.state) do stub.state[k] = false end
+    Sound = realS
+    local PSP = require 'src/player/PlayerSprite'
+    check('caida_fuerte', not lowStop and n0 == 0 and stop0 > 0 and frame0 == PSP.LAND and n1 == 1 and held and moved and vol14 > vol8,
+        ('doble salto: parado=%s · 8 casillas: parado %.2f s, pose %s, golpes %d · sin moverse ni saltar=%s, luego anda=%s · volumen 8: %.2f, 14: %.2f'):format(
+         tostring(lowStop), stop0, tostring(frame0), n1, tostring(held), tostring(moved), vol8 or -1, vol14 or -1))
+end
+
 function cases.tutorial()
     local json = require 'libs/json'
     local L = require 'src/core/Lang'
@@ -4324,7 +4359,7 @@ function love.load()
                          'puffer_through', 'puffer_concave', 'puffer_cycle', 'puffer_dry', 'flyer_anim', 'vuelo_libre', 'boxed_in',
                          'bloque_roto', 'activador', 'tramp_avanza', 'tramp_pinchos', 'ping_icono',
                          'bomba_activa', 'bomba_pisada', 'bomba_radios', 'bomba_mundo', 'bomba_objeto',
-                         'hielo_solido', 'hielo_desgaste', 'hielo_nivel', 'hielo_vuelve', 'mirar', 'salto_variable', 'esquina', 'hitstop', 'poses', 'polvo_correr', 'tutorial', 'hielo_gp', 'hielo_bomba', 'encerrado', 'trepador_canto', 'hielo_resbala', 'filo_propio', 'saltarin', 'saltarin_cueva', 'persecucion', 'persecucion_cuerpo', 'inofensivos', 'tapa_base', 'manzana',
+                         'hielo_solido', 'hielo_desgaste', 'hielo_nivel', 'hielo_vuelve', 'mirar', 'salto_variable', 'esquina', 'hitstop', 'poses', 'caida_fuerte', 'polvo_correr', 'tutorial', 'hielo_gp', 'hielo_bomba', 'encerrado', 'trepador_canto', 'hielo_resbala', 'filo_propio', 'saltarin', 'saltarin_cueva', 'persecucion', 'persecucion_cuerpo', 'inofensivos', 'tapa_base', 'manzana',
                          'cryo_jugador', 'cryo_enemigo', 'cryo_activador', 'cryo_corte', 'lava', 'pocos_fps', 'ahogo_ganado', 'techo_pinchos',
                          'caja_empuje', 'caja_rota', 'caja_borde', 'cargar', 'bomba_reaparece', 'islas', 'islas_arte', 'viento', 'cuerpo_mueve', 'cajas_golpes', 'balanza', 'soplon', 'semilla', 'ventisca', 'geiser', 'balanza_tope', 'caja_choques', 'cargar_gp', 'gp_radio', 'dejar_encima', 'jump_buffer', 'jefe_puntos', 'persecucion_toque', 'secreto_reina', 'secreto_tifon', 'paredes_falsas', 'aire_caja', 'geiser_peso', 'bomba_cajas', 'cajas_fila', 'balanza_impacto', 'balanza_salto', 'balanza_techo', 'escarabajo', 'escarabajo_lanzado', 'escarabajo_ruta', 'escarabajo_manos', 'escarabajo_arrolla',
                          'topo', 'topo_culetazo', 'topo_suelo', 'topo_borde', 'pirana', 'pirana_pisar', 'pirana_rebota', 'pirana_nada', 'planta', 'planta_pisar', 'planta_traga', 'planta_colgada', 'planta_come', 'planta_bomba' }) do

@@ -202,22 +202,6 @@ POSES = {
                    "....#...#....",
                    "...##...##..."],
     # 4. GROUND POUND, preparación: hecho una bola (manos con los pies), mira abajo. (El picado es el salto de siempre.)
-    'gpound_curl': [".........",
-                    ".##...##.",
-                    "...#.#...",
-                    "..#####..",
-                    ".#.....#.",
-                    ".#.....#.",
-                    ".#.....#.",
-                    "..#####..",
-                    "...v##...",
-                    ".#.###.#.",
-                    ".#.#.#.#.",
-                    "..##.##..",
-                    ".........",
-                    ".........",
-                    ".........",
-                    "........."],
     # 5. DAÑO: el golpe (en estrella) y el retroceso (echado atrás, brazos al frente). Brazos y piernas del largo de
     #    las bases: brazo 2 px en diagonal desde el cuerpo, pierna 2 px + pie.
     'hurt1': ["...#.....#...",
@@ -391,7 +375,7 @@ POSES = {
 
 # Dónde está la cabeza de cada pose (x0, y0 de su lienzo de 9 de ancho: la cara en x0+1.., filas y0+4..y0+6)
 HEAD_AT = {
-    'skid1': (1, 0), 'skid2': (1, 0), 'land_hard1': (2, 2), 'land_hard2': (2, 1), 'gpound_curl': (0, 0),
+    'skid1': (1, 0), 'skid2': (1, 0), 'land_hard1': (2, 2), 'land_hard2': (2, 1),
     'hurt1': (2, 0), 'hurt2': (1, 0), 'throw': (2, 0), 'push1': (3, 1), 'push2': (3, 1),
     'ledge1': (4, 0), 'ledge2': (3, 0), 'victory1': (2, 2), 'victory2': (2, 0), 'victory3': (2, 0),
     'look_up': (0, 0), 'crouch_look_down': (0, 6), 'idle_blink': (0, 0), 'idle_wiggle1': (0, 0),
@@ -402,7 +386,6 @@ HEAD_AT = {
 LOOK = {
     'skid1': ('normal', 0.5, 0), 'skid2': ('normal', 0.5, 0),
     'land_hard1': ('blink', 0, 0), 'land_hard2': ('normal', 0, 0),
-    'gpound_curl': ('normal', 0, 0.5),
     'hurt1': ('hurt', 0, 0), 'hurt2': ('hurt', 0, 0),
     'throw': ('normal', 0.5, -0.5),
     'push1': ('normal', 0.5, 0), 'push2': ('normal', 0.5, 0),
@@ -456,7 +439,6 @@ def pose(name):
 ANIMS = [
     # (1, derrapar: quitado por el usuario en el juego, 2026-11-10 — «no termina de quedar bien» —)
     ('3 land',      'crouch', ['land_hard1', 'land_hard2']),
-    ('4 gpound',    'jump',   ['gpound_curl']),
     # (5, dolor: quitado por el usuario en el juego, 2026-11-10 — «no termina de quedar bien» —)
     ('8 throw',     'jump',   ['throw']),
     ('9 push',      'idle',   ['push1', 'push2']),

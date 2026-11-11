@@ -63,6 +63,7 @@ ICY = {'snow', 'frozen_coast'}    # temas helados: nieve cayendo, pinchos de hie
 THEMES = {
     # (modo historia: cada nivel con el tema de SU isla — src/story/Worlds.lua). La COSTA es 'beach' (arena): con
     # 'tropical' (césped + palmeras) sus niveles parecían de la pradera con agua — el usuario lo notó en jungla_colgante
+    'tutorial': 'meadow',
     'valle_soleado': 'meadow', 'jardin_gummies': 'meadow', 'carrera01': 'volcano', 'nivel01': 'cave',
     'lluvia_pinchos': 'volcano', 'tren_fugaz': 'fortress', 'ruta_del_espejo': 'volcano', 'huida_del_espejo': 'volcano', 'ciudadela_cangrejos': 'meadow',
     'marea_alta': 'tropical', 'cascada_dorada': 'tropical', 'isla_flotante': 'meadow', 'canon_trampolines': 'beach',
@@ -90,6 +91,7 @@ THEMES = {
 # Fondo de superficie (src/fx/Sky.lua), hora y fondo de profundidad (opcional) de cada nivel: `--sky` los escribe SOLO si el nivel
 # aún no los tiene (lo elegido en el editor no se toca)
 SKY = {
+    'tutorial': ('meadow', 'day'),
     'valle_soleado': ('meadow', 'day'), 'jardin_gummies': ('forest', 'day'), 'carrera01': ('meadow', 'day', 'underwater'),
     'nivel01': ('coast', 'day', 'abyss'), 'lluvia_pinchos': ('mountain', 'day'), 'tren_fugaz': ('mountain', 'dusk'),
     'ruta_del_espejo': ('meadow', 'night'), 'ciudadela_cangrejos': ('coast', 'day'), 'marea_alta': ('coast', 'dusk'),

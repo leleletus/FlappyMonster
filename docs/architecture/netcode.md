@@ -214,6 +214,8 @@ piece took damage, immortal online), and a rewound "stomp" may hit a boss that i
 
 ## Protocol version history
 
+v116: own-state `landStopT` (43, before `jumpV0`), the stop after a hard landing; `landHard` is a shared sound.
+
 v115 running: input bit `IN_RUN` 256 (held; `IN_MAX` 511, `IN_HELD_MASK` 271); walking ×0.9, running ×1.11; the player's action poses (`frame` 6-13); enemies hurt instead of killing and hazards scale (the predicted result of touching them changes).
 v114 variable jump height (own state 43-44: take-off speed, held seen) and corner correction: the predicted physics changes.
 v113 the carryable snowball (`snowball_ball`, new type: a reserve of every Snowball, so another entity list) and broken thin ice that grows back (a `set` tile event).

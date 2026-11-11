@@ -5,7 +5,7 @@
 -- su animación:
 --   1 `glide` (brazos arriba) · 2 `jump` (aleteo) · 3 `idle` · 4 `dead` · 5 `crouch`
 --   (0.5.190, las POSES DE ACCIÓN — tools/art/player/make_monster_actions.py, assets/images/player/actions/ —)
---   6 aterrizar fuerte · 7 ground pound (encogido, al empezar; luego, el salto de siempre) · 8 lanzar · 9 empujar ·
+--   6 aterrizar fuerte · 7 (libre: era el encogido del ground pound; el usuario lo quitó, se ve el salto de siempre) · 8 lanzar · 9 empujar ·
 --   10 mirar arriba · 11 agachado mirando abajo · 12 quieto mucho rato · 13 victoria
 --   (el derrape y el dolor se quitaron: el usuario, «no terminan de quedar bien»)
 -- y además `fall` (cayendo: brazos arriba / abajo), `flutter` (aleteo seguido), `dead_eyes` (los ojos en X) e `icon`.
@@ -20,9 +20,9 @@
 local Anim = require 'src/fx/Anim'
 
 local PS = { SET = 'player', POSES = { 'glide', 'jump', 'idle', 'dead', 'crouch',
-    'act_land', 'act_gp_curl', 'act_throw', 'act_push', 'act_look_up', 'act_crouch_look_down',
+    'act_land', 'jump', 'act_throw', 'act_push', 'act_look_up', 'act_crouch_look_down',
     'act_idle_long', 'act_victory' } }
-PS.LAND, PS.GP_CURL, PS.THROW, PS.PUSH = 6, 7, 8, 9
+PS.LAND, PS.THROW, PS.PUSH = 6, 8, 9                  -- (el 7 fue el encogido del ground pound: se quitó)
 PS.LOOK_UP, PS.CROUCH_LOOK_DOWN, PS.IDLE_LONG, PS.VICTORY = 10, 11, 12, 13
 
 function PS.clip(pose)

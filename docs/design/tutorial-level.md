@@ -77,6 +77,10 @@ The first time a new story is started on a device, `TutorialOfferState` asks bef
 
 Players who skip it still learn to run: `valle_soleado`, the first story level, has a `hint` sign at the start (`tut.run_tip`, "Hold {run} to run!"; the user asked for this). Signs don't count towards a bot graph's signature (`BotNav.signature`), so adding one never makes a graph stale.
 
+## Dressing and darkness (0.5.193)
+
+Dressed with `retheme.py tutorial` (theme `meadow`, 17 cosmetic tiles) and `retheme.py --bg tutorial` (a generated background plane); the 9 meadow decorations inside the cave columns were swapped for 19 cave ones. Gameplay data is unchanged. The cave fades in and out over 1.2 s (`Scenes.follow`, `DARK_FADE`); the sky and the rest of the scene swap only while fully dark, so the change is never seen. The user: entering was too quick, and leaving must fade too.
+
 ## Open questions for the user
 
 - Which enemies to show (one Gummy and one Crabby by default)?

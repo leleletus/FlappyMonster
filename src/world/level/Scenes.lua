@@ -50,16 +50,29 @@ function Scenes.apply(level, i)
     level.darkness = sc.dark and 1 or 0
 end
 
--- `followScenes` (JSON): la escena la decide la columna del jugador, entrando en la oscuridad con un fundido. Solo en UN
+-- `followScenes` (JSON): la escena la decide la columna del jugador, con un fundido al entrar y al salir de la oscuridad. Solo en UN
 -- JUGADOR (lo llama AdventureState; la oscuridad es de todo el nivel y online hay varios jugadores: esos niveles no se
 -- listan en línea, LevelCatalog). El tutorial la usa para su cueva.
-local DARK_FADE = 0.4                         -- s que tarda en oscurecerse al entrar
+local DARK_FADE = 1.2                         -- s que tarda en oscurecerse al entrar y en aclararse al salir
+-- El cielo y lo demás de la escena cambian cuando está del todo oscuro, para que nunca se vea el cambio
 function Scenes.follow(level, pa, dt)
     if not level.followScenes then return end
-    local was = level.dark
-    Scenes.apply(level, Scenes.at(level, math.floor(pa.x / TILE_PX) + 1))
-    if level.dark and not was then level.darkness = 0 end
-    if level.dark and level.darkness < 1 then level.darkness = math.min(1, level.darkness + dt / DARK_FADE) end
+    local want = Scenes.at(level, math.floor(pa.x / TILE_PX) + 1)
+    local wantDark = want and level.scenes[want].dark
+    if wantDark then
+        if not level.dark then level.dark, level.darkness = true, 0 end
+        level.darkness = math.min(1, level.darkness + dt / DARK_FADE)
+        if level.darkness >= 1 then Scenes.apply(level, want) end
+    elseif level.dark then
+        if level.darkness >= 1 then
+            Scenes.apply(level, want)
+            level.dark, level.darkness = true, 1                 -- (la luz vuelve poco a poco)
+        end
+        level.darkness = math.max(0, level.darkness - dt / DARK_FADE)
+        if level.darkness <= 0 then level.dark = false end
+    else
+        Scenes.apply(level, want)
+    end
 end
 
 -- Escena que contiene la columna `col` (o nil)

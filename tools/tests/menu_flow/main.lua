@@ -548,10 +548,18 @@ local function run()
             wait(0.6)
             return st.level.dark == true, st.level.darkness
         end
-        local dark, dk = at(315)
+        -- (TUTLOOK=1: capturas a lo largo del nivel, para ver cómo queda decorado)
+        if os.getenv('TUTLOOK') then
+            for _, col in ipairs({ 12, 50, 100, 150, 200, 250, 295, 345 }) do at(col); at(col); at(col); shot('tut_' .. col) end
+        end
+        local dark, dkMid = at(315)                                  -- (a medio fundido: aún no del todo)
+        local _, dk = at(315); at(315)
+        local fullIdx = st.level.sceneIdx
         shot('tutorial_dark')
-        local lit = at(300)
-        check('tutorial_cueva', dark and dk == 1 and not lit, ('en la cueva: oscuro=%s (%.1f) · fuera: oscuro=%s'):format(tostring(dark), dk or -1, tostring(lit)))
+        local stillDark, dkOut = at(300)                             -- (al salir, la luz vuelve poco a poco)
+        local _, _ = at(300); local lit = at(300)
+        check('tutorial_cueva', dark and dkMid > 0 and dkMid < 1 and dk > dkMid and fullIdx == 1 and stillDark and dkOut > 0 and dkOut < 1 and not lit and st.level.sceneIdx == nil,
+            ('entrando: %.2f → %.2f, escena %s · saliendo: %.2f, sigue a oscuras=%s · fuera: oscuro=%s'):format(dkMid, dk, tostring(fullIdx), dkOut, tostring(stillDark), tostring(lit)))
         gStateMachine:change(ret); wait(0.3)
         local after = name(top())
         check('oferta', first == 'TutorialOfferState' and marked and skip == 'StoryFilmState' and again == 'StoryFilmState'

@@ -3,6 +3,7 @@
   "sounds": [
     {"id": "gpStart", "file": "assets/sounds/player/ground_pound_start.wav", "echo": 0.5},
     {"id": "gpImpact", "file": "assets/sounds/player/ground_pound_impact.wav", "echo": 1},
+    {"id": "landHard", "file": "assets/sounds/player/land_hard.wav", "echo": 1, "note": "caída fuerte · no escuchado aún"},
     {"id": "headBump", "file": "assets/sounds/player/head_bump.wav", "echo": 0.6},
     {"id": "stunned", "file": "assets/sounds/player/stunned.wav", "echo": 0.6},
     {"id": "collect", "file": "assets/sounds/items/collect.wav", "echo": 0.5},

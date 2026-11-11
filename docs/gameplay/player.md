@@ -24,8 +24,7 @@ The part files are loaded by `PlayerAdventure.lua` and add methods to the same c
 flashlight in dark levels, carrying (UP: pick up / throw; crouch + UP: put down carefully — [carry-and-push](carry-and-push.md)).
 **Action poses** (0.5.190; designed by an art agent from the user's frames and the rhythm-duel poses, every one
 approved by the user — `tools/art/player/make_monster_actions.py` → `assets/images/player/actions/`, anims `act_*` in
-`assets/anim/player.json`): the pose NUMBER (`frame`, it travels online) 6 hard landing, 7 ground-pound wind-up (curled,
-only the first `GP_CURL_T` 0.08 s; then the classic jump frame 2, also for the dive: the user), 8 throw, 9 push, 10 look
+`assets/anim/player.json`): the pose NUMBER (`frame`, it travels online) 6 hard landing, 7 free (it was a curled ground-pound sprite; the user removed it, the ground pound shows the classic jump frame 2), 8 throw, 9 push, 10 look
 up (UP held standing still 0.6 s), 11 crouched looking down (DOWN held crouched 0.6 s, the camera look), 12 long idle
 (5 s still: blink, antennae), 13 victory (on winning the level). Built and then removed in play (the user: "it does
 not quite work"): skid, hurt. Chosen by priority at the end of `PlayerAdventure:update`
@@ -39,6 +38,8 @@ one apart had shifted the `^ ^` a quarter pixel — the user saw it). One-shot a
 (`basicPoses`). Online: remote players see what the server's simulation picks; look up shows only on your own screen
 (the held UP is not in the input bits). Harness `mechanics poses` (`LOOK=1` → `<save>/poses.png`, every frame drawn
 by the game).
+
+**Hard landing** (0.5.193): landing faster than `LAND_HARD_VY` 1000 px/s (about 4.9 tiles of fall; a double jump from the same floor lands at about 800) shows pose 6, stops the monster for its 0.28 s (`landStopT`, own state: no walking, no jumping) and plays `landHard`, louder and deeper the higher the fall (`tools/sounds/land.py`). Bots and actors (`moveK`) don't stop. The user: it used to fire even after a double jump.
 
 **Walking and running** (0.5.190; the user: "by default a bit slower, and with a button it runs, a bit faster than
 now"; testers complained it could not run): walking `ADV_MOVE_SPD × PlayerAdventure.WALK_K` (0.9 → 216 px/s), holding

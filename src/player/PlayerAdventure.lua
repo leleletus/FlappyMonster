@@ -29,6 +29,10 @@ end
 -- POLVO y APLASTARSE al caer (solo dibujo): aterrizar más rápido que LAND_DUST_VY levanta polvo; LAND_SQ_VY o más, un
 -- achatado corto (landSq: 1 → 0 en LAND_SQ_T s). Dar la vuelta corriendo en el suelo: polvo de derrape.
 local LAND_DUST_VY, LAND_SQ_VY, LAND_SQ_T = 420, 650, 0.16
+-- CAÍDA FUERTE: a más de LAND_HARD_VY (≈ 4,9 casillas de caída; un doble salto desde el mismo suelo llega a ≈ 800) sale su pose,
+-- el monstruo se queda parado lo que dura (landStopT: ni anda ni salta) y suena un golpe, más fuerte y grave cuanto
+-- más alta la caída. Los bots y actores (moveK) no se paran: sus grafos cuentan con seguir andando.
+local LAND_HARD_VY, LAND_HARD_MAX, LAND_POSE_T = 1000, 1600, 0.28
 local PUFF_SCALE = 1.15
 local PUFF_SPD   = 14
 
@@ -364,7 +368,7 @@ function PlayerAdventure:respawn()
     self.drownAudT=0; self.drownDead=false
     self.prevInWater=false
     self.splashSt='out'; self.splashCD=0
-    self.gpPhase=nil; self.gpT=0; self.gpLanded=false; self.jumpBufT=0; self.stunT=0; self.squashT=0; self.ctrlLockT=0; self.iceT=0
+    self.gpPhase=nil; self.gpT=0; self.gpLanded=false; self.jumpBufT=0; self.landStopT=0; self.stunT=0; self.squashT=0; self.ctrlLockT=0; self.iceT=0
     self.frostT=0; self.stepVis=0; self.hardLaunch=nil; self.hardBy=nil
     self.gulped=false; self.gulpMash=0; self.gulpBiteT=0
     self.lightOn=false; self.lightBat=1; self.lightCd=0
@@ -483,7 +487,9 @@ function PlayerAdventure:_update(dt, level)
     self:tickEffects(dt, level)                                    -- (power-ups con tiempo: PlayerPowerups.lua)
     local stunned = self.stunT > 0
     if (self.ctrlLockT or 0) > 0 then self.ctrlLockT = math.max(0, self.ctrlLockT - dt) end
-    local locked = stunned or (self.ctrlLockT or 0) > 0      -- sin control (lanzado de lado)
+    if (self.landStopT or 0) > 0 then self.landStopT = math.max(0, self.landStopT - dt) end
+    local stopped = (self.landStopT or 0) > 0                -- (parado por una caída fuerte)
+    local locked = stunned or stopped or (self.ctrlLockT or 0) > 0      -- sin control (lanzado de lado)
 
     -- Input de este paso (los "recién pulsado" se leen UNA vez: el stub de red
     -- los consume). Se apunta lo que el jugador PULSA, pueda o no hacerlo:
@@ -574,7 +580,7 @@ function PlayerAdventure:_update(dt, level)
         self.jumpBufT = math.max(0, self.jumpBufT - dt)
         if self.onGround and self.jumpsLeft > 0 and not stunned then wantJump, self.jumpBufT = true, 0 end
     end
-    if wantJump and not stunned then
+    if wantJump and not stunned and not stopped then
         local crouchJump = self.crouching and self.onGround and (self.squashT or 0) <= 0
         if not self.crouching or crouchJump then
             self:jump()
@@ -599,7 +605,7 @@ function PlayerAdventure:_update(dt, level)
     if self.hurtT > 0 then self.hurtT = math.max(0, self.hurtT - dt) end
 
     -- (lanzado de lado: el impulso se mantiene mientras dura el bloqueo)
-    if (self.ctrlLockT or 0) <= 0 then
+    if (self.ctrlLockT or 0) <= 0 and not stopped then
         self.vx = self.vx + (moveX*ADV_MOVE_SPD*moveK(self)*speedM*walkM*(self.speedMult or 1) - self.vx)*fric*dt
     end
     self.vy = self.vy + ADV_GRAVITY*gravM*dt
@@ -614,13 +620,18 @@ function PlayerAdventure:_update(dt, level)
     if ride and ride.alive ~= false and ride.moves then rdx, rdy = ride.stepDx or 0, ride.stepDy or 0 end
     self.rideBody, self.standBody = ride, nil
     local wind = Push.player(self, level, dt)       -- (el aire que sopla: Soplón, Ventisca, Géiser — systems/Push)
-    local vyMove, wasGround = self.vy, self.onGround
+    local vyMove, wasGround, wasGP = self.vy, self.onGround, self.gpPhase
     self:moveSteps(level, (self.vx + convey + current + wind)*dt + rdx, self.vy*dt + rdy)
     -- (solo dibujo: polvo al aterrizar fuerte y un achatado corto; polvo al derrapar dando la vuelta)
     local feetY = self.y + OUTER_YOFF * (self.sizeK or 1) + self.h / 2
     if self.onGround and not wasGround and not self.inWater then
         if vyMove > LAND_DUST_VY then fx(self, 'land_dust', self.x, feetY) end
-        if vyMove > LAND_SQ_VY then self.landSq, self.landPoseT = 1, 0.28 end        -- (y su pose: actionPose)
+        if vyMove > LAND_SQ_VY then self.landSq = 1 end
+        if vyMove > LAND_HARD_VY and not wasGP and not self.moveK then
+            local k = math.min(1, (vyMove - LAND_HARD_VY) / (LAND_HARD_MAX - LAND_HARD_VY))
+            self.landPoseT, self.landStopT, self.vx = LAND_POSE_T, LAND_POSE_T, 0           -- (y su pose: actionPose)
+            Sound.play('landHard', 1.1 - 0.25 * k, 0.6 + 0.4 * k)
+        end
     end
     if self.onGround and moveX ~= 0 and self.vx * moveX < -ADV_MOVE_SPD * 0.5 and not self.inWater then
         self.skidT = (self.skidT or 0) - dt
@@ -689,7 +700,6 @@ end
 -- se aprobaron con las poses de siempre
 local PSP = require 'src/player/PlayerSprite'
 local LOOK_HOLD, IDLE_LONG_AT, IDLE_LONG_T = 0.6, 5, 1.25
-local GP_CURL_T = 0.08          -- s del encogido al empezar el ground pound (el usuario: «tarda bastante»; antes toda la carga)
 local function tick(self, k, dt) local v = self[k]; if v and v > 0 then self[k] = math.max(0, v - dt) end end
 function PlayerAdventure:actionPose(dt, moveX)
     if self.dying or self.basicPoses or self.flight then return end
@@ -701,8 +711,7 @@ function PlayerAdventure:actionPose(dt, moveX)
     self.idleLongT = idle and (self.idleLongT or 0) + dt or 0
     local p
     if self.victory then p = PSP.VICTORY
-    elseif self.gpPhase == 'windup' and (self.gpT or 0) < GP_CURL_T then p = PSP.GP_CURL   -- (el encogido, un instante)
-    elseif self.gpPhase then p = 2                                -- (el resto, y en picado: el cuadro de salto de siempre)
+    elseif self.gpPhase then p = 2                                -- (el ground pound: el cuadro de salto de siempre)
     elseif (self.throwPoseT or 0) > 0 then p = PSP.THROW
     elseif self.onGround and not self.inWater and (self.landPoseT or 0) > 0 then p = PSP.LAND
     elseif self.onGround and (self.pushPoseT or 0) > 0 then p = PSP.PUSH
