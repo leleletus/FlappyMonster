@@ -141,17 +141,28 @@ function MenuList.header(text, color, A, i, maxS)
 end
 
 -- La DESCRIPCIÓN del elegido (en un panel abajo) y la AYUDA de los botones
-function MenuList.footer(desc, A, i, hint)
+-- El rectángulo del panel de la descripción (x, y, w, h): como mucho `maxW` de ancho (lo que deje libre quien tenga algo
+-- en las esquinas: el engranaje del menú principal); si no cabe en una línea, crece hacia ARRIBA (el pie no se mueve)
+function MenuList.footerRect(desc, maxW)
+    local lim = math.min(WINDOW_W - 80, maxW or WINDOW_W)
+    local w = math.min(lim, FONT_MED:getWidth(desc) + 64)
+    local _, lines = FONT_MED:getWrap(desc, w - 32)
+    local h = math.max(52, #lines * FONT_MED:getHeight() + 28)
+    return math.floor((WINDOW_W - w) / 2), WINDOW_H - 60 - h, w, h, lines
+end
+
+function MenuList.footer(desc, A, i, hint, maxW)
     local ox, oy, a = 0, 0, 1
     if A then ox, oy, a = A:slide(i or 1, 0, 160, 0, 160) end
     if desc then
         love.graphics.setFont(FONT_MED)
-        local w = math.min(WINDOW_W - 80, FONT_MED:getWidth(desc) + 64)
-        local h = 52
-        local x, y = math.floor((WINDOW_W - w) / 2) + ox, WINDOW_H - 112 + oy
+        local x, y, w, h, lines = MenuList.footerRect(desc, maxW)
+        x, y = x + ox, y + oy
         MenuButton.panel(x, y, w, h, 0.95 * a)
         love.graphics.setColor(1, 1, 1, a)
-        love.graphics.printf(desc, x, y + math.floor((h - FONT_MED:getHeight()) / 2) + 2, w, 'center')
+        local lh = FONT_MED:getHeight()
+        local ty = y + math.floor((h - #lines * lh) / 2) + 2
+        for k, l in ipairs(lines) do love.graphics.printf(l, x, ty + (k - 1) * lh, w, 'center') end
     end
     hint = hint or L('menu.hint', { move = Input.label('nav_up') .. Input.label('nav_down'),
                                     ok = Input.label('confirm'), back = Input.label('back') })

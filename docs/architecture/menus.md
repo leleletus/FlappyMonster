@@ -83,10 +83,32 @@ kind (`story.collect.kind.<kind>`), what it is (`desc`) and how it was won (`how
 (`assets/images/story/collectibles/locked.png`) and its `hint`. Texts: `<entry.keys>.name|desc|how|hint`. Arrows walk
 the grid in order (left / right wrap to the next row, up / down change row). Harness `collection`.
 
+## Settings screen (rebuilt 0.5.197)
+
+Design and the user's complaints: [settings-menu-rework](../design/settings-menu-rework.md) (plan:
+[settings-menu-plan](../design/settings-menu-plan.md)). `SettingsState` draws a drifting CHECKERED background
+(`assets/images/ui/settings/checker.png`, not the living `MenuScene`), the title, four TABS (audio, controls, game,
+other) and a panel of uniform rows: name on the left, control on the right (volume bar of 10 blocks + number, a
+switch, `< value >`, or an action). The options are data in `src/ui/menu/SettingsRows.lua` (a new option = a row in
+its tab + `settings.row_<id>` / `settings.desc_<id>` texts); what is saved did not change (`src/core/Settings.lua`).
+Input: up / down rows (up from the first row = the tab bar), left / right change the value, confirm toggles / steps /
+runs, `tab_prev` / `tab_next` (Q · E / Tab · pad L / R) change tab; touch: a first tap on a row only selects it, a second
+tap changes it; mouse hover selects, click changes. A scroll bar appears only when a tab does not fit. The credits
+come back to OTHER → credits. Art: `tools/art/ui/make_settings_ui.py`.
+
+The main menu has no SETTINGS button any more: a GEAR in the bottom-right corner (shown whenever the button list is
+open, on every device; down from the last button / up from the first selects it, `TitleState:_gearRect`). Harness:
+`menu_flow` `cfg_datos`, `cfg_pestanas`, `opciones_son`, `idioma`, `cfg_tactil`, `cfg_scroll`, `a settings`, `vuelve cfg`,
+`engranaje`.
+
+History: the user (2026-11-11) on the old screen: "horrible, uncomfortable, strange, unpleasant"; no hint that it
+scrolled, every option a big identical button, the language changing on confirm, ON / OFF as text. On the first
+mockup: centre the switch knob vertically, and leave a gap between the title and the content.
+
 ## Debug menu (secret)
 
 0.5.163 (step 1 of [flappy-prequel](../design/flappy-prequel.md)). `DebugMenuState` (state `debug_menu`, red banner),
-opened from the TITLE with ↑ ↑ ↓ ↓ ← → ← → (arrows or d-pad) or 7 quick taps on the version number (bottom right) —
+opened from the TITLE with ↑ ↑ ↓ ↓ ← → ← → (arrows or d-pad) or 7 quick taps on the version number (bottom LEFT since 0.5.197; the gear took the bottom right) —
 the combination that used to open the sound test. Buttons: ENDLESS CLASSIC (the old Flappy, `difficulty` with
 `from = 'debug_menu'`), UNLOCKED ADVENTURE (`Campaign.debugOpen = true`, then `adv_mode_select`: Adventure stays open
 for the rest of the SESSION, not saved), FLAPPY FLIGHT (TEST) (0.5.164: the flight test stage `assets/levels/_flappy_vuelo.json`, back here), FREE PLAY (also

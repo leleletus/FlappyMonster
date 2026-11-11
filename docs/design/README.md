@@ -12,7 +12,6 @@ and describe the real thing in the system's page.
 
 | What | Page |
 |---|---|
-| **Settings menu rework (2026-11-11):** tabs, rows with switches / bars / `< >`, checkered background, a gear in the main menu (approved, being built) | [settings-menu-rework](settings-menu-rework.md) |
 | **The tutorial level (2026-11-10):** every mechanic, signs with prompts, teach the verb not the trick (being built) | [tutorial-level](tutorial-level.md) |
 | **Game feel, structure and performance round (2026-11-10):** variable jump, coyote time, rumble, dust, camera lead, boss file split… (hit-stop waiting, off-screen arrow rejected) | [gamefeel-round-2026-11](gamefeel-round-2026-11.md) |
 | **Flappy levels need work (the user, 2026-11-10):** the first zone's attack, cages, power-ups, wheel and boss are built, but its levels are too short, weak and easy | [flappy-prequel](flappy-prequel.md) |
@@ -36,6 +35,7 @@ and describe the real thing in the system's page.
 
 | Document | What it holds | Status |
 |---|---|---|
+| [settings-menu-rework](settings-menu-rework.md) · [settings-menu-plan](settings-menu-plan.md) | the settings screen rebuilt: tabs, rows, switches, checkered background, the gear | built (0.5.197) |
 | [secrets-design](archive/secrets-design.md) | cannons, splinters, secret exits, the Collection, the pieces each crab wears | built (0.5.111) |
 | [secrets-lore-analysis](archive/secrets-lore-analysis.md) | endings, the flap problem, options weighed and the user's decisions | decided |
 | [frozen-islands-design](archive/frozen-islands-design.md) | iceberg, cold water, tide, avalanche, cable car, levels, the user's verdict | built |

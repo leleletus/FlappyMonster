@@ -151,6 +151,8 @@ function TitleState:_versionRect() return 0, WINDOW_H - 50, 180, 50 end
 -- abajo desde el último botón lo elige (gearSel); arriba vuelve a la lista; abajo otra vez, al primero
 local GEAR_S = 3                                  -- (el arte es de 20x20: 60 px en pantalla)
 function TitleState:_gearRect() local s = 20 * GEAR_S + 16; return WINDOW_W - s - 16, WINDOW_H - s - 16, s, s end
+-- Lo ancho que puede ser la descripción de abajo sin tapar el engranaje (centrada: el mismo hueco a cada lado)
+function TitleState:_footerMaxW() local _, _, w = self:_gearRect(); return WINDOW_W - 2 * (w + 24) end
 local gearImg, gearQ
 local function gearArt()
     if not gearImg then
@@ -249,7 +251,8 @@ function TitleState:render()
         self.list:draw()
         self.list.selected = keep
         self:_drawGear()
-        MenuList.footer(self.gearSel and L('menu.desc_settings') or self.list:desc(), self.anim, #self.list.items + 2)
+        MenuList.footer(self.gearSel and L('menu.desc_settings') or self.list:desc(), self.anim, #self.list.items + 2, nil,
+                        self:_footerMaxW())
     end
 
     -- Versión instalada (version.txt; la cambian las actualizaciones)

@@ -4,7 +4,7 @@
 -- translations.csv: settings.row_<id>, settings.desc_<id>).
 --   fila = { id, kind = 'volume' | 'switch' | 'choice' | 'number' | 'action', label = clave, desc = clave,
 --            value() → número (volume / number: 0..10, ms) | booleano (switch) | texto (choice),
---            step(d)  (d = -1 / +1: volume 0..10, number ±10 ms en -300..300, choice da la vuelta, switch cambia),
+--            step(d)  (d = -1 / +1: volume 0..10, number ±10 ms en -300..300, choice da la vuelta, switch: -1 apaga, +1 enciende),
 --            go(state) (confirmar: switch cambia, choice avanza, action la hace; volume / number: nil) }
 -- Todo se guarda como siempre: src/core/Settings.lua (mismas claves, mismo options.cfg).
 local Settings = require 'src/core/Settings'
@@ -19,13 +19,16 @@ local function volume(key)
              value = function() return Settings[key] end,
              step = function(d) Settings.set(key, math.max(0, math.min(10, Settings[key] + d))); beep(d) end }
 end
+-- (izquierda = apagado, derecha = encendido; confirmar lo cambia)
 local function switch(key, set)
-    local flip = function()
-        if set then set(not Settings[key]) else Settings.set(key, not Settings[key]) end
-        beep(Settings[key] and 1 or -1)
+    local put = function(v)
+        if (Settings[key] == true) == v then return end
+        if set then set(v) else Settings.set(key, v) end
+        beep(v and 1 or -1)
     end
     return { id = key, kind = 'switch', label = 'settings.row_' .. key, desc = 'settings.desc_' .. key,
-             value = function() return Settings[key] == true end, step = flip, go = flip }
+             value = function() return Settings[key] == true end,
+             step = function(d) put(d > 0) end, go = function() put(not (Settings[key] == true)) end }
 end
 
 local function langIndex()

@@ -124,8 +124,8 @@ end
 
 function SettingsState:_step(d)
     local r = rowOf(self)
-    if not r then return end
-    if r.step then r.step(d) elseif r.go then return r.go(self) end
+    if not r or not r.step then return end              -- (una ACCIÓN — los créditos — solo con confirmar)
+    r.step(d)
     self.kick = { d = d, t = 0 }
 end
 
@@ -316,6 +316,7 @@ function SettingsState:touchpressed(id, x, y)
             local row = rowOf(self)
             if row.kind == 'switch' or row.kind == 'action' then return self:_go() end
             local c = ctrlRect(r)
+            if x < c.x then return end                  -- (el nombre de la fila: no cambia nada; solo su control)
             return self:_step((x < c.x + c.w / 2) and -1 or 1)
         end
     end

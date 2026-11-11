@@ -1,6 +1,6 @@
 # Settings menu rework (2026-11-11)
 
-**Status:** approved by the user (mockup + this page, 2026-11-11); not built yet.
+**Status:** built (0.5.197); the system page is [menus](../architecture/menus.md#settings-screen-rebuilt-0-5-197).
 
 ## Why
 

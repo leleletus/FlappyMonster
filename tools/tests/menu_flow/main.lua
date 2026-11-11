@@ -40,6 +40,7 @@ end
 local realInput, pressed, co, wantShot = nil, {}, nil, nil
 local MenuScene, Transition, L
 
+local MenuList = require 'src/ui/menu/MenuList'
 local function top() return gStateMachine:_top() end
 local function tick()
     local cur = pressed; pressed = {}
@@ -499,6 +500,7 @@ local function run()
         check('cfg_pestanas', table.concat(seq, ',') == 'audio,controls,game,other' and wrapped == 'audio' and back1 == 'other',
             ('siguiente: %s → %s · anterior: %s'):format(table.concat(seq, ','), tostring(wrapped), tostring(back1)))
         -- volumen de la música (se aplica y se guarda), silencio, A / B
+        S.set('musicVol', 10)                                     -- (lo guardado por una pasada anterior no cuenta)
         Sound.playMusic('menus'); wait(0.05)
         local v0 = Sound.musicVolume()
         local onMusic = rowId() == 'musicVol'
@@ -543,6 +545,29 @@ local function run()
         S.set('rumble', rum0)
         check('cfg_tactil', tabOk and selOnly and toggled,
             ('tocar la pestaña=%s · 1er toque solo elige=%s · 2º cambia=%s'):format(tostring(tabOk), tostring(selOnly), tostring(toggled)))
+        -- revisión final: tocar el NOMBRE de una fila de volumen ya elegida no cambia nada (solo su control); izquierda
+        -- en un interruptor apagado lo deja apagado y derecha lo enciende; izquierda / derecha en CRÉDITOS no la abren
+        do
+            st.tab, st.row, st.first = 1, 1, 1
+            local rv = st:layout().rows[1]
+            local v0 = S.musicVol
+            st:touchpressed('t', rv.x + 20, rv.y + rv.h / 2); wait(0.05)
+            local labelSafe = S.musicVol == v0
+            st.tab, st.row = 2, 2                                   -- (CONTROLES · vibración)
+            local keepR = S.rumble
+            S.set('rumble', false)
+            press('nav_left', 0.05); local leftOff = S.rumble == false
+            press('nav_right', 0.05); local rightOn = S.rumble == true
+            press('nav_right', 0.05); local stillOn = S.rumble == true
+            S.set('rumble', keepR)
+            st.tab, st.row = 4, 1                                   -- (OTROS · créditos)
+            press('nav_right', 0.1); press('nav_left', 0.1)
+            local noFilm = name(top()) == 'SettingsState' and not st.anim:busy()
+            st.tab, st.row = 1, 1
+            check('cfg_revision', labelSafe and leftOff and rightOn and stillOn and noFilm,
+                ('tocar el nombre no cambia el volumen=%s · interruptor: izquierda apagado=%s, derecha encendido=%s (y sigue=%s) · ←/→ en créditos no los abre=%s'):format(
+                 tostring(labelSafe), tostring(leftOff), tostring(rightOn), tostring(stillOn), tostring(noFilm)))
+        end
         -- una pestaña que no cabe: barra de desplazamiento y la elegida siempre dentro del panel (960 de ancho)
         resize(960, 720); wait(0.2)
         shot('settings_960')
@@ -580,6 +605,21 @@ local function run()
         check('engranaje', tapOk and closedOk and gx > WINDOW_W / 2 and vx < WINDOW_W / 2,
             ('tocarlo abre=%s · en el título no=%s · engranaje a la derecha=%s · versión a la izquierda=%s'):format(tostring(tapOk),
              tostring(closedOk), tostring(gx > WINDOW_W / 2), tostring(vx < WINDOW_W / 2)))
+        -- a 960 de ancho la descripción más larga no tapa el engranaje
+        resize(960, 720); wait(0.2)
+        local m3 = top()
+        local gx3, gy3, gw3, gh3 = m3:_gearRect()
+        local worst = 0
+        for _, it in ipairs(m3.list.items) do
+            for _, lg in ipairs(L.LANGUAGES) do
+                local txt = L.keys(lg.id)[it.desc] or ''
+                local fx, fy, fw, fh = MenuList.footerRect(txt, m3:_footerMaxW())
+                if fx + fw > gx3 and fy + fh > gy3 then worst = math.max(worst, fx + fw - gx3) end
+            end
+        end
+        shot('main_960_gear')
+        resize(1280, 720); wait(0.2)
+        check('engranaje_pie', worst == 0, 'la descripción tapa el engranaje en 960: ' .. worst .. ' px')
         gStateMachine:change('main_menu', { select = 'settings' }); wait(0.6)
     end
 
