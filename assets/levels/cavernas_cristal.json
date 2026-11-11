@@ -80,7 +80,11 @@
     {"col":52,"row":11,"type":"star"},
     {"col":116,"row":18,"type":"extralife"},
     {"col":81,"row":16,"type":"gust"},
-    {"col":131,"row":18,"type":"gust"}
+    {"col":131,"row":18,"type":"gust"},
+    {"col":19,"props":{"patrol":{"left":18,"right":23}},"row":20,"type":"hopper"},
+    {"col":29,"props":{"patrol":{"left":25,"right":30}},"row":20,"type":"hopper"},
+    {"col":67,"props":{"patrol":{"left":65,"right":68}},"row":18,"type":"hopper"},
+    {"col":103,"props":{"patrol":{"left":102,"right":106}},"row":20,"type":"hopper"}
   ],
   "foliage": [
     {"col":7,"row":20,"sub":4,"type":"stalagmite_small"},

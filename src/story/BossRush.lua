@@ -17,7 +17,8 @@ local SAVE = 'bossrush.dat'
 function BossRush.levels()
     local have, out, seen = {}, {}, {}
     for _, f in ipairs(LevelCatalog.files()) do
-        if LevelCatalog.hasBossZone(f) and not LevelCatalog.EVENTS[f] then have[f] = true end
+        -- (las etapas Flappy son de su campaña: ahí no empieza la pelea sola)
+        if LevelCatalog.hasBossZone(f) and not LevelCatalog.EVENTS[f] and not LevelCatalog.isFlappy(f) then have[f] = true end
     end
     local function add(id)
         local f = id .. '.json'

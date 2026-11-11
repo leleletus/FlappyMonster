@@ -65,7 +65,11 @@
     {"col":111,"row":14,"type":"checkpoint"},
     {"col":116,"props":{"patrol":false,"speed":60,"wallWalk":true},"row":14,"type":"crabby_river"},
     {"col":53,"row":10,"type":"gust"},
-    {"col":7,"props":{"text":"tut.run_tip"},"row":14,"type":"hint"}
+    {"col":7,"props":{"text":"tut.run_tip"},"row":14,"type":"hint"},
+    {"col":19,"props":{"patrol":{"left":15,"right":23}},"row":14,"type":"hopper"},
+    {"col":46,"props":{"patrol":{"left":43,"right":47}},"row":12,"type":"hopper"},
+    {"col":86,"props":{"patrol":{"left":82,"right":87}},"row":14,"type":"hopper"},
+    {"col":119,"props":{"patrol":{"left":118,"right":121}},"row":12,"type":"hopper"}
   ],
   "foliage": [
     {"col":4,"row":14,"type":"butterflies"},

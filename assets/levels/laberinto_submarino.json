@@ -226,7 +226,8 @@
     {"col":46,"row":12,"type":"apple"},
     {"col":56,"row":37,"type":"apple"},
     {"col":66,"row":32,"type":"apple"},
-    {"col":102,"row":37,"type":"apple"}
+    {"col":102,"row":37,"type":"apple"},
+    {"col":122,"props":{"patrol":{"left":121,"right":126}},"row":9,"type":"hopper"}
   ],
   "foliage": [
     {"col":19,"row":12,"sub":3,"type":"anemone"},

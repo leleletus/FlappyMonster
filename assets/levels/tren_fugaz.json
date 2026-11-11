@@ -57,7 +57,13 @@
     {"col":34,"row":9,"type":"apple"},
     {"col":66,"row":9,"type":"apple"},
     {"col":105,"row":9,"type":"apple"},
-    {"col":140,"row":9,"type":"apple"}
+    {"col":140,"row":9,"type":"apple"},
+    {"col":45,"props":{"patrol":{"left":44,"right":49}},"row":9,"type":"hopper"},
+    {"col":56,"props":{"patrol":{"left":54,"right":60}},"row":9,"type":"hopper"},
+    {"col":72,"props":{"patrol":{"left":68,"right":76}},"row":9,"type":"hopper"},
+    {"col":94,"props":{"patrol":{"left":90,"right":96}},"row":9,"type":"hopper"},
+    {"col":133,"props":{"patrol":{"left":129,"right":137}},"row":9,"type":"hopper"},
+    {"col":156,"props":{"patrol":{"left":152,"right":160}},"row":9,"type":"hopper"}
   ],
   "foliage": [
     {"col":50,"props":{"layer":"back"},"row":5,"sub":4,"type":"torch"},

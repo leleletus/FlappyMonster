@@ -27,7 +27,8 @@
     {"col":8,"row":14,"type":"scorpion"},
     {"col":38,"row":14,"type":"giantscorpion"},
     {"col":23,"props":{"corner":{"col":25,"row":14},"material":"basalt","zone":1},"row":3,"type":"bosswall"},
-    {"col":46,"props":{"corner":{"col":48,"row":14},"material":"basalt","zone":1},"row":3,"type":"bosswall"}
+    {"col":46,"props":{"corner":{"col":48,"row":14},"material":"basalt","zone":1},"row":3,"type":"bosswall"},
+    {"col":17,"props":{"patrol":{"left":13,"right":21}},"row":14,"type":"hopper"}
   ],
   "foliage": [],
   "vents": [],

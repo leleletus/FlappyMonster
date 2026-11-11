@@ -76,7 +76,10 @@
     {"col":69,"props":{"helmet":true,"patrol":{"left":62,"right":76},"points":4,"respawn":8},"row":13,"type":"gummy_ice"},
     {"col":23,"row":11,"type":"star"},
     {"col":69,"row":11,"type":"star"},
-    {"col":46,"props":{"points":6,"respawn":1},"row":20,"type":"gust"}
+    {"col":46,"props":{"points":6,"respawn":1},"row":20,"type":"gust"},
+    {"col":15,"props":{"patrol":{"left":13,"right":19},"points":6,"respawn":8},"row":13,"type":"hopper"},
+    {"col":46,"props":{"patrol":{"left":42,"right":50},"points":6,"respawn":8},"row":7,"type":"hopper"},
+    {"col":77,"props":{"patrol":{"left":73,"right":79},"points":6,"respawn":8},"row":21,"type":"hopper"}
   ],
   "foliage": [
     {"col":44,"props":{"layer":"back"},"row":7,"sub":3,"type":"snow_pile"},

@@ -43,11 +43,18 @@ end
 
 -- ¿Es un nivel de JEFE? (tiene zonas de jefe) — rápido, sin cargar el nivel: mira el JSON. Lo usa el Juego Libre (sus
 -- pestañas CARRERAS / JEFES) y el Boss Rush (src/story/BossRush.lua). Se recuerda por archivo.
-local bossCache = {}
+local bossCache, flappyCache = {}, {}
+-- ¿Nivel Flappy? (se sabe al mirar si tiene jefe: el mismo vistazo al archivo)
+function LevelCatalog.isFlappy(file)
+    LevelCatalog.hasBossZone(file)
+    return flappyCache[file] == true
+end
+
 function LevelCatalog.hasBossZone(file)
     if bossCache[file] == nil then
         local raw = love.filesystem.read(LevelCatalog.DIR .. '/' .. file) or ''
         bossCache[file] = raw:find('"bossZones"%s*:%s*%[%s*{') ~= nil
+        flappyCache[file] = raw:find('"flappy"%s*:%s*true') ~= nil
     end
     return bossCache[file]
 end

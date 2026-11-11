@@ -96,7 +96,10 @@
     {"col":12,"row":23,"type":"trampoline"},
     {"col":76,"row":23,"type":"trampoline"},
     {"col":30,"row":8,"type":"gust"},
-    {"col":70,"row":8,"type":"gust"}
+    {"col":70,"row":8,"type":"gust"},
+    {"col":16,"props":{"patrol":{"left":12,"right":19}},"row":9,"type":"hopper"},
+    {"col":52,"props":{"patrol":{"left":51,"right":56}},"row":23,"type":"hopper"},
+    {"col":81,"props":{"patrol":{"left":77,"right":85}},"row":9,"type":"hopper"}
   ],
   "foliage": [
     {"col":50,"props":{"flip":true,"layer":"back"},"row":2,"sub":4,"type":"hibiscus"},

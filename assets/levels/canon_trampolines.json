@@ -99,7 +99,11 @@
     {"col":62,"row":5,"type":"extralife"},
     {"col":30,"row":17,"type":"trampoline"},
     {"col":52,"row":14,"type":"gust"},
-    {"col":99,"row":13,"type":"gust"}
+    {"col":99,"row":13,"type":"gust"},
+    {"col":20,"props":{"patrol":{"left":16,"right":24}},"row":17,"type":"hopper"},
+    {"col":40,"props":{"patrol":{"left":36,"right":44}},"row":17,"type":"hopper"},
+    {"col":69,"props":{"patrol":{"left":65,"right":70}},"row":16,"type":"hopper"},
+    {"col":57,"props":{"patrol":{"left":53,"right":61}},"row":16,"type":"hopper"}
   ],
   "foliage": [
     {"col":5,"row":17,"type":"palmtree"},

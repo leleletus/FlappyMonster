@@ -55,7 +55,9 @@
     {"col":53,"row":14,"type":"mortar"},
     {"col":77,"row":12,"type":"mortar"},
     {"col":107,"row":11,"type":"mortar"},
-    {"col":87,"row":9,"type":"gust"}
+    {"col":87,"row":9,"type":"gust"},
+    {"col":30,"props":{"patrol":{"left":29,"right":32}},"row":5,"type":"hopper"},
+    {"col":103,"props":{"patrol":{"left":99,"right":107}},"row":11,"type":"hopper"}
   ],
   "foliage": [
     {"col":30,"props":{"flip":true,"layer":"back"},"row":5,"sub":3,"type":"torch"},

@@ -52,7 +52,8 @@
     {"col":42,"props":{"patrol":{"left":37,"right":46},"points":4,"respawn":8},"row":15,"type":"gummy_ice"},
     {"col":42,"row":9,"type":"star"},
     {"col":10,"row":13,"type":"star"},
-    {"col":46,"row":15,"type":"apple"}
+    {"col":46,"row":15,"type":"apple"},
+    {"col":25,"props":{"patrol":{"left":21,"right":29},"points":6,"respawn":8},"row":9,"type":"hopper"}
   ],
   "foliage": [
     {"col":19,"props":{"flip":true,"layer":"back"},"row":3,"sub":1,"type":"icicle_small"},

@@ -98,7 +98,13 @@
     {"col":136,"row":21,"type":"checkpoint"},
     {"col":148,"props":{"area":[{"col":141,"row":22},{"col":155,"row":22},{"col":155,"row":23},{"col":141,"row":23}]},"row":23,"type":"piranha"},
     {"col":57,"row":21,"type":"apple"},
-    {"col":119,"row":16,"type":"apple"}
+    {"col":119,"row":16,"type":"apple"},
+    {"col":18,"props":{"patrol":{"left":14,"right":20}},"row":21,"type":"hopper"},
+    {"col":42,"props":{"patrol":{"left":39,"right":46}},"row":21,"type":"hopper"},
+    {"col":73,"props":{"patrol":{"left":69,"right":75}},"row":20,"type":"hopper"},
+    {"col":93,"props":{"patrol":{"left":92,"right":97}},"row":16,"type":"hopper"},
+    {"col":124,"props":{"patrol":{"left":120,"right":125}},"row":16,"type":"hopper"},
+    {"col":158,"props":{"patrol":{"left":157,"right":162}},"row":21,"type":"hopper"}
   ],
   "foliage": [
     {"col":158,"row":21,"type":"stone_brazier"},

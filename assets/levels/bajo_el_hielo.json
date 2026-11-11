@@ -82,7 +82,12 @@
     {"col":159,"row":5,"type":"penguin"},
     {"col":38,"row":11,"type":"star"},
     {"col":33,"row":11,"type":"star"},
-    {"col":125,"row":11,"type":"door"}
+    {"col":125,"row":11,"type":"door"},
+    {"col":24,"props":{"patrol":{"left":23,"right":28}},"row":11,"type":"hopper"},
+    {"col":38,"props":{"patrol":{"left":34,"right":39}},"row":8,"type":"hopper"},
+    {"col":54,"props":{"patrol":{"left":50,"right":55}},"row":11,"type":"hopper"},
+    {"col":108,"props":{"patrol":{"left":106,"right":109}},"row":11,"type":"hopper"},
+    {"col":131,"props":{"patrol":{"left":128,"right":133}},"row":11,"type":"hopper"}
   ],
   "foliage": [
     {"col":113,"props":{"flip":true,"layer":"back"},"row":8,"sub":3,"type":"starfish_ice"},

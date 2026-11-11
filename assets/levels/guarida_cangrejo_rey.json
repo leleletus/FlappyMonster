@@ -60,7 +60,10 @@
     {"col":101,"props":{"area":[{"col":90,"row":12},{"col":108,"row":12},{"col":108,"row":13},{"col":90,"row":13}]},"row":13,"type":"pufferfish"},
     {"col":107,"props":{"area":[{"col":90,"row":12},{"col":108,"row":12},{"col":108,"row":13},{"col":90,"row":13}]},"row":12,"type":"pufferfish"},
     {"col":44,"row":10,"type":"apple"},
-    {"col":85,"row":12,"type":"apple"}
+    {"col":85,"row":12,"type":"apple"},
+    {"col":36,"props":{"patrol":{"left":35,"right":40}},"row":13,"type":"hopper"},
+    {"col":69,"props":{"patrol":{"left":68,"right":72}},"row":11,"type":"hopper"},
+    {"col":80,"props":{"patrol":{"left":76,"right":83}},"row":13,"type":"hopper"}
   ],
   "foliage": [
     {"col":9,"row":13,"type":"palmtree"},

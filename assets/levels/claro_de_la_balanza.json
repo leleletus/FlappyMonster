@@ -37,7 +37,9 @@
     {"col":12,"props":{"patrol":{"left":9,"right":16},"points":4,"respawn":1},"row":15,"type":"gummy_jungle"},
     {"col":36,"props":{"patrol":{"left":33,"right":40},"points":4,"respawn":1},"row":15,"type":"gummy_jungle"},
     {"col":4,"row":9,"type":"star"},
-    {"col":44,"row":9,"type":"star"}
+    {"col":44,"row":9,"type":"star"},
+    {"col":19,"props":{"patrol":{"left":16,"right":23},"points":6,"respawn":8},"row":15,"type":"hopper"},
+    {"col":31,"props":{"patrol":{"left":27,"right":32},"points":6,"respawn":8},"row":15,"type":"hopper"}
   ],
   "foliage": [
     {"col":21,"props":{"flip":true,"layer":"back"},"row":3,"type":"flower_vine"},

@@ -78,7 +78,11 @@
     {"col":46,"row":13,"type":"checkpoint"},
     {"col":98,"row":13,"type":"checkpoint"},
     {"col":61,"row":10,"type":"gust"},
-    {"col":111,"row":10,"type":"gust"}
+    {"col":111,"row":10,"type":"gust"},
+    {"col":32,"props":{"patrol":{"left":28,"right":34}},"row":11,"type":"hopper"},
+    {"col":52,"props":{"patrol":{"left":48,"right":54}},"row":13,"type":"hopper"},
+    {"col":81,"props":{"patrol":{"left":77,"right":84}},"row":11,"type":"hopper"},
+    {"col":103,"props":{"patrol":{"left":99,"right":104}},"row":13,"type":"hopper"}
   ],
   "foliage": [
     {"col":8,"row":13,"type":"palmtree"},

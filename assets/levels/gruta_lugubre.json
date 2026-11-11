@@ -62,7 +62,11 @@
     {"col":48,"row":3,"type":"gloomy"},
     {"col":23,"row":3,"type":"gloomy"},
     {"col":45,"row":12,"type":"apple"},
-    {"col":83,"row":12,"type":"apple"}
+    {"col":83,"row":12,"type":"apple"},
+    {"col":35,"props":{"patrol":{"left":34,"right":39}},"row":12,"type":"hopper"},
+    {"col":48,"props":{"patrol":{"left":44,"right":49}},"row":12,"type":"hopper"},
+    {"col":75,"props":{"patrol":{"left":71,"right":79}},"row":12,"type":"hopper"},
+    {"col":60,"props":{"patrol":{"left":56,"right":64}},"row":12,"type":"hopper"}
   ],
   "foliage": [
     {"col":2,"props":{"flip":true},"row":3,"type":"stalactite"},

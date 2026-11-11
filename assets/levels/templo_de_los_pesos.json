@@ -125,7 +125,12 @@
     {"col":146,"row":29,"type":"apple"},
     {"col":93,"row":29,"type":"door"},
     {"col":94,"props":{"id":2},"row":29,"type":"door"},
-    {"col":95,"props":{"id":3},"row":29,"type":"door"}
+    {"col":95,"props":{"id":3},"row":29,"type":"door"},
+    {"col":15,"props":{"patrol":{"left":14,"right":17}},"row":15,"type":"hopper"},
+    {"col":43,"props":{"patrol":{"left":40,"right":47}},"row":29,"type":"hopper"},
+    {"col":81,"props":{"patrol":{"left":80,"right":85}},"row":38,"type":"hopper"},
+    {"col":104,"props":{"patrol":{"left":100,"right":107}},"row":29,"type":"hopper"},
+    {"col":137,"props":{"patrol":{"left":133,"right":141}},"row":29,"type":"hopper"}
   ],
   "foliage": [
     {"col":55,"row":19,"type":"hanging_moss"},

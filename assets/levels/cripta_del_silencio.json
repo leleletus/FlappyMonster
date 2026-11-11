@@ -80,7 +80,10 @@
     {"col":30,"row":23,"type":"star"},
     {"col":60,"row":23,"type":"star"},
     {"col":40,"row":23,"type":"apple"},
-    {"col":46,"props":{"points":6,"respawn":1},"row":17,"type":"gust"}
+    {"col":46,"props":{"points":6,"respawn":1},"row":17,"type":"gust"},
+    {"col":15,"props":{"patrol":{"left":13,"right":19},"points":6,"respawn":8},"row":13,"type":"hopper"},
+    {"col":43,"props":{"patrol":{"left":39,"right":47},"points":6,"respawn":8},"row":19,"type":"hopper"},
+    {"col":77,"props":{"patrol":{"left":76,"right":79},"points":6,"respawn":8},"row":21,"type":"hopper"}
   ],
   "foliage": [
     {"col":4,"props":{"layer":"back"},"row":4,"type":"stalactite"},

@@ -109,7 +109,13 @@
     {"col":108,"props":{"attach":"ceiling","dropOnSight":true,"patrol":{"left":104,"right":113}},"row":16,"type":"crabby_river"},
     {"col":107,"row":19,"type":"gust"},
     {"col":58,"row":23,"type":"star"},
-    {"col":57,"row":24,"type":"star"}
+    {"col":57,"row":24,"type":"star"},
+    {"col":21,"props":{"patrol":{"left":20,"right":25}},"row":13,"type":"hopper"},
+    {"col":42,"props":{"patrol":{"left":41,"right":46}},"row":21,"type":"hopper"},
+    {"col":62,"props":{"patrol":{"left":61,"right":66}},"row":21,"type":"hopper"},
+    {"col":103,"props":{"patrol":{"left":102,"right":107}},"row":13,"type":"hopper"},
+    {"col":122,"props":{"patrol":{"left":121,"right":126}},"row":21,"type":"hopper"},
+    {"col":153,"props":{"patrol":{"left":149,"right":157}},"row":21,"type":"hopper"}
   ],
   "foliage": [
     {"col":26,"props":{"flip":true},"row":13,"type":"pine_tree"},

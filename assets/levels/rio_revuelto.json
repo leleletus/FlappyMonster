@@ -90,7 +90,12 @@
     {"col":29,"row":11,"type":"carnivoreplant"},
     {"col":2,"props":{"control":"switch","corner":{"col":159,"row":27},"fallSpeed":1,"maxLevel":13,"risePause":0.7,"riseSpeed":1,"riseStep":3,"startLevel":0},"row":10,"type":"flood"},
     {"col":41,"row":13,"type":"apple"},
-    {"col":79,"row":22,"type":"apple"}
+    {"col":79,"row":22,"type":"apple"},
+    {"col":17,"props":{"patrol":{"left":16,"right":21}},"row":13,"type":"hopper"},
+    {"col":46,"props":{"patrol":{"left":42,"right":48}},"row":13,"type":"hopper"},
+    {"col":80,"props":{"patrol":{"left":77,"right":82}},"row":10,"type":"hopper"},
+    {"col":117,"props":{"patrol":{"left":116,"right":121}},"row":13,"type":"hopper"},
+    {"col":144,"props":{"patrol":{"left":140,"right":145}},"row":22,"type":"hopper"}
   ],
   "foliage": [
     {"col":21,"plane":"bg","row":10,"type":"fallen_block"},

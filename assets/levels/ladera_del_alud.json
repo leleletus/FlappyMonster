@@ -101,7 +101,9 @@
     {"col":23,"props":{"delay":4.8,"length":7,"period":7,"pour":2.2,"width":3},"row":53,"type":"avalanche"},
     {"col":34,"props":{"patrol":{"left":33,"right":35}},"row":59,"type":"crabby_ice"},
     {"col":27,"props":{"patrol":{"left":26,"right":29}},"row":59,"type":"gummy_ice"},
-    {"col":21,"props":{"patrol":{"left":18,"right":22}},"row":59,"type":"snowball"}
+    {"col":21,"props":{"patrol":{"left":18,"right":22}},"row":59,"type":"snowball"},
+    {"col":12,"props":{"patrol":{"left":8,"right":15}},"row":59,"type":"hopper"},
+    {"col":37,"props":{"patrol":{"left":33,"right":39}},"row":59,"type":"hopper"}
   ],
   "foliage": [
     {"col":13,"props":{"flip":true,"layer":"back"},"row":5,"type":"icicle"},

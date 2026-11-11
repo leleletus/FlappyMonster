@@ -110,7 +110,12 @@
     {"col":117,"row":17,"sub":2,"type":"spikefall"},
     {"col":117,"row":17,"sub":1,"type":"spikefall"},
     {"col":119,"row":16,"sub":1,"type":"spikefall"},
-    {"col":75,"row":19,"type":"gust"}
+    {"col":75,"row":19,"type":"gust"},
+    {"col":18,"props":{"patrol":{"left":14,"right":19}},"row":21,"type":"hopper"},
+    {"col":49,"props":{"patrol":{"left":48,"right":53}},"row":21,"type":"hopper"},
+    {"col":90,"props":{"patrol":{"left":89,"right":94}},"row":21,"type":"hopper"},
+    {"col":104,"props":{"patrol":{"left":100,"right":108}},"row":21,"type":"hopper"},
+    {"col":145,"props":{"patrol":{"left":143,"right":149}},"row":21,"type":"hopper"}
   ],
   "foliage": [
     {"col":22,"row":13,"type":"tropical_bush"},

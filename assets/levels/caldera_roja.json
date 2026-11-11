@@ -98,7 +98,12 @@
     {"col":114,"props":{"attach":"ceiling","dropOnSight":true,"patrol":{"left":110,"right":119}},"row":16,"type":"crabby_lava"},
     {"col":129,"row":13,"type":"mortar"},
     {"col":34,"row":19,"type":"gust"},
-    {"col":128,"row":19,"type":"gust"}
+    {"col":128,"row":19,"type":"gust"},
+    {"col":38,"props":{"patrol":{"left":34,"right":39}},"row":21,"type":"hopper"},
+    {"col":47,"props":{"patrol":{"left":46,"right":51}},"row":13,"type":"hopper"},
+    {"col":111,"props":{"patrol":{"left":110,"right":115}},"row":13,"type":"hopper"},
+    {"col":132,"props":{"patrol":{"left":128,"right":134}},"row":21,"type":"hopper"},
+    {"col":142,"props":{"patrol":{"left":140,"right":146}},"row":21,"type":"hopper"}
   ],
   "foliage": [
     {"col":38,"props":{"flip":true,"layer":"back"},"row":13,"sub":4,"type":"ash_pile"},

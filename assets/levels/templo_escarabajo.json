@@ -50,7 +50,9 @@
     {"col":61,"row":12,"type":"giantbeetle"},
     {"col":61,"props":{"drop":6.375,"span":12,"travel":2},"row":3,"type":"scale"},
     {"col":46,"props":{"corner":{"col":48,"row":12},"zone":1},"row":3,"type":"bosswall"},
-    {"col":73,"props":{"corner":{"col":75,"row":12},"zone":1},"row":3,"type":"bosswall"}
+    {"col":73,"props":{"corner":{"col":75,"row":12},"zone":1},"row":3,"type":"bosswall"},
+    {"col":18,"props":{"patrol":{"left":14,"right":22}},"row":12,"type":"hopper"},
+    {"col":43,"props":{"patrol":{"left":39,"right":47}},"row":12,"type":"hopper"}
   ],
   "foliage": [
     {"col":50,"row":12,"type":"stone_brazier"},

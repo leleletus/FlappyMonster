@@ -95,7 +95,13 @@
     {"col":125,"props":{"attach":"ceiling","dropOnSight":true,"patrol":{"left":121,"right":130}},"row":16,"type":"crabby_ice"},
     {"col":54,"props":{"area":[{"col":48,"row":23},{"col":59,"row":23},{"col":57,"row":25},{"col":50,"row":25}]},"row":25,"type":"pufferfish"},
     {"col":98,"row":19,"type":"gust"},
-    {"col":154,"row":19,"type":"gust"}
+    {"col":154,"row":19,"type":"gust"},
+    {"col":19,"props":{"patrol":{"left":18,"right":23}},"row":21,"type":"hopper"},
+    {"col":42,"props":{"patrol":{"left":38,"right":45}},"row":19,"type":"hopper"},
+    {"col":72,"props":{"patrol":{"left":71,"right":76}},"row":21,"type":"hopper"},
+    {"col":90,"props":{"patrol":{"left":86,"right":91}},"row":21,"type":"hopper"},
+    {"col":128,"props":{"patrol":{"left":124,"right":132}},"row":13,"type":"hopper"},
+    {"col":157,"props":{"patrol":{"left":153,"right":160}},"row":21,"type":"hopper"}
   ],
   "foliage": [
     {"col":38,"props":{"flip":true,"layer":"back"},"row":13,"sub":3,"type":"snow_pile"},

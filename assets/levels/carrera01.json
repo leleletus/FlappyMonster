@@ -63,7 +63,10 @@
     {"col":15,"props":{"patrol":{"left":12,"right":17}},"row":7,"type":"crabby_lava"},
     {"col":50,"row":8,"type":"checkpoint"},
     {"col":57,"row":16,"type":"star"},
-    {"col":46,"row":8,"type":"gust"}
+    {"col":46,"row":8,"type":"gust"},
+    {"col":20,"props":{"patrol":{"left":19,"right":21}},"row":9,"type":"hopper"},
+    {"col":63,"props":{"patrol":{"left":62,"right":64}},"row":10,"type":"hopper"},
+    {"col":80,"props":{"patrol":{"left":79,"right":81}},"row":11,"type":"hopper"}
   ],
   "foliage": [
     {"col":27,"row":9,"sub":4,"type":"dead_bush"},

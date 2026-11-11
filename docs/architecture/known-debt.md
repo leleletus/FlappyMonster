@@ -53,21 +53,11 @@ from `FlappyMonster_originals`.
 
 ## Failing tests
 
-- Also failing before 0.5.182 (identical output on the clean tree, 2026-11-09, not investigated): `bot_nav` level
-  `ciudadela_alterna` (stopped up to 6.4 s), `gloomy_rules` check `parkour` (the farthest Gloomy stays 1.6 tiles away),
-  `free_play` check `rush_arena` (`valle_redcoptero.json` does not start alone: `idle`). On the Mac, `project_check`
-  fails on `tools/music/ref` (a git-ignored folder that only exists on the Linux machine).
-
-- `run.sh bot_nav`, level `la_cima`: its saved graph is stale (`DESACTUALIZADO`); same result on a clean export of
-  0.5.189, 2026-11-10. Not investigated; `BUILD=1` for that level would rebuild it.
-
-- `run.sh bot_nav`, level `cascada_dorada`: fails its water check (0.1 jumps/s in 30 s in the water). Already failing
-  before 0.5.175 (identical output at `fe2fad5f~1`); not investigated.
+Fixed in 0.5.194 (the user asked to clear the old failures): `la_cima` (stale graph, rebuilt); `rush_arena` (a real bug: the Adventure Boss Rush included the Flappy stage `valle_redcoptero`, whose fight does not start alone; Flappy levels are out); `gloomy_rules` `parkour` (a real cost: `GloomyNav.path` took 75-100 ms per search; now about 22 ms mean, 30 ms worst, with a per-search memo, an early distance cut and `MAX_NODES` 350); `ciudadela_alterna` (the harness counted the bot's deliberate `Bot.SWITCH_CD` wait under an Activator as being stuck); `project_check` on the Mac (it no longer checks links into the git-ignored `tools/music/ref`).
 
 ## Product items still open
 
 - The Switch "overlay" update mode has never been verified on a real console (`update/boot.log` tells the mode).
-- Hoppers are placed in no story level except `huida_del_espejo` and the dark caves (cripta_del_silencio, gruta_lugubre, templo_del_eco).
 
 ## Google Play readiness (input for the next task; nothing here is done)
 

@@ -174,6 +174,8 @@ sprite's pixel grid.
 
 ## Hopper (Saltarín)
 
+0.5.194 (the user: more Hoppers in every level): `tools/levelgen/add_hoppers.py <levels>` placed 202 across the levels (about one every 30 columns, on flat ground, away from the start, the goal, boss zones and other enemies). Left out: Flappy levels, test levels, `tutorial`, and `marea_alta` (no flat ground with room to hop).
+
 - **HOPPER / Saltarín (3.74.0; `types/enemies/hopper.lua`, protocol v48 = new entity type)**: the user's pick, design B
   "Muelle" (a ball with a face on a spring). It never walks: 'idle' (rests `jumpEvery` s, faces the nearest player in
   `range` tiles × difficulty `sense`) → 'crouch' (`WINDUP` 0.35 s = the telegraph, hopWind) → 'hop' (ballistic toward

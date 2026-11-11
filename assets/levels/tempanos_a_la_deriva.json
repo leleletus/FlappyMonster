@@ -93,7 +93,9 @@
     {"col":33,"row":20,"type":"trampoline"},
     {"col":51,"row":20,"type":"trampoline"},
     {"col":83,"row":20,"type":"trampoline"},
-    {"col":128,"row":20,"type":"trampoline"}
+    {"col":128,"row":20,"type":"trampoline"},
+    {"col":23,"props":{"patrol":{"left":22,"right":27}},"row":15,"type":"hopper"},
+    {"col":75,"props":{"patrol":{"left":74,"right":78}},"row":12,"type":"hopper"}
   ],
   "foliage": [
     {"col":142,"row":15,"type":"snowy_fir_small"},

@@ -82,7 +82,10 @@
     {"col":49,"props":{"attach":"ceiling","dropOnSight":true,"patrol":{"left":40,"right":52},"points":6,"respawn":1},"row":2,"type":"crabbytramp"},
     {"col":42,"props":{"attach":"ceiling","dropOnSight":true,"patrol":{"left":38,"right":50},"points":6,"respawn":1},"row":8,"type":"crabbytramp"},
     {"col":46,"props":{"attach":"ceiling","dropOnSight":true,"patrol":{"left":42,"right":54},"points":6,"respawn":1},"row":8,"type":"crabbytramp"},
-    {"col":50,"props":{"attach":"ceiling","dropOnSight":true,"patrol":{"left":46,"right":54},"points":6,"respawn":1},"row":8,"type":"crabbytramp"}
+    {"col":50,"props":{"attach":"ceiling","dropOnSight":true,"patrol":{"left":46,"right":54},"points":6,"respawn":1},"row":8,"type":"crabbytramp"},
+    {"col":15,"props":{"patrol":{"left":13,"right":19},"points":6,"respawn":8},"row":13,"type":"hopper"},
+    {"col":43,"props":{"patrol":{"left":39,"right":44},"points":6,"respawn":8},"row":14,"type":"hopper"},
+    {"col":77,"props":{"patrol":{"left":73,"right":79},"points":6,"respawn":8},"row":21,"type":"hopper"}
   ],
   "foliage": [
     {"col":20,"props":{"flip":true,"layer":"back"},"row":13,"sub":3,"type":"pineapple"},

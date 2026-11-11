@@ -76,7 +76,9 @@
     {"col":40,"row":9,"type":"star"},
     {"col":8,"row":18,"type":"mortar"},
     {"col":11,"props":{"points":6,"respawn":1},"row":14,"type":"crabby"},
-    {"col":20,"props":{"respawn":6},"row":10,"type":"bomb"}
+    {"col":20,"props":{"respawn":6},"row":10,"type":"bomb"},
+    {"col":19,"props":{"patrol":{"left":15,"right":23},"points":6,"respawn":8},"row":25,"type":"hopper"},
+    {"col":35,"props":{"patrol":{"left":31,"right":36},"points":6,"respawn":8},"row":25,"type":"hopper"}
   ],
   "foliage": [
     {"col":18,"row":12,"sub":1,"type":"starfish"},

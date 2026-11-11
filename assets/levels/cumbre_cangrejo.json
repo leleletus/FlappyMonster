@@ -23,7 +23,8 @@
     {"col":12,"props":{"attach":"ceiling","canHide":false,"dropOnSight":true,"patrol":false,"points":6,"respawn":1,"wallWalk":true},"row":2,"type":"crabby"},
     {"col":12,"props":{"canHide":false,"dropOnSight":true,"patrol":false,"points":6,"respawn":1,"wallWalk":true},"row":9,"type":"crabby"},
     {"col":2,"props":{"corner":{"col":23,"row":9},"maxLevel":6},"row":3,"type":"flood"},
-    {"col":11,"props":{"corner":{"col":14,"row":4},"points":4},"row":3,"type":"pointarea"}
+    {"col":11,"props":{"corner":{"col":14,"row":4},"points":4},"row":3,"type":"pointarea"},
+    {"col":19,"props":{"patrol":{"left":18,"right":21},"points":6,"respawn":8},"row":9,"type":"hopper"}
   ],
   "foliage": [
     {"col":14,"row":4,"type":"palmtree"},

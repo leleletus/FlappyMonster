@@ -334,7 +334,13 @@
     {"col":32,"row":9,"type":"apple"},
     {"col":68,"row":9,"type":"apple"},
     {"col":105,"row":9,"type":"apple"},
-    {"col":140,"row":9,"type":"apple"}
+    {"col":140,"row":9,"type":"apple"},
+    {"col":18,"props":{"patrol":{"left":16,"right":22}},"row":9,"type":"hopper"},
+    {"col":45,"props":{"patrol":{"left":44,"right":48}},"row":9,"type":"hopper"},
+    {"col":74,"props":{"patrol":{"left":70,"right":78}},"row":9,"type":"hopper"},
+    {"col":110,"props":{"patrol":{"left":109,"right":113}},"row":9,"type":"hopper"},
+    {"col":132,"props":{"patrol":{"left":131,"right":134}},"row":9,"type":"hopper"},
+    {"col":161,"props":{"patrol":{"left":160,"right":164}},"row":9,"type":"hopper"}
   ],
   "foliage": [
     {"col":7,"row":9,"sub":3,"type":"dead_bush"},

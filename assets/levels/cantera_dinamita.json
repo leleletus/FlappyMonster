@@ -104,7 +104,12 @@
     {"col":113,"props":{"attach":"ceiling","dropOnSight":true,"patrol":{"left":109,"right":118}},"row":16,"type":"crabby_fortress"},
     {"col":97,"row":18,"type":"gust"},
     {"col":34,"row":19,"type":"gust"},
-    {"col":126,"row":19,"type":"gust"}
+    {"col":126,"row":19,"type":"gust"},
+    {"col":19,"props":{"patrol":{"left":18,"right":23}},"row":21,"type":"hopper"},
+    {"col":46,"props":{"patrol":{"left":45,"right":50}},"row":13,"type":"hopper"},
+    {"col":76,"props":{"patrol":{"left":72,"right":80}},"row":21,"type":"hopper"},
+    {"col":108,"props":{"patrol":{"left":107,"right":112}},"row":13,"type":"hopper"},
+    {"col":138,"props":{"patrol":{"left":134,"right":142}},"row":21,"type":"hopper"}
   ],
   "foliage": [
     {"col":29,"props":{"layer":"back"},"row":13,"sub":4,"type":"glow_mushroom"},

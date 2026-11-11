@@ -75,7 +75,14 @@
     {"col":40,"row":8,"type":"apple"},
     {"col":84,"row":8,"type":"apple"},
     {"col":120,"row":8,"type":"apple"},
-    {"col":175,"row":8,"type":"apple"}
+    {"col":175,"row":8,"type":"apple"},
+    {"col":30,"props":{"patrol":{"left":26,"right":34}},"row":8,"type":"hopper"},
+    {"col":48,"props":{"patrol":{"left":47,"right":52}},"row":8,"type":"hopper"},
+    {"col":68,"props":{"patrol":{"left":66,"right":72}},"row":7,"type":"hopper"},
+    {"col":100,"props":{"patrol":{"left":96,"right":104}},"row":8,"type":"hopper"},
+    {"col":125,"props":{"patrol":{"left":121,"right":129}},"row":8,"type":"hopper"},
+    {"col":150,"props":{"patrol":{"left":146,"right":151}},"row":8,"type":"hopper"},
+    {"col":135,"props":{"patrol":{"left":131,"right":139}},"row":8,"type":"hopper"}
   ],
   "foliage": [
     {"col":118,"row":5,"sub":1,"type":"liana_mid"},

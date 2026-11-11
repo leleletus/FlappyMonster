@@ -53,7 +53,10 @@
     {"col":81,"row":12,"type":"checkpoint"},
     {"col":101,"row":12,"type":"gianthopper"},
     {"col":86,"props":{"corner":{"col":88,"row":12},"zone":1},"row":3,"type":"bosswall"},
-    {"col":113,"props":{"corner":{"col":115,"row":12},"zone":1},"row":3,"type":"bosswall"}
+    {"col":113,"props":{"corner":{"col":115,"row":12},"zone":1},"row":3,"type":"bosswall"},
+    {"col":23,"props":{"patrol":{"left":19,"right":26}},"row":12,"type":"hopper"},
+    {"col":53,"props":{"patrol":{"left":49,"right":57}},"row":12,"type":"hopper"},
+    {"col":84,"props":{"patrol":{"left":80,"right":88}},"row":12,"type":"hopper"}
   ],
   "foliage": [
     {"col":13,"props":{"layer":"back"},"row":3,"type":"stalactite"},

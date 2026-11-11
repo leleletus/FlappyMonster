@@ -23,7 +23,7 @@ Nav.STEP = 48                 -- px por paso de trepar
 Nav.LEAP = 5 * T              -- alcance de un salto
 Nav.LEAP_MIN = 1.6 * T        -- no salta a lo que tiene al lado (para eso anda)
 Nav.LEAP_COST = 260           -- px "de más" que cuesta un salto (agacharse + recuperarse)
-Nav.MAX_NODES = 600
+Nav.MAX_NODES = 350
 Nav.GREED = 1.6               -- peso de "lo que falta" (busca más derecho al sitio: menos nodos)
 Nav.DROP_MAX = 14 * T         -- lo más que se deja caer
 Nav.ARRIVE = 1.1 * T
@@ -53,20 +53,32 @@ end
 
 -- Puntos de apoyo a los que saltar desde `s`: por cada casilla libre cercana, el suelo de debajo, el techo de
 -- encima y las paredes de los lados (los que tenga). Solo los que ACERCAN al destino (saltar por saltar, no).
-local function landings(e, level, s, gx, gy, hNow)
+-- (`memo`: el apoyo de cada casilla no cambia durante una búsqueda: se mira una vez; y lo que está seguro de no valer
+-- se descarta sin preguntar al nivel)
+local function landings(e, level, s, gx, gy, hNow, memo)
     local out = {}
     local hh = (e.outerH or 40) / 2
     local c0, r0 = math.floor(s.x / T), math.floor(s.y / T)
     local R = math.ceil(Nav.LEAP / T)
+    local dMax2, hMax2 = (Nav.LEAP + T) * (Nav.LEAP + T), (hNow + T * 0.5) * (hNow + T * 0.5)
     for r = r0 - R, r0 + R do
         for c = c0 - R, c0 + R do
             local cx, cy = c * T + T / 2, r * T + T / 2
-            if c >= 0 and r >= 0 and c < level.tileW and r < level.tileH and not level:collisionAt(cx, cy) then
-                local cand
-                if level:collisionAt(cx, cy + T) then cand = { cx, r * T + T - hh, 0, -1 }                 -- suelo
-                elseif level:collisionAt(cx + T, cy) then cand = { c * T + T - hh, cy, -1, 0 }             -- pared a la derecha
-                elseif level:collisionAt(cx - T, cy) then cand = { c * T + hh, cy, 1, 0 }                  -- pared a la izquierda
-                elseif level:collisionAt(cx, cy - T) then cand = { cx, r * T + hh, 0, 1 } end              -- techo
+            local dx, dy, hx, hy = cx - s.x, cy - s.y, cx - gx, cy - gy
+            if dx * dx + dy * dy <= dMax2 and hx * hx + hy * hy < hMax2       -- (el apoyo está a menos de 1 casilla del centro)
+               and c >= 0 and r >= 0 and c < level.tileW and r < level.tileH then
+                local key = c + r * 4096
+                local cand = memo[key]
+                if cand == nil then
+                    cand = false
+                    if not level:collisionAt(cx, cy) then
+                        if level:collisionAt(cx, cy + T) then cand = { cx, r * T + T - hh, 0, -1 }                 -- suelo
+                        elseif level:collisionAt(cx + T, cy) then cand = { c * T + T - hh, cy, -1, 0 }             -- pared a la derecha
+                        elseif level:collisionAt(cx - T, cy) then cand = { c * T + hh, cy, 1, 0 }                  -- pared a la izquierda
+                        elseif level:collisionAt(cx, cy - T) then cand = { cx, r * T + hh, 0, 1 } end              -- techo
+                    end
+                    memo[key] = cand
+                end
                 if cand then
                     local d = math.sqrt((cand[1] - s.x) ^ 2 + (cand[2] - s.y) ^ 2)
                     local h = math.sqrt((cand[1] - gx) ^ 2 + (cand[2] - gy) ^ 2)
@@ -104,38 +116,42 @@ function Nav.path(e, level, gx, gy)
     local start = { x = e.x, y = e.y, nx = e.cnx, ny = e.cny, g = 0 }
     start.h = math.sqrt((gx - e.x) ^ 2 + (gy - e.y) ^ 2)
     local open, seen = { start }, { [keyOf(start.x, start.y, start.nx, start.ny)] = 0 }
+    local memo = {}
+    start.f = start.h * Nav.GREED
+    local function push(s, x, y, nx, ny, cost, via)
+        local k = keyOf(x, y, nx, ny)
+        local g = s.g + cost
+        if seen[k] and seen[k] <= g then return end
+        seen[k] = g
+        local dx, dy = gx - x, gy - y
+        local h = math.sqrt(dx * dx + dy * dy)
+        open[#open + 1] = { x = x, y = y, nx = nx, ny = ny, g = g, h = h, f = g + h * Nav.GREED, from = s, via = via }
+    end
     local best = start
     local found
     local n = 0
     while #open > 0 and n < Nav.MAX_NODES do
         n = n + 1
-        local bi, bf = 1, open[1].g + open[1].h * Nav.GREED
+        local bi, bf = 1, open[1].f
         for i = 2, #open do
-            local f = open[i].g + open[i].h * Nav.GREED
+            local f = open[i].f
             if f < bf then bi, bf = i, f end
         end
         local s = table.remove(open, bi)
         if s.h < best.h then best = s end
         if s.h <= Nav.ARRIVE then found = s; break end
-        local function push(x, y, nx, ny, cost, via)
-            local k = keyOf(x, y, nx, ny)
-            local g = s.g + cost
-            if seen[k] and seen[k] <= g then return end
-            seen[k] = g
-            open[#open + 1] = { x = x, y = y, nx = nx, ny = ny, g = g, h = math.sqrt((gx - x) ^ 2 + (gy - y) ^ 2), from = s, via = via }
-        end
         for _, dir in ipairs({ 1, -1 }) do
             local gh = ghost(e, s, dir)
             if Crawler.move(gh, level, Nav.STEP) then
                 -- (al doblar una esquina el sentido cambia de signo: el tramo guarda con el que EMPEZÓ)
-                push(gh.x, gh.y, gh.cnx, gh.cny, Nav.STEP, { kind = 'crawl', dir = dir })
+                push(s, gh.x, gh.y, gh.cnx, gh.cny, Nav.STEP, { kind = 'crawl', dir = dir })
             end
         end
-        for _, l in ipairs(landings(e, level, s, gx, gy, s.h)) do
-            push(l.x, l.y, l.nx, l.ny, l.d + Nav.LEAP_COST, { kind = 'leap' })
+        for _, l in ipairs(landings(e, level, s, gx, gy, s.h, memo)) do
+            push(s, l.x, l.y, l.nx, l.ny, l.d + Nav.LEAP_COST, { kind = 'leap' })
         end
         local dr = dropTo(e, level, s)
-        if dr then push(dr.x, dr.y, dr.nx, dr.ny, dr.d * 0.5 + 120, { kind = 'drop' }) end
+        if dr then push(s, dr.x, dr.y, dr.nx, dr.ny, dr.d * 0.5 + 120, { kind = 'drop' }) end
     end
     local goal = found or best
     if goal == start or goal.h > start.h - T * 0.5 then return nil end

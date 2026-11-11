@@ -207,7 +207,11 @@ function love.load()
 
     -- docs: rutas y enlaces
     local ROOT = love.filesystem.getSource() .. '/../../../'
-    local function exists(p) local f = io.open(ROOT .. p, 'rb'); if f then f:close(); return true end; return false end
+    local function exists(p)
+        -- (tools/music/ref no está en git: las notas de música la citan, pero solo existe en la máquina Linux)
+        if p == 'tools/music/ref' or p:match('^tools/music/ref/') then return true end
+        local f = io.open(ROOT .. p, 'rb'); if f then f:close(); return true end; return false
+    end
     local pages = {}
     local function walkMd(dir)
         for _, f in ipairs(love.filesystem.getDirectoryItems(dir .. '/.')) do

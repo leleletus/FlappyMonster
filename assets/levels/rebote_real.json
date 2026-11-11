@@ -50,7 +50,8 @@
     {"col":33,"row":3,"sub":2,"type":"spikefall"},
     {"col":33,"row":9,"type":"trampoline_left"},
     {"col":28,"row":10,"type":"trampoline"},
-    {"col":25,"props":{"corner":{"col":31,"row":6},"points":4},"row":4,"type":"pointarea"}
+    {"col":25,"props":{"corner":{"col":31,"row":6},"points":4},"row":4,"type":"pointarea"},
+    {"col":25,"props":{"patrol":{"left":24,"right":29},"points":6,"respawn":8},"row":10,"type":"hopper"}
   ],
   "foliage": [
     {"col":18,"props":{"flip":true,"layer":"back"},"row":8,"sub":4,"type":"hibiscus"},

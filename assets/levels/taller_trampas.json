@@ -56,7 +56,8 @@
     {"col":53,"row":2,"sub":2,"type":"spikefall"},
     {"col":56,"row":2,"sub":2,"type":"spikefall"},
     {"col":42,"row":8,"type":"gust"},
-    {"col":2,"props":{"corner":{"col":2,"row":10},"dir_down":false,"dir_left":false,"dir_right":false,"blowMax":4,"blowMin":3,"firstDelay":1,"gapMax":3,"gapMin":2,"power":1.6,"warn":0.6},"row":3,"type":"blizzard"}
+    {"col":2,"props":{"corner":{"col":2,"row":10},"dir_down":false,"dir_left":false,"dir_right":false,"blowMax":4,"blowMin":3,"firstDelay":1,"gapMax":3,"gapMin":2,"power":1.6,"warn":0.6},"row":3,"type":"blizzard"},
+    {"col":22,"props":{"patrol":{"left":21,"right":24}},"row":11,"type":"hopper"}
   ],
   "foliage": [
     {"col":25,"row":8,"sub":3,"type":"torch"},

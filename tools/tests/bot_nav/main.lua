@@ -228,7 +228,9 @@ local function play(level, nav, withTarget, lure, counter)
                 bot.path and #bot.path or '-', tgt and tgt.x or 0, tgt and tgt.y or 0, tgt and tgt.stunT or 0))
         end
         -- (esperar a que baje el agua no es quedarse atascado)
-        if isIn or bot.kind == 'wait' or bot.kind == 'shelter' or math.abs(bpa.x - ax) > 40 or math.abs(bpa.y - ay) > 100 then ax, ay, still = bpa.x, bpa.y, 0
+        -- (ni esperar a poder volver a pulsar el Activador: Bot.SWITCH_CD; ciudadela_alterna, cuyo suelo depende de él)
+        local coolingSwitch = bot.kind == 'switch' and bot.clock < (bot.switchCd or 0)
+        if isIn or coolingSwitch or bot.kind == 'wait' or bot.kind == 'shelter' or math.abs(bpa.x - ax) > 40 or math.abs(bpa.y - ay) > 100 then ax, ay, still = bpa.x, bpa.y, 0
         else still = still + dt; worst = math.max(worst, still) end
         if isIn then inside = inside + dt end
         if active and active.ride then

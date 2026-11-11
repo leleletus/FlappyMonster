@@ -79,7 +79,10 @@
     {"col":37,"row":13,"type":"mortar"},
     {"col":55,"row":13,"type":"mortar"},
     {"col":36,"row":19,"type":"mortar"},
-    {"col":56,"row":19,"type":"mortar"}
+    {"col":56,"row":19,"type":"mortar"},
+    {"col":15,"props":{"patrol":{"left":13,"right":19},"points":6,"respawn":8},"row":13,"type":"hopper"},
+    {"col":33,"props":{"patrol":{"left":29,"right":34},"points":6,"respawn":8},"row":21,"type":"hopper"},
+    {"col":77,"props":{"patrol":{"left":73,"right":79},"points":6,"respawn":8},"row":13,"type":"hopper"}
   ],
   "foliage": [
     {"col":45,"props":{"layer":"back"},"row":7,"sub":4,"type":"basalt_pebbles"},

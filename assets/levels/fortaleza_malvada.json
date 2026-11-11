@@ -63,7 +63,10 @@
     {"col":93,"props":{"corner":{"col":93,"row":12}},"row":2,"type":"bosswall"},
     {"col":112,"props":{"corner":{"col":112,"row":12}},"row":2,"type":"bosswall"},
     {"col":50,"row":8,"type":"apple"},
-    {"col":91,"row":12,"type":"apple"}
+    {"col":91,"row":12,"type":"apple"},
+    {"col":21,"props":{"patrol":{"left":17,"right":25}},"row":13,"type":"hopper"},
+    {"col":53,"props":{"patrol":{"left":52,"right":57}},"row":13,"type":"hopper"},
+    {"col":81,"props":{"patrol":{"left":77,"right":85}},"row":13,"type":"hopper"}
   ],
   "foliage": [
     {"col":21,"props":{"layer":"back"},"row":5,"sub":3,"type":"torch"},

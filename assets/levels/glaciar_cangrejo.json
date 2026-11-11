@@ -60,7 +60,10 @@
     {"col":46,"row":9,"type":"apple"},
     {"col":84,"row":12,"type":"apple"},
     {"col":92,"row":13,"type":"gummy_ice"},
-    {"col":100,"row":13,"type":"gummy_ice"}
+    {"col":100,"row":13,"type":"gummy_ice"},
+    {"col":13,"props":{"patrol":{"left":9,"right":14}},"row":12,"type":"hopper"},
+    {"col":50,"props":{"patrol":{"left":49,"right":53}},"row":12,"type":"hopper"},
+    {"col":61,"props":{"patrol":{"left":57,"right":64}},"row":12,"type":"hopper"}
   ],
   "foliage": [
     {"col":52,"props":{"layer":"back"},"row":8,"type":"icicle"},

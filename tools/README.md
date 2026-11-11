@@ -95,6 +95,6 @@ See the generator table in `docs/audio/music-catalog.md`. `famicom.py` (engine),
 
 ## levelgen/
 
-`lib.py`, `levels_*.py` (builders), `build.py --only <level>`, `retheme.py <levels>` (`retheme.py --bg <levels> [--out <dir>]`:
+`lib.py`, `levels_*.py` (builders), `build.py --only <level>`, `add_hoppers.py <levels>` (run once per level), `retheme.py <levels>` (`retheme.py --bg <levels> [--out <dir>]`:
 the background-plane structures per island, `retheme_bg.py`; generated content listed in `bg_gen/<level>.json`), `add_apples.py <levels>`,
 `make_sets.py` (film sets), `make_credits_sets.py` (the live stages of the credits: `assets/story/sets/credits_*.json`), `arenas/` (test arenas and their `make_*.py`; `make_nuevos_enemigos.py` = a mole of each island, a river with piranhas and carnivorous plants with a beetle to feed them; `make_decoraciones.py` = the showcase of every decoration, from `docs/reference/decorations-and-modes.md`).

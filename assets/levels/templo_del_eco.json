@@ -109,7 +109,12 @@
     {"col":71,"row":24,"type":"apple"},
     {"col":105,"row":21,"type":"apple"},
     {"col":46,"row":19,"type":"gust"},
-    {"col":119,"row":19,"type":"gust"}
+    {"col":119,"row":19,"type":"gust"},
+    {"col":19,"props":{"patrol":{"left":18,"right":23}},"row":21,"type":"hopper"},
+    {"col":47,"props":{"patrol":{"left":46,"right":51}},"row":13,"type":"hopper"},
+    {"col":68,"props":{"patrol":{"left":65,"right":69}},"row":19,"type":"hopper"},
+    {"col":118,"props":{"patrol":{"left":117,"right":122}},"row":13,"type":"hopper"},
+    {"col":143,"props":{"patrol":{"left":139,"right":146}},"row":21,"type":"hopper"}
   ],
   "foliage": [
     {"col":5,"row":4,"type":"stalactite"},

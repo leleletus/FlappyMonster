@@ -48,7 +48,14 @@
     {"col":40,"row":8,"type":"apple"},
     {"col":84,"row":9,"type":"apple"},
     {"col":129,"row":9,"type":"apple"},
-    {"col":169,"row":9,"type":"apple"}
+    {"col":169,"row":9,"type":"apple"},
+    {"col":23,"props":{"patrol":{"left":19,"right":27}},"row":9,"type":"hopper"},
+    {"col":43,"props":{"patrol":{"left":41,"right":44}},"row":7,"type":"hopper"},
+    {"col":76,"props":{"patrol":{"left":72,"right":80}},"row":9,"type":"hopper"},
+    {"col":113,"props":{"patrol":{"left":112,"right":117}},"row":9,"type":"hopper"},
+    {"col":144,"props":{"patrol":{"left":143,"right":148}},"row":9,"type":"hopper"},
+    {"col":164,"props":{"patrol":{"left":162,"right":165}},"row":7,"type":"hopper"},
+    {"col":199,"props":{"patrol":{"left":195,"right":203}},"row":9,"type":"hopper"}
   ],
   "foliage": [
     {"col":41,"props":{"layer":"back"},"row":7,"type":"basalt_rock"},

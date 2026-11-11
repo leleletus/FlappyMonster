@@ -106,7 +106,12 @@
     {"col":27,"props":{"dir":"down","id":8},"row":19,"type":"cryo"},
     {"col":67,"props":{"dir":"left","id":9,"range":13},"row":21,"type":"cryo"},
     {"col":41,"row":19,"type":"gust"},
-    {"col":116,"row":19,"type":"gust"}
+    {"col":116,"row":19,"type":"gust"},
+    {"col":19,"props":{"patrol":{"left":18,"right":23}},"row":13,"type":"hopper"},
+    {"col":47,"props":{"patrol":{"left":46,"right":51}},"row":13,"type":"hopper"},
+    {"col":79,"props":{"patrol":{"left":76,"right":83}},"row":21,"type":"hopper"},
+    {"col":116,"props":{"patrol":{"left":115,"right":120}},"row":13,"type":"hopper"},
+    {"col":145,"props":{"patrol":{"left":141,"right":149}},"row":21,"type":"hopper"}
   ],
   "foliage": [
     {"col":21,"props":{"flip":true,"layer":"back"},"row":13,"sub":3,"type":"ice_crystal"},

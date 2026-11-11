@@ -85,7 +85,11 @@
     {"col":145,"props":{"corner":{"col":163,"row":18},"dir_down":false,"dir_up":false,"firstDelay":3,"gapMax":8,"gapMin":4,"power":0.5,"warn":1.2},"row":2,"type":"blizzard"},
     {"col":31,"props":{"startDir":"left"},"row":13,"type":"gust"},
     {"col":94,"props":{"startDir":"left"},"row":12,"type":"gust"},
-    {"col":82,"row":12,"type":"gust"}
+    {"col":82,"row":12,"type":"gust"},
+    {"col":36,"props":{"patrol":{"left":35,"right":40}},"row":15,"type":"hopper"},
+    {"col":101,"props":{"patrol":{"left":100,"right":105}},"row":9,"type":"hopper"},
+    {"col":133,"props":{"patrol":{"left":129,"right":135}},"row":13,"type":"hopper"},
+    {"col":165,"props":{"patrol":{"left":164,"right":168}},"row":7,"type":"hopper"}
   ],
   "foliage": [
     {"col":125,"props":{"flip":true},"row":12,"type":"snowy_fir"},

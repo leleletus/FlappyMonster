@@ -63,7 +63,10 @@
     {"col":110,"props":{"corner":{"col":112,"row":13},"material":"basalt"},"row":3,"type":"bosswall"},
     {"col":92,"props":{"corner":{"col":109,"row":12}},"row":12,"type":"bossglass"},
     {"col":46,"row":13,"type":"apple"},
-    {"col":87,"row":13,"type":"apple"}
+    {"col":87,"row":13,"type":"apple"},
+    {"col":23,"props":{"patrol":{"left":19,"right":25}},"row":13,"type":"hopper"},
+    {"col":64,"props":{"patrol":{"left":60,"right":65}},"row":13,"type":"hopper"},
+    {"col":84,"props":{"patrol":{"left":80,"right":88}},"row":13,"type":"hopper"}
   ],
   "foliage": [
     {"col":11,"row":13,"type":"basalt_rock"},

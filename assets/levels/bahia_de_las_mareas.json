@@ -102,7 +102,13 @@
     {"col":112,"row":11,"type":"star"},
     {"col":115,"row":11,"type":"star"},
     {"col":108,"props":{"id":4},"row":14,"type":"door"},
-    {"col":110,"props":{"id":5},"row":24,"type":"door"}
+    {"col":110,"props":{"id":5},"row":24,"type":"door"},
+    {"col":16,"props":{"patrol":{"left":15,"right":20}},"row":25,"type":"hopper"},
+    {"col":38,"props":{"patrol":{"left":35,"right":39}},"row":25,"type":"hopper"},
+    {"col":68,"props":{"patrol":{"left":64,"right":69}},"row":25,"type":"hopper"},
+    {"col":100,"props":{"patrol":{"left":99,"right":104}},"row":24,"type":"hopper"},
+    {"col":124,"props":{"patrol":{"left":120,"right":126}},"row":25,"type":"hopper"},
+    {"col":146,"props":{"patrol":{"left":142,"right":147}},"row":25,"type":"hopper"}
   ],
   "foliage": [
     {"col":3,"row":17,"type":"buoy"},
