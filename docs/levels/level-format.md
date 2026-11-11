@@ -24,6 +24,7 @@ that exists: [reference/levels](../reference/levels.md).
 | `background`, `time`, `clouds`, `depth`, `surfaceRow` | sky: surface biome, day / dusk / night, depth biome and the surface line |
 | `light`, `dark`, `echo`, `snow`, `spikeSkin` | light mood, dark level, echo, snowfall, spike look |
 | `scenes` | parts of the level with their own sky and light: `{col, w, background, time, clouds, light, dark, snow, echo, spikeSkin, depth, surfaceRow}`; `Level:applyScene(i)` (`src/world/level/Scenes.lua`) — the Crab Mega Mashup stitches five arenas |
+| `followScenes` | the active scene follows the player's column (dark caves in a bright level); single player only: such a level is never listed online |
 | `event` | an EVENT level (Free Play shows it first, highlighted: `LevelCatalog.EVENTS`; boss-fight help on every difficulty) |
 | `music` | catalog id of the level track |
 | `modes`, `matchTime` | whitelist of online modes; seconds for timed modes |

@@ -225,6 +225,19 @@ function cases.editor()
     local painted = m2:linkAt(9, 5) == nil
     m2:setLink(7, 5, nil)
     local removed = m2:linkAt(7, 5) == nil and #m2.links == 0
+    -- Un activador conectado a VARIOS objetos: se guarda y el juego los mueve todos; quitar uno deja los demás
+    local mm = Model.fromData(json.decode(m:encode()))
+    local a, b = mm:floods()[1].props.id, mm:floods()[2].props.id
+    mm:setLink(5, 5, nil)
+    local on1, on2 = mm:toggleLink(5, 5, a), mm:toggleLink(5, 5, b)
+    mm:setId(5, 5, TileTypes.byName.switch_on.id)
+    local both = Level.fromData(json.decode(mm:encode()))
+    local sigA, sigB, stored = both:signal(a), both:signal(b), #Model.fromData(json.decode(mm:encode())):linksAt(5, 5)
+    local off = mm:toggleLink(5, 5, a)
+    local left = mm:hasLink(5, 5, b) and not mm:hasLink(5, 5, a)
+    mm:setLink(5, 5, nil)
+    check('varios', on1 and on2 and sigA and sigB and stored == 2 and off == false and left and #mm:linksAt(5, 5) == 0,
+        ('activador con 2 objetos: guardados %d, señal #%s=%s #%s=%s · quitar uno deja el otro=%s'):format(stored, tostring(a), tostring(sigA), tostring(b), tostring(sigB), tostring(left)))
     local old = Model.fromData({ name = 'x', width = 4, height = 4, playerStart = { 2, 2 },
         tiles = { { 1, 1, 1, 1 }, { 1, TileTypes.byName.switch_off.id, 0, 1 }, { 1, 0, 0, 1 }, { 1, 1, 1, 1 } },
         entities = {}, links = { { col = 2, row = 2, flood = 7 }, { col = 3, row = 2, flood = 7 } } })

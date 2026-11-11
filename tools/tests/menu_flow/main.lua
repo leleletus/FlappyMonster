@@ -541,6 +541,17 @@ local function run()
         newGame(false)
         press('confirm', 1.2)
         local played, lvl, ret = name(top()), top().levelPath, top().returnTo
+        -- (la cueva del tutorial: la oscuridad sigue al jugador en el estado de verdad)
+        local st = top()
+        local function at(col)
+            st.startCd, st.player.x, st.player.y, st.player.vx, st.player.vy = nil, (col - 0.5) * TILE_PX, 5 * TILE_PX, 0, 0
+            wait(0.6)
+            return st.level.dark == true, st.level.darkness
+        end
+        local dark, dk = at(315)
+        shot('tutorial_dark')
+        local lit = at(300)
+        check('tutorial_cueva', dark and dk == 1 and not lit, ('en la cueva: oscuro=%s (%.1f) · fuera: oscuro=%s'):format(tostring(dark), dk or -1, tostring(lit)))
         gStateMachine:change(ret); wait(0.3)
         local after = name(top())
         check('oferta', first == 'TutorialOfferState' and marked and skip == 'StoryFilmState' and again == 'StoryFilmState'

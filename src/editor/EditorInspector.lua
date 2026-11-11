@@ -301,7 +301,7 @@ local function drawNothingSelected(x, y, w)
 end
 
 -- ── Panel de la derecha: Selección / Nivel / Avisos ──────────────────────────
--- Bloque ON/OFF (herramienta Conectar): a qué inundación está conectado
+-- Bloque ON/OFF (herramienta Conectar): a qué objetos está conectado (pueden ser varios)
 local function drawSwitchInspector(x, y, w)
     local sw, m = E.selSwitch, E.model
     local d = TT.get(Codec.id(m:get(sw.c, sw.r) or 0))
@@ -309,36 +309,36 @@ local function drawSwitchInspector(x, y, w)
     y = inspectorHeader(x, y, w, function(ix, iy, s) drawTileThumb(d, ix, iy, s) end, 'Bloque ON/OFF',
                         string.format('Mecanismo  ·  col %d, fila %d', sw.c, sw.r),
                         'Un cabezazo o un ground pound lo cambia. Enciende y apaga los objetos conectados (p. ej. una inundación: en ON sube al máximo, en OFF baja al mínimo). Al borrar el bloque, su conexión se va con él.')
-    local l = m:linkAt(sw.c, sw.r)
-    local cur = l and l.to or 0
-    local opts = { { value = 0, label = 'Nada' } }
-    local found = cur == 0
+    local links, known = m:linksAt(sw.c, sw.r), {}
+    local opts = {}
     for _, e in ipairs(m:activatables()) do
         local t, id = ET.get(e.type), tonumber(e.props.id) or 1
-        if id == cur then found = true end
+        known[id] = true
         opts[#opts + 1] = { value = id, label = string.format('%s #%d (col %d, fila %d)%s', t.label, id, e.col, e.row,
                             (e.type == 'flood' and e.props.control ~= 'switch') and ' — no usa ON/OFF' or '') }
     end
-    if not found then opts[#opts + 1] = { value = cur, label = '#' .. cur .. ' (ya no existe)' } end
+    for _, l in ipairs(links) do
+        if not known[l.to] then opts[#opts + 1] = { value = l.to, label = '#' .. l.to .. ' (ya no existe)' } end
+    end
     local nb = 0
     for _, bl in ipairs(m.blockLinks or {}) do if bl.from[1] == sw.c and bl.from[2] == sw.r then nb = nb + 1 end end
     local hintTxt = string.format('Bloques ON/OFF conectados: %d. Con este activador elegido, haz clic (o arrastra) en Bloques ON/OFF para conectarlos o desconectarlos. Los que no tienen conexión siguen al activador más cercano.', nb)
     y = y + ui.hint(hintTxt, x, y, w) + 8
-    ui.text('Objeto conectado', x, y, th.text); y = y + 20
+    ui.text('Objetos conectados (uno o varios)', x, y, th.text); y = y + 20
     for _, o in ipairs(opts) do
-        if ui.button(o.label, x, y, w, 26, { active = o.value == cur, align = 'left', font = ui.fontSm }) and o.value ~= cur then
+        if ui.button(o.label, x, y, w, 26, { active = m:hasLink(sw.c, sw.r, o.value), align = 'left', font = ui.fontSm }) then
             pushUndo()
-            m:setLink(sw.c, sw.r, o.value > 0 and o.value or nil)
+            local on = m:toggleLink(sw.c, sw.r, o.value)
             -- (el objeto conectado se prepara para ello: la inundación pasa a moverse con bloques ON/OFF)
-            local e = o.value > 0 and m:activatableById(o.value)
+            local e = on and m:activatableById(o.value)
             local t = e and ET.get(e.type)
             if t and t.onLink then t.onLink(e.props) end
             markDirty()
         end
         y = y + 30
     end
-    if l then
-        if ui.button('Quitar conexión', x, y, w, 26, { font = ui.fontSm, textColor = th.danger }) then
+    if #links > 0 then
+        if ui.button('Quitar todas', x, y, w, 26, { font = ui.fontSm, textColor = th.danger }) then
             pushUndo(); m:setLink(sw.c, sw.r, nil); markDirty()
         end
         y = y + 32

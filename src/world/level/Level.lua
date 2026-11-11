@@ -275,6 +275,7 @@ function Level.fromData(lvl, difficulty)
     self.depth, self.surfaceRow = lvl.depth, tonumber(lvl.surfaceRow)                    -- (fondo de profundidad y su línea)
     -- (OSCURIDAD que se funde: 0..1 sobre `dark` — la pone quien encienda / apague las luces, p. ej. un evento)
     self.darkness  = self.dark and 1 or 0
+    self.followScenes = lvl.followScenes == true       -- (la escena la decide la columna del jugador: Scenes.follow)
     -- ESCENAS: partes del nivel con su propio cielo y luz (src/world/level/Scenes.lua)
     require('src/world/level/Scenes').build(self, lvl)
     return self

@@ -1243,17 +1243,20 @@ function cases.tutorial()
     local solidBefore = level:getDef(wall[1], wall[2]).collision
     level:hitTile(switches[1][1], switches[1][2], 'head')
     local solidAfter = level:getDef(wall[1], wall[2]).collision
-    -- la tapa del ground pound: la fila de rompibles a ras de suelo (fila 14)
-    local lid
-    for _, b in ipairs(lids) do if b[2] == 14 then lid = b end end
+    -- la tapa del ground pound
+    local lid = lids[1]                                           -- (el nivel lo retoca el usuario: cualquiera de sus rompibles)
     level:hitTile(lid[1], lid[2], 'pound')
     local lidName = level:getDef(lid[1], lid[2]).name
     -- la puerta: su Activador es el otro (antes, un paso: la puerta apunta cómo estaba la señal — Door:fired —)
     for _, e in ipairs(es) do if e.alive then e:update(1 / 60, level) end end
-    level:hitTile(switches[2][1], switches[2][2], 'head')
+    level:hitTile(level.links[1].col, level.links[1].row, 'head')  -- (el Activador conectado a la puerta)
     for _ = 1, 60 * 3 do level:update(1 / 60); for _, e in ipairs(es) do if e.alive then e:update(1 / 60, level) end end end
     local valle, tip = json.decode(love.filesystem.read('assets/levels/valle_soleado.json')), false
     for _, pl in ipairs(valle.entities) do tip = tip or (pl.type == 'hint' and pl.props.text == 'tut.run_tip' and L.has('tut.run_tip')) end
+    local Catalog = require 'src/world/level/LevelCatalog'
+    local nModes = #Catalog.info(level, 'assets/levels/tutorial.json', 'tutorial.json').modeList
+    local music = json.decode(love.filesystem.read('assets/levels/tutorial.json')).music
+    check('tutorial_solo', level.followScenes and nModes == 0 and music == 'tutorial', ('sigue al jugador=%s · modos online %d · música %s'):format(tostring(level.followScenes), nModes, tostring(music)))
     check('correr_1er_nivel', tip, 'cartel de correr en valle_soleado: ' .. tostring(tip))
     check('tutorial', signs > 20 and #noText == 0 and solidBefore == 'solid' and solidAfter == 'none' and lidName == 'empty' and door and door.state == 'open',
         ('%d carteles (sin texto: %s) · muro ON/OFF %s → %s · tapa → %s · puerta %s'):format(signs, table.concat(noText, ','), solidBefore, solidAfter, lidName, door and door.state or 'no hay'))

@@ -518,14 +518,36 @@ function Model:linkAt(c, r)
     for i, l in ipairs(self.links or {}) do if l.col == c and l.row == r then return l, i end end
 end
 
--- Conecta el bloque (c, r) al objeto `id` (nil = desconectar)
-function Model:setLink(c, r, id)
+-- Un activador puede mover VARIOS objetos (una fila de `links` por cada uno)
+function Model:linksAt(c, r)
+    local out = {}
+    for _, l in ipairs(self.links or {}) do if l.col == c and l.row == r then out[#out + 1] = l end end
+    return out
+end
+function Model:hasLink(c, r, id)
+    for _, l in ipairs(self:linksAt(c, r)) do if l.to == id then return true end end
+    return false
+end
+-- Conecta / desconecta el objeto `id`, sin tocar los demás. Devuelve true si queda conectado
+function Model:toggleLink(c, r, id)
     self.links = self.links or {}
-    local l, i = self:linkAt(c, r)
-    if not id then if l then table.remove(self.links, i); return true end return false end
-    if l then if l.to == id then return false end l.to = id; return true end
+    for i, l in ipairs(self.links) do
+        if l.col == c and l.row == r and l.to == id then table.remove(self.links, i); return false end
+    end
     self.links[#self.links + 1] = { col = c, row = r, to = id }
     return true
+end
+
+-- Deja el bloque (c, r) conectado SOLO al objeto `id` (nil = quitar todas sus conexiones)
+function Model:setLink(c, r, id)
+    self.links = self.links or {}
+    local changed = false
+    for i = #self.links, 1, -1 do
+        local l = self.links[i]
+        if l.col == c and l.row == r and l.to ~= id then table.remove(self.links, i); changed = true end
+    end
+    if id and not self:hasLink(c, r, id) then self.links[#self.links + 1] = { col = c, row = r, to = id }; changed = true end
+    return changed
 end
 
 -- ── Bloques ON/OFF → su activador ────────────────────────────────────────────

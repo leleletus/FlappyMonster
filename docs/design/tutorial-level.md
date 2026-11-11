@@ -6,7 +6,7 @@ everything or how to squeeze the obstacles, to avoid spoilers and ruining the ex
 
 **Status:** first version built (0.5.190): `assets/levels/tutorial.json` (362 × 18, 21 sections, 23 signs), from
 `tools/levelgen/make_tutorial.py`; the entry **TUTORIAL** heads the Adventure menu (Story stays the default
-selection); `"modes": []` keeps it out of online. The user reviews it in play; this page keeps the plan and decisions.
+selection); `"followScenes": true` makes its dark cave follow the player and keeps the level out of online (`"modes": []` never did: an empty list means no limit, and the editor drops it). The user reviews it in play; this page keeps the plan and decisions.
 
 **Built pieces:** the help sign `hint` (`src/world/entities/types/items/hint.lua`: props `text` = a translation key,
 `radius`; the bubble is drawn above the darkness through `Entities.renderOverlays`), its art
@@ -62,7 +62,7 @@ climbed out of, the double-jump wall is 2 tiles. Found in play / by the solver a
 ## Decisions taken by default (the user can change them)
 
 - **Where:** a new **TUTORIAL** entry in the Adventure menu (above Story); it is also listed in Free Play. Level file
-  `assets/levels/tutorial.json` (the id is permanent once shipped). Online: not listed (single player only).
+  `assets/levels/tutorial.json` (the id is permanent once shipped). Online: not listed (`followScenes`, single player only).
 - **The sign** is a new generic entity `hint` ("Cartel", category Objetos): props `text` (a translation key) and
   `radius` (tiles). It draws only (no collision, nothing in the simulation); online it would work the same on each
   client. Its art is a real file (`tools/art/items/make_hint_sign.py`).

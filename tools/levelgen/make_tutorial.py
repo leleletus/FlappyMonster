@@ -469,7 +469,7 @@ def build():
         'width': W, 'height': H, 'playerStart': start,
         'tiles': tiles, 'entities': entities, 'foliage': [], 'vents': vents,
         'music': 'tutorial', 'parTime': 0,
-        'modes': [],                                 # (ningún modo online: el tutorial es de un jugador)
+        'followScenes': True,                        # (la cueva a oscuras sigue al jugador; deja el nivel fuera de online)
     }
     if links: level['links'] = links
     if scenes: level['scenes'] = scenes

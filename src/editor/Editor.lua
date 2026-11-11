@@ -62,7 +62,7 @@ local TOOLS = {
     fill   = { label='Relleno',     key='f', help='Rellena la zona contigua del mismo tipo.' },
     erase  = { label='Borrar',      key='e', help='Borra lo de esta capa (también con clic derecho).' },
     pick   = { label='Cuentagotas', key='i', help='Copia a la paleta el bloque que hay bajo el cursor.' },
-    link   = { label='Conectar',    key='k', help='Clic en un bloque ON/OFF para elegir (a la derecha) a qué objeto está conectado (inundaciones...). Las conexiones se ven como líneas amarillas; al borrar el bloque se borra la suya.' },
+    link   = { label='Conectar',    key='k', help='Clic en un bloque ON/OFF para elegir (a la derecha) a qué objetos está conectado (uno o varios: inundaciones, puertas...). Las conexiones se ven como líneas amarillas; al borrar el bloque se borra la suya.' },
     select = { label='Seleccionar', key='v', help='Clic para seleccionar y editar sus propiedades; arrastra para moverlo. Las cajitas azules (rutas, puntos, esquinas) también se arrastran.' },
     place  = { label='Colocar',     key='b', help='Coloca lo elegido en la paleta. Algunos objetos se pintan arrastrando.' },
     spawn  = { label='Inicio',      key='s', help='Mueve el punto donde aparece el jugador (uno por nivel).' },

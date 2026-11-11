@@ -113,6 +113,7 @@ if it should exist as a mini block, add it to `SubTiles.KINDS`. Then
   never turns solid with a player/obstacle inside (`pending`, retried in `Level:update`,
   only where tiles are decided: SP/server). Editor: Conectar tool → pick an activator,
   then click/drag ON/OFF Blocks to (un)link; cyan lines = links, faint = nearest.
+  An activator can drive **several** objects (one `links` row each; the inspector's buttons toggle them, 2026-11-10).
   Harness `flood_control` case `switchblocks`. Protocol v27.
 
 ## Secret exit

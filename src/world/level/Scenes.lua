@@ -5,8 +5,8 @@
 -- oscuras, playa de noche) y un escenario en un solo nivel y pasa de una a otra.
 --   "scenes": [ { "col": 1, "w": 30, "background": "coast", "time": "night", "light": "...", "dark": true,
 --                 "snow": true, "echo": false, "spikeSkin": "ice", "clouds": ..., "depth": ..., "surfaceRow": 12 }, … ]
--- Lo que una escena no dice, lo toma del nivel. Quién cambia de escena: el juego (Level:applyScene(i), lo llama el
--- director del evento en un jugador y en el servidor; el cliente online la aplica al llegarle en la instantánea).
+-- Lo que una escena no dice, lo toma del nivel. Quién cambia de escena: `followScenes` (Scenes.follow, abajo) o el juego
+-- (Level:applyScene(i), lo llama el director del evento en un jugador y en el servidor; el cliente online la aplica al llegarle en la instantánea).
 -- Todo lo que lo dibuja (Sky, Darkness, Snowfall, pinchos…) lee los campos del nivel en cada fotograma: basta con
 -- cambiarlos. El ECO lo pone el estado (Sound no se toca desde la simulación).
 local Scenes = {}
@@ -48,6 +48,18 @@ function Scenes.apply(level, i)
     for _, f in ipairs(Scenes.FIELDS) do level[f] = sc[f] end
     level.sceneIdx = i
     level.darkness = sc.dark and 1 or 0
+end
+
+-- `followScenes` (JSON): la escena la decide la columna del jugador, entrando en la oscuridad con un fundido. Solo en UN
+-- JUGADOR (lo llama AdventureState; la oscuridad es de todo el nivel y online hay varios jugadores: esos niveles no se
+-- listan en línea, LevelCatalog). El tutorial la usa para su cueva.
+local DARK_FADE = 0.4                         -- s que tarda en oscurecerse al entrar
+function Scenes.follow(level, pa, dt)
+    if not level.followScenes then return end
+    local was = level.dark
+    Scenes.apply(level, Scenes.at(level, math.floor(pa.x / TILE_PX) + 1))
+    if level.dark and not was then level.darkness = 0 end
+    if level.dark and level.darkness < 1 then level.darkness = math.min(1, level.darkness + dt / DARK_FADE) end
 end
 
 -- Escena que contiene la columna `col` (o nil)

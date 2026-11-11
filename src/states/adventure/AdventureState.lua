@@ -3,6 +3,7 @@ local Darkness      = require 'src/fx/Darkness'
 local LightHud      = require 'src/ui/LightHud'
 local Difficulty    = require 'src/core/Difficulty'
 local Noise         = require 'src/world/systems/Noise'
+local Scenes        = require 'src/world/level/Scenes'
 local CornerButtons = require 'src/ui/CornerButtons'
 local L = require 'src/core/Lang'
 local MenuKit = require 'src/ui/menu/MenuKit'
@@ -744,6 +745,7 @@ function AdventureState:_makeSimHooks()
         else
             self.player:update(dt, self.level)
         end
+        Scenes.follow(self.level, self.player, dt)                        -- (niveles con `followScenes`: el tutorial)
         -- al moverse, como cada jugador en el servidor: el oxígeno, la 1ª pasada de choques y las metas
         self:checkVentOxyCollisions()
         self:checkEnemyCollisions()

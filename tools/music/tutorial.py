@@ -2,7 +2,7 @@
 # tools/music/tutorial.py
 # La música del nivel TUTORIAL (id `tutorial`, "Primeros pasos"): acogedora, juguetona, sin prisa; suena mientras se
 # leen los carteles, así que va DEBAJO de la lectura. No es de ninguna isla ni lleva motivos de jefes o de la historia.
-# Mi bemol mayor, 105 BPM (1 compás = 100 800 muestras exactas), con un balanceo ligero de las corcheas (60/40).
+# Mi bemol mayor, 105 BPM (1 compás = 100 800 muestras exactas), a pulso recto (ver SWING).
 # La idea: un PASEO. El bajo de triángulo camina en negras (los pasos del monstruo) y la melodía es una célula de
 # 2 compases (un 3+3+2 suave que sube una 6.ª y vuelve a su sitio; la respuesta baja una 3.ª y sube por grados) en secuencia.
 # Forma: intro 4 (los pasos solos; luego la guitarrilla) + bucle de 64 compases, 8 frases de 8:
@@ -32,7 +32,14 @@ import worldmap_nes as W
 BPM = 105
 S16 = 60.0 / BPM / 4
 BAR = 16 * S16
-SWING = 0.4                               # (semicorcheas que se retrasa la 2.ª corchea de cada negra: 60/40)
+# (semicorcheas que se retrasa la 2.ª corchea de cada negra). Era 0,4 (60/40): cada contratiempo llegaba 57 ms tarde sobre
+# un bajo recto y las semicorcheas duraban 171 o 114 ms; el usuario lo oyó «como a destiempo». Recta, como toda la banda
+# sonora. Si se vuelve a subir, la rejilla de abajo deja de ser exacta en los contratiempos.
+SWING = 0.0
+# El driver de este tema va a 63 Hz (700 muestras por frame), no a 60,1: una semicorchea son 9 frames justos, así que TODAS
+# las voces del chip empiezan en la misma muestra que el bombo y el ruido (a 60,1 Hz cada nota se corría hasta ±8 ms).
+F.FRAME_S = round(S16 * SR) / 9
+F.FPS = SR / F.FRAME_S
 INTRO = 4
 NB = INTRO + 64
 MAJ, MIN, DOM = (0, 4, 7), (0, 3, 7), (0, 4, 7, 10)
@@ -344,6 +351,8 @@ def comprueba():
         if not en and not (d < 3 and ant is not None and sig is not None and 1 <= abs(n - ant) <= 2 and 1 <= abs(n - sig) <= 2):
             malas.append((b, st, n, d))
         if d >= 4: assert en, f'nota larga fuera del acorde: compás {b}, semicorchea {st}'
+    # ¿toda semicorchea cae en un frame del driver, sin resto?
+    assert SWING != 0 or abs(F.FRAME_S - 700) < 1e-9 and all(abs(tval(b, st) * F.FPS - round(tval(b, st) * F.FPS)) < 1e-6 for b, st, *_ in MEL + linea_bajo())
     t = len(MEL)
     print(f'  melodía: {t} notas · del acorde {100 * tono / t:.0f}% (aprobadas 79-90) · por grado {100 * paso / t:.0f}% (20-44) · '
           f'repetidas {100 * igual / t:.0f}% (1-23) · largas {100 * largas / t:.0f}% (11-46) · a contratiempo {100 * fuera / t:.0f}% (regla > 50)')
