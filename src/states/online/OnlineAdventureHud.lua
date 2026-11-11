@@ -225,7 +225,7 @@ function OnlineAdventureState:_renderSpectatorOverlay()
 
     if not self.specOverlay then
         love.graphics.setColor(1, 1, 1, 0.35)
-        love.graphics.printf(L(CornerButtons.pointerMode() and 'oadv.opts_touch' or 'oadv.opts_key'),
+        require('src/ui/RichText').printf(L(CornerButtons.pointerMode() and 'oadv.opts_touch' or 'oadv.opts_key'),
                              0, WINDOW_H - 36, WINDOW_W, 'center')
         return
     end

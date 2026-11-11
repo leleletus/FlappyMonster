@@ -42,6 +42,24 @@ local MenuScene, Transition, L
 
 local MenuList = require 'src/ui/menu/MenuList'
 local function top() return gStateMachine:_top() end
+-- ICONOS EN TODO EL JUEGO (0.5.198): mientras dura el recorrido, cualquier texto dibujado con love.graphics.print /
+-- printf que lleve un nombre de botón con icono ([Space], [A], [Esc]...) se apunta: ese sitio no pasa por
+-- src/ui/RichText.lua. RichText dibuja sus trozos ya sin corchetes, así que no cuenta
+local plainKeys = {}
+do
+    local RichText = require 'src/ui/RichText'
+    local function watch(name)
+        local real = love.graphics[name]
+        love.graphics[name] = function(text, ...)
+            if type(text) == 'string' and text:find('[', 1, true) and RichText.has(text) then
+                local where = debug.getinfo(2, 'Sl')
+                plainKeys[where.short_src .. ':' .. where.currentline] = text
+            end
+            return real(text, ...)
+        end
+    end
+    watch('print'); watch('printf')
+end
 local function tick()
     local cur = pressed; pressed = {}
     Input = setmetatable({ pressed = function(x) return cur[x] == true end, down = function() return false end },
@@ -60,6 +78,8 @@ end
 local function selId(st) local it = st.list and st.list.items[st.list.selected]; return it and (it.id or it.text) end
 
 local function run()
+    -- (PAD=1: todo el recorrido como con un MANDO — los iconos de mando —; si no, con el teclado)
+    if os.getenv('PAD') then Input.lastDevice = 'gamepad' end
     -- ── 1. título ─────────────────────────────────────────────────────────
     gStateMachine:change('title')
     local st = top()
@@ -952,6 +972,22 @@ local function run()
     resize(960, 720); wait(0.8); shot('main_960')
     resize(1600, 720); wait(0.2); shot('main_1600')
     resize(1280, 720)
+
+    do
+        -- (el detector funciona: un texto con [Esc] dibujado a mano se apunta)
+        local dev = Input.lastDevice
+        Input.lastDevice = 'keyboard'
+        love.graphics.printf('[Esc] prueba', 0, 0, 100)             -- (con el teclado: [Esc] es un botón)
+        local caught = false
+        for where, txt in pairs(plainKeys) do if txt == '[Esc] prueba' then caught = true; plainKeys[where] = nil end end
+        Input.lastDevice = dev
+        check('iconos_detector', caught, 'un [Esc] dibujado como texto se detecta: ' .. tostring(caught))
+        local list = {}
+        for where, txt in pairs(plainKeys) do list[#list + 1] = where .. ' «' .. txt:sub(1, 50) .. '»' end
+        table.sort(list)
+        check('iconos_todo', #list == 0, #list == 0 and 'ningún nombre de botón dibujado como texto' or
+            (#list .. ' sitios con el nombre del botón como texto: ' .. table.concat(list, ' · ', 1, math.min(#list, 10))))
+    end
 
     print(fails == 0 and 'TODO OK' or ('FALLOS: ' .. fails))
     print('capturas: ' .. love.filesystem.getSaveDirectory() .. '/menu_*.png')

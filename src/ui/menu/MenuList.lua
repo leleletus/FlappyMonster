@@ -10,6 +10,7 @@
 local PixelFont  = require 'src/ui/PixelFont'
 local MenuButton = require 'src/ui/menu/MenuButton'
 local L          = require 'src/core/Lang'
+local RichText   = require 'src/ui/RichText'
 
 local MenuList = {}
 MenuList.__index = MenuList
@@ -162,7 +163,7 @@ function MenuList.footer(desc, A, i, hint, maxW)
         love.graphics.setColor(1, 1, 1, a)
         local lh = FONT_MED:getHeight()
         local ty = y + math.floor((h - #lines * lh) / 2) + 2
-        for k, l in ipairs(lines) do love.graphics.printf(l, x, ty + (k - 1) * lh, w, 'center') end
+        for k, l in ipairs(lines) do RichText.printf(l, x, ty + (k - 1) * lh, w, 'center') end
     end
     hint = hint or L('menu.hint', { move = Input.label('nav_up') .. Input.label('nav_down'),
                                     ok = Input.label('confirm'), back = Input.label('back') })
@@ -170,9 +171,9 @@ function MenuList.footer(desc, A, i, hint, maxW)
     if hint ~= '' then
         love.graphics.setFont(FONT_SMALL)
         love.graphics.setColor(0, 0, 0, 0.6 * a)
-        love.graphics.printf(hint, 2, WINDOW_H - 40 + oy + 2, WINDOW_W, 'center')
+        RichText.printf(hint, 2, WINDOW_H - 40 + oy + 2, WINDOW_W, 'center', { shadow = true })
         love.graphics.setColor(1, 1, 1, 0.9 * a)
-        love.graphics.printf(hint, 0, WINDOW_H - 40 + oy, WINDOW_W, 'center')
+        RichText.printf(hint, 0, WINDOW_H - 40 + oy, WINDOW_W, 'center')
     end
     love.graphics.setColor(1, 1, 1, 1)
 end

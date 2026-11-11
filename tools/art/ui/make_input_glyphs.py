@@ -19,6 +19,9 @@ FONT = {   # 3x5
     'E': ['kkk', 'k..', 'kk.', 'k..', 'kkk'], 'F': ['kkk', 'k..', 'kk.', 'k..', 'k..'], 'H': ['k.k', 'k.k', 'kkk', 'k.k', 'k.k'],
     'I': ['kkk', '.k.', '.k.', '.k.', 'kkk'], 'L': ['k..', 'k..', 'k..', 'k..', 'kkk'], 'R': ['kk.', 'k.k', 'kk.', 'k.k', 'k.k'], 'P': ['kk.', 'k.k', 'kk.', 'k..', 'k..'], 'S': ['.kk', 'k..', '.k.', '..k', 'kk.'],
     'T': ['kkk', '.k.', '.k.', '.k.', '.k.'], 'X': ['k.k', 'k.k', '.k.', 'k.k', 'k.k'], 'Y': ['k.k', 'k.k', '.k.', '.k.', '.k.'],
+    'N': ['k.k', 'kkk', 'kkk', 'k.k', 'k.k'], 'R': ['kk.', 'k.k', 'kk.', 'k.k', 'k.k'], 'D': ['kk.', 'k.k', 'k.k', 'k.k', 'kk.'],
+    'L': ['k..', 'k..', 'k..', 'k..', 'kkk'], 'Q': ['.k.', 'k.k', 'k.k', 'kk.', '.kk'], 'O': ['.k.', 'k.k', 'k.k', 'k.k', '.k.'],
+    '+': ['...', '.k.', 'kkk', '.k.', '...'], '-': ['...', '...', 'kkk', '...', '...'],
 }
 ARROW = {'up': ['..k..', '.kkk.', 'kkkkk', '..k..', '..k..'], 'down': ['..k..', '..k..', 'kkkkk', '.kkk.', '..k..'],
          'left': ['..k..', '.kk..', 'kkkkk', '.kk..', '..k..'], 'right': ['..k..', '..kk.', 'kkkkk', '..kk.', '..k..']}
@@ -100,3 +103,30 @@ for d in ('up', 'down', 'left', 'right'):
 for c in 'ABXY': save(round_btn(c), 'pad_' + c.lower())
 save(text_key('X'), 'key_x')                                   # (0.5.196: el ataque especial, para las jaulas)
 for c in 'LR': save(shoulder(c), 'pad_' + c.lower())
+# (0.5.198: todos los botones que salen en los textos del juego — src/ui/RichText.lua —)
+for t, n in (('ENTER', 'key_enter'), ('ESC', 'key_esc'), ('Q', 'key_q'), ('E', 'key_e'), ('TAB', 'key_tab'), ('DEL', 'key_del')):
+    save(text_key(t), n)
+
+def arrows_key():
+    g = keycap(17)
+    mini = {'up': ['.k.', 'kkk'], 'down': ['kkk', '.k.'], 'left': ['.k', 'kk', '.k'], 'right': ['k.', 'kk', 'k.']}
+    stamp(g, mini['up'], 7, 1); stamp(g, mini['down'], 7, 7); stamp(g, mini['left'], 4, 3); stamp(g, mini['right'], 11, 3)
+    return g
+save(arrows_key(), 'key_arrows')
+
+def pad_round_sym(ch):
+    g = round_btn('A')
+    for y in range(3, 8):
+        for x in range(4, 7):
+            if g[y][x] == 'k': g[y][x] = 'W'
+    stamp(g, FONT[ch], 4, 3)
+    return g
+save(pad_round_sym('+'), 'pad_plus'); save(pad_round_sym('-'), 'pad_minus')
+
+def dpad_all():
+    g = dpad('up')
+    for y in range(H):
+        for x in range(11):
+            if g[y][x] == 'Y': g[y][x] = 'W'
+    return g
+save(dpad_all(), 'pad_dpad')

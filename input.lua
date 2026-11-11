@@ -97,11 +97,11 @@ function Input.hints()
     if hintCache and hintPad == pad and hintLang == lang then return hintCache end
     hintPad, hintLang = pad, lang
     if pad then
-        hintCache = { ok = labelsConsole.confirm, back = labelsConsole.back, arrows = L('keys.dpad'), lr = '[<][>]',
+        hintCache = { pause = labelsConsole.pause, ok = labelsConsole.confirm, back = labelsConsole.back, arrows = L('keys.dpad'), lr = '[<][>]',
                       ud = '[^][v]', up = '[^]', down = '[v]', diff = labelsConsole.light, del = labelsConsole.light,
                       alt = labelsConsole.light, left = '[<]', right = '[>]' }
     else
-        hintCache = { ok = '[ENTER]', back = '[ESC]', arrows = L('keys.arrows'), lr = L('keys.lr'), ud = L('keys.ud'),
+        hintCache = { pause = labelsPC.pause, ok = '[ENTER]', back = '[ESC]', arrows = L('keys.arrows'), lr = L('keys.lr'), ud = L('keys.ud'),
                       up = L('keys.up'), down = L('keys.down'), diff = labelsPC.light, del = L('keys.del'),
                       alt = labelsPC.light, left = L('keys.left'), right = L('keys.right') }
     end

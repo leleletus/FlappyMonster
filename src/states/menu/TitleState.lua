@@ -239,11 +239,12 @@ function TitleState:render()
             local text = L('title.press', { key = Input.label('confirm') })
             love.graphics.setFont(FONT_MED)
             local y = math.floor(WINDOW_H * 0.70) + hop + math.floor((1 - k) * 40 / 4) * 4
-            local w = FONT_MED:getWidth(text) + 56
+            local RichText = require 'src/ui/RichText'
+            local w = RichText.width(text, FONT_MED) + 56
             local MenuButton = require 'src/ui/menu/MenuButton'
             MenuButton.panel(math.floor((WINDOW_W - w) / 2), y - 18, w, FONT_MED:getHeight() + 36, 0.9 * k)
             love.graphics.setColor(1, 0.92, 0.3, blink * k)
-            love.graphics.printf(text, 0, y + 2, WINDOW_W, 'center')
+            RichText.printf(text, 0, y + 2, WINDOW_W, 'center')
         end
     else
         local keep = self.list.selected

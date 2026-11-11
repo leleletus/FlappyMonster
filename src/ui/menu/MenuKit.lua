@@ -67,16 +67,18 @@ end
 function MenuKit.text(font, text, x, y, w, align, color, a)
     love.graphics.setFont(font)
     a = a or 1
+    local RichText = require 'src/ui/RichText'
     if a > 0.05 then                          -- (lo que ocupa de verdad: el cursor no se pone encima)
-        local tw, lines = font:getWrap(text, w)
+        local tw, lines = RichText.wrap(text, font, w)
         local lx = (align == 'center' and (w - tw) / 2) or (align == 'right' and w - tw) or 0
         MenuKit.occupy(math.floor(x + lx), math.floor(y), tw, #lines * font:getHeight() * font:getLineHeight())
     end
+    -- (los nombres de botón entre corchetes, como su icono: src/ui/RichText.lua)
     love.graphics.setColor(0, 0, 0, 0.7 * a)
-    love.graphics.printf(text, math.floor(x) + 2, math.floor(y) + 2, w, align or 'left')
+    RichText.printf(text, math.floor(x) + 2, math.floor(y) + 2, w, align or 'left', { shadow = true })
     local c = color or { 1, 1, 1 }
     love.graphics.setColor(c[1], c[2], c[3], (c[4] or 1) * a)
-    love.graphics.printf(text, math.floor(x), math.floor(y), w, align or 'left')
+    RichText.printf(text, math.floor(x), math.floor(y), w, align or 'left')
     love.graphics.setColor(1, 1, 1, 1)
 end
 

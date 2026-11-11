@@ -397,7 +397,7 @@ function StoryResultsState:render()
         end
         love.graphics.setFont(FONT_SMALL)
         love.graphics.setColor(1, 1, 1, 0.55 + 0.25 * math.sin(t * 4))
-        love.graphics.printf(L('story.results.choose', { lr = Input.label('nav_left') .. Input.label('nav_right'), ok = Input.label('confirm') }),
+        require('src/ui/RichText').printf(L('story.results.choose', { lr = Input.label('nav_left') .. Input.label('nav_right'), ok = Input.label('confirm') }),
                              0, WINDOW_H - 28, WINDOW_W, 'center')
     end
     love.graphics.setFont(FONT_MED)

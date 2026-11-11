@@ -107,7 +107,7 @@ function UpdateState:render()
         love.graphics.setFont(FONT_SMALL)
         love.graphics.setColor(1, 1, 1, 0.35)
         local txt = Input.lastDevice == 'touch' and L('upd.tap_skip') or L('upd.skip', { key = Input.label('back') })
-        love.graphics.printf(txt, 0, WINDOW_H - 40, WINDOW_W, 'center')
+        require('src/ui/RichText').printf(txt, 0, WINDOW_H - 40, WINDOW_W, 'center')
     end
     love.graphics.setColor(1, 1, 1, 1)
 end

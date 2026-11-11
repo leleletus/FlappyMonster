@@ -1617,10 +1617,10 @@ function StoryMapState:_drawHud()
         line = L('story.done_line', { grade = b.grade or '-', score = b.score or 0, time = string.format('%d:%02d', math.floor((b.time or 0) / 60), math.floor((b.time or 0) % 60)) })
     else line = L(node.boss and 'story.boss_line' or 'story.play_line') end
     love.graphics.setColor(1, 1, 1, 0.85)
-    love.graphics.printf(line, 100, by + 52, nameW, 'center')
+    require('src/ui/RichText').printf(line, 100, by + 52, nameW, 'center')
     love.graphics.setFont(FONT_SMALL)
     love.graphics.setColor(1, 1, 1, 0.6)
-    if Input.lastDevice ~= 'touch' then love.graphics.printf(L('story.map_hint'), 100, by + 80, nameW, 'center') end
+    if Input.lastDevice ~= 'touch' then require('src/ui/RichText').printf(L('story.map_hint'), 100, by + 80, nameW, 'center') end
     -- flechas: nivel anterior / siguiente
     local cur = stopIndex(self.world, self.node)
     for _, side in ipairs(SIDES) do
