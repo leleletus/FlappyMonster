@@ -23,6 +23,7 @@ local Difficulty    = require 'src/core/Difficulty'
 local json          = require 'libs/json'
 local L = require 'src/core/Lang'
 
+local TutorialOffer = require 'src/states/story/TutorialOfferState'
 local StorySlotState = BaseState:new()
 
 local CART_S = 4                         -- escala del cartucho (60 x 72 → 240 x 288)
@@ -131,11 +132,14 @@ end
 function StorySlotState:_go()
     local cx, cy = self:_cartCenter(self.inserting.slot)
     local map = self.c.map
+    local nextState, nextArgs = map, nil
     if self.inserting.new and self.c.introFilm then
-        Transition.go('story_film', { film = self.c.introFilm, onDone = function() gStateMachine:change(map) end }, cx, cy)
-    else
-        Transition.go(map, nil, cx, cy)
+        nextState, nextArgs = 'story_film', { film = self.c.introFilm, onDone = function() gStateMachine:change(map) end }
     end
+    if self.inserting.new and self.c.offerTutorial and TutorialOffer.shouldOffer() then
+        return Transition.go('tutorial_offer', { state = nextState, args = nextArgs }, cx, cy)
+    end
+    Transition.go(nextState, nextArgs, cx, cy)
 end
 
 function StorySlotState:_cartCenter(i)

@@ -11,7 +11,7 @@ import json, re, math, os
 import soundfile as sf, pyloudnorm as pyln
 
 ROOT = os.path.join(os.path.dirname(__file__), '..', '..', 'assets', 'music')
-CALM = {'costa_2', 'cuevas_1', 'cuevas_2', 'cuevas_oscuras', 'map_cuevas'}
+CALM = {'costa_2', 'cuevas_1', 'cuevas_2', 'cuevas_oscuras', 'map_cuevas', 'tutorial'}
 
 
 def target(t):

@@ -468,7 +468,7 @@ def build():
         'name': 'Tutorial', 'name_en': 'Tutorial',
         'width': W, 'height': H, 'playerStart': start,
         'tiles': tiles, 'entities': entities, 'foliage': [], 'vents': vents,
-        'music': 'pradera_1', 'parTime': 0,
+        'music': 'tutorial', 'parTime': 0,
         'modes': [],                                 # (ningún modo online: el tutorial es de un jugador)
     }
     if links: level['links'] = links

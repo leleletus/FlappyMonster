@@ -357,6 +357,7 @@ PATHS = {
     'menus_chip': 'menus/menus_chip', 'menus': 'menus/menus', 'flappy': 'flappy/flappy',
     'map_pradera': 'map/map_pradera', 'map_costa': 'map/map_costa', 'map_fortaleza': 'map/map_fortaleza',
     'map_nieve': 'map/map_nieve', 'map_cuevas': 'map/map_cuevas', 'map_final': 'map/map_final',
+    'tutorial': 'worlds/tutorial/tutorial',     # (tutorial.py: el nivel TUTORIAL, intro + bucle)
     'map_jungla': 'map/map_jungla', 'map_costa_helada': 'map/map_costa_helada', 'map_flappy': 'map/map_flappy',
 }
 

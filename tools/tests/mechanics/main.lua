@@ -1252,6 +1252,9 @@ function cases.tutorial()
     for _, e in ipairs(es) do if e.alive then e:update(1 / 60, level) end end
     level:hitTile(switches[2][1], switches[2][2], 'head')
     for _ = 1, 60 * 3 do level:update(1 / 60); for _, e in ipairs(es) do if e.alive then e:update(1 / 60, level) end end end
+    local valle, tip = json.decode(love.filesystem.read('assets/levels/valle_soleado.json')), false
+    for _, pl in ipairs(valle.entities) do tip = tip or (pl.type == 'hint' and pl.props.text == 'tut.run_tip' and L.has('tut.run_tip')) end
+    check('correr_1er_nivel', tip, 'cartel de correr en valle_soleado: ' .. tostring(tip))
     check('tutorial', signs > 20 and #noText == 0 and solidBefore == 'solid' and solidAfter == 'none' and lidName == 'empty' and door and door.state == 'open',
         ('%d carteles (sin texto: %s) · muro ON/OFF %s → %s · tapa → %s · puerta %s'):format(signs, table.concat(noText, ','), solidBefore, solidAfter, lidName, door and door.state or 'no hay'))
 end

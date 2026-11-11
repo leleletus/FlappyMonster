@@ -700,6 +700,12 @@ tut.geyser,Los géiseres te empujan hacia arriba cuando brotan.,Geysers push you
 tut.door,Esta puerta se abre con un activador. Búscalo.,This door opens with an activator. Find it.,
 tut.light,Aquí está oscuro: pulsa {light} para encender tu linterna. Su batería se gasta: apágala si no la necesitas.,It is dark here: press {light} to switch on your flashlight. Its battery runs down: switch it off when you do not need it.,
 tut.seed,Lleva la semilla y haz un ground pound sobre tierra firme: ¡crece una planta a la que subir!,Carry the seed and ground pound on firm ground: a plant grows that you can climb!,
+tut.run_tip,¡Mantén {run} para correr!,Hold {run} to run!,El cartel del primer nivel de la historia
 tut.goal,¡Toca la meta para terminar! Hay mucho más que descubrir por tu cuenta.,Touch the goal to finish! There is much more to discover on your own.,
+story.tut_offer,¿PRIMERA VEZ?,FIRST TIME HERE?,La oferta del tutorial al empezar la primera historia
+story.tut_yes,JUGAR EL TUTORIAL,PLAY THE TUTORIAL,
+story.tut_no,EMPEZAR YA,START NOW,
+story.tut_desc_yes,"Un nivel guiado para aprender a jugar, y luego empieza la historia","A guided level to learn how to play, then the story begins",
+story.tut_desc_no,Directo a la historia: el tutorial seguirá en el menú de Aventura,Straight to the story: the tutorial stays in the Adventure menu,
 adv.tutorial,TUTORIAL,TUTORIAL,El menú de Aventura: el nivel tutorial
 adv.desc_tutorial,"Aprende a jugar: moverse, saltar, los objetos y todo lo básico","Learn to play: moving, jumping, objects and all the basics",

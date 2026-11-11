@@ -40,9 +40,11 @@ function BotNav.signature(level)
     end
     -- (y dónde está cada entidad colocada: mover un mortero o un trampolín — objetos sólidos — cambia por dónde se pasa)
     for _, pl in ipairs(level.entities or {}) do
+        if pl.type ~= 'hint' then                     -- (un cartel de ayuda no cambia por dónde se pasa)
         local k = 0
         for i = 1, #tostring(pl.type) do k = (k * 131 + tostring(pl.type):byte(i)) % 1000003 end
         h = (h * 31 + k + (pl.col or 0) * 7919 + (pl.row or 0) * 104729 + (pl.sub or 0)) % 2147483647
+        end
     end
     return tostring(h) .. ':' .. level.tileW .. 'x' .. level.tileH
 end

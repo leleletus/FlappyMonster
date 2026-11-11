@@ -21,6 +21,7 @@ save slots are **cartridges** (Sonic 3 style save select).
 | `src/states/menu/AdventureModeSelectState.lua`, `SettingsState.lua`, `src/states/flappy/DifficultySelectionState.lua`, `src/states/flappy/FlappyCampaignState.lua` (CLÁSICO), `src/states/menu/DebugMenuState.lua` | the sub-menus, built with the pieces below |
 | `src/flappy/Campaign.lua` | the Adventure lock (below) |
 | `src/states/story/StorySlotState.lua` | the save slots as cartridges (see below), for the story or the Flappy campaign (`args.campaign`, descriptors in `src/story/Campaigns.lua`) |
+| `src/states/story/TutorialOfferState.lua` | the one-time offer of the tutorial before the first new story ([tutorial level](../design/tutorial-level.md)); `offerTutorial` in the campaign |
 | `src/states/story/StoryCollectionState.lua` | the story COLLECTION, pushed over the world map (see below) |
 | `src/ui/menu/MenuScene.lua` | the living background: `SCENES` (level + seed), `SCENE_MAX`, `STALL`, `CAM_X/CAM_Y` (where the monster sits on screen), iris timings; `update`, `draw`, `backdrop()` (background + big dark panel for content screens), `dim(a)` |
 | `src/states/adventure/AdventureState.lua` | `args.demo = { step, camX, camY }`: the demo mode MenuScene uses (no View lock, HUD, pause, music or recorder; endless lives; `step(dt, level)` moves the player instead of the pad); `rebindGlobals()` |

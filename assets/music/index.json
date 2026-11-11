@@ -2,7 +2,7 @@
   "_ayuda": [
     "Índice de la música del juego. Carpetas de assets/music/:",
     "  menus/     menús              map/    el mapa del mundo (un arreglo por isla)     flappy/  el modo Flappy",
-    "  worlds/<mundo>/  música de NIVEL de cada mundo o zona: 2-3 pistas temáticas por mundo (pradera, costa, fortaleza, nieve, montanas, cuevas, volcan, jungla)",
+    "  worlds/<mundo>/  música de NIVEL de cada mundo o zona: 2-3 pistas temáticas por mundo (pradera, costa, fortaleza, nieve, montanas, cuevas, volcan, jungla, tutorial)",
     "  bosses/    peleas de jefe        jingles/  sintonías cortas",
     "Para añadir una canción: copia el archivo en su carpeta y añade una entrada aquí. Sale sola en el editor.",
     "Campos de cada pista:",
@@ -47,6 +47,7 @@
     { "id": "jungla_1",   "name": "Jungla 1 (Corazón de la selva)", "intro": "worlds/jungla/jungla_1_intro.ogg", "loop": "worlds/jungla/jungla_1_loop.ogg", "volume": 0.66 },
     { "id": "jungla_2",   "name": "Jungla 2 (Río de tambores)", "intro": "worlds/jungla/jungla_2_intro.ogg", "loop": "worlds/jungla/jungla_2_loop.ogg", "volume": 0.66 },
     { "id": "jungla_bonus", "name": "Jungla (bonus: Lianas)", "intro": "worlds/jungla/jungla_bonus_intro.ogg", "loop": "worlds/jungla/jungla_bonus_loop.ogg", "volume": 0.66 },
+    { "id": "tutorial",   "name": "Tutorial (Primeros pasos)", "intro": "worlds/tutorial/tutorial_intro.ogg", "loop": "worlds/tutorial/tutorial_loop.ogg", "volume": 0.64 },
 
     { "id": "gummy_king_boss", "name": "Su Majestad Gummy (Rey Gummy)", "intro": "bosses/gummy_king_boss_intro.ogg", "loop": "bosses/gummy_king_boss_loop.ogg", "level": false, "boss": true, "volume": 0.67 },
     { "id": "evil_ship_boss",  "name": "Persecución (Nave Malvada)",   "intro": "bosses/evil_ship_boss_intro.ogg",  "loop": "bosses/evil_ship_boss_loop.ogg",  "level": false, "boss": true, "volume": 0.66 },

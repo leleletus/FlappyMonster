@@ -42,6 +42,7 @@ function love.load(a)
                           'touchmoved', 'touchreleased', 'focus' }) do love[cb] = function() end end
     love.audio.setVolume(0)
     realInput = Input
+    require('src/core/Settings').tutorialOffered = true                 -- (la oferta del tutorial se prueba en menu_flow)
     Save, Run, Worlds = require 'src/story/Save', require 'src/story/Run', require 'src/story/Worlds'
     for i = 1, Save.SLOTS do Save.delete(i) end
     pcall(love.filesystem.remove, 'story.sav'); pcall(love.filesystem.remove, 'story.sav.bak')          -- (desbloqueos globales de una pasada anterior)

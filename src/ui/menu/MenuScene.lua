@@ -28,7 +28,7 @@ local MenuScene = {}
 -- semillas llega, en cuánto y con cuántas muertes). menu_flow comprueba que cada una llega. Añadir una = una línea
 -- + su grafo + su semilla; si cambia el nivel, el bot o la física, hay que volver a buscarlas.
 MenuScene.SCENES = {
-    { level = 'valle_soleado',    seed = 14 },     -- la Pradera (37 s, 0 muertes; 0.5.72: con el Soplón)
+    { level = 'valle_soleado',    seed = 2 },      -- la Pradera (38 s, 0 muertes; 0.5.191: con el cartel de correr)
     { level = 'arrecife_globo',   seed = 7 },      -- la Costa, buceando (65 s; 0.5.72)
     { level = 'fabrica_morteros', seed = 30 },     -- la Fortaleza, al atardecer (43 s, 0 muertes; 0.5.190)
     { level = 'cumbres_escarcha', seed = 12 },     -- las Cumbres (50 s, 0 muertes; 0.5.190)

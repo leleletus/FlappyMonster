@@ -517,6 +517,40 @@ local function run()
     shot('story_pick')
     press('back', 0.3)
 
+    -- ── 3b. La OFERTA del tutorial: solo la primera vez que se crea una partida; EMPEZAR YA / atrás → la intro; JUGAR →
+    --        el nivel, y de cualquier salida del nivel → la intro (docs/design/tutorial-level.md)
+    do
+        local S = require 'src/core/Settings'
+        local keep = S.tutorialOffered
+        local function newGame(flag)
+            S.tutorialOffered = flag
+            local slot = top()
+            slot.inserting = { slot = 2, t = 0, new = true }
+            slot:_go()
+            wait(1.2)
+            return name(top())
+        end
+        local first = newGame(false)
+        shot('tutorial_offer')
+        local marked = S.tutorialOffered == true
+        press('back', 1.2)
+        local skip = name(top())
+        gStateMachine:change('story_slots'); wait(0.5)
+        local again = newGame(true)
+        gStateMachine:change('story_slots'); wait(0.5)
+        newGame(false)
+        press('confirm', 1.2)
+        local played, lvl, ret = name(top()), top().levelPath, top().returnTo
+        gStateMachine:change(ret); wait(0.3)
+        local after = name(top())
+        check('oferta', first == 'TutorialOfferState' and marked and skip == 'StoryFilmState' and again == 'StoryFilmState'
+              and played == 'AdventureState' and lvl == 'assets/levels/tutorial.json' and after == 'StoryFilmState',
+            ('1ª vez: %s (marcada=%s) · atrás: %s · 2ª vez: %s · JUGAR: %s %s · al salir del nivel: %s'):format(first, tostring(marked),
+             skip, again, played, tostring(lvl), after))
+        S.tutorialOffered = keep
+        gStateMachine:change('story_slots'); wait(0.5)
+    end
+
     -- ── 4. CONTINUAR ─────────────────────────────────────────────────────
     local Save = require 'src/story/Save'
     for i = 1, Save.SLOTS do Save.delete(i) end

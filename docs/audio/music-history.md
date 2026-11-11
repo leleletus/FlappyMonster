@@ -992,3 +992,18 @@ The user's verdict is pending.
   40, bass 25, arp 25. Only 25 % of the melody notes are off the beat (calmer than the 56-76 % of the level tracks:
   deliberate for a map). Previews with the loop twice + `LEEME.txt`: `FlappyMonster_pruebas/musica/mapa_flappy/`.
   Install the other with `INSTALL=1 MAPA_FLAPPY=B python3 tools/music/mapa_flappy.py`.
+
+### `tutorial` "Primeros pasos" (2026-11-10): the TUTORIAL level's theme
+
+- Brief: warm, friendly, playful, patient; it plays while the player reads signs, so it must sit under reading and survive a stay of several minutes.
+  Tied to no island and with no boss or story motif. Composed by a fresh agent from the guide and the verdicts in this file (`tools/music/tutorial.py`).
+- **E♭ major, 105 BPM, a light swing (60/40), intro 4 + loop 64 bars (9.14 + 146.29 s).** The idea is a STROLL: the triangle bass walks in quarter notes (root, 3rd or 5th, a step
+  into the next root, never m2 / M7 / tritone against the melody), which the game had not used, and the melody is one 2-bar cell in sequence (a soft 3+3+2 climbing a sixth; the answer falls a third and
+  climbs by step). Soft N163 flute lead, music box, rounded pulse off-beats (low-passed at 2.4 kHz), an N163 pad, a very light kit.
+- Form, eight 8-bar phrases, each extending in its own way: A · A′ (higher close, pad enters) · B (own theme in long notes, on IV) · A″ (the melody on the music box an octave up) · C "the reading corner"
+  (no drums, half-note bass, long music-box notes) · D **"now you"** (the flute teaches a bar, a thin pulse repeats it, and shows off on the last one: the tutorial's idea as form) · A‴ (densest, grown by layers) · the way back
+  (the cell, quieter, down to the opening texture; its last bar is the intro's last bar, so intro → loop and loop → loop arrive the same way).
+- House rules: la llamada once (B♭–E♭–G–B♭, music box, bar 3 of C, on its own chord); the one dark turn is A♭ minor in bar 2 of C (C → C♭); the accent is the WINK (8-5-8, a short N163 bell, chord tones only) where the melody rests.
+- Numbers (**verified by numbers only: NOT listened to**): melody chord tones 82 %, by step 44 %, repeated 2 %, long 29 %, off the beat 59 %; no loose non-chord note; no bass / melody clash. Energy: lead 19 % (over the ≤ ~17 % rule, within what calm tracks get), bass 26, pad 15, off-beats 18.
+  Accompaniment minus melody at 1-5 kHz: −1.9 to −11.5 dB per phrase. Master −11.6 LUFS, loop −11.4 after encoding; `levels.py` volume 0.64 → −15.3 in game (`CALM`). No 7-note interval run is shared at length with another track's MIDI (one 7-gram each in `pradera_bonus` and `volcan_2`).
+- Only one version exists (the guide suggests variants; one was asked for). The melody's feel, the swing and how it sits under the signs need the author's ear.

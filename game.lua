@@ -111,6 +111,7 @@ function love.load()
         adv_mode_select    = function() return AdventureModeSelectState:new() end,
         free_play          = function() return FreePlayState:new() end,       -- Juego libre (pruebas)
         story_slots        = function() return require('src/states/story/StorySlotState'):new() end,   -- Historia: partidas
+        tutorial_offer     = function() return require('src/states/story/TutorialOfferState'):new() end,   -- Historia: la oferta del tutorial, la primera vez
         story_results      = function() return require('src/states/story/StoryResultsState'):new() end, -- Historia: resultados del nivel
         story_map          = function() return require('src/states/story/StoryMapState'):new() end,    -- Historia: el mapa
         story_collection   = function() return require('src/states/story/StoryCollectionState'):new() end, -- Historia: la Colección (encima del mapa)

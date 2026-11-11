@@ -13,6 +13,7 @@ local MenuAnim      = require 'src/ui/menu/MenuAnim'
 local MenuList      = require 'src/ui/menu/MenuList'
 local Transition    = require 'src/ui/menu/Transition'
 local L = require 'src/core/Lang'
+local TutorialOffer = require 'src/states/story/TutorialOfferState'
 local AdventureModeSelectState = BaseState:new()
 
 function AdventureModeSelectState:enter(args)
@@ -21,7 +22,7 @@ function AdventureModeSelectState:enter(args)
     self.list = MenuList.new({ anim = self.anim, first = 2, top = 0.34, selected = (args and args.selected) or 2, items = {   -- (por defecto, HISTORIA: el tutorial va primero en la lista)
         -- (el nivel TUTORIAL — docs/design/tutorial-level.md —: se vuelve a este menú)
         { text = 'adv.tutorial', color = 'green', desc = 'adv.desc_tutorial',
-          go = function() self:_leave('adventure', { level = 'assets/levels/tutorial.json', returnTo = 'adv_mode_select' }) end },
+          go = function() TutorialOffer.markOffered(); self:_leave('adventure', { level = TutorialOffer.LEVEL, returnTo = 'adv_mode_select' }) end },
         { text = 'adv.story',  color = 'yellow', desc = 'adv.desc_story',  go = go('story_slots') },
         { text = 'adv.online', color = 'purple', desc = 'adv.desc_online', go = go('online_login') },
     } })

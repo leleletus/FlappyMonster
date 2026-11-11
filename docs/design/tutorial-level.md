@@ -71,7 +71,12 @@ climbed out of, the double-jump wall is 2 tiles. Found in play / by the solver a
   edited it in the editor) unless `--force`.
 - Texts in Spanish and English (the only languages of the sheet today).
 
+## The offer in Story (0.5.191, the user: "yes, optionally")
+
+The first time a new story is started on a device, `TutorialOfferState` asks before the intro film: PLAY THE TUTORIAL / START NOW (back = start now). Shown once (`Settings.tutorialOffered`, also set by entering the tutorial from the Adventure menu). Any exit from the level (finishing, quitting from pause) continues to the intro, so the new game starts either way. Campaigns opt in with `offerTutorial`.
+
+Players who skip it still learn to run: `valle_soleado`, the first story level, has a `hint` sign at the start (`tut.run_tip`, "Hold {run} to run!"; the user asked for this). Signs don't count towards a bot graph's signature (`BotNav.signature`), so adding one never makes a graph stale.
+
 ## Open questions for the user
 
-- Should the Story offer the tutorial the first time it starts?
 - Which enemies to show (one Gummy and one Crabby by default)?

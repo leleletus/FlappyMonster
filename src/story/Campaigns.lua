@@ -13,6 +13,7 @@
 --   shards(d)     fragmentos que lleva la partida, total (nil = la campaña no tiene)
 --   slotDesc(s)   la línea de abajo con un cartucho elegido
 --   introFilm     película al crear una partida (nil = ninguna)
+--   offerTutorial  la primera vez que se crea una partida, ofrece el tutorial (src/states/story/TutorialOfferState.lua)
 --   newHint, emptyDesc  claves de idioma del cartucho vacío y de su línea de abajo
 local L = require 'src/core/Lang'
 
@@ -32,7 +33,7 @@ local DEF = {
             scene = function(W) return W.id end,
             shards = function(d) return Shards.count(d) end,
             slotDesc = function(s) return L('story.slot_desc', { world = s.world, shards = s.shards, total = s.shardsTotal }) end,
-            introFilm = 'intro', newHint = 'story.slot_new_hint', emptyDesc = 'story.slot_empty',
+            introFilm = 'intro', offerTutorial = true, newHint = 'story.slot_new_hint', emptyDesc = 'story.slot_empty',
         }
     end,
     flappy = function()
