@@ -552,6 +552,29 @@ local function run()
         if os.getenv('TUTLOOK') then
             for _, col in ipairs({ 12, 50, 100, 150, 200, 250, 295, 345 }) do at(col); at(col); at(col); shot('tut_' .. col) end
         end
+        -- (los carteles con ICONOS de botones: teclado y mando; con el dedo, el botón de la pantalla brilla)
+        do
+            local realDev, realMob = Input.lastDevice, Input.isMobile
+            local TC = require 'src/ui/TouchControls'
+            local seen = {}
+            for _, dev in ipairs({ 'keyboard', 'gamepad', 'touch' }) do
+                Input.lastDevice, Input.isMobile = dev, dev == 'touch' or realMob
+                at(17); at(17)
+                -- (el bocadillo aparece con el tiempo REAL — love.timer.getDelta —, que aquí apenas corre: ya del todo)
+                for _, e in ipairs(st.enemies or {}) do if e.def and e.def.name == 'hint' and e.props.text == 'tut.run' then e.show = 1 end end
+                shot('tut_sign_' .. dev)
+                for _, e in ipairs(st.enemies or {}) do
+                    if e.def and e.def.name == 'hint' and e.props.text == 'tut.run' and e._lines then
+                        local imgs = 0
+                        for _, l in ipairs(e._lines) do for _, p in ipairs(l.parts) do if p.img then imgs = imgs + 1 end end end
+                        seen[dev] = imgs
+                    end
+                end
+            end
+            Input.lastDevice, Input.isMobile = realDev, realMob
+            check('tut_iconos', seen.keyboard == 1 and seen.gamepad == 1 and seen.touch == 0,
+                ('iconos en el cartel de correr: teclado %s · mando %s · dedo %s'):format(tostring(seen.keyboard), tostring(seen.gamepad), tostring(seen.touch)))
+        end
         local dark, dkMid = at(315)                                  -- (a medio fundido: aún no del todo)
         local _, dk = at(315); at(315)
         local fullIdx = st.level.sceneIdx

@@ -81,6 +81,10 @@ Players who skip it still learn to run: `valle_soleado`, the first story level, 
 
 Dressed with `retheme.py tutorial` (theme `meadow`, 17 cosmetic tiles) and `retheme.py --bg tutorial` (a generated background plane); the 9 meadow decorations inside the cave columns were swapped for 19 cave ones. Gameplay data is unchanged. The cave fades in and out over 1.2 s (`Scenes.follow`, `DARK_FADE`); the sky and the rest of the scene swap only while fully dark, so the change is never seen. The user: entering was too quick, and leaving must fade too.
 
+## Order and button icons (0.5.195)
+
+The user: stars and checkpoints appeared long before the sign that explained them. Now `tut.stars` sits before the first star and `tut.checkpoint` before the first checkpoint; the old `tut.pickups` sign (section 11) explains the extra life. The user also asked for button sprites: with a keyboard or a controller each `{button}` in a sign is drawn as its icon (`src/ui/InputGlyphs.lua`, art from `tools/art/ui/make_input_glyphs.py`, picked from `Input.label` so A/B swapping follows); on a phone the text keeps the on-screen button's name and that button glows and bounces while the sign is read (`TouchControls.highlight`). Checked by `menu_flow` `tut_iconos` with captures `tut_sign_{keyboard,gamepad,touch}`. `make_tutorial.py` no longer matches the level (the user edits it by hand now): never rerun it with `--force`.
+
 ## Open questions for the user
 
 - Which enemies to show (one Gummy and one Crabby by default)?

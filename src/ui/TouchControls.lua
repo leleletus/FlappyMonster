@@ -155,6 +155,29 @@ end
 local function T(name) return require('src/fx/Anim').clip('ui/touch', name) end
 local function show(name, x, y, px) T(name):play(love.timer.getTime(), x, y, 0, px, px) end
 
+-- RESALTAR un botón (0.5.195; el usuario: el tutorial marca, brillante y botando, el botón que nombra): quien lo pide
+-- lo llama cada fotograma (el cartel de ayuda, mientras se lee); se apaga solo al dejar de pedirlo. Acciones: 'jump',
+-- 'run', 'light' (o el botón extra que haya), y las de la cruceta ('move_left', 'move_right', 'grab', 'crouch').
+local lit = {}
+local PAD_ACT = { move_left = true, move_right = true, grab = true, crouch = true }
+function TC.highlight(action)
+    lit[PAD_ACT[action] and 'pad' or action] = love.timer.getTime()
+end
+local function litNow(k) return love.timer.getTime() - (lit[k] or -9) < 0.2 end
+-- Bote (px de pantalla hacia arriba) y brillo encima: el mismo cuadro sumado (blend 'add'), que late
+local function bounce(k, px)
+    if not litNow(k) then return 0 end
+    return -math.floor(math.abs(math.sin(love.timer.getTime() * 6)) * 3 * px + 0.5)
+end
+local function glow(k, name, x, y, px, fade)
+    if not litNow(k) then return end
+    local t = love.timer.getTime()
+    love.graphics.setBlendMode('add')
+    love.graphics.setColor(1, 0.85, 0.35, (0.45 + 0.25 * math.sin(t * 8)) * fade)
+    show(name, x, y, px)
+    love.graphics.setBlendMode('alpha')
+end
+
 -- Dibuja en píxeles de pantalla (fuera de lovesize). `st` = lo pulsado (por
 -- defecto, lo del último update)
 function TC.draw(L, st, fade, ex, run)
@@ -173,16 +196,22 @@ function TC.draw(L, st, fade, ex, run)
     show(padFrame(st), L.padX + sh, L.padY + sh, L.padPx)
     show(st.j and 'jump_pressed' or 'jump_up', L.jumpX + sh, L.jumpY + sh, L.jumpPx)
     love.graphics.setColor(1, 1, 1, ((st.l or st.r or st.d) and 0.8 or a) * fade)
-    show(padFrame(st), L.padX, L.padY, L.padPx)
+    local by = bounce('pad', L.padPx)
+    show(padFrame(st), L.padX, L.padY + by, L.padPx)
+    glow('pad', padFrame(st), L.padX, L.padY + by, L.padPx, fade)
     love.graphics.setColor(1, 1, 1, (st.j and 0.8 or a) * fade)
-    show(st.j and 'jump_pressed' or 'jump_up', L.jumpX, L.jumpY + (st.j and L.jumpPx or 0), L.jumpPx)
+    local jn, jy = st.j and 'jump_pressed' or 'jump_up', L.jumpY + (st.j and L.jumpPx or 0) + bounce('jump', L.jumpPx)
+    show(jn, L.jumpX, jy, L.jumpPx)
+    glow('jump', jn, L.jumpX, jy, L.jumpPx, fade)
     if run == nil then run = runOn end
     if run then
         local name = st.rn and 'run_pressed' or 'run_up'
         love.graphics.setColor(0, 0, 0, 0.35 * a / 0.7 * fade)
         show(name, L.runX + sh, L.runY + sh, L.lightPx)
         love.graphics.setColor(1, 1, 1, (st.rn and 0.8 or a) * fade)
-        show(name, L.runX, L.runY, L.lightPx)
+        local ry = L.runY + bounce('run', L.lightPx)
+        show(name, L.runX, ry, L.lightPx)
+        glow('run', name, L.runX, ry, L.lightPx, fade)
     end
     if ex then
         local on = (ex == 'special') and st.x or st.f
@@ -190,7 +219,10 @@ function TC.draw(L, st, fade, ex, run)
         love.graphics.setColor(0, 0, 0, 0.35 * a / 0.7 * fade)
         show(name, L.lightX + sh, L.lightY + sh, L.lightPx)
         love.graphics.setColor(1, 1, 1, (on and 0.8 or a) * fade)
-        show(name, L.lightX, L.lightY, L.lightPx)
+        local k = (ex == 'special') and 'special' or 'light'
+        local ly = L.lightY + bounce(k, L.lightPx)
+        show(name, L.lightX, ly, L.lightPx)
+        glow(k, name, L.lightX, ly, L.lightPx, fade)
     end
     love.graphics.setColor(1, 1, 1, 1)
 end

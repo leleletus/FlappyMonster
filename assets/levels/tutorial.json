@@ -112,7 +112,9 @@
     {"col":284,"props":{"path":[{"col":291,"row":3}]},"row":11,"type":"cablecar"},
     {"col":71,"row":19,"type":"bomb"},
     {"col":73,"row":19,"type":"bomb"},
-    {"col":75,"row":19,"type":"bomb"}
+    {"col":75,"row":19,"type":"bomb"},
+    {"col":26,"props":{"text":"tut.stars"},"row":13,"type":"hint"},
+    {"col":96,"props":{"text":"tut.checkpoint"},"row":13,"type":"hint"}
   ],
   "foliage": [
     {"col":279,"props":{"layer":"back"},"row":6,"sub":3,"type":"sunflower"},

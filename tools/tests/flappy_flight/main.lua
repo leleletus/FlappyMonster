@@ -28,7 +28,8 @@
 --   normal      en un nivel normal el jugador NO vuela (salto de plataformas de siempre)
 --   etapa       la etapa de prueba (assets/levels/_flappy_vuelo.json) y las del Valle (src/flappy/Zones.lua, con sus
 --               lanzarredes) se pueden pasar: un piloto sencillo (aletea cuando está por debajo del centro del hueco
---               siguiente; no cura con la comida: eso lo hace AdventureState) llega a la meta sin morir
+--               siguiente —en un pasillo, de lo común de las columnas que vienen—; esquiva las redes como un jugador;
+--               no cura con la comida: eso lo hace AdventureState) llega a la meta sin morir
 --
 --   tools/tests/run.sh flappy_flight   (CASE=nombre: solo ese)
 io.stdout:setvbuf('no')
@@ -316,6 +317,55 @@ local function nextGap(level, x)
     end
 end
 
+-- El hueco de la columna c (si es de pilar), con la misma regla que nextGap → arriba, abajo (px) o nil
+local function gapAt(level, c)
+    local H = level.tileH
+    if c < 1 or c > level.tileW or not (level:getTile(c, 1) == PILLAR_ID or level:getTile(c, H) == PILLAR_ID) then return nil end
+    local function solid(cc, r) return r >= 1 and r <= H and level:getDef(cc, r).collision == 'solid' end
+    local r = 1
+    while r <= H do
+        if level:getTile(c, r) ~= PILLAR_ID and not solid(c, r) then
+            local top = r
+            while r + 1 <= H and level:getTile(c, r + 1) ~= PILLAR_ID and not solid(c, r + 1) do r = r + 1 end
+            if not solid(c, top - 1) and not solid(c, r + 1) then return (top - 1) * T, r * T end
+        end
+        r = r + 1
+    end
+end
+
+-- La altura a la que apunta el piloto: el hueco que viene y, si hay varias columnas de pilar seguidas (un PASILLO) en lo
+-- que toca recorrer enseguida (de 40 px detrás a 110 px delante), lo que tienen en común; si no tienen nada en común, la
+-- primera (y luego la siguiente)
+local function pilotTarget(level, x)
+    local top, bot
+    for c = math.floor((x - 40) / T) + 1, math.floor((x + 110) / T) + 1 do
+        local a, b = gapAt(level, c)
+        if a then
+            if not top then top, bot = a, b
+            elseif math.max(top, a) < math.min(bot, b) - 70 then top, bot = math.max(top, a), math.min(bot, b) end
+        end
+    end
+    if not top then top, bot = nextGap(level, x - 40) end
+    return top and (top + bot) / 2 + 20 or 5 * T
+end
+
+-- ¿Una red a punto de dar? Lo que haría un jugador: un lanzarredes que BRILLA muy cerca por delante (menos de 2,6
+-- casillas) → 'go' (pasar deprisa antes de que dispare); algo más lejos (hasta 4) → 'wait' (quedarse atrás); una red que
+-- ya sube por debajo y por delante (hasta 3,5 casillas) → 'wait'; justo debajo o ya detrás → 'go' / nil
+local function netDanger(level, pa)
+    for _, e in ipairs(level.liveEntities) do
+        if e.alive and e.def then
+            local dx = e.x - pa.x
+            if e.def.name == 'netlauncher' and e.state == 'aim' and dx > -T and dx < 4 * T then
+                return dx < 2.6 * T and 'go' or 'wait'
+            end
+            if e.def.name == 'netshot' and e.state == 'fly' and e.up and e.y > pa.y - T and dx > -T and dx < 3.5 * T then
+                return dx < 0.3 * T and 'go' or 'wait'
+            end
+        end
+    end
+end
+
 local function runStage(path)
     local level = Level.new(path)
     local es = {}
@@ -325,20 +375,32 @@ local function runStage(path)
     local sx, sy = level:getSpawnPx()
     local pa = player(level, sx, sy)
     local hp0, deaths, done, t = pa.hp, 0, false, 0
-    step(level, 90, function()
+    -- (dónde le dan: columna y qué, para el mensaje)
+    local hits, takeDamage = {}, pa.takeDamage
+    pa.takeDamage = function(self, ...)
+        local inv = self:isInvulnerable()
+        local r = takeDamage(self, ...)
+        if not inv then hits[#hits + 1] = ('%d%s'):format(math.floor(self.x / T) + 1, debug.traceback():find('netshot', 1, true) and 'red' or '') end
+        return r
+    end
+    -- (tiempo de sobra: lo que tarda la cámara en recorrer la etapa + 30 s)
+    local secs = level.tileW * T / level.autoScroll.speed + 30
+    step(level, secs, function()
         t = t + DT
         if pa.dying then deaths = deaths + 1; return true end
-        local top, bot = nextGap(level, pa.x - 40)
-        local target = top and (top + bot) / 2 + 20 or 5 * T
+        local target = pilotTarget(level, pa.x)
         if pa.y > target and pa.vy > -60 then stub.state.jump_pressed = true end
-        stub.state.right = level.autoScroll.state == 'stop'      -- (la cámara se para al final: a la meta volando)
+        local danger = netDanger(level, pa)
+        stub.state.left = danger == 'wait'
+        stub.state.right = danger == 'go' or level.autoScroll.state == 'stop'      -- (la cámara se para al final: a la meta volando)
         local ob = pa:getOuterBounds()
         if level:triggerInBox(ob.x, ob.y, ob.w, ob.h, 'finish') then done = true; return true end
     end)
     clearInput()
     check('etapa', level.flappy and level.autoScroll and done and deaths == 0,
-          ('%s: nivel Flappy=%s con cámara=%s; llega a la meta SIN CARGA=%s en %.1f s; vida %d → %d; muertes %d'):format(
-           path:match('[^/]+$'), tostring(level.flappy), tostring(level.autoScroll ~= nil), tostring(done), t, hp0, pa.hp, deaths))
+          ('%s: nivel Flappy=%s con cámara=%s; llega a la meta SIN CARGA=%s en %.1f s; vida %d → %d; muertes %d; golpes en las columnas: %s'):format(
+           path:match('[^/]+$'), tostring(level.flappy), tostring(level.autoScroll ~= nil), tostring(done), t, hp0, pa.hp, deaths,
+           #hits > 0 and table.concat(hits, ' ') or 'ninguno'))
 end
 
 -- La etapa de prueba y las del Valle: el piloto sencillo, SIN usar el ataque especial, llega a la meta sin morir (la ruta

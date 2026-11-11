@@ -20,3 +20,10 @@ played the meadow's `pradera_1`.
 ## HUD and pacing
 
 - `src/states/` — Title, MainMenu, Play (flappy; HUD: big score in PixelFont with a black margin + shadow (`boxed`), pops on each point and flashes yellow every 10; best with the crown → "¡NUEVO RÉCORD!" blinking once beaten; difficulty plaque top-left in its colour; game-over card. Labels use PixelFont because FONT_* lack uppercase accents; harness `flappy_hud`). Difficulty pacing = `DIFFICULTIES` in settings.lua: pipes spawn by DISTANCE (`spacing`), speed ramps per pipe passed (`ramp` up to `rampMax`), the gap moves at most `maxJump` from the previous one; easy/normal were reworked to be faster (user: "very slow, boring"), `flappy_hud BOT=1` proves them beatable at top speed), Adventure (SP), FreePlay (SP level hub), Online* (login, hub, room, adventure, results, error), Pause
+
+## History
+
+- 2026-11-11, the user: the campaign's first-zone Flappy stages were "quite short, repetitive and very easy" → the three
+  Valley stages were redesigned (longer, by sections, a difficulty curve); details and the decision in
+  [flappy-campaign § The Valley's stages](flappy-campaign.md#the-valleys-stages-plan-5b). The endless mode on this page
+  did not change.

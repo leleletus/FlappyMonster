@@ -8,6 +8,8 @@
 -- tools/art/items/make_hint_sign.py.
 local Entity = require 'src/world/entities/base/Entity'
 local L = require 'src/core/Lang'
+local Glyphs = require 'src/ui/InputGlyphs'
+local TouchControls = require 'src/ui/TouchControls'
 
 local Hint = Entity.extend(Entity, { debugColor = { 1, 0.85, 0.4 },
     hitbox = { outerW = 0.6, outerH = 1, innerW = 0.01, innerH = 0.01 } })
@@ -42,16 +44,59 @@ function Hint:render(camX, camY)
     art():draw(self.read and 2 or 1, x, y - 8 * S, 0, S, S)
 end
 
--- El texto con los botones del aparato que se usa (se rehace al cambiar de idioma o de aparato)
-local ARGS = {}
-local function text(self)
-    local dev, lang = Input.lastDevice, L.current()
-    if self._txt and self._dev == dev and self._lang == lang then return self._txt end
-    ARGS.jump, ARGS.run, ARGS.crouch = Input.label('jump'), Input.label('run'), Input.label('crouch')
-    ARGS.grab, ARGS.light = Input.label('grab'), Input.label('light')
-    ARGS.left, ARGS.right = Input.label('move_left'), Input.label('move_right')
-    self._txt, self._dev, self._lang = L(self.props.text or 'tut.missing', ARGS), dev, lang
-    return self._txt
+-- El texto con los botones del aparato que se usa (se rehace al cambiar de idioma, de aparato o de A/B): con teclado o
+-- mando, cada {botón} es su ICONO (src/ui/InputGlyphs.lua) dentro del texto; con el dedo, el nombre del botón de la
+-- pantalla, y ese botón se ilumina (TouchControls.highlight). Se parte en líneas aquí, con los iconos: `lines` = lista
+-- de líneas, cada una una lista de trozos { text = s } o { img = Image }, y su ancho.
+local ACT = { jump = 'jump', run = 'run', crouch = 'crouch', grab = 'grab', light = 'light', left = 'move_left', right = 'move_right' }
+local MARK = {}
+for k in pairs(ACT) do MARK[k] = '\1' .. k .. '\2' end
+local function layout(self, font)
+    local dev, lang, key = Input.lastDevice, L.current(), Input.usingPad() and Input.label('jump') or ''
+    if self._lines and self._dev == dev and self._lang == lang and self._key == key then return self._lines, self._w, self._acts end
+    local raw = L(self.props.text or 'tut.missing', MARK)
+    local gh = font:getHeight()
+    local sc = math.max(2, math.floor(gh * 1.6 / 11 + 0.5))      -- (el icono, algo más alto que las letras)
+    local acts, words = {}, {}
+    for word in raw:gmatch('%S+') do
+        local parts, w = {}, 0
+        local pos = 1
+        while pos <= #word do
+            local a, b, name = word:find('\1(%a+)\2', pos)
+            if not a then a = #word + 1 end
+            if a > pos then
+                local t = word:sub(pos, a - 1)
+                parts[#parts + 1] = { text = t }; w = w + font:getWidth(t)
+            end
+            if not name then break end
+            acts[ACT[name]] = true
+            local img = Glyphs.get(ACT[name])
+            if img then
+                parts[#parts + 1] = { img = img, sc = sc }; w = w + img:getWidth() * sc
+            else
+                local t = Input.label(ACT[name])
+                parts[#parts + 1] = { text = t }; w = w + font:getWidth(t)
+            end
+            pos = b + 1
+        end
+        words[#words + 1] = { parts = parts, w = w }
+    end
+    local space = font:getWidth(' ')
+    local lines, cur, curW, maxW = {}, {}, 0, 0
+    for _, wd in ipairs(words) do
+        local add = (#cur > 0 and space or 0) + wd.w
+        if #cur > 0 and curW + add > MAXW then
+            lines[#lines + 1] = { parts = cur, w = curW }; maxW = math.max(maxW, curW)
+            cur, curW, add = {}, 0, wd.w
+        end
+        if #cur > 0 then cur[#cur + 1] = { text = ' ' } end
+        for _, p in ipairs(wd.parts) do cur[#cur + 1] = p end
+        curW = curW + add
+    end
+    if #cur > 0 then lines[#lines + 1] = { parts = cur, w = curW }; maxW = math.max(maxW, curW) end
+    self._lines, self._w, self._acts, self._dev, self._lang, self._key = lines, maxW, acts, dev, lang, key
+    self._lh = math.max(gh, 11 * sc) + 4
+    return lines, maxW, acts
 end
 
 -- Por encima de todo (y de la oscuridad): el bocadillo, si el jugador de este aparato está cerca. `viewer` = ese
@@ -66,11 +111,11 @@ function Hint:renderOverlay(camX, camY, viewer, dt)
     self.show = math.max(0, math.min(1, (self.show or 0) + (near and 1 or -1) * FADE * (dt or 1 / 60)))
     if self.show <= 0 then return end
     local font = FONT_SMALL
-    local msg = text(self)
-    local _, lines = font:getWrap(msg, MAXW)
-    local w = 0
-    for _, l in ipairs(lines) do w = math.max(w, font:getWidth(l)) end
-    local lh = font:getHeight() + 4
+    local lines, w, acts = layout(self, font)
+    if near and Input.lastDevice == 'touch' then
+        for a in pairs(acts) do TouchControls.highlight(a) end        -- (el botón de la pantalla que nombra: brilla y bota)
+    end
+    local lh = self._lh or (font:getHeight() + 4)
     local bw, bh = w + PAD * 2, #lines * lh + PAD * 2 - 4
     local cx = math.floor(self.x - camX + 0.5)
     local top = math.floor(self.y - self.outerH / 2 - camY - 18 - bh + (1 - self.show) * 10 + 0.5)
@@ -82,11 +127,25 @@ function Hint:renderOverlay(camX, camY, viewer, dt)
     love.graphics.rectangle('fill', bx, top, bw, 2)
     love.graphics.rectangle('fill', cx - 4, top + bh, 8, 6)               -- (la punta hacia el cartel)
     love.graphics.setFont(font)
+    local fh = font:getHeight()
+    local ty = math.floor((lh - 4 - fh) / 2)                               -- (las letras, centradas en la línea)
     for i, l in ipairs(lines) do
-        love.graphics.setColor(0, 0, 0, 0.75 * a)
-        love.graphics.print(l, bx + PAD + 2, top + PAD + (i - 1) * lh + 2)
-        love.graphics.setColor(1, 1, 1, a)
-        love.graphics.print(l, bx + PAD, top + PAD + (i - 1) * lh)
+        local x, y = bx + PAD, top + PAD + (i - 1) * lh
+        for _, p in ipairs(l.parts) do
+            if p.img then
+                local ih = p.img:getHeight() * p.sc
+                local iy = y + math.floor((lh - 4 - ih) / 2 + 0.5)
+                love.graphics.setColor(1, 1, 1, a)
+                love.graphics.draw(p.img, x, iy, 0, p.sc, p.sc)
+                x = x + p.img:getWidth() * p.sc
+            else
+                love.graphics.setColor(0, 0, 0, 0.75 * a)
+                love.graphics.print(p.text, x + 2, y + ty + 2)
+                love.graphics.setColor(1, 1, 1, a)
+                love.graphics.print(p.text, x, y + ty)
+                x = x + font:getWidth(p.text)
+            end
+        end
     end
     love.graphics.setColor(1, 1, 1, 1)
 end

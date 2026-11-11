@@ -151,6 +151,7 @@ local FLING_T    = 1.6    -- s volando tras romperle el bloque de debajo
 local BURST_T    = 1.0    -- s "muerta" tras reventar (las partículas vuelan)
 local FLING_VX, FLING_VY = 230, -760
 local LAUNCH_MIN_VX = 170   -- px/s de avance mínimo al salir de un trampolín hacia arriba
+local TRAMP_AGAIN   = 4     -- s en los que el mismo trampolín ya no la vuelve a lanzar (es suelo)
 -- Muertes especiales (ya muertas: sin choques, lo atraviesan todo; el dibujo
 -- solo depende de state + deadTimer + x, y: igual online)
 Entity.SPECIAL_DEATH = { dead_fling = true, dead_burst = true }
@@ -942,10 +943,14 @@ function Entity:touchBody(o, face)
     if not (o.bouncyFace and o.face == face and o.launchVelocity) then return false end
     if o.canLaunchEntity and not o:canLaunchEntity() then return false end
     if not self:canBeLaunched() then return false end
+    -- (el MISMO trampolín otra vez enseguida: es suelo. Si no, quien vuelve a él — su ruta pasa por encima, o salta en
+    -- el sitio como el Saltarín — se quedaba rebotando para siempre; el usuario lo veía en todas las entidades)
+    if (self.trampCd or 0) > 0 and self.trampLast == o then return false end
     local vx, vy = o:launchVelocity()
-    -- Hacia arriba (sin impulso de lado): sigue avanzando hacia donde andaba,
-    -- no rebota en el sitio para siempre (volvía a caer en el mismo trampolín)
-    if vx == 0 and self.moving then vx = (self.facing or 1) * math.max(self.speed or 0, LAUNCH_MIN_VX) end
+    -- Hacia arriba (sin impulso de lado): sale hacia donde mira, no rebota en el sitio (volvía a caer en el mismo
+    -- trampolín). También quien no anda (el Saltarín): antes solo los que tenían `moving`
+    if vx == 0 then vx = (self.facing or 1) * math.max(self.moving and self.speed or 0, LAUNCH_MIN_VX) end
+    self.trampLast, self.trampCd = o, TRAMP_AGAIN
     if o.onLaunch then o:onLaunch(nil) end
     self:launch(vx, vy)
     -- Sale desde ENCIMA de la cara de arriba: un trepador llega a ella girando
@@ -1032,6 +1037,7 @@ function Entity:update(dt, level)
         return
     end
     if (self.thrownT or 0) > 0 then self.thrownT = self.thrownT - dt end
+    if (self.trampCd or 0) > 0 then self.trampCd = self.trampCd - dt end     -- (touchBody: no repite trampolín enseguida)
     if self.stepAlways then self:stepAlways(dt, level) end
 
     if self.state == 'dead' then

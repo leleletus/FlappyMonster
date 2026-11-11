@@ -689,7 +689,7 @@ tut.health,Los pinchos hacen daño. Tu vida está arriba; la comida la recupera.
 tut.spikes_enemy,Algunos enemigos tienen pinchos o trucos propios. Observa cómo se mueve cada uno.,Some enemies have spikes or tricks of their own. Watch how each one moves.,
 tut.pound,"En el aire, pulsa {crouch}: ¡ground pound! Rompe bloques bajo tus pies… y algo más.","In the air, press {crouch}: ground pound! It breaks blocks under your feet… and more.",
 tut.bump,Golpea con la cabeza los bloques de arriba. Los activadores cambian los bloques ON / OFF.,Bump the blocks above you with your head. Activators switch the ON / OFF blocks.,
-tut.pickups,"Las estrellas dan puntos. Toca los checkpoints: si caes, vuelves allí.","Stars give points. Touch checkpoints: if you fall, you come back there.",
+tut.pickups,"Una vida extra: cógela, que si te quedas sin vidas se acaba la partida.","An extra life: grab it, running out of lives ends the game.",
 tut.carry,"Junto a una caja pequeña, pulsa {grab} para cogerla y otra vez para lanzarla. Con {crouch} + {grab} la dejas con cuidado.","Next to a small box, press {grab} to pick it up and again to throw it. {crouch} + {grab} puts it down gently.",
 tut.push,Las cajas grandes se empujan andando contra ellas.,Walk into big boxes to push them.,
 tut.trampoline,¡Los trampolines te lanzan por los aires!,Trampolines send you flying!,
@@ -701,6 +701,8 @@ tut.door,Esta puerta se abre con un activador. Búscalo.,This door opens with an
 tut.light,Aquí está oscuro: pulsa {light} para encender tu linterna. Su batería se gasta: apágala si no la necesitas.,It is dark here: press {light} to switch on your flashlight. Its battery runs down: switch it off when you do not need it.,
 tut.seed,Lleva la semilla y haz un ground pound sobre tierra firme: ¡crece una planta a la que subir!,Carry the seed and ground pound on firm ground: a plant grows that you can climb!,
 tut.run_tip,¡Mantén {run} para correr!,Hold {run} to run!,El cartel del primer nivel de la historia
+tut.stars,¡Coge las estrellas: dan puntos!,Grab the stars: they give points!,El tutorial: la primera estrella
+tut.checkpoint,"Esto es un checkpoint: tócalo y, si caes, volverás aquí.","This is a checkpoint: touch it and if you fall, you come back here.",
 tut.goal,¡Toca la meta para terminar! Hay mucho más que descubrir por tu cuenta.,Touch the goal to finish! There is much more to discover on your own.,
 story.tut_offer,¿PRIMERA VEZ?,FIRST TIME HERE?,La oferta del tutorial al empezar la primera historia
 story.tut_yes,JUGAR EL TUTORIAL,PLAY THE TUTORIAL,

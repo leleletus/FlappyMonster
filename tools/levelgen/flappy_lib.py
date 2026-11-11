@@ -117,6 +117,27 @@ def cubby(wc, inside, min_charge=2, **props):
     return ents, [(wc + 1, 2), (wc + 2, 1), (wc + 2, 2)]
 
 
+def corridor(c0, tops, h):
+    """Un PASILLO: columnas de pilar SEGUIDAS desde c0, una por cada fila de arriba de `tops`, todas con un hueco de `h`
+    filas (la ruta tiene que seguir la curva sin salirse; cambiar como mucho 1 fila por columna) → gaps de build()"""
+    for a, b in zip(tops, tops[1:]):
+        assert abs(a - b) <= 1, ('pasillo con un escalón de más de 1 fila', c0, tops)
+    return [(c0 + i, top, h) for i, top in enumerate(tops)]
+
+
+def ledge(c0, c1, gaps, row):
+    """Una CORNISA: un suelo de bloques sólidos en la fila `row` de c0 a c1 que parte la pantalla en dos rutas. La de
+    ABAJO es la de los huecos (han de empezar en row + 2 o más abajo: el pilar que queda debajo de la cornisa cuelga de
+    ella); la de ARRIBA, filas 1 a row - 1, es una ruta opcional (sin muro: se entra por arriba antes de c0; los pilares
+    de dentro pierden esas filas, salvo los huecos que empiecen en la fila 2 —una estalactita de una fila—). El piloto de
+    flappy_flight no toma la de arriba (sus huecos tocan un bloque). → bloques sólidos, casillas vacías"""
+    for c, top, h in gaps:
+        assert not (c0 <= c <= c1) or top >= row + 2 or top == 2, ('hueco bajo la cornisa demasiado alto', c, top)
+    solids = [(c, row) for c in range(c0, c1 + 1)]
+    air = [(c, r) for c, top, _ in gaps if c0 <= c <= c1 and top != 2 for r in range(1, row)]
+    return solids, air
+
+
 def tunnel(c0, c1, gaps, min_charge=2):
     """Un ATAJO arriba: un túnel de las filas 1-2 de la columna c0 + 1 a la c1, con un muro agrietado en c0 (pide
     `min_charge`) y un suelo de bloques sólidos en la fila 3 de c0 a c1; los pilares de dentro pierden sus filas 1-2. Por

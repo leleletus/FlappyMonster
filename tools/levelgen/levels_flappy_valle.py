@@ -1,20 +1,29 @@
 #!/usr/bin/env python3
 # tools/levelgen/levels_flappy_valle.py
-# Las TRES etapas del Valle de los Pilares (zona 1 de la campaña Flappy, src/flappy/Zones.lua; Plan 5b de
-# docs/design/flappy-plan-5b-valley.md), con el fondo `valley` (src/fx/Sky.lua). Los ids se guardan en las partidas:
-# nunca se renombran. Escribe SOLO valle_pilares_1/2/3.json (lo común: flappy_lib.py; el jefe, levels_flappy_valle_boss.py).
-#   1 la entrada suave: huecos anchos (4-5), alturas tranquilas, 5 cargas, 2 comidas, una jaula fácil, sin muros
-#   2 jaulas y muros: huecos de 3-4, una jaula a la vista y otra detrás de un muro agrietado (carga 2), 2 comidas
-#   3 la primera máquina del Malvado: huecos de 3-4, tres LANZARREDES en sus soportes bajo la ruta (siempre con sitio a
-#     los lados para esperar la red), una jaula muy arriba, 2 comidas y un ATAJO: un túnel arriba tras un muro agrietado
-#     que pasa por encima del segundo lanzarredes (su suelo para las redes)
-# Sin suelo (Plan 5d): los pilares de abajo llegan al borde de abajo; los lanzarredes, en su soporte (flappy_lib.launcher).
-# La ruta principal (los huecos) nunca necesita romper un muro: el piloto sin carga de flappy_flight `etapa` las pasa.
+# Las TRES etapas del Valle de los Pilares (zona 1 de la campaña Flappy, src/flappy/Zones.lua), con el fondo `valley`
+# (src/fx/Sky.lua). Los ids se guardan en las partidas: nunca se renombran. Escribe SOLO valle_pilares_1/2/3.json (lo
+# común: flappy_lib.py; el jefe, levels_flappy_valle_boss.py).
+#
+# REDISEÑO (el usuario, 2026-11-11: "bastante cortas, repetitivas y muy fáciles"): cada etapa unas 2-2,5 veces más larga,
+# hecha de TRAMOS que no se repiten (cada etapa con su idea, y los tramos la van apretando), con una curva de dificultad:
+#   1 «Los pilares» (200 px/s): huecos de 4 que pasan a 3; escalera, el primer pasillo, una jaula colgada de un pilar
+#     (la ráfaga atraviesa los pilares) y otra abajo del todo, junto al borde; acaba en un zigzag
+#   2 «Grietas y cornisas» (210 px/s): huecos de 3; jaula a la vista, escondite tras un muro con la carga justo delante,
+#     un cañón (pasillo sinuoso), pilares dobles, una CORNISA (arriba, ruta estrecha con premio; abajo, la segura), ritmo
+#     de 5 columnas, una bajada de pilares pegados (cada 4) y un segundo cañón
+#   3 «La máquina del Malvado» (225 px/s): huecos de 3 y AGUJAS de 2; lanzarredes solos, en BATERÍA (tres seguidos) y
+#     debajo de una cornisa (arriba, sin redes pero con estalactitas; abajo, con redes), el atajo del túnel sobre dos
+#     lanzarredes, un pasillo vigilado, la jaula de la fila 1 y un final con lanzarredes entre agujas
+# Reglas que se mantienen: sin suelo (Plan 5d: los pilares de abajo llegan al borde; los lanzarredes, en su soporte); la
+# ruta principal (los huecos) nunca necesita romper un muro ni coger la ruta de arriba de una cornisa (el piloto sin carga
+# de flappy_flight `etapa` las pasa); un lanzarredes, a 3 columnas o más de los pilares de los lados (sitio para esperar
+# la red); las jaulas de antes siguen en el MISMO índice de la lista de entidades (`rescued` de las partidas guarda el
+# índice: legacy=), con su regalo.
 #   python3 tools/levelgen/levels_flappy_valle.py
 import os, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import flappy_lib
-from flappy_lib import ent, at_gaps, launcher
+from flappy_lib import ent, launcher, corridor, ledge, cubby, tunnel
 
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..')
 BG = 'valley'
@@ -24,44 +33,243 @@ def out(name):
     return os.path.join(ROOT, 'assets', 'levels', name + '.json')
 
 
-def pillars(first, step, spec):
-    """spec = [(fila de arriba del hueco, alto), ...] → gaps de build() cada `step` columnas desde `first`"""
-    return [(first + i * step, top, h) for i, (top, h) in enumerate(spec)]
+class Course:
+    """Una etapa por TRAMOS: un cursor de columna que avanza; cada tramo añade sus huecos, entidades y bloques"""
+
+    def __init__(self, start=22):
+        self.c = start
+        self.gaps, self.ents, self.solids, self.air, self.mounts = [], [], [], [], []
+        self.cages = []                       # (entidad, índice heredado o None)
+
+    def skip(self, n):
+        self.c += n
+
+    def pillars(self, step, spec):
+        """spec = [(fila de arriba del hueco, alto), ...]: un pilar cada `step` columnas desde el cursor → los huecos"""
+        g = []
+        for top, h in spec:
+            g.append((self.c, top, h))
+            self.c += step
+        self.gaps += g
+        return g
+
+    def at(self, cols_spec):
+        """pilares sueltos en columnas dadas: [(columna, fila de arriba, alto), ...] (el cursor queda en la última)"""
+        self.gaps += cols_spec
+        self.c = max(self.c, cols_spec[-1][0])
+        return cols_spec
+
+    def corridor(self, tops, h, after=6):
+        g = corridor(self.c, tops, h)
+        self.gaps += g
+        self.c += len(tops) - 1 + after
+        return g
+
+    def put(self, kind, col, row, **props):
+        self.ents.append(ent(kind, col, row, **props))
+
+    def mid(self, kind, gap, dy=0, **props):
+        """una entidad en el centro del hueco `gap` (dy filas más abajo)"""
+        c, top, h = gap
+        self.put(kind, c, top + (h - 1) // 2 + dy, **props)
+
+    def cage(self, col, row, min_charge, gift, legacy=None):
+        self.cages.append((ent('cage', col, row, minCharge=min_charge, gift=gift), legacy))
+
+    def launcher(self, col, row=9):
+        e, m = launcher(col, row)
+        self.ents.append(e)
+        self.mounts.append(m)
+
+    def entities(self):
+        """la lista final: las jaulas heredadas en su índice de siempre (1 = el primero), lo demás en orden"""
+        rest = list(self.ents)
+        fixed = {idx: e for e, idx in self.cages if idx}
+        new = [e for e, idx in self.cages if not idx]
+        out = []
+        n = len(rest) + len(fixed)
+        for i in range(1, n + 1):
+            if i in fixed:
+                out.append(fixed[i])
+            else:
+                assert rest, ('no hay entidades bastantes para poner la jaula heredada en su índice', i)
+                out.append(rest.pop(0))
+        return out + new
+
+    def write(self, name, title, title_en, speed):
+        cols = [g[0] for g in self.gaps]
+        assert len(cols) == len(set(cols)), ('dos huecos en la misma columna', sorted(c for c in cols if cols.count(c) > 1))
+        width = max(cols) + 14
+        ents = self.entities()
+        flappy_lib.write(out(name), title, title_en, width, self.gaps, speed=speed, entities=ents,
+                         solids=self.solids, air=self.air, mounts=self.mounts, background=BG)
+        kinds = {}
+        for e in ents:
+            kinds[e['type']] = kinds.get(e['type'], 0) + 1
+        hs = [h for _, top, h in self.gaps if top != 2 or h < 10]
+        print('  %s: %d columnas, ~%.0f s a %d px/s, huecos de %d-%d, %s' % (
+            name, width, (width - 20) * 64 / speed, speed, min(hs), max(hs),
+            ', '.join('%s %d' % kv for kv in sorted(kinds.items()))))
 
 
-# 1: huecos de 4-5 cada 8 columnas, alturas que cambian como mucho 1-2 filas
-g1 = pillars(20, 8, [(4, 5), (3, 5), (4, 4), (5, 5), (4, 5), (3, 4), (4, 5), (5, 4), (4, 5), (3, 5), (4, 4), (5, 5),
-                     (4, 5)])
-e1 = (at_gaps('flapcharge', g1, [1, 3, 5, 7, 9]) + at_gaps('apple', g1, [4, 10])
-      # la jaula fácil: carga 1, justo por encima de la ruta, poco después de la primera carga
-      + [ent('cage', g1[2][0] + 4, 3, minCharge=1, gift='shield')])
-flappy_lib.write(out('valle_pilares_1'), "Valle de los Pilares 1", "Valley of the Pillars 1", g1[-1][0] + 14, g1,
-                 entities=e1, background=BG)
+# ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+# 1 «LOS PILARES»: la entrada de la campaña. Huecos de 4 que pasan a 3, a 200 px/s.
+s = Course()
+# A bienvenida: 5 pilares cada 8, alturas tranquilas; dos cargas y la jaula fácil de siempre (fila 3, justo encima)
+a = s.pillars(8, [(4, 4), (5, 4), (4, 4), (3, 4), (4, 4)])
+s.mid('flapcharge', a[1]); s.mid('flapcharge', a[3])
+s.cage(a[2][0] + 4, 3, 1, 'shield', legacy=8)
+# B escalera: cada 6, el hueco sube de 2 en 2 hasta arriba del todo, baja hasta abajo y vuelve a subir
+b = s.pillars(6, [(6, 4), (4, 4), (2, 4), (2, 4), (4, 4), (6, 4), (7, 4), (5, 4), (3, 4)])
+s.mid('flapcharge', b[2]); s.mid('apple', b[4]); s.mid('flapcharge', b[6])
+# C el primer pasillo: 12 columnas de pilar seguidas, hueco de 4 que ondula (una carga dentro)
+s.skip(2)
+c = s.corridor([5, 5, 4, 4, 3, 3, 3, 4, 5, 6, 6, 6], 4, after=7)
+s.mid('flapcharge', c[6])
+# D el nido: una jaula COLGADA del pilar, en la fila 2 encima de un hueco bajo; se abre disparando desde la parte de
+#   arriba del hueco anterior (la ráfaga atraviesa los pilares) y luego hay que bajar
+d = s.pillars(6, [(3, 4), (3, 4), (6, 4)])
+s.mid('flapcharge', d[0])
+s.cage(d[2][0], 2, 1, 'small')
+# E huecos de 3: cada 7, saltos de 2-3 filas
+s.skip(2)
+e = s.pillars(7, [(5, 3), (3, 3), (6, 3), (4, 3), (2, 3), (5, 3), (7, 3), (4, 3)])
+s.mid('flapcharge', e[1]); s.mid('apple', e[3]); s.mid('flapcharge', e[4]); s.mid('flapcharge', e[6])
+# F la zambullida: dos pilares con el hueco abajo y, entre ellos, una jaula en la fila 10, junto al borde de abajo
+#   (caerse quita 1); pide 2 de carga
+f = s.pillars(6, [(7, 3), (7, 3)])
+s.cage(f[0][0] + 3, 10, 2, 'heart')
+# G el zigzag final: cada 5, arriba / abajo con huecos de 4; comida al salir
+s.skip(2)
+g = s.pillars(5, [(2, 4), (6, 4), (2, 4), (6, 4), (3, 4)])
+s.put('apple', g[-1][0] + 4, 5)
+s.write('valle_pilares_1', "Valle de los Pilares 1", "Valley of the Pillars 1", 200)
 
-# 2: huecos de 4 que pasan a 3 cada 7 columnas, saltos de altura más grandes; una jaula a la vista (carga 2) y un
-#    escondite arriba (muro de carga 2) con otra jaula (carga 1) detrás: hacen falta 3 cargas, hay 4 antes
-g2 = pillars(20, 7, [(4, 4), (2, 4), (5, 4), (3, 4), (6, 3), (3, 3), (5, 3), (2, 3), (5, 3), (3, 4), (6, 3), (4, 3),
-                     (2, 3), (5, 3), (3, 3), (5, 4)])
-e2c, s2 = flappy_lib.cubby(g2[7][0] + 3, 'cage', min_charge=2, minCharge=1, gift='magnet_points')
-e2 = (at_gaps('flapcharge', g2, [0, 2, 3, 5, 8, 10]) + at_gaps('apple', g2, [4, 12]) + e2c
-      + [ent('cage', g2[11][0] + 3, 2, minCharge=2, gift='heart')])
-flappy_lib.write(out('valle_pilares_2'), "Valle de los Pilares 2", "Valley of the Pillars 2", g2[-1][0] + 14, g2,
-                 entities=e2, solids=s2, background=BG)
 
-# 3: huecos de 3-4 cada 7 columnas. Lanzarredes en la fila 9, sobre su soporte (filas 10-11), entre dos pilares, a 3
-#    columnas de cada uno, con la ruta pasando por ENCIMA (huecos que acaban en la fila 7 o antes). El túnel va de la columna 58 a la 80 (filas
-#    1-2, muro en la 58): por debajo, los huecos empiezan en la fila 5 y el 2º lanzarredes dispara contra su suelo.
-g3 = pillars(20, 7, [(4, 4), (3, 4), (2, 4), (4, 3), (3, 4), (4, 4), (5, 3), (6, 3), (5, 4), (2, 4), (5, 3), (4, 4),
-                     (5, 3), (3, 4), (5, 3), (3, 4)])
-T0, T1 = g3[5][0] + 3, g3[8][0] + 4                     # el túnel: 58 → 80
-e3t, s3, a3 = flappy_lib.tunnel(T0, T1, g3, min_charge=2)
-l3 = [launcher(g3[1][0] + 3, 9),                         # entre huecos altos: la ruta pasa 3-5 filas por encima
-      launcher(g3[7][0] + 3, 9),                         # bajo el túnel: su red se queda en el suelo del túnel
-      launcher(g3[11][0] + 3, 9)]
-e3 = (at_gaps('flapcharge', g3, [0, 2, 4, 9, 11, 13]) + at_gaps('apple', g3, [3, 12]) + e3t
-      + [ent('flapcharge', T0 + 6, 2), ent('flapcharge', T0 + 15, 1)]          # el premio del atajo
-      + [e for e, _ in l3]
-      # la jaula muy arriba (carga 3), en la fila 1 entre dos pilares
-      + [ent('cage', g3[10][0] + 3, 1, minCharge=3, gift='strength')])
-flappy_lib.write(out('valle_pilares_3'), "Valle de los Pilares 3", "Valley of the Pillars 3", g3[-1][0] + 14, g3,
-                 entities=e3, solids=s3, air=a3, mounts=[m for _, m in l3], background=BG)
+# ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+# 2 «GRIETAS Y CORNISAS»: huecos de 3, a 210 px/s; muros, jaulas y la primera ruta partida.
+s = Course()
+# A calentamiento: cada 7; dos cargas
+a = s.pillars(7, [(4, 4), (2, 3), (5, 3), (3, 3), (6, 3)])
+s.mid('flapcharge', a[0]); s.mid('flapcharge', a[3])
+# B grietas: la jaula a la vista (fila 2, carga 2) y el escondite (muro de carga 2, jaula de carga 1 detrás) con una
+#   carga justo delante del muro, debajo: romper, coger la carga y disparar otra vez en un par de segundos
+b = s.pillars(7, [(3, 3), (5, 3), (2, 3), (5, 3)])
+s.mid('flapcharge', b[0])
+s.cage(b[0][0] + 4, 2, 2, 'heart', legacy=11)
+s.mid('flapcharge', b[1]); s.mid('flapcharge', b[2])
+wc = b[2][0] + 3
+ce, cs = cubby(wc, 'cage', min_charge=2, minCharge=1, gift='magnet_points')
+s.ents.append(ce[0]); s.cages.append((ce[1], 10)); s.solids += cs
+s.put('flapcharge', wc - 1, 3)
+# C el cañón: 20 columnas de pasillo de 3 que serpentea (cuestas de una fila cada dos o tres columnas)
+s.skip(2)
+c = s.corridor([5, 5, 4, 4, 3, 3, 3, 3, 4, 4, 4, 5, 5, 6, 6, 6, 5, 5, 4, 4], 3)
+s.mid('flapcharge', c[5])
+s.put('apple', s.c - 2, 5)
+# D pilares DOBLES: dos pilares con dos columnas entre ellos y el segundo hueco movido 1 fila (corregir rápido)
+s.skip(2)
+d = s.at([(s.c, 3, 3), (s.c + 3, 4, 3), (s.c + 10, 6, 3), (s.c + 13, 5, 3),
+          (s.c + 20, 2, 3), (s.c + 23, 3, 3), (s.c + 30, 6, 3), (s.c + 33, 7, 3)])
+s.mid('flapcharge', d[5])
+s.skip(7)
+# E la cornisa: un suelo de piedra en la fila 4 parte la pantalla. Abajo, la ruta segura (huecos de 3); arriba, una ruta
+#   de 3 filas con estalactitas (filas 2-3 libres) que lleva dos cargas y una jaula
+L0 = s.c + 2
+low = [(L0 + 2, 6, 3), (L0 + 8, 7, 3), (L0 + 14, 6, 3), (L0 + 20, 7, 3), (L0 + 26, 6, 3)]
+stal = [(L0 + 5, 2, 10), (L0 + 11, 2, 10), (L0 + 17, 2, 10), (L0 + 23, 2, 10)]
+s.at(low + stal)
+L1 = L0 + 26
+ls, la = ledge(L0, L1, low + stal, 4)
+s.solids += ls; s.air += la
+s.put('flapcharge', L0 + 7, 2); s.put('flapcharge', L0 + 19, 2)
+s.cage(L0 + 25, 2, 2, 'ghost')
+s.mid('flapcharge', low[2])
+s.c = L1 + 6
+# F ritmo: cada 5, de arriba abajo (saltos de 3-4 filas en 4 columnas)
+f = s.pillars(5, [(3, 3), (6, 3), (3, 3), (7, 3), (4, 3), (7, 3), (3, 3), (6, 3)])
+s.mid('flapcharge', f[3]); s.mid('apple', f[6])
+# G la bajada pegada: un pilar cada 4, el hueco baja fila a fila y vuelve a subir
+s.skip(1)
+g = s.pillars(4, [(2, 3), (3, 3), (4, 3), (5, 3), (6, 3), (7, 3), (6, 3), (4, 3), (2, 3)])
+# H el segundo cañón: 21 columnas, baja despacio desde el techo y vuelve a subir
+s.skip(2)
+h = s.corridor([2, 2, 2, 3, 3, 3, 4, 4, 4, 5, 5, 5, 6, 6, 6, 5, 5, 5, 4, 4, 4], 3)
+s.mid('flapcharge', h[13])
+# I final: cada 6, saltos grandes
+i = s.pillars(6, [(4, 3), (7, 3), (3, 3), (6, 3), (4, 3)])
+s.put('apple', i[-1][0] + 4, 5)
+s.write('valle_pilares_2', "Valle de los Pilares 2", "Valley of the Pillars 2", 210)
+
+
+# ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+# 3 «LA MÁQUINA DEL MALVADO»: huecos de 3 y agujas de 2, a 225 px/s; lanzarredes de todas las maneras.
+s = Course()
+# A calentamiento: cada 6
+a = s.pillars(6, [(4, 3), (3, 3), (5, 3), (2, 3), (4, 3)])
+s.mid('flapcharge', a[1]); s.mid('flapcharge', a[3])
+# B el primer lanzarredes, con la ruta por encima
+b = s.pillars(6, [(3, 3), (2, 3), (4, 3)])
+s.launcher(b[0][0] + 3)
+s.mid('flapcharge', b[1])
+s.put('apple', b[2][0] + 3, 5)
+# C el atajo: un túnel arriba tras un muro (carga 2) por encima de DOS lanzarredes (sus redes se quedan en su suelo);
+#   por debajo, la ruta de los huecos
+s.skip(2)
+c = s.pillars(7, [(5, 3), (6, 3), (5, 4), (6, 3), (5, 3)])
+T0, T1 = c[0][0] + 3, c[4][0] - 3
+te, ts, ta = tunnel(T0, T1, c, min_charge=2)
+s.ents += te; s.solids += ts; s.air += ta
+s.launcher(c[1][0] + 3); s.launcher(c[3][0] + 3)
+s.put('flapcharge', T0 + 6, 2); s.put('flapcharge', T0 + 15, 1)
+s.mid('flapcharge', c[2])
+# D agujas: huecos de 2 (de una columna) entre huecos de 3
+d = s.pillars(6, [(4, 3), (5, 2), (3, 3), (4, 2), (6, 3), (5, 2)])
+s.mid('flapcharge', d[2])
+s.put('apple', d[-1][0] + 3, 5)
+# E la batería: tres lanzarredes seguidos bajo la ruta; con carga se puede bajar a la fila 9 y reventar uno. Al final,
+#   una jaula colgada del último pilar en la fila 10, junto al soporte del 3er lanzarredes: bajar entre él y el pilar
+e = s.pillars(6, [(5, 3), (4, 3), (5, 3), (4, 3)])
+for k in range(3):
+    s.launcher(e[k][0] + 3)
+s.mid('flapcharge', e[0]); s.mid('flapcharge', e[1])
+s.cage(e[3][0], 10, 1, 'shield')
+# F la cornisa del Malvado: piedra en la fila 4. Abajo, huecos de 3 con dos lanzarredes (las redes paran en la piedra);
+#   arriba, sin redes pero con estalactitas (filas 2-3) y una carga
+s.skip(2)
+L0 = s.c
+low = [(L0 + 2, 6, 3), (L0 + 8, 7, 3), (L0 + 14, 6, 3), (L0 + 20, 7, 3), (L0 + 26, 6, 3)]
+stal = [(L0 + 5, 2, 10), (L0 + 11, 2, 10), (L0 + 17, 2, 10), (L0 + 23, 2, 10)]
+s.at(low + stal)
+ls, la = ledge(L0, L0 + 26, low + stal, 4)
+s.solids += ls; s.air += la
+s.launcher(L0 + 5); s.launcher(L0 + 17)
+s.put('flapcharge', L0 + 14, 2)
+s.mid('apple', low[3])
+s.c = L0 + 32
+# G el pasillo vigilado: un pasillo de 3 que baja y sube despacio y un lanzarredes a la salida
+p = s.corridor([4, 4, 4, 5, 5, 5, 6, 6, 6, 5, 5, 5, 4, 4, 4], 3)
+s.mid('flapcharge', p[7])
+s.launcher(p[-1][0] + 3)
+s.put('flapcharge', p[-1][0] + 4, 4)
+# H la jaula alta de siempre (fila 1, carga 3, fuerza) entre dos pilares; cargas antes
+s.skip(0)
+hh = s.pillars(7, [(2, 3), (5, 3), (3, 3)])
+s.mid('flapcharge', hh[0])
+s.cage(hh[0][0] + 3, 1, 3, 'strength', legacy=15)
+# I la serpiente: pasillo de 4 con cuestas de una fila por columna (dos seguidas como mucho)
+s.skip(1)
+q = s.corridor([3, 4, 5, 5, 6, 7, 7, 6, 5, 5, 4, 3, 3, 4, 5], 4)
+s.mid('flapcharge', q[6])
+# K la escalera de agujas: cada 5, huecos de 2 y de 3 alternos que bajan y suben; una jaula colgada del pilar más
+#   bajo, en la fila 3 (subir, disparar y bajar a la fila 8 en 4 columnas)
+k = s.pillars(5, [(2, 3), (4, 2), (6, 3), (8, 2), (6, 3), (4, 2), (2, 3)])
+s.mid('flapcharge', k[1]); s.mid('flapcharge', k[2])
+s.cage(k[3][0], 3, 2, 'magnet_all')
+s.skip(1)
+# J el final: agujas y lanzarredes entre ellas
+j = s.at([(s.c, 4, 3), (s.c + 5, 7, 3), (s.c + 11, 3, 3), (s.c + 16, 6, 2), (s.c + 22, 3, 3), (s.c + 27, 5, 2),
+          (s.c + 32, 3, 2), (s.c + 37, 5, 3)])
+s.launcher(j[1][0] + 3); s.launcher(j[3][0] + 3)
+s.mid('apple', j[2])
+s.write('valle_pilares_3', "Valle de los Pilares 3", "Valley of the Pillars 3", 225)

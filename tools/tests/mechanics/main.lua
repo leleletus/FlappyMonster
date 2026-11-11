@@ -613,6 +613,29 @@ function cases.tramp_avanza()
             firstLand and math.abs(firstLand - tx) / T or -1))
 end
 
+-- Ninguna entidad se queda REBOTANDO en el sitio sobre un trampolín (el usuario: «todas las entidades se quedan buggeadas
+-- rebotando sobre trampolines»): cada tipo de enemigo que anda o salta, puesto encima, en 12 s lo usa pocas veces
+function cases.tramp_atasco()
+    local res, ok = {}, true
+    for _, ty in ipairs({ 'gummy', 'crabby', 'hopper', 'snowball', 'penguin', 'beetle', 'mole' }) do
+        if require('src/world/entities/base/EntityTypes').byName[ty] then
+            -- (con su ruta pasando por encima: vuelve a él una y otra vez)
+            local level, es = room(18, 8, {}, { { type = 'trampoline', col = 9, row = 7 },
+                { type = ty, col = 9, row = 6, props = { patrol = { left = 6, right = 12 } } } })
+            level.players = {}
+            local tr, e = es[1], es[2]
+            local n, was = 0, tr.state
+            stepAll(level, es, 12, function()
+                if tr.state == 'bounce' and was ~= 'bounce' then n = n + 1 end
+                was = tr.state
+            end)
+            res[#res + 1] = ty .. ' ' .. n
+            if n > 3 then ok = false end
+        end
+    end
+    check('tramp_atasco', ok, 'lanzamientos en 12 s, encima de uno: ' .. table.concat(res, ' · '))
+end
+
 function cases.tramp_pinchos()
     local TileCodec = require 'src/world/tiles/TileCodec'
     local level, es = trampRoom(function(level)
@@ -4359,7 +4382,7 @@ function love.load()
                          'puffer_through', 'puffer_concave', 'puffer_cycle', 'puffer_dry', 'flyer_anim', 'vuelo_libre', 'boxed_in',
                          'bloque_roto', 'activador', 'tramp_avanza', 'tramp_pinchos', 'ping_icono',
                          'bomba_activa', 'bomba_pisada', 'bomba_radios', 'bomba_mundo', 'bomba_objeto',
-                         'hielo_solido', 'hielo_desgaste', 'hielo_nivel', 'hielo_vuelve', 'mirar', 'salto_variable', 'esquina', 'hitstop', 'poses', 'caida_fuerte', 'polvo_correr', 'tutorial', 'hielo_gp', 'hielo_bomba', 'encerrado', 'trepador_canto', 'hielo_resbala', 'filo_propio', 'saltarin', 'saltarin_cueva', 'persecucion', 'persecucion_cuerpo', 'inofensivos', 'tapa_base', 'manzana',
+                         'hielo_solido', 'hielo_desgaste', 'hielo_nivel', 'hielo_vuelve', 'mirar', 'salto_variable', 'esquina', 'hitstop', 'poses', 'caida_fuerte', 'tramp_atasco', 'polvo_correr', 'tutorial', 'hielo_gp', 'hielo_bomba', 'encerrado', 'trepador_canto', 'hielo_resbala', 'filo_propio', 'saltarin', 'saltarin_cueva', 'persecucion', 'persecucion_cuerpo', 'inofensivos', 'tapa_base', 'manzana',
                          'cryo_jugador', 'cryo_enemigo', 'cryo_activador', 'cryo_corte', 'lava', 'pocos_fps', 'ahogo_ganado', 'techo_pinchos',
                          'caja_empuje', 'caja_rota', 'caja_borde', 'cargar', 'bomba_reaparece', 'islas', 'islas_arte', 'viento', 'cuerpo_mueve', 'cajas_golpes', 'balanza', 'soplon', 'semilla', 'ventisca', 'geiser', 'balanza_tope', 'caja_choques', 'cargar_gp', 'gp_radio', 'dejar_encima', 'jump_buffer', 'jefe_puntos', 'persecucion_toque', 'secreto_reina', 'secreto_tifon', 'paredes_falsas', 'aire_caja', 'geiser_peso', 'bomba_cajas', 'cajas_fila', 'balanza_impacto', 'balanza_salto', 'balanza_techo', 'escarabajo', 'escarabajo_lanzado', 'escarabajo_ruta', 'escarabajo_manos', 'escarabajo_arrolla',
                          'topo', 'topo_culetazo', 'topo_suelo', 'topo_borde', 'pirana', 'pirana_pisar', 'pirana_rebota', 'pirana_nada', 'planta', 'planta_pisar', 'planta_traga', 'planta_colgada', 'planta_come', 'planta_bomba' }) do

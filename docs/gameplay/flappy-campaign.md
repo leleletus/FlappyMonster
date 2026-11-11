@@ -128,20 +128,32 @@ while Adventure is locked, its saves do not count.
 
 ## The Valley's stages (Plan 5b)
 
-Generator `tools/levelgen/levels_flappy_valle.py` (ids kept: `valle_pilares_1/2` since Plan 3, `valle_pilares_3` new),
-all with `"background": "valley"` ([sky-and-biomes](../art/sky-and-biomes.md)), auto-scroll 200 px/s, floor at row 10.
+Redesigned 2026-11-11 (see Decisions). Generator `tools/levelgen/levels_flappy_valle.py` (ids kept: `valle_pilares_1/2` since Plan 3, `valle_pilares_3` since
+5b; run the script itself, it writes only those three files), all with `"background": "valley"`
+([sky-and-biomes](../art/sky-and-biomes.md)), no floor. Each stage is a `Course`: a column cursor and named SECTIONS
+that never repeat, each stage with its own idea and a difficulty curve (gap size, pillar spacing, scroll speed,
+corridors, net-launchers). Times = the window crossing the stage.
 
-| Stage | Width | Pillars | Content |
+| Stage | Width · speed · time | Idea and sections | Content |
 |---|---|---|---|
-| `valle_pilares_1` | 130 | 13, every 8 cols, gaps 4-5, heights change 1-2 rows | 5 charges, 2 food, 1 easy cage (`minCharge` 1, row 3 just above the route, right after the first charge; gift `shield`), no walls |
-| `valle_pilares_2` | 139 | 16, every 7 cols, gaps 4 then 3, bigger height jumps | 6 charges, 2 food; a cage in the open (row 2, `minCharge` 2, gift `heart`) and a `cubby` at col 72 (wall `minCharge` 2) with a cage (`minCharge` 1, gift `magnet_points`) behind it: 3 charges in all, 4 are on the route before it |
-| `valle_pilares_3` | 139 | 16, every 7 cols, gaps 3-4 | 3 `netlauncher` (cols 30, 72, 100, row 9, each 3 cols from both pillars: room to wait for the net), 6 charges on the route + 2 in the shortcut, 2 food (right after launchers 1 and 3), a cage at row 1 (`minCharge` 3, gift `strength`, before the boss), and the shortcut `tunnel` cols 58-80 (wall `minCharge` 2) running over launcher 2, whose nets stop on its floor |
+| `valle_pilares_1` "The pillars" | 260 cols · 200 px/s · ~80 s | welcome, gaps 4 → 3: A five wide pillars every 8 · B a staircase every 6 (up to the top, down to the bottom, up) · C the first CORRIDOR (12 pillar columns in a row, gap 4, waving) · D the NEST: a cage hung ON a pillar at row 2 over a low gap (the burst passes pillars: fire from the top of the previous gap, then dive) · E gaps of 3 every 7, jumps of 2-3 rows · F the DIVE: a cage at row 10 between two low gaps, next to the bottom edge (charge 2) · G a zigzag every 5 | 9 charges, 3 food, 3 cages (`shield` row 3 charge 1 — the old one, same entity index 8 —, `small` charge 1, `heart` charge 2), no walls |
+| `valle_pilares_2` "Cracks and ledges" | 331 cols · 210 px/s · ~95 s | gaps of 3: A warm-up every 7 · B CRACKS: the open cage (row 2, charge 2) and the `cubby` (wall charge 2, cage charge 1 behind) with a charge right in front of the wall, under it: break, grab, fire again · C the canyon (20-column corridor of 3, slopes of 1 row per 2-3 columns) · D DOUBLE pillars (two, 3 columns apart, second gap 1 row off) · E the LEDGE (`flappy_lib.ledge`): a stone floor at row 4 splits the screen; below the safe gaps, above a 3-row route with one-row stalactites, 2 charges and a cage · F rhythm every 5 (jumps of 3-4 rows) · G a tight descent (a pillar every 4) · H a second 21-column canyon · I big jumps every 6 | 13 charges, 3 food, 3 cages (`heart` and `magnet_points` — the old ones, indices 11 and 10 —, `ghost` on the ledge, charge 2), 1 wall |
+| `valle_pilares_3` "The Evil Monster's machine" | 350 cols · 225 px/s · ~95 s | gaps of 3 and NEEDLES of 2 (single columns only), 11 `netlauncher`: A warm-up every 6 · B one launcher under a high route · C the TUNNEL shortcut (wall charge 2) over TWO launchers · D needles · E the BATTERY: three launchers in a row under the route (with charge, drop to row 9 and burst one), and a cage hung on the last pillar at row 10, next to the third launcher's mount (fly down between them) · F the Evil Monster's LEDGE: two launchers under a stone floor at row 4 (nets stop on it) — below the nets, above no nets but stalactites · G a guarded corridor (slow slopes) with a launcher at its exit · H the old high cage (row 1, charge 3, `strength`, index 15) · I the snake: corridor of 4 with 1-row-per-column slopes · K a needle staircase every 5 with a cage hung at row 3 over the lowest needle (row 8) · J the final: needles with launchers between | 16 charges, 4 food, 3 cages (`strength`, `shield`, `magnet_all` charge 2), 1 wall |
 
-The net-launcher and a steady flyer: it comes within range 20 tiles (6.4 s at 200 px/s) before the player reaches it
-and fires every 3.5 s, so a player who flies straight on without looking is usually hit as it passes (the zero-charge
-pilot of `flappy_flight etapa` is hit by launchers 1 and 3 and still finishes, 3 → 1 HP; the harness applies no food
-healing, the game does, and the food sits right after those two). Dodging = waiting left of its column or hurrying
-past during the 0.6 s glow. Feel judged by the user in play.
+Rules kept by the generator: the main route never needs a wall, a charge or a ledge's upper route (the zero-charge
+pilot of `flappy_flight etapa` finishes all three); a net-launcher stands 3+ columns from the pillars beside it; corridor
+steps are at most 1 row per column (`flappy_lib.corridor` asserts it); a gap of 2 is never a corridor (a flap rises
+75 px, a gap of 2 leaves 83 px for the 45-px hitbox: one column is a timing test, several would be near impossible);
+the cages of the old layout keep their ENTITY INDEX and gift (`rescued` in saves stores the index: `Course.cage(...,
+legacy=)`). New `flappy_lib` helpers: `corridor(c0, tops, h)`, `ledge(c0, c1, gaps, row)` (a gap with top 2 under a
+ledge = a one-row stalactite). Cages can hang on a pillar cell (they are ghosts and the burst passes pillars); a hole in a
+pillar would leave a floating chunk (`zonas` forbids it).
+
+The net-launcher and the flyer: it fires every 3.5 s once a player is within 20 tiles (first shot after 1.5 s), so at
+225 px/s the second shot comes when the player is ~2.5 tiles before it. Waiting at the window's left edge is not
+always enough (the edge carries the player into the column while the net still rises); the pilot of `etapa` does
+what a player would: dash past during the 0.6 s glow when it is close, hang back when it is further, wait while a net
+rises ahead. Pilot results (no healing, 3 HP): stage 1 no hits, 2 no hits, 3 one hit (the final needles).
 
 ## Evil Monster machines (Plan 5b)
 
@@ -196,6 +208,15 @@ the air inside the zone with full HP), `touch_layout` (`especial`), `menu_flow` 
 `continuar_flappy`, `candado`).
 
 **Decisions**
+- 2026-11-11, the user: the Flappy stages of the first zone are "quite short, repetitive and very easy"; keep the
+  special attack, the cages, the power-ups and the wheel, and the boss stage as they are. → The three Valley stages
+  redesigned ([§ The Valley's stages](#the-valleys-stages-plan-5b)): ~2-2.5x longer (130 / 139 /
+  139 cols, ~38-41 s → 260 / 331 / 350 cols, ~80 / 95 / 95 s), sections instead of one pillar pattern, speed 200 /
+  210 / 225, gaps 4-3 / 3 / 3-2, corridors, ledges with a risky upper route, cages that need aiming or a dive, launchers
+  alone, in a battery, under a ledge and between needles. Tried and dropped while building: corridors of 3 with long
+  1-row-per-column slopes (the pilot could not follow them; kept short, in a corridor of 4, in stage 3 only), doubles one
+  column apart (a 2-row passage for 3 columns), holes in pillars for cages (floating chunks). Feel and difficulty NOT
+  judged yet: only the pilot proves them passable.
 - 2026-11-08, the user after playing 0.5.179 (Plan 5d, [flappy-plan-5d-valley-fixes](../design/flappy-plan-5d-valley-fixes.md)),
   six points + one: (1) the merchant's place does not stand out -> the TIENDA / SHOP sign over its nest; (2) the stage
   ground was still the meadow's and (3) better no ground at all: pillars rise from the bottom edge as they hang from the
