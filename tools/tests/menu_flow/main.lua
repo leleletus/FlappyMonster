@@ -126,7 +126,7 @@ local function run()
         back = name(top()) == 'DebugMenuState' and selId(top()) == 'sound'
         gStateMachine:change('title'); wait(1.8)
         local t = top()
-        for _ = 1, 7 do t:touchpressed('dedo', WINDOW_W - 40, WINDOW_H - 20); wait(0.05) end
+        do local vx, vy, vw, vh = t:_versionRect(); for _ = 1, 7 do t:touchpressed('dedo', vx + vw / 2, vy + vh / 2); wait(0.05) end end
         wait(0.2)
         taps = name(top()) == 'DebugMenuState'
     end
@@ -467,7 +467,20 @@ local function run()
             ('pestañas %s · opciones que faltan o se repiten: %s · textos que faltan: %s'):format(okR and #Rows.TABS or 'sin módulo',
              #missing > 0 and table.concat(missing, ',') or 'ninguna', #bad > 0 and table.concat(bad, ',', 1, math.min(#bad, 6)) or 'ninguno'))
     end
-    go('settings', 'SettingsState', 'settings')
+    -- EL ENGRANAJE (abajo a la derecha, en lugar del botón de configuración): abajo desde el último botón lo elige,
+    -- arriba vuelve a la lista; confirmar abre la configuración
+    do
+        local m = top()
+        for _ = 1, 6 do if m.gearSel then break end; press('nav_down', 0.1) end
+        local focused = m.gearSel == true
+        press('nav_up', 0.1)
+        local lastId = m.list.items[#m.list.items].id
+        local backList = not m.gearSel and selId(m) == lastId
+        press('nav_down', 0.1)
+        press('confirm', 0.75)
+        check('a settings', focused and backList and name(top()) == 'SettingsState',
+            ('abajo → engranaje=%s · arriba → %s=%s · confirmar → %s'):format(tostring(focused), tostring(lastId), tostring(backList), name(top())))
+    end
     -- LA CONFIGURACIÓN rehecha (docs/design/settings-menu-rework.md): pestañas, filas, interruptores, barras
     do
         local S = require 'src/core/Settings'
@@ -551,7 +564,24 @@ local function run()
             ('14 filas: barra=%s, la elegida dentro=%s · 4 filas: barra=%s'):format(tostring(L2.scroll ~= nil), tostring(inside), tostring(L3.scroll ~= nil)))
     end
     press('back', 0.6)
-    check('vuelve cfg', selId(top()) == 'settings', 'atrás → menú con CONFIGURACIÓN elegido: ' .. tostring(selId(top())))
+    check('vuelve cfg', top().gearSel == true, 'atrás → menú con el ENGRANAJE elegido: ' .. tostring(top().gearSel))
+    -- con el dedo: tocar el engranaje abre la configuración; con el menú cerrado (el título) no está
+    do
+        local m = top()
+        local gx, gy, gw, gh = m:_gearRect()
+        m:touchpressed('dedo', gx + gw / 2, gy + gh / 2); wait(0.75)
+        local tapOk = name(top()) == 'SettingsState'
+        press('back', 0.6)
+        local m2 = top()
+        m2:_close(); wait(0.8)
+        m2:touchpressed('dedo', gx + gw / 2, gy + gh / 2); wait(0.75)
+        local closedOk = name(top()) == 'TitleState'
+        local vx = m2:_versionRect()
+        check('engranaje', tapOk and closedOk and gx > WINDOW_W / 2 and vx < WINDOW_W / 2,
+            ('tocarlo abre=%s · en el título no=%s · engranaje a la derecha=%s · versión a la izquierda=%s'):format(tostring(tapOk),
+             tostring(closedOk), tostring(gx > WINDOW_W / 2), tostring(vx < WINDOW_W / 2)))
+        gStateMachine:change('main_menu', { select = 'settings' }); wait(0.6)
+    end
 
     -- ── 3. transición (el iris): Aventura → Historia ─────────────────────
     -- (con dos partidas para ver los cartuchos llenos: la 1 en el mundo 3, la 3 recién empezada)
@@ -673,7 +703,7 @@ local function run()
     gStateMachine:change('main_menu')
     local order = {}
     for _, x in ipairs(top().list.items) do order[#order + 1] = x.id end
-    check('sin partida', top().slot == nil and table.concat(order, ',') == 'classic,adventure,settings',
+    check('sin partida', top().slot == nil and table.concat(order, ',') == 'classic,adventure',
           'sin partidas no hay CONTINUAR; orden: ' .. table.concat(order, ','))
     Save.write(2, Save.new('normal'))
     gStateMachine:change('main_menu')

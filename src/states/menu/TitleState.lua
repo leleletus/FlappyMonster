@@ -78,11 +78,12 @@ function TitleState:_buildList(select)
         items[#items + 1] = { text = 'menu.adventure', color = 'green', desc = 'menu.desc_adventure', id = 'adventure',
                               go = function() self:_leave('adv_mode_select') end }
     end
-    items[#items + 1] = { text = 'menu.settings', color = 'blue', desc = 'menu.desc_settings', id = 'settings',
-                          go = function() self:_leave('settings') end }
-    -- `select` = id del botón elegido al volver de otra pantalla (sin él, el primero: CONTINUAR si está)
+    -- (CONFIGURACIÓN ya no es un botón de la lista: es el ENGRANAJE de la esquina — docs/design/settings-menu-rework.md —)
+    -- `select` = id del botón elegido al volver de otra pantalla (sin él, el primero: CONTINUAR si está); 'settings' =
+    -- el engranaje
     local sel = 1
     for i, it in ipairs(items) do if it.id == select then sel = i end end
+    self.gearSel = select == 'settings'
     self.list = MenuList.new({ items = items, anim = self.anim, first = 2, top = 0.33, selected = sel })
 end
 
@@ -121,7 +122,7 @@ end
 
 -- MENÚ DE DEPURACIÓN secreto (src/states/menu/DebugMenuState.lua: clásico infinito, Aventura sin candado, juego libre,
 -- sound test, film test): ↑ ↑ ↓ ↓ ← → ← → (flechas o cruceta), o 7 toques seguidos
--- en la versión (abajo a la derecha)
+-- en la versión (abajo a la IZQUIERDA desde 0.5.197: a la derecha está el engranaje)
 local SECRET = { 'nav_up', 'nav_up', 'nav_down', 'nav_down', 'nav_left', 'nav_right', 'nav_left', 'nav_right' }
 function TitleState:_secret()
     for _, a in ipairs({ 'nav_up', 'nav_down', 'nav_left', 'nav_right' }) do
@@ -143,7 +144,34 @@ function TitleState:_openDebug()
     Sound.play('oneUp')
     gStateMachine:change('debug_menu')
 end
-function TitleState:_versionRect() return WINDOW_W - 180, WINDOW_H - 50, 180, 50 end
+-- La versión (y sus 7 toques secretos) abajo a la IZQUIERDA; a la derecha, el engranaje (el usuario, 2026-11-11)
+function TitleState:_versionRect() return 0, WINDOW_H - 50, 180, 50 end
+
+-- EL ENGRANAJE (la configuración): abajo a la derecha, solo con el menú abierto, en cualquier aparato. Teclado / mando:
+-- abajo desde el último botón lo elige (gearSel); arriba vuelve a la lista; abajo otra vez, al primero
+local GEAR_S = 3                                  -- (el arte es de 20x20: 60 px en pantalla)
+function TitleState:_gearRect() local s = 20 * GEAR_S + 16; return WINDOW_W - s - 16, WINDOW_H - s - 16, s, s end
+local gearImg, gearQ
+local function gearArt()
+    if not gearImg then
+        gearImg = love.graphics.newImage('assets/images/ui/settings/gear-Sheet.png')
+        gearImg:setFilter('nearest', 'nearest')
+        gearQ = { love.graphics.newQuad(0, 0, 20, 20, 40, 20), love.graphics.newQuad(20, 0, 20, 20, 40, 20) }
+    end
+    return gearImg, gearQ
+end
+function TitleState:_drawGear()
+    local x, y, w, h = self:_gearRect()
+    local _, oy, a = self.anim:slide(#self.list.items + 2, 0, 200)
+    local MenuButton = require 'src/ui/menu/MenuButton'
+    local sel = self.gearSel or self.gearHover
+    local bob = (sel and math.floor(self.t * 3) % 2 == 0) and -4 or 0
+    MenuButton.draw('', x, y + oy + bob, w, h, sel and 'yellow' or 'blue', sel, { alpha = a })
+    local img, q = gearArt()
+    love.graphics.setColor(1, 1, 1, a)
+    love.graphics.draw(img, q[sel and 2 or 1], x + 8, y + oy + bob + 4, 0, GEAR_S, GEAR_S)
+    love.graphics.setColor(1, 1, 1, 1)
+end
 
 function TitleState:update(dt)
     self.t = self.t + dt
@@ -161,6 +189,18 @@ function TitleState:update(dt)
     end
     if self.anim:busy() then return end
     if Input.pressed('back') then return self:_close() end
+    local n = #self.list.items
+    if self.gearSel then
+        if Input.pressed('nav_up') then self.gearSel = false; self.list.selected = n; Sound.play('select', 0.94); return end
+        if Input.pressed('nav_down') then self.gearSel = false; self.list.selected = 1; Sound.play('select', 1.08); return end
+        if Input.pressed('confirm') or Input.pressed('flap') then Sound.play('select', 1.2); return self:_leave('settings') end
+        return
+    end
+    if (Input.pressed('nav_down') and self.list.selected == n) or (Input.pressed('nav_up') and self.list.selected == 1) then
+        self.gearSel = true
+        Sound.play('select', 1.08)
+        return
+    end
     self.list:update(dt)
 end
 
@@ -204,8 +244,12 @@ function TitleState:render()
             love.graphics.printf(text, 0, y + 2, WINDOW_W, 'center')
         end
     else
+        local keep = self.list.selected
+        if self.gearSel then self.list.selected = 0 end            -- (con el engranaje elegido, ningún botón lo está)
         self.list:draw()
-        MenuList.footer(self.list:desc(), self.anim, #self.list.items + 2)
+        self.list.selected = keep
+        self:_drawGear()
+        MenuList.footer(self.gearSel and L('menu.desc_settings') or self.list:desc(), self.anim, #self.list.items + 2)
     end
 
     -- Versión instalada (version.txt; la cambian las actualizaciones)
@@ -215,9 +259,9 @@ function TitleState:render()
     end
     love.graphics.setFont(FONT_SMALL)
     love.graphics.setColor(0, 0, 0, 0.6)
-    love.graphics.printf(self.version, 0, WINDOW_H - 22, WINDOW_W - 14, 'right')
+    love.graphics.print(self.version, 16, WINDOW_H - 22)
     love.graphics.setColor(1, 1, 1, 0.85)
-    love.graphics.printf(self.version, 0, WINDOW_H - 24, WINDOW_W - 16, 'right')
+    love.graphics.print(self.version, 14, WINDOW_H - 24)
     love.graphics.setColor(1, 1, 1, 1)
     if self.menu then CornerButtons.drawBack(self.backHover) end
 end
@@ -226,7 +270,10 @@ end
 function TitleState:mousemoved(x, y)
     if not self.menu then return end
     self.backHover = CornerButtons.hitBack(x, y)
-    if not self.backHover then self.list:mousemoved(x, y) end
+    local gx, gy, gw, gh = self:_gearRect()
+    self.gearHover = x >= gx and x <= gx + gw and y >= gy and y <= gy + gh
+    if self.gearHover then return end
+    if not self.backHover and self.list:mousemoved(x, y) then self.gearSel = false end
 end
 
 function TitleState:touchpressed(id, x, y)
@@ -243,6 +290,11 @@ function TitleState:touchpressed(id, x, y)
     if self.anim:busy() then return end
     if not self.menu then return self:_open() end
     if CornerButtons.hitBack(x, y) then return self:_close() end
+    local gx, gy, gw, gh = self:_gearRect()
+    if x >= gx and x <= gx + gw and y >= gy and y <= gy + gh then
+        self.gearSel = true; Sound.play('select', 1.2)
+        return self:_leave('settings')
+    end
     self.list:touchpressed(x, y)
 end
 
