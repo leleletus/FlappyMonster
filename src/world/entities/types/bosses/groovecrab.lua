@@ -354,7 +354,7 @@ function GC:updateFloor(level)
         if on then
             local box = self:boomBox(i)
             for _, pa in ipairs(level.players or {}) do
-                if overlap(pa:getOuterBounds(), box) then strike(pa, HIT_BOOM, (pa.x >= box.x + box.w / 2) and 1 or -1) end
+                if overlap(pa:getOuterBounds(), box) then strike(pa, HIT_BOOM, (pa.x >= box.x + box.w / 2) and 1 or -1, require('src/player/DamageSource').of(self, 'blast')) end
             end
         end
     end
@@ -531,7 +531,7 @@ function GC:touch(level)
         if not pa.dying and pa.alive ~= false and not pa:isInvulnerable() then
             local pb = pa:getOuterBounds()
             local onTop = pb.y + pb.h <= b.y + 14 and (pa.vy or 0) >= -50
-            if not onTop and overlap(pb, b) and strike(pa, HIT_TOUCH, (pa.x >= self.x) and 1 or -1) then
+            if not onTop and overlap(pb, b) and strike(pa, HIT_TOUCH, (pa.x >= self.x) and 1 or -1, require('src/player/DamageSource').of(self, 'body')) then
                 self.graceT = GRACE
             end
         end
@@ -701,7 +701,7 @@ function GC:updateNotes(level, dt)
                             Sound.play('helmetBounce', 0.9, 1.3)
                             Entity.emitFx('king_sparkle', n.x, n.y)
                             break
-                        elseif strike(pa, HIT_NOTE, n.vx >= 0 and 1 or -1) then gone = true end
+                        elseif strike(pa, HIT_NOTE, n.vx >= 0 and 1 or -1, require('src/player/DamageSource').of(self, 'projectile')) then gone = true end
                     end
                 end
             end

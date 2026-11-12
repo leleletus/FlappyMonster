@@ -188,7 +188,7 @@ function GB:updateShot(level, dt)
         elseif s.vy < -250 and vy >= -20 and s.t > 0.05 then                       -- (frenazo en seco subiendo: el techo)
             local pb = pa:getOuterBounds()
             if level:collisionAt(pa.x, pb.y - 6) or level:bodyAt(pa.x, pb.y - 6) then
-                strike(pa, HIT_CEIL, 0)
+                strike(pa, HIT_CEIL, 0, require('src/player/DamageSource').of(self, 'slam'))
                 Sound.play('headBump')
                 Entity.emitFx('shake_small', pa.x, pb.y)
             end
@@ -208,7 +208,7 @@ function GB:touch(level, hit)
             -- (encima del caparazón — los pies por encima de su mitad, bajando o subiendo tras el rebote — no es tocarlo: es
             -- rebotar (Boss:interact); antes solo valía una franja de 14 px y al caer rápido dolía: el usuario, 0.5.79)
             local onTop = pb.y + pb.h <= b.y + b.h * 0.5
-            if not onTop and overlap(pb, box) and strike(pa, hit or HIT_TOUCH, (pa.x >= self.x) and 1 or -1) then
+            if not onTop and overlap(pb, box) and strike(pa, hit or HIT_TOUCH, (pa.x >= self.x) and 1 or -1, require('src/player/DamageSource').of(self, 'body')) then
                 self.graceT = GRACE
             end
         end
@@ -297,7 +297,7 @@ function GB:updateBlocks(level, dt)
         b.x, b.y = b.x + b.vx * dt, b.y + b.vy * dt
         local box = { x = b.x - BLOCK_S / 2, y = b.y - BLOCK_S / 2, w = BLOCK_S, h = BLOCK_S }
         for _, pa in ipairs(level.players or {}) do
-            if not b.hit[pa] and overlap(pa:getOuterBounds(), box) and strike(pa, HIT_BLOCK, (b.vx >= 0) and 1 or -1) then
+            if not b.hit[pa] and overlap(pa:getOuterBounds(), box) and strike(pa, HIT_BLOCK, (b.vx >= 0) and 1 or -1, require('src/player/DamageSource').of(self, 'projectile')) then
                 b.hit[pa] = true
             end
         end
@@ -351,7 +351,7 @@ function GB:updateRocks(level, dt)
             r.y = r.y + r.vy * dt
             local box = { x = r.x - ROCK_S / 2, y = r.y - ROCK_S / 2, w = ROCK_S, h = ROCK_S }
             for _, pa in ipairs(level.players or {}) do
-                if not r.hit[pa] and overlap(pa:getOuterBounds(), box) and strike(pa, HIT_ROCK, (pa.x >= r.x) and 1 or -1) then
+                if not r.hit[pa] and overlap(pa:getOuterBounds(), box) and strike(pa, HIT_ROCK, (pa.x >= r.x) and 1 or -1, require('src/player/DamageSource').of(self, 'projectile')) then
                     r.hit[pa] = true
                 end
             end

@@ -142,7 +142,7 @@ function GP:crush(level, hit)
     for _, pa in ipairs(level.players or {}) do
         if not pa.dying and pa.alive ~= false and not pa:isInvulnerable() and overlap(pa:getOuterBounds(), box)
            and pa.y > self.y and math.abs(pa.x - self.x) < box.w * 0.4 then
-            if strike(pa, hit, (pa.x >= self.x) and 1 or -1) then any = true end
+            if strike(pa, hit, (pa.x >= self.x) and 1 or -1, require('src/player/DamageSource').of(self, 'slam')) then any = true end
         end
     end
     return any
@@ -157,7 +157,7 @@ function GP:prick(level, hit)
             local nx = math.max(b.x, math.min(self.x, b.x + b.w))
             local ny = math.max(b.y, math.min(self.y, b.y + b.h))
             if (nx - self.x) ^ 2 + (ny - self.y) ^ 2 <= PUFF_R * PUFF_R then
-                if strike(pa, hit, (pa.x >= self.x) and 1 or -1) then
+                if strike(pa, hit, (pa.x >= self.x) and 1 or -1, require('src/player/DamageSource').of(self, 'spike')) then
                     any = true
                     Sound.play('pufferPrick', 0.7)
                 end
@@ -195,7 +195,7 @@ function GP:updateSpines(level, dt)
             local box = self:spineBox(s)
             for _, pa in ipairs(level.players or {}) do
                 if not s.hit[pa] and overlap(pa:getOuterBounds(), box) then
-                    if strike(pa, HIT_SPINE, (math.cos(s.a) >= 0) and 1 or -1) then
+                    if strike(pa, HIT_SPINE, (math.cos(s.a) >= 0) and 1 or -1, require('src/player/DamageSource').of(self, 'projectile')) then
                         s.hit[pa] = true
                         Sound.play('pufferPrick', 0.8)
                     end
@@ -278,7 +278,7 @@ function GP:onDamaged(n, kind)
     Entity.emitFx('puffer_pop', self.x, self.y)
     for _, pa in ipairs((self.levelRef or {}).players or {}) do
         if math.abs(pa.x - self.x) < 3 * T and math.abs(pa.y - self.y) < 2.5 * T then
-            strike(pa, HIT_SHOVE, (pa.x >= self.x) and 1 or -1)
+            strike(pa, HIT_SHOVE, (pa.x >= self.x) and 1 or -1, require('src/player/DamageSource').of(self, 'dash'))
         end
     end
 end

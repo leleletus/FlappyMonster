@@ -216,6 +216,10 @@ function cases.fuente_base()
     local a4 = pa.lastHit == D and pa.dying
     pa:respawn()
     local a5 = pa.lastHit == nil
+    -- (un golpe que entra SIN fuente no deja la de antes: el aviso no nombraría lo que no fue)
+    pa.hp, pa.invT = 5, 0
+    pa:hurt(1, A); pa.invT = 0; pa:hurt(1)
+    a5 = a5 and pa.lastHit == nil
     local function same(x, y) return (x == nil and y == nil) or (x and y and x.what == y.what and x.part == y.part) end
     local rt = same(DS.decode(DS.encode(A)), A) and same(DS.decode(DS.encode(C)), C) and same(DS.decode(DS.encode(DS.make('fall'))), DS.make('fall'))
     local zero = DS.encode(nil) == 0 and DS.decode(0) == nil
@@ -2144,11 +2148,29 @@ function cases.fuente_partes()
             elseif n:match('%.lua$') then
                 local src = love.filesystem.read(p) or ''
                 local makes = src:find(':getHazardBoxes%(%)%s*\n') or src:find('function [%w_]+:getHazardBoxes%(') or src:find('hazards%s*=%s*function')
-                if makes and not src:find('return nil end', 1, true) == nil then end
                 if makes and not (src:find('part%s*=') or src:find('hazardPart')) then bad[#bad + 1] = p .. ' (cajas sin parte)' end
-                for line in src:gmatch('[^\n]+') do
-                    if line:find('Boss%.strike%(') and not line:find('function Boss%.strike') and not line:find('DamageSource') and not line:find('src%)') and not line:find(', *self:src') then
-                        bad[#bad + 1] = p .. ' (Boss.strike sin fuente)'
+                -- (y CADA línea que arma una caja que daña — `effect = 'hurt' | 'kill' | 'freeze'`, o su variable — nombra la
+                --  suya en esa línea: una caja con nombre no tapa a las demás del mismo archivo)
+                if makes then
+                    local ln2 = 0
+                    for line in (src .. '\n'):gmatch('(.-)\n') do
+                        ln2 = ln2 + 1
+                        local code = line:gsub('%-%-.*$', '')
+                        local builds = code:find("effect%s*=%s*'hurt'") or code:find("effect%s*=%s*'kill'") or code:find("effect%s*=%s*'freeze'")
+                            or code:find('effect%s*=%s*effect') or code:find('effect%s*=%s*cfg%.') or code:find("%.effect%s*=%s*'")
+                            or code:find('%.effect, [%w_.]+ = ') or code:find('effect, [%w_.]+%.time')
+                        if builds and not code:find('part') and not code:find('launch') then bad[#bad + 1] = p .. ':' .. ln2 .. ' (caja sin parte)' end
+                    end
+                end
+                -- (también con OTRO NOMBRE: `local strike = Boss.strike`, `Snow.strike`… — el revisor encontró 22 así —)
+                local aliased = src:find('=%s*Boss%.strike') or src:find('=%s*Snow%.strike') or src:find('[%w_]+,%s*[%w_]+%s*=%s*Boss%.strike')
+                local ln = 0
+                for line in (src .. '\n'):gmatch('(.-)\n') do
+                    ln = ln + 1
+                    local code = line:gsub('%-%-.*$', '')
+                    local call = code:find('Boss%.strike%(') or (aliased and (code:find('^%s*strike%(') or code:find('[^%w_%.:]strike%(')))
+                    if call and not code:find('function [%w_%.:]*strike') and not code:find('DamageSource') and not code:find('src%)') then
+                        bad[#bad + 1] = p .. ':' .. ln .. ' (golpe de jefe sin fuente)'
                     end
                 end
             end

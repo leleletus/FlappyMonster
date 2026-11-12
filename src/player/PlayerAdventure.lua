@@ -283,7 +283,8 @@ function PlayerAdventure:takeDamage(src)
     if self.immortal then return false end
     if self.shield then self:breakShield(); return false end        -- (power-up ESCUDO: PlayerPowerups.lua)
     self.hp=self.hp-1
-    if src then self.lastHit = src end                             -- (de dónde vino: src/player/DamageSource.lua)
+    self.lastHit = src                                             -- (de dónde vino: src/player/DamageSource.lua; sin fuente,
+                                                                   --  nada: el aviso no nombra un golpe de antes)
     if self.hp<=0 then self.hp=self.hpMax; self:die(nil, nil, src); return true end
     Sound.play('dies'); Noise.emit(self.x, self.y, Noise.R.hurt, nil, 'hurt'); return false     -- (from 'hurt': el Saltarín Gigante no se asusta de esto)
 end
@@ -328,7 +329,7 @@ function PlayerAdventure:die(drownDeath, force, src)
         return false
     end
     self.dying=true; self.vx=0; self.vy=0
-    if src then self.lastHit = src end                             -- (de qué murió: src/player/DamageSource.lua)
+    self.lastHit = src                                             -- (de qué murió; sin fuente, se adivina: DeathCause)
     self.deathFlags = { drown = drownDeath == true, force = force == true }   -- (src/player/DeathCause.lua: de qué murió)
     self.gpPhase=nil; self.stunT=0; self.squashT=0; self.iceT=0; self.gulped=false; self.gulpMash=0; self.frostT=0
     self.deathPhase='freeze'; self.deathTimer=0; self.deathY=self.y

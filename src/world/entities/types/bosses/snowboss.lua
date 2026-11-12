@@ -419,7 +419,7 @@ function Snow:slamWave(level)
         local ob = pa:getOuterBounds()
         local dx = pa.x - self.x
         if math.abs(dx) <= reach and ob.y + ob.h >= floorY - 1.6 * T and ob.y <= floorY + 8 then
-            strike(pa, HIT_SLAM, (dx >= 0) and 1 or -1)
+            strike(pa, HIT_SLAM, (dx >= 0) and 1 or -1, require('src/player/DamageSource').of(self, 'slam'))
         end
     end
 end
@@ -514,7 +514,7 @@ function Snow:updateIcicles(level, dt)
             -- en un jugador: 2 de vida
             if not broke then
                 for _, pa in ipairs(players) do
-                    if overlap(pa:getOuterBounds(), box) and strike(pa, HIT_ICICLE, (pa.x >= c.x) and 1 or -1) then
+                    if overlap(pa:getOuterBounds(), box) and strike(pa, HIT_ICICLE, (pa.x >= c.x) and 1 or -1, require('src/player/DamageSource').of(self, 'ice')) then
                         broke = true
                         break
                     end
@@ -553,7 +553,7 @@ function Snow:hitWithShots(level)
         for _, pa in ipairs(players) do
             if overlap(pa:getOuterBounds(), box) then
                 local dir = (b.vx > 30 and 1) or (b.vx < -30 and -1) or ((pa.x >= b.x) and 1 or -1)
-                if strike(pa, HIT_BALL, dir) then
+                if strike(pa, HIT_BALL, dir, require('src/player/DamageSource').of(self, 'projectile')) then
                     table.remove(self.proj, i)
                     Sound.play('snowSplat')
                     Entity.emitFx('snow_puff', b.x, b.y)
@@ -568,7 +568,7 @@ function Snow:hitWithShots(level)
             local x = self.shockX + sd * d
             local box = { x = x - 22, y = self.shockY - 30, w = 44, h = 30 }
             for _, pa in ipairs(players) do
-                if overlap(pa:getOuterBounds(), box) then strike(pa, HIT_WAVE, sd) end
+                if overlap(pa:getOuterBounds(), box) then strike(pa, HIT_WAVE, sd, require('src/player/DamageSource').of(self, 'wave')) end
             end
         end
     end
@@ -686,7 +686,7 @@ function Snow:checkSoak(level)
     local x0, x1 = self:poolSpan(level)
     for _, pa in ipairs(level.players or {}) do
         if pa.x >= x0 - 8 and pa.x <= x1 + 8 and level:liquidAt(pa.x, pa.y) then
-            if strike(pa, HIT_SPLASH, (pa.x >= self.x) and 1 or -1) then self.splashed = pa.vy end
+            if strike(pa, HIT_SPLASH, (pa.x >= self.x) and 1 or -1, require('src/player/DamageSource').of(self, 'wave')) then self.splashed = pa.vy end
         end
     end
     self:hitPlayers(level, true)

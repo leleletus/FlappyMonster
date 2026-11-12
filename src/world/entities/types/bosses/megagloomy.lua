@@ -259,7 +259,7 @@ local function overlap(a, b) return a.x < b.x + b.w and a.x + a.w > b.x and a.y 
 
 function MG:hitBox(level, box, hit, cx)
     for _, pa in ipairs(level.players or {}) do
-        if overlap(pa:getOuterBounds(), box) and strike(pa, hit, (pa.x >= cx) and 1 or -1) then self.gloat = true end
+        if overlap(pa:getOuterBounds(), box) and strike(pa, hit, (pa.x >= cx) and 1 or -1, require('src/player/DamageSource').of(self, 'slam')) then self.gloat = true end
     end
 end
 

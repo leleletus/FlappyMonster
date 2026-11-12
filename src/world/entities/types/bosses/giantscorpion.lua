@@ -198,7 +198,7 @@ function GS:hitBox(level, x, y, halfW, hit)
     local box = { x = x - halfW, y = y - BOX_H, w = halfW * 2, h = BOX_H + 8 }
     for _, pa in ipairs(level.players or {}) do
         if not pa.dying and pa.alive ~= false and not pa:isInvulnerable() and overlap(box, pa:getOuterBounds()) then
-            strike(pa, hit, (pa.x >= x) and 1 or -1)
+            strike(pa, hit, (pa.x >= x) and 1 or -1, require('src/player/DamageSource').of(self, 'spike'))
         end
     end
 end

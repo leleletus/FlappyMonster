@@ -158,7 +158,7 @@ function MG:touch(level, box, cx)
     for _, pa in ipairs(level.players or {}) do
         if not pa.dying and pa.alive ~= false and not pa:isInvulnerable() and overlap(pa:getOuterBounds(), box)
            and not onTop(pa, box) then
-            if strike(pa, HIT_TOUCH, (pa.x >= cx) and 1 or -1) then hitAny = true end
+            if strike(pa, HIT_TOUCH, (pa.x >= cx) and 1 or -1, require('src/player/DamageSource').of(self, 'body')) then hitAny = true end
         end
     end
     return hitAny
@@ -207,7 +207,7 @@ function MG:updateWaves(level, dt)
         else
             local box = self:waveBox(w)
             for _, pa in ipairs(level.players or {}) do
-                if not w.hit[pa] and overlap(pa:getOuterBounds(), box) and strike(pa, HIT_WAVE, w.dir) then
+                if not w.hit[pa] and overlap(pa:getOuterBounds(), box) and strike(pa, HIT_WAVE, w.dir, require('src/player/DamageSource').of(self, 'wave')) then
                     w.hit[pa] = true
                 end
             end

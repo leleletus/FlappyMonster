@@ -183,7 +183,7 @@ function GH:touch(level)
         if not pa.dying and pa.alive ~= false and not pa:isInvulnerable() then
             local pb = pa:getOuterBounds()
             local onTop = pb.y + pb.h <= b.y + 14 and (pa.vy or 0) >= -50
-            if not onTop and overlap(pb, box) and strike(pa, HIT_TOUCH, (pa.x >= self.x) and 1 or -1) then
+            if not onTop and overlap(pb, box) and strike(pa, HIT_TOUCH, (pa.x >= self.x) and 1 or -1, require('src/player/DamageSource').of(self, 'body')) then
                 self.graceT = GRACE
             end
         end
@@ -274,7 +274,7 @@ function GH:onDamaged(n, kind)
     Sound.play('lightOn', 0.6)
     for _, pa in ipairs((self.levelRef or {}).players or {}) do
         if math.abs(pa.x - self.x) < 3 * T and math.abs(pa.y - self.y) < 3 * T then
-            strike(pa, HIT_SHOVE, (pa.x >= self.x) and 1 or -1)
+            strike(pa, HIT_SHOVE, (pa.x >= self.x) and 1 or -1, require('src/player/DamageSource').of(self, 'dash'))
         end
     end
 end
