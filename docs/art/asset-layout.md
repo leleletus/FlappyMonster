@@ -25,7 +25,7 @@ assets/
     world/          tiles/ sky/ decorations/<theme>/ (+ foliage/, fx/) bubbles/ crack.png
     flappy/         pipe.png, Background.png (the Flappy mode only); map/ (the campaign's zone maps: <zone>_bg, _pillar, _nest/_boss/_shop-Sheet)
     story/          world-map sprites, features/, mirror/ (frame, glass, shards), fx/
-    ui/             touch/ ping/ icons/ menus/ flashlight
+    ui/             touch/ ping/ icons/ menus/ flashlight glyphs/ settings/ loading/ intro/ (the level intro card)
     fx/             ice block, ice drop, lava fx, noise mark, snowflakes
 ```
 Rules: lower-case names; animation strips are `<thing>-Sheet.png` (frames side by side, loaded with
