@@ -18,6 +18,8 @@ local json                 = require 'libs/json'
 local Blocks               = require 'src/network/Blocks'
 local Protocol             = require 'src/network/Protocol'
 
+local StartCountdown = require 'src/world/systems/StartCountdown'
+
 return function(OnlineAdventureState, P)
 local TICK_DT, TELEPORT_DIST, EVENT_MAX_WAIT, SPEC_WAIT, lerp = P.TICK_DT, P.TELEPORT_DIST, P.EVENT_MAX_WAIT, P.SPEC_WAIT, P.lerp
 
@@ -42,9 +44,17 @@ function OnlineAdventureState:_onGameInit(data)
     self.localPa:applyDifficulty()
     self.level.hiddenTriggers = Modes.hiddenTriggers(self.mode)   -- (la meta, fuera de Carrera)
     self.introT = 0
-    -- Cuenta atrás del principio (src/world/systems/StartCountdown.lua): los primeros `cd` ticks del servidor, todo
-    -- congelado (un servidor antiguo no la manda: sin cuenta atrás)
-    self.startTicks = tonumber(data.cd) or 0
+    -- INICIO (src/world/systems/StartCountdown.lua): `start` = el tick del servidor en que se empieza a jugar (nil = el
+    -- servidor aún espera a que carguen todos: llega en round_start). Hasta entonces, todo congelado. La TARJETA de
+    -- presentación (src/ui/IntroCard.lua) sale mientras se espera y su fase; quien entra con la partida ya en marcha (o
+    -- pasada la tarjeta) no la ve
+    self.startTicks = tonumber(data.start)
+    self.waitingStart = self.startTicks == nil
+    local cdTicks = math.floor(StartCountdown.TIME / TICK_DT + 0.5)
+    local seeCard = not data.late and (self.waitingStart or (tonumber(data.tick) or 0) < self.startTicks - cdTicks)
+    local path = self.currentRoom and self.currentRoom.level
+    self.card = seeCard and require('src/ui/IntroCard').new(self.level, path and path:match('([^/]+)%.json$')) or nil
+    self.cardT0 = love.timer.getTime()
 
     self.myIdx = data.idx
     -- (volver a entrar si se corta: el token de esta partida; entró con ella en marcha: mira hasta la próxima ronda)
@@ -71,9 +81,16 @@ function OnlineAdventureState:_onGameInit(data)
     self.snapBuf   = SnapshotBuffer.new(data.tickRate or Protocol.TICK_RATE,
                                         data.snapEvery or Protocol.SNAPSHOT_EVERY)
     self.localPaInit = true
+    NC:send('level_loaded', {})                    -- (cargado: el servidor espera a todos antes de empezar)
     self.renderX, self.renderY = self.localPa.x, self.localPa.y
     self.camX = math.max(0, math.min(self.level.widthPx  - WINDOW_W, self.localPa.x - WINDOW_W/2))
     self.camY = math.max(0, math.min(self.level.heightPx - WINDOW_H, self.localPa.y - WINDOW_H/2))
+end
+
+-- El servidor ya tiene a todos (o se cansó de esperar): el tick en que se empieza a jugar
+function OnlineAdventureState:_onRoundStart(data)
+    if type(data) ~= 'table' or not tonumber(data.start) then return end
+    self.startTicks, self.waitingStart = tonumber(data.start), false
 end
 
 -- ── Snapshots ─────────────────────────────────────────────────────────────────

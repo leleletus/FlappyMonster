@@ -21,8 +21,10 @@ local function initRoomSim(room)
                   levelRaw = love.filesystem.read(room.level),   -- se envía a los clientes
                   mode = Modes.get(room.mode),
                   startPlayers = #room.playerIds,
-                  -- cuenta atrás del principio (src/world/systems/StartCountdown.lua): estos ticks, todo congelado
-                  startTicks = S.StartCountdown.ticks(TICK_DT) }
+                  -- INICIO (src/world/systems/StartCountdown.lua): tarjeta + cuenta atrás, todo congelado. Antes, la ESPERA a
+                  -- que carguen todos (0.5.202): startTicks = nil hasta entonces (stepRoom: S.startWaitOver)
+                  startTicks = nil, loaded = {}, firstLoadedTick = nil,
+                  waitFor = {} }
 
     -- Crear instancias de las entidades del nivel (enemigos, NPCs)
     for _, placement in ipairs(level.entities) do
@@ -30,6 +32,7 @@ local function initRoomSim(room)
         if e then table.insert(sim.enemies, e) end
     end
 
+    for _, pid in ipairs(room.playerIds) do sim.waitFor[pid] = true end
     -- Crear simulaciones de jugadores con spawn escalonado
     for i, pid in ipairs(room.playerIds) do
         local c = S.findClientById(pid)
@@ -459,6 +462,20 @@ end
 
 -- Avanzar la simulación de una sala un tick fijo
 
+-- ¿Se acabó la espera del principio? Todos los que empezaban y siguen conectados avisaron de que cargaron el nivel
+-- (`level_loaded`), o pasó el límite: LOAD_WAIT s desde el primero que cargó, LOAD_WAIT_MAX s desde el game_init
+local LOAD_WAIT, LOAD_WAIT_MAX = 8, 20
+function S.startWaitOver(room)
+    local sim = room.sim
+    local all = true
+    for pid in pairs(sim.waitFor) do
+        if not sim.loaded[pid] and S.findClientById(pid) then all = false; break end
+    end
+    if all then return true end
+    if sim.firstLoadedTick and (sim.tick - sim.firstLoadedTick) * TICK_DT >= LOAD_WAIT then return true end
+    return sim.tick * TICK_DT >= LOAD_WAIT_MAX
+end
+
 local function stepRoom(room)
     local sim = room.sim
     if not sim then return end
@@ -470,8 +487,15 @@ local function stepRoom(room)
     S.soundEvents = {}
     S.emitX, S.emitY = nil, nil
 
-    -- ── Cuenta atrás del principio (StartCountdown): el mundo entero congelado ─
-    if sim.tick <= sim.startTicks then
+    -- ── La ESPERA a que carguen todos y luego tarjeta + cuenta atrás (StartCountdown): el mundo entero congelado ─
+    if not sim.startTicks and S.startWaitOver(room) then
+        sim.startTicks = sim.tick + S.StartCountdown.ticks(TICK_DT, true)
+        for _, pid in ipairs(room.playerIds) do
+            local c = S.findClientById(pid)
+            if c then c:send("round_start", { start = sim.startTicks }) end
+        end
+    end
+    if not sim.startTicks or sim.tick <= sim.startTicks then
         for _, pid in ipairs(room.playerIds) do
             local ps = sim.playerSims[pid]
             if ps then drainFrozenInputs(ps) end

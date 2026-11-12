@@ -139,6 +139,7 @@ function NC:_open(host, port, name)
         "room_left", "kicked", "banned", "room_closed", "reported", "records",
         "room_error", "level_catalog", "s", "ev",
         "rhythm_pose",                              -- (la pose de otro jugador en el duelo de ritmo)
+        "round_start",                              -- (el servidor empieza la tarjeta + cuenta atrás: StartCountdown)
     }
     for _, evt in ipairs(events) do
         local e = evt

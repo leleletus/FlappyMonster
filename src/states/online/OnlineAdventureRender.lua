@@ -42,6 +42,10 @@ function OnlineAdventureState:_duelCast()
 end
 
 function OnlineAdventureState:render()
+    -- (la tarjeta de presentación: pantalla negra en lugar del nivel mientras se espera y en su fase; src/ui/IntroCard.lua)
+    if self:_cardShowing() then
+        return require('src/ui/IntroCard').draw(self.card, love.timer.getTime() - self.cardT0, { waiting = self:_introWaiting() })
+    end
     -- Temblor de pantalla (impactos, explosiones): solo al dibujar
     local shx, shy = Particles.shakeOffset()
     local realCamX, realCamY = self.camX, self.camY

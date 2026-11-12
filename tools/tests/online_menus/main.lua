@@ -77,7 +77,7 @@ local function newBot(nm)
     b.c:on('room_update', function(d) b.room = d; if d.state == 'WAITING' and b.inGame then b.ended = true end end)
     b.c:on('room_error', function(d) b.err = d end)
     b.c:on('room_list', function(d) b.list = d end)
-    b.c:on('game_init', function(d) b.inGame, b.init = true, d end)
+    b.c:on('game_init', function(d) b.inGame, b.init = true, d; b.c:send('level_loaded', {}) end)   -- (cargado: el servidor espera a todos)
     b.c:connect()
     bots[#bots + 1] = b
     return b

@@ -206,7 +206,7 @@ end
 
 -- En píxeles de pantalla, tras lovesize (game.lua): controles táctiles
 function OnlineAdventureState:drawScreen()
-    if TouchControls.visible() and not self.showPause and not self.showGameOver
+    if TouchControls.visible() and not self.showPause and not self.showGameOver and not self:_cardShowing()
        and not (self.ownData and self.ownData.isSpectator) then
         TouchControls.draw(nil, nil, BossHud.hudAlpha())
     end

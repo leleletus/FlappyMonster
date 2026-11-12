@@ -30,6 +30,12 @@
 -- WANTSHOVE=1: EMPUJADO por una Bola de Nieve (LEVEL=tools/tests/online_smoke/bola_de_nieve.json WATCH=snowball
 -- WANT=windup,charge): el jugador local tiene que salir lanzado de lado (predicho como un trampolín: ctrlLockT y vx) sin
 -- perder vida; se mide la mayor corrección del servidor en el medio segundo siguiente (falla si pasa de SHOVE_ERR px)
+-- LA ESPERA DEL PRINCIPIO (0.5.202, docs/design/level-intro-card.md): el servidor no empieza la tarjeta + cuenta atrás
+-- hasta que todos han cargado (`level_loaded`), con un límite. El bot avisa al recibir game_init; con DELAYLOAD=s lo
+-- hace esos segundos tarde (la tarjeta del cliente espera viva y sale «Esperando jugadores»), con NOLOAD=1 nunca (se
+-- empieza 8 s después del primero) y con QUITLOAD=1 se desconecta antes de cargar (se empieza enseguida). Siempre:
+-- tras empezar, la tarjeta dura CARD_TIME por el reloj del servidor y luego la cuenta atrás (checks espera_carga,
+-- tarjeta_online)
 io.stdout:setvbuf("no")
 love.filesystem.setSymlinksEnabled(true)
 lovesize = require 'libs/lovesize'
@@ -94,7 +100,11 @@ function love.load()
     end
     bot.c = sock.newClient('localhost', 22122, P.CHANNELS)
     bot.c:setSerialization(bitser.dumps, bitser.loads)
-    bot.c:on('game_init', function() bot.inGame = true end)
+    bot.c:on('game_init', function()
+        bot.inGame = true
+        if os.getenv('QUITLOAD') then bot.quitAt = t + 1
+        elseif not os.getenv('NOLOAD') then bot.loadAt = t + (tonumber(os.getenv('DELAYLOAD')) or 0) end
+    end)
     bot.c:on('s', function(d) if d.a then bot.ack = d.a end end)
     bot.c:on('login_success', function(d) bot.logged = true; bot.id = d.id end)
     bot.c:connect()
@@ -127,7 +137,9 @@ function love.update(dt)
     if bot.readyAt and t > bot.readyAt then bot.readyAt = nil
         bot.c:send('set_ready', { ready = true }); NC:send('set_ready', { ready = true }); bot.startAt = t + 0.6 end
     if bot.startAt and t > bot.startAt then bot.startAt = nil; NC:send('start_game', {}) end
-    if bot.inGame then
+    if bot.loadAt and t >= bot.loadAt then bot.loadAt = nil; bot.c:send('level_loaded', {}) end
+    if bot.quitAt and t >= bot.quitAt then bot.quitAt = nil; bot.gone = true; bot.c:disconnectNow() end
+    if bot.inGame and not bot.gone then
         bot.acc = bot.acc + dt
         while bot.acc >= P.TICK_DT do bot.acc = bot.acc - P.TICK_DT; bot.seq = bot.seq + 1
             table.insert(bot.bits, P.encodeInput(false, bot.seq % 120 < 60, false, false, bot.seq % 40 == 0, false)) end
@@ -181,6 +193,16 @@ function love.update(dt)
             elseif (watch.gulped or 0) > 0 and not pa.dying then watch.spat = true end
         end
     end
+    -- LA ESPERA y la TARJETA del principio (vistas en el cliente)
+    if st and st.localPaInit then
+        intro = intro or { gi = t }
+        if st.startTicks and not intro.rs then intro.rs = t end
+        if st._introWaiting then intro.wait = math.max(intro.wait or 0, st:_introWaiting() or 0) end
+        local showing = st._cardShowing and st:_cardShowing()
+        if showing and not intro.rs then intro.cardWait = true end
+        if showing and intro.rs then intro.cardEnd = t end
+        if showing and intro.cardEnd and intro.rs and not intro.cardFirst then intro.cardFirst = t end
+    end
     -- Cuenta atrás del principio (StartCountdown): mientras dura, el jugador propio no se mueve (aunque se pulse)
     local cdRem = st and st._startRemaining and st:_startRemaining()
     if cdRem and cdRem > 0.2 and st.localPaInit then
@@ -211,6 +233,23 @@ function love.update(dt)
             for _, e in pairs(st.enemyRenderers or {}) do if e.def and e.def.boss then nb = nb + 1 end end
             print(('jefes en el cliente: %d'):format(nb))
             if #(st.level.bossZones or {}) > 0 and nb < 1 then print('Error: el cliente no tiene el jefe') end
+        end
+        do
+            local SC = require 'src/world/systems/StartCountdown'
+            local gap = intro and intro.rs and (intro.rs - intro.gi) or -1
+            local want, okWait
+            if os.getenv('DELAYLOAD') then want = tonumber(os.getenv('DELAYLOAD')); okWait = gap >= want - 0.3 and gap < want + 1.2
+                and intro.cardWait and (intro.wait or 0) > (want > SC.CARD_TIME + 1 and 0.5 or -1)
+            elseif os.getenv('NOLOAD') then want = 8; okWait = gap >= 7.5 and gap < 9.2
+            elseif os.getenv('QUITLOAD') then want = 1; okWait = gap >= 0.7 and gap < 2.2
+            else want = 0; okWait = gap >= 0 and gap < 1.0 end
+            print(('%s espera_carga: game_init → empieza %.2f s (se esperaba ~%s); tarjeta esperando=%s; «esperando» %.1f s'):format(
+                okWait and 'OK   ' or 'FALLA', gap, tostring(want), tostring(intro and intro.cardWait), intro and intro.wait or 0))
+            if not okWait then print('Error: el servidor no esperó lo que debía a que cargaran todos') end
+            local cardLen = intro and intro.rs and intro.cardEnd and (intro.cardEnd - intro.rs) or -1
+            local okCard = math.abs(cardLen - SC.CARD_TIME) < 0.45
+            print(('%s tarjeta_online: tras empezar, la tarjeta dura %.2f s (CARD_TIME %.1f)'):format(okCard and 'OK   ' or 'FALLA', cardLen, SC.CARD_TIME))
+            if not okCard then print('Error: la tarjeta online no sigue el reloj del servidor') end
         end
         print(('cuenta atrás: %s (desde %.1f s), el jugador se movió %.1f px'):format(tostring(startCd ~= nil),
               startCd and startCd.max or -1, startCd and startCd.moved or -1))

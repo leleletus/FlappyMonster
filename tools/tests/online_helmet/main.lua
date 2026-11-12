@@ -64,7 +64,7 @@ function love.load()
     NC:connect('localhost', 22122, 'Cliente')        -- (nunca el servidor real)
     bot.c = sock.newClient('localhost', 22122, P.CHANNELS)
     bot.c:setSerialization(bitser.dumps, bitser.loads)
-    bot.c:on('game_init', function() bot.inGame = true end)
+    bot.c:on('game_init', function() bot.inGame = true; bot.c:send('level_loaded', {}) end)   -- (cargado: el servidor espera a todos)
     bot.c:on('login_success', function() bot.logged = true end)
     bot.c:connect()
 end
@@ -102,7 +102,8 @@ function love.update(dt)
         T.minHp = math.min(T.minHp or 99, pa.hp)
         T.died = T.died or pa.dying
         if T.phase == 'wait' then
-            T.phase, T.t0, T.hp0 = 'A', t, pa.hp
+            -- (tras el inicio entero — tarjeta y cuenta atrás, StartCountdown —: antes todo está quieto)
+            if (st:_startRemaining() or 0) <= 0 then T.phase, T.t0, T.hp0 = 'A', t, pa.hp end
         elseif T.phase == 'A' and t - T.t0 > 6 then
             check('rebote', (heard.helmetBounce or 0) >= 2 and g and g.helmet and g.alive and not T.died and T.minHp == T.hp0,
                 ('rebotes oídos=%d, casco=%s, jugador %s, vida mínima %d/%d'):format(heard.helmetBounce or 0,

@@ -160,18 +160,39 @@ function OnlineAdventureState:enter(args)
 end
 
 -- ── Cuenta atrás del principio (src/world/systems/StartCountdown.lua) ───────────
--- Segundos que faltan según el reloj del servidor (nil = sin cuenta atrás; negativo = ya acabó hace tanto)
+-- Segundos que faltan para empezar a jugar según el reloj del servidor (nil = sin inicio; negativo = ya acabó hace
+-- tanto). Mientras el servidor espera a que carguen todos: más que el inicio entero (fase 'card', todo quieto)
 function OnlineAdventureState:_startRemaining()
-    if (self.startTicks or 0) <= 0 or not self.localPaInit then return nil end
-    if not (self.snapBuf and self.snapBuf.clock) then return StartCountdown.TIME end
+    if not self.localPaInit then return nil end
+    if self.waitingStart then return StartCountdown.total(true) + 1 end
+    if not self.startTicks then return nil end
+    if not (self.snapBuf and self.snapBuf.clock) then return StartCountdown.total(true) end
     return (self.startTicks - self.snapBuf.clock) * TICK_DT
 end
 
 -- ¿El servidor procesará aún congelados los inputs que predecimos ahora? (su tick ≈ reloj + ping, como el agua)
 function OnlineAdventureState:_startFrozenAhead()
-    if (self.startTicks or 0) <= 0 then return false end
+    if self.waitingStart then return true end
+    if not self.startTicks then return false end
     if not (self.snapBuf and self.snapBuf.clock) then return true end
     return self.snapBuf.clock + NC:getPing() / 1000 / TICK_DT < self.startTicks
+end
+
+-- ¿Se ve la tarjeta de presentación? (mientras se espera y en su fase del inicio)
+function OnlineAdventureState:_cardShowing()
+    return self.card ~= nil and StartCountdown.phase(self:_startRemaining()) == 'card'
+end
+
+-- Segundos de espera de más tras lo que dura la tarjeta (nil = no se espera): «Esperando jugadores»
+function OnlineAdventureState:_introWaiting()
+    if not (self.waitingStart and self.card and self.cardT0) then return nil end
+    return love.timer.getTime() - self.cardT0 - StartCountdown.CARD_TIME
+end
+
+-- (sin pausa durante la tarjeta ni la cuenta atrás: el usuario)
+function OnlineAdventureState:_startLocked()
+    local ph = StartCountdown.phase(self:_startRemaining())
+    return ph == 'card' or ph == 'count'
 end
 
 -- (Re)construye el nivel, los renderers de entidades y el jugador local.
@@ -222,7 +243,7 @@ end
 function OnlineAdventureState:exit()
     require('src/fx/Silhouette').level = nil
     require('src/ui/View').unlock()
-    NC:off("s"); NC:off("ev"); NC:off("game_init")
+    NC:off("s"); NC:off("ev"); NC:off("game_init"); NC:off("round_start")
     NC.pendingGameInit = nil
     require('src/core/Difficulty').bind(nil)
     -- Fuera de la partida (sala, hub, resultados, error): nada de la partida
@@ -233,6 +254,7 @@ end
 function OnlineAdventureState:_setupHandlers()
     NC:on("game_init", function(data) self:_onGameInit(data) end)
     NC:on("s",  function(data) self:_onSnapshot(data) end)
+    NC:on("round_start", function(data) self:_onRoundStart(data) end)
     NC:on("rhythm_pose", function(data)                                  -- (la pose de otro jugador en el duelo de ritmo)
         if type(data) == 'table' then RhythmDuel.remotePose(data.id, data.lane, data.ok) end
     end)
@@ -535,7 +557,7 @@ function OnlineAdventureState:update(dt)
         end
 
         -- ── Activar pause / overlay espectador ────────────────────────────────
-        if Input.pressed('pause') then
+        if Input.pressed('pause') and not self:_startLocked() then
             if self.ownData.isSpectator then
                 self.specOverlay = not self.specOverlay
                 self.specSel = SPEC_WAIT

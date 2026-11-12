@@ -95,6 +95,17 @@ Updates.register(function(event, handler)
     end, true)
 end)
 
+-- El cliente terminó de CARGAR el nivel de la partida (0.5.202): el servidor espera a todos antes de la tarjeta y la
+-- cuenta atrás (server/srv/sim.lua S.startWaitOver)
+on("level_loaded", function(data, client, player)
+    if not player.roomId then return end
+    local room = rooms[player.roomId]
+    local sim = room and room.sim
+    if not sim or sim.startTicks then return end
+    sim.loaded[player.id] = true
+    sim.firstLoadedTick = sim.firstLoadedTick or sim.tick
+end)
+
 -- El resultado del duelo de ritmo de un jugador: cada cliente lo juega contra su música (src/ui/RhythmDuel.lua)
 on("rhythm_result", function(data, client, player)
     if type(data) ~= "table" or not player.roomId then return end

@@ -102,7 +102,10 @@ local function sendGameInit(room, only)
                 mode     = room.mode,
                 difficulty = room.difficulty,   -- (nil = sin dificultad)
                 level    = sim.levelRaw,        -- el nivel viaja al cliente
-                cd       = sim.startTicks,      -- cuenta atrás del principio (ticks), StartCountdown
+                -- el INICIO (StartCountdown): el tick en que se empieza a jugar (nil = aún se espera a que carguen todos:
+                -- llegará en round_start) y los ticks de la tarjeta; la cuenta atrás va justo antes de `start`
+                start    = sim.startTicks,
+                card     = math.floor(S.StartCountdown.CARD_TIME / Protocol.TICK_DT + 0.5),
                 rejoin   = ps.token,            -- (para volver a entrar si se corta: hello con `rejoin`)
                 late     = ps.late,             -- (entró con la partida en marcha: mira hasta la próxima ronda)
             })
