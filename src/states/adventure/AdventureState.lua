@@ -220,6 +220,11 @@ function AdventureState:enter(args)
     self.startCd   = (not self.demo) and StartCountdown.total(self.introCard) or nil
     -- (la TARJETA DE PRESENTACIÓN: src/ui/IntroCard.lua; se dibuja EN LUGAR del nivel mientras dura su fase)
     self.card = self.introCard and require('src/ui/IntroCard').new(self.level, self.levelPath:match('([^/]+)%.json$')) or nil
+    -- (y debajo, la ESCENA: el fondo de este nivel, el monstruo cruzando y el enemigo de la isla — src/ui/IntroScene.lua —)
+    if self.card then
+        self.introScene = require('src/ui/IntroScene').new(self.level, self.levelPath:match('([^/]+)%.json$'))
+        self:rebindGlobals()
+    end
     self.cardT = 0
     self.startPrev = nil            -- (lo que faltaba el frame anterior: para el sonido de cada número)
     self.startGoT  = nil            -- (s desde el ¡YA!: el cartel)
@@ -651,6 +656,16 @@ function AdventureState:update(dt)
 
     -- ── Cuenta atrás del principio: el mundo congelado y sin control ──────────
     if self.card then self.cardT = self.cardT + dt end
+    if self.introScene then
+        if self:startPhase() == 'card' then
+            self._rebindFn = self._rebindFn or function() self:rebindGlobals() end
+            self.introScene:update(dt, false, self._rebindFn)
+        else
+            self.introScene:finish(); self.introScene = nil
+            self.afterCardT = 0                       -- (el nivel sale del negro: IntroCard.drawFadeIn)
+        end
+    end
+    if self.afterCardT then self.afterCardT = self.afterCardT + dt end
     if self.deathShowT then self.deathShowT = self.deathShowT + dt end
     if self.startCd then
         StartCountdown.beeps(self.startPrev, self.startCd - dt)
@@ -947,7 +962,8 @@ end
 function AdventureState:render()
     -- (la tarjeta de presentación: pantalla negra en lugar del nivel; src/ui/IntroCard.lua)
     if self.card and self:startPhase() == 'card' then
-        return require('src/ui/IntroCard').draw(self.card, self.cardT)
+        return require('src/ui/IntroCard').draw(self.card, self.cardT, { scene = self.introScene,
+            left = self.startCd - require('src/world/systems/StartCountdown').TIME })
     end
     -- Temblor de pantalla (impactos, explosiones): solo al dibujar
     local shx, shy = Particles.shakeOffset()
@@ -1021,6 +1037,7 @@ function AdventureState:_renderScene()
     end
 
     if self.demo then return end          -- (la demo del fondo de los menús: sin HUD)
+    if self.afterCardT then require('src/ui/IntroCard').drawFadeIn(self.afterCardT) end   -- (tras la tarjeta, bajo el HUD)
     -- (un director de evento: siluetas de su intro y el fundido a negro de sus costuras — el Mega Mashup —)
     local md = self.level.musicDirector
     if md and md.drawOverlay then md:drawOverlay() end

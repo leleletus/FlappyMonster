@@ -44,7 +44,8 @@ end
 function OnlineAdventureState:render()
     -- (la tarjeta de presentación: pantalla negra en lugar del nivel mientras se espera y en su fase; src/ui/IntroCard.lua)
     if self:_cardShowing() then
-        return require('src/ui/IntroCard').draw(self.card, love.timer.getTime() - self.cardT0, { waiting = self:_introWaiting() })
+        return require('src/ui/IntroCard').draw(self.card, love.timer.getTime() - self.cardT0, { waiting = self:_introWaiting(), scene = self.introScene,
+            left = not self.waitingStart and (self:_startRemaining() or 0) - require('src/world/systems/StartCountdown').TIME or nil })
     end
     -- Temblor de pantalla (impactos, explosiones): solo al dibujar
     local shx, shy = Particles.shakeOffset()
@@ -149,6 +150,7 @@ function OnlineAdventureState:_renderScene()
     -- (un director de evento: siluetas de su intro y el fundido de sus costuras — el Mega Mashup —)
     local md = self.level.musicDirector
     if md and md.drawOverlay then md:drawOverlay() end
+    if self.afterCardT then require('src/ui/IntroCard').drawFadeIn(self.afterCardT) end   -- (tras la tarjeta, bajo el HUD)
     -- HUD (antes, las franjas de cine de la entrada de un jefe: el HUD va encima)
     RhythmDuel.drawDim()                                                 -- (el duelo de ritmo: el fondo se oscurece)
     BossHud.drawCinema(self.level)

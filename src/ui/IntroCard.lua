@@ -1,19 +1,32 @@
 -- src/ui/IntroCard.lua
--- La TARJETA DE PRESENTACIÓN del nivel (0.5.202, docs/design/level-intro-card.md): pantalla NEGRA antes de la cuenta
--- atrás, unos 2 s, que no se salta. Dos BANDAS del color de la isla entran por lados opuestos (el nombre del nivel desde
--- la izquierda, la isla desde la derecha); una PLACA pequeña con el número («1-3», «1-B», «1-?», «1-» + el castillo)
--- cae en el hueco a la izquierda de la banda de la isla; abajo, una FRANJA del suelo de la isla con una decoración y un
--- enemigo, y el MONSTRUO (con borde blanco) entra corriendo y se para. Mientras el servidor espera a los que cargan
--- (online) sigue VIVA: el monstruo se mueve, las bandas brillan, y pasado un rato «Esperando jugadores...» abajo a la
--- izquierda. Solo dibujo (el tiempo lo lleva StartCountdown). Datos: Worlds.plate / Worlds.introOf; arte:
--- tools/art/ui/make_intro_card.py.
+-- La TARJETA DE PRESENTACIÓN del nivel (0.5.202, docs/design/level-intro-card.md): antes de la cuenta atrás, ~5 s,
+-- no se salta. Dos BANDAS del color de la isla entran por lados opuestos (el nombre del nivel desde la izquierda, la
+-- isla desde la derecha); una PLACA pequeña con el número («1-3», «1-B», «1-?», «1-» + el castillo) cae en el hueco a
+-- la izquierda de la banda de la isla. DEBAJO, la ESCENA de verdad (0.5.203, src/ui/IntroScene.lua: el fondo del
+-- nivel, el monstruo cruzando y el enemigo de la isla); sin escena, negro. Mientras el servidor espera a los que cargan
+-- (online) las bandas brillan y, pasado un rato, «Esperando jugadores...» abajo a la izquierda. Solo dibujo (el tiempo
+-- lo lleva StartCountdown). Datos: Worlds.plate / Worlds.introOf; arte: tools/art/ui/make_intro_card.py.
 --   local card = IntroCard.new(level, id)       id = el archivo sin .json (nil: sin isla ni número); nil en niveles Flappy
---   IntroCard.draw(card, t, o)                  t = s desde que salió; o.waiting = s de espera de más (nil: no espera)
---   IntroCard.rects(card) → { name, island, plate, strip }   {x,y,w,h} a la medida de ahora (para las pruebas)
+--   IntroCard.draw(card, t, o)                  t = s desde que salió; o.scene = la escena de debajo; o.waiting = s de
+--                                               espera de más (nil: no espera); o.left = s que le quedan (el fundido)
+--   IntroCard.drawFadeIn(since)                 el nivel saliendo del negro (bajo el HUD), `since` s tras la tarjeta
+--   IntroCard.rects(card) → { name, island, plate, stage }   {x,y,w,h} a la medida de ahora (stage: donde pasa la escena)
 local L         = require 'src/core/Lang'
 local PixelFont = require 'src/ui/PixelFont'
 
 local IntroCard = {}
+-- FUNDIDO al pasar al nivel (0.5.203, el usuario: «que no se sienta tan brusco»): la tarjeta se va a negro en sus
+-- últimos FADE_OUT s y el nivel sale del negro en sus primeros FADE_IN s — por DEBAJO del HUD: el ¡YA! y el inicio
+-- del nivel se ven enteros —
+IntroCard.FADE_OUT, IntroCard.FADE_IN = 0.35, 0.4
+
+-- El velo negro del nivel tras la tarjeta: `since` = s desde que acabó la tarjeta (nil: nada)
+function IntroCard.drawFadeIn(since)
+    if not since or since >= IntroCard.FADE_IN then return end
+    love.graphics.setColor(0, 0, 0, 1 - math.max(0, since) / IntroCard.FADE_IN)
+    love.graphics.rectangle('fill', 0, 0, WINDOW_W, WINDOW_H)
+    love.graphics.setColor(1, 1, 1, 1)
+end
 
 local cache = {}
 local function img(path)
@@ -27,7 +40,6 @@ local function img(path)
     return im or nil
 end
 local function art(name) return img('assets/images/ui/intro/' .. name) end
-local function asset(p) return p and img('assets/images/' .. p) end
 
 local quads = {}
 local function quad(im, x, y, w, h)
@@ -37,9 +49,7 @@ local function quad(im, x, y, w, h)
 end
 
 local NAME_S, ISLE_S, PLATE_S = 6, 4, 4     -- escalas de la fuente pixel
-local FW, FH, MS = 11, 18, PLAYER_SCALE or 6 -- cuadro del monstruo y su escala
 local SLIDE, DROP_AT, DROP = 0.4, 0.45, 0.2  -- s: entrada de las bandas, cuándo cae la placa y cuánto tarda
-local RUN_END = 1.2                         -- s: el monstruo ya llegó
 
 function IntroCard.new(level, id)
     if not level or level.flappy then return nil end
@@ -99,20 +109,16 @@ local function layout(card)
     iw = math.min(iw, W - (pt and (pw + 72) or 24))
     Ly.island = { x = W - iw, y = iy, w = iw, h = 64 }
     if pt then Ly.plate = { x = math.max(24, Ly.island.x - pw - 32), y = iy + 2, w = pw, h = ph, text = pt, castle = castle } end
-    -- franja de abajo: dos filas de casillas y, encima, lo que hay de pie en ella
-    local look = card.look
-    local ground = H - 2 * TILE_PX
-    local deco = asset(look.deco)
-    local en = asset(look.enemy[1])
-    local tall = math.max(FH * MS, deco and deco:getHeight() * (look.decoScale or 4) or 0, en and en:getHeight() * 4 or 0)
-    Ly.ground = ground
-    Ly.strip = { x = 0, y = ground - tall, w = W, h = H - (ground - tall) }
+    -- la escena: el suelo (dos casillas abajo) y lo que anda por él (el monstruo, el enemigo, un salto)
+    Ly.ground = H - 2 * TILE_PX
+    local top = Ly.ground - 200
+    Ly.stage = { x = 0, y = top, w = W, h = H - top }
     return Ly
 end
 
 function IntroCard.rects(card)
     local Ly = layout(card)
-    return { name = Ly.name, island = Ly.island, plate = Ly.plate, strip = Ly.strip }
+    return { name = Ly.name, island = Ly.island, plate = Ly.plate, stage = Ly.stage }
 end
 
 -- Una banda teñida con su sombra y su punta; `fromLeft`: la punta a la derecha
@@ -157,8 +163,8 @@ function IntroCard.draw(card, t, o)
     local W, H = WINDOW_W, WINDOW_H
     local Ly = layout(card)
     local look = card.look
-    love.graphics.setColor(0, 0, 0, 1)
-    love.graphics.rectangle('fill', 0, 0, W, H)
+    if o.scene then o.scene:draw()
+    else love.graphics.setColor(0, 0, 0, 1); love.graphics.rectangle('fill', 0, 0, W, H) end
 
     -- bandas
     local n = Ly.name
@@ -211,46 +217,11 @@ function IntroCard.draw(card, t, o)
         end
     end
 
-    -- franja: casillas, decoración, enemigo
-    love.graphics.setColor(1, 1, 1, 1)
-    local top, under = asset(look.top), asset(look.under)
-    for x = 0, W, TILE_PX do
-        if top then love.graphics.draw(top, quad(top, 0, 0, TILE_PX, TILE_PX), x, Ly.ground) end
-        if under then love.graphics.draw(under, quad(under, 0, 0, TILE_PX, TILE_PX), x, Ly.ground + TILE_PX) end
+    -- a negro al acabar (o.left = s que le quedan a la tarjeta)
+    if o.left and o.left < IntroCard.FADE_OUT then
+        love.graphics.setColor(0, 0, 0, 1 - math.max(0, o.left) / IntroCard.FADE_OUT)
+        love.graphics.rectangle('fill', 0, 0, W, H)
     end
-    local deco = asset(look.deco)
-    if deco then
-        local ds = look.decoScale or 4
-        love.graphics.draw(deco, math.floor(W * 0.66), Ly.ground - deco:getHeight() * ds, 0, ds, ds)
-    end
-    local ef = asset(look.enemy[1 + math.floor(t / 0.35) % #look.enemy])
-    if ef then love.graphics.draw(ef, math.floor(W * 0.84), Ly.ground - ef:getHeight() * 4, 0, 4, 4) end
-
-    -- el monstruo: entra corriendo y se para; luego quieto, y de vez en cuando un saltito o se da la vuelta
-    local sheet = art('monster-Sheet.png')
-    if sheet then
-        local stopX = math.floor(W * 0.28)
-        local mx, frame, flip, hop = 0, 1, false, 0
-        if t < RUN_END then
-            mx = -FW * MS + stepped(t, 0, RUN_END, stopX + FW * MS)
-            frame = 1 + math.floor(t / 0.09) % 3
-        else
-            mx = stopX
-            local k = t - RUN_END
-            frame = 4 + math.floor(k / 0.5) % 2
-            local beat = k % 1.5
-            local which = math.floor(k / 1.5) % 3
-            if k > 1.5 and which == 1 and beat < 0.24 then hop = (beat < 0.12) and 18 or 9 end
-            if k > 1.5 and which == 2 and beat < 0.6 then flip = true end
-        end
-        local my = Ly.ground - FH * MS + MS - hop       -- (el borde blanco de abajo, metido en el suelo)
-        if flip then
-            love.graphics.draw(sheet, quad(sheet, (frame - 1) * FW, 0, FW, FH), mx + FW * MS, my, 0, -MS, MS)
-        else
-            love.graphics.draw(sheet, quad(sheet, (frame - 1) * FW, 0, FW, FH), mx, my, 0, MS, MS)
-        end
-    end
-
     -- esperando a los demás (online): abajo a la izquierda, con puntos que se mueven
     if o.waiting and o.waiting > 1 then
         local dots = string.rep('.', 1 + math.floor(t * 2) % 3)

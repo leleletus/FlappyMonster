@@ -212,7 +212,7 @@ function love.update(dt)
             for _, w in ipairs({ 960, 1280, 1600 }) do
                 WINDOW_W = w
                 local R = IC.rects and IC.rects(IC.new({ name = longest }, 'bosque_interruptores')) or {}
-                local list = { R.name, R.island, R.plate, R.strip }
+                local list = { R.name, R.island, R.plate, R.stage }
                 if #list < 4 then bad[#bad + 1] = w .. ': faltan zonas' end
                 for i = 1, #list do
                     local r = list[i]
@@ -226,10 +226,15 @@ function love.update(dt)
                 end
                 -- capturas de tres islas a esta anchura
                 for _, lv in ipairs({ 'bosque_interruptores', 'lago_helado', 'nido_del_escorpion' }) do
+                    local Level = require 'src/world/level/Level'
+                    local real = Level.new('assets/levels/' .. lv .. '.json')
+                    local sc = require('src/ui/IntroScene').new(real, lv, { outcome = 'stomp' })
+                    for _ = 1, 100 do sc:update(1 / 60, false, function() st:rebindGlobals() end) end
                     local cv = love.graphics.newCanvas(w, WINDOW_H)
                     love.graphics.setCanvas(cv); love.graphics.clear(0, 0, 0, 1)
-                    IC.draw(IC.new({ name = lv == 'lago_helado' and 'El Lago Helado' or lv == 'nido_del_escorpion' and 'Nido del Escorpión' or longest }, lv), 3, { waiting = 2 })
+                    IC.draw(IC.new(real, lv), 3, { waiting = 2, scene = sc })
                     love.graphics.setCanvas()
+                    sc:finish()
                     cv:newImageData():encode('png', ('story_intro_%s_%d.png'):format(lv, w))
                 end
             end
@@ -239,6 +244,59 @@ function love.update(dt)
                 ('«%s» · isla %s · placa %s; fase %s; nivel dibujado %d veces; Juego Libre sin placa=%s; nombre más largo «%s»: %s'):format(
                  tostring(c and c.name), tostring(c and c.island), c and c.plate and ((c.plate.w or '?') .. '-' .. (c.plate.n or c.plate.kind or '?')) or 'nil',
                  tostring(ph), drawn, tostring(fp ~= nil and fp.plate == nil), longest, #bad == 0 and 'nada se pisa' or table.concat(bad, ', ')))
+        end
+        -- LA ESCENA de la tarjeta (src/ui/IntroScene.lua): el monstruo de verdad cruza y sale por la derecha a tiempo; con
+        -- 'jump' salta por encima (el enemigo vivo, sin daño), con 'stomp' lo pisa (vencido, sin daño), con 'hurt' se lo
+        -- come; en todas las islas; con `hold` (online) espera en pantalla y al soltarlo sale a tiempo; nada cuenta en el
+        -- nivel de verdad (vencidos) y lo global vuelve a él
+        do
+            local IS = require 'src/ui/IntroScene'
+            local SC = require 'src/world/systems/StartCountdown'
+            local Level = require 'src/world/level/Level'
+            local kills0 = st.stats.kills
+            local bad, heard = {}, {}
+            local play = Sound.play
+            Sound.play = function(n, ...) heard[n] = true; return play(n, ...) end
+            local restore = function() st:rebindGlobals() end
+            local function run(lv, outcome, holdS)
+                local real = Level.new('assets/levels/' .. lv .. '.json')
+                local sc = IS.new(real, lv, { outcome = outcome })
+                local e0 = sc.enemy ~= nil
+                local f, goneAt, maxXHold = 0, nil, -1
+                if holdS then
+                    for _ = 1, math.floor(holdS * 60) do sc:update(1 / 60, true, restore); maxXHold = math.max(maxXHold, sc.player.x - sc.camX) end
+                end
+                while f < SC.CARD_TIME * 60 do
+                    sc:update(1 / 60, false, restore); f = f + 1
+                    if not goneAt and sc:gone() then goneAt = f / 60 end
+                end
+                local r = { gone = goneAt, alive = sc.enemy and sc.enemy.alive, hurt = sc.hurtSeen == true, e0 = e0, hold = maxXHold }
+                sc:finish()
+                return r
+            end
+            local function okOutcome(o, r)
+                if o == 'jump' then return r.alive and not r.hurt end
+                if o == 'stomp' then return not r.alive and not r.hurt end
+                return r.hurt
+            end
+            local isles = {}
+            for w2, Wd in ipairs(Worlds.LIST) do isles[#isles + 1] = Wd.levels[1] end
+            for _, lv in ipairs(isles) do
+                for _, o in ipairs(IS.OUTCOMES) do
+                    local r = run(lv, o)
+                    if not r.e0 then bad[#bad + 1] = lv .. ': sin enemigo'
+                    elseif not r.gone or r.gone > SC.CARD_TIME - 0.15 then bad[#bad + 1] = ('%s/%s: sale a %s s'):format(lv, o, tostring(r.gone and ('%.2f'):format(r.gone)))
+                    elseif not okOutcome(o, r) then bad[#bad + 1] = ('%s/%s: enemigo vivo=%s daño=%s'):format(lv, o, tostring(r.alive), tostring(r.hurt)) end
+                end
+            end
+            local h = run('valle_soleado', 'jump', 3)
+            local holdOk = h.hold > 0 and h.hold < WINDOW_W * (IS.HOLD_AT + 0.08) and h.gone ~= nil
+            Sound.play = play
+            local snd = heard.jump and (heard.stomp or heard.enemyStomp or heard.squish or next(heard) ~= nil)
+            local clean = st.stats.kills == kills0 and require('src/world/entities/base/Entity').onKill == st.onKill
+            check('escena', #bad == 0 and holdOk and snd and clean,
+                ('%d islas × %d finales: %s; esperando se queda en pantalla (x %.0f) y luego sale=%s; suenan (salto=%s); el nivel de verdad intacto=%s'):format(
+                 #isles, #IS.OUTCOMES, #bad == 0 and 'bien' or table.concat(bad, ', '), h.hold, tostring(h.gone ~= nil), tostring(heard.jump), tostring(clean)))
         end
         go('in1b')
     elseif step == 'in1b' and t - T > 1.0 then
@@ -281,9 +339,13 @@ function love.update(dt)
                 end
                 Input = realInput
                 local still = nst.player.x == x0 and nst.player.y == y0
+                -- (tras la tarjeta, el nivel sale del NEGRO por debajo del HUD: IntroCard.drawFadeIn)
+                nst:update(1 / 60)                                          -- (el primer fotograma ya sin tarjeta)
+                FADE = nst.afterCardT ~= nil and nst.afterCardT < 0.5 and nst.introScene == nil
                 nst:pauseGame()
                 local after = top() ~= nst
                 if after then gStateMachine:pop() end
+                check('fundido', FADE == true, ('tras la tarjeta: la escena se fue y el nivel sale del negro=%s'):format(tostring(FADE)))
                 check('sin_pausa_inicio', cd0 ~= nil and math.abs(cd0 - SC.total(true)) < 0.05 and stays and still and after,
                     ('inicio %.2f s (tarjeta + cuenta atrás = %s); pausa cada fotograma: sigue en el nivel=%s, quieto=%s; tras el ¡YA! pausa=%s'):format(
                      cd0 or -1, tostring(SC.total and SC.total(true)), tostring(stays), tostring(still), tostring(after)))

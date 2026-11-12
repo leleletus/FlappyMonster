@@ -210,7 +210,9 @@ local function run()
         Campaign.debugOpen = false
         -- VUELO FLAPPY (prueba): entra a la etapa de prueba con el jugador volando y la cámara automática; aletear sube
         gStateMachine:change('debug_menu'); wait(0.6)
-        pickDbg('flight'); wait(4.0)                 -- (tras la cuenta atrás del principio del nivel)
+        pickDbg('flight')                            -- (tras el inicio del nivel — StartCountdown: lo que dure —)
+        for _ = 1, 80 do if name(top()) == 'AdventureState' and not top().startCd then break end; wait(0.1) end
+        wait(0.3)
         local adv = top()
         local flies = name(adv) == 'AdventureState' and adv.level.flappy == true and adv.player.flight == true
         local y0 = flies and adv.player.y or 0

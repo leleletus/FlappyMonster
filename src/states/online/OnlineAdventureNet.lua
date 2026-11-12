@@ -62,6 +62,12 @@ function OnlineAdventureState:_onGameInit(data)
     local path = self.currentRoom and self.currentRoom.level
     self.card = seeCard and require('src/ui/IntroCard').new(self.level, path and path:match('([^/]+)%.json$')) or nil
     self.cardT0 = love.timer.getTime()
+    -- (la escena de debajo: el monstruo entra, espera en pantalla mientras el servidor espera y se va al empezar)
+    if self.introScene then self.introScene:finish(); self.introScene = nil end
+    if self.card then
+        self.introScene = require('src/ui/IntroScene').new(self.level, path and path:match('([^/]+)%.json$'))
+        self:_rebindGlobals()
+    end
 
     self.myIdx = data.idx
     -- (volver a entrar si se corta: el token de esta partida; entró con ella en marcha: mira hasta la próxima ronda)
@@ -92,6 +98,13 @@ function OnlineAdventureState:_onGameInit(data)
     self.renderX, self.renderY = self.localPa.x, self.localPa.y
     self.camX = math.max(0, math.min(self.level.widthPx  - WINDOW_W, self.localPa.x - WINDOW_W/2))
     self.camY = math.max(0, math.min(self.level.heightPx - WINDOW_H, self.localPa.y - WINDOW_H/2))
+end
+
+-- Lo global vuelve a apuntar a ESTE nivel (tras la escena de la tarjeta, que tiene el suyo)
+function OnlineAdventureState:_rebindGlobals()
+    require('src/fx/Particles').setLevel(self.level)
+    require('src/world/systems/Noise').bind(nil)                -- (online: los ruidos son cosa del servidor)
+    require('src/core/Difficulty').bind(self.level)
 end
 
 -- El servidor ya tiene a todos (o se cansó de esperar): el tick en que se empieza a jugar

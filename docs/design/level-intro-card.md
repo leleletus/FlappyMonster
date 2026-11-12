@@ -1,6 +1,9 @@
 # Level intro card (2026-11-12)
 
-**Status:** built (0.5.202); the system page is [start-countdown](../gameplay/start-countdown.md). Replaces the lower-third card of the UX round
+**Status:** built (0.5.202); changed in 0.5.203 — the black background and the hand-animated strip became a LIVE
+scene (the level's background, the real monster and enemy: `src/ui/IntroScene.lua`), the card lasts 5 s, the
+countdown is 0 for testing, and the card fades to and from black. The system page is
+[start-countdown](../gameplay/start-countdown.md) (it has the current behaviour and the history). Replaces the lower-third card of the UX round
 ([ux-round-2026-11](ux-round-2026-11.md) item 2, `LevelCard` (src/ui, removed in 0.5.202)).
 
 ## Why

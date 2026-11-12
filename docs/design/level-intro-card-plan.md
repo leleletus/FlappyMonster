@@ -118,7 +118,7 @@ new `src/ui/IntroCard.lua` that replaces `LevelCard` (src/ui, removed in 0.5.202
 ### Task 3: The card's art
 
 **Files:**
-- Create: `tools/art/ui/make_intro_card.py` → `assets/images/ui/intro/monster-Sheet.png`, `band.png`, `plate.png`
+- Create: `tools/art/ui/make_intro_card.py` → `monster-Sheet.png` (in assets/images/ui/intro, removed in 0.5.203), `band.png`, `plate.png`
 - Modify: `docs/art/generators.md` (one line), `docs/art/asset-layout.md` (the `ui/intro/` folder)
 
 **Interfaces:**

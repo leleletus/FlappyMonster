@@ -18,8 +18,8 @@ local StartCountdown = {}
 -- (CARD_TIME, src/ui/IntroCard.lua: pantalla negra, no se salta) y luego la cuenta atrás de siempre (TIME). Las dos
 -- con el mundo congelado y SIN pausa. `rem` = lo que falta para empezar a jugar (s): > TIME tarjeta, (0, TIME] cuenta
 -- atrás, (−GO_TIME, 0] el ¡YA!. TIME = 0 deja solo la tarjeta (el usuario la probará en el juego).
-StartCountdown.CARD_TIME = 2.0    -- s de tarjeta
-StartCountdown.TIME      = 3      -- s de cuenta atrás
+StartCountdown.CARD_TIME = 5.0    -- s de tarjeta (0.5.203: 5 s, el usuario; con la escena del monstruo cruzando)
+StartCountdown.TIME      = 0      -- s de cuenta atrás (0.5.203: 0 para PROBAR sin ella — el usuario —; antes 3)
 StartCountdown.GO_TIME   = 0.8    -- s que se ve "¡YA!" al acabar
 
 -- Lo que dura el inicio entero (s): con tarjeta o sin ella (demo, niveles Flappy, prueba del editor)

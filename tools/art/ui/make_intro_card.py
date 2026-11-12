@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # tools/art/ui/make_intro_card.py — el ARTE de la TARJETA DE PRESENTACIÓN del nivel (0.5.202,
 # docs/design/level-intro-card.md; src/ui/IntroCard.lua). Escribe en assets/images/ui/intro/:
-#   monster-Sheet.png  el monstruo con un BORDE BLANCO de 1 px (el usuario: que se vea sobre el negro), cuadros de 11×18
-#                      en fila: 1-3 corriendo (monstrito3-5, su aleteo), 4-5 quieto (monstrito1-2). Sin alas (regla 6).
+#   (0.5.203: el monstruo ya no se dibuja aquí — la escena de la tarjeta usa el de verdad, con su filo blanco de
+#    src/fx/Silhouette.lua —)
 #   band.png           un trozo de banda de 16×16 en grises (se tiñe con el color de la isla al dibujar): fila de brillo
 #                      arriba, cuerpo, dos filas más oscuras abajo; se repite en horizontal
 #   band_cap.png       la PUNTA de la banda (4×16, escalonada) para el borde que entra
@@ -14,8 +14,6 @@ import os, struct, zlib
 
 ROOT = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', '..'))
 OUT = os.path.join(ROOT, 'assets', 'images', 'ui', 'intro')
-RUN = ['monstrito3.png', 'monstrito4.png', 'monstrito5.png']
-IDLE = ['monstrito1.png', 'monstrito2.png']
 
 
 def read(path):
@@ -67,23 +65,6 @@ def write(name, w, h, pix):
 os.makedirs(OUT, exist_ok=True)
 CLEAR = (0, 0, 0, 0)
 WHITE = (255, 255, 255, 255)
-
-# ── el monstruo con borde blanco ──
-frames = [read(os.path.join(ROOT, 'assets', 'images', 'player', n)) for n in RUN + IDLE]
-FW = max(f[0] for f in frames) + 2; FH = max(f[1] for f in frames) + 2
-
-
-def framePix(f, x, y):
-    w, h, px = f
-    sx, sy = x - 1, y - 1                     # (1 px de margen para el borde)
-    inside = lambda a, b: 0 <= a < w and 0 <= b < h and px(a, b)[3] > 0
-    if inside(sx, sy): return px(sx, sy)
-    for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
-        if inside(sx + dx, sy + dy): return WHITE
-    return CLEAR
-
-
-write('monster-Sheet.png', FW * len(frames), FH, lambda x, y: framePix(frames[x // FW], x % FW, y))
 
 # ── la banda (grises: se tiñe) ──
 def bandPix(x, y):

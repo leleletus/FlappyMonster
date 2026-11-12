@@ -198,9 +198,11 @@ local cases = {}
 -- pitidos solo en la cuenta atrás; con TIME = 0 queda solo la tarjeta
 function cases.inicio_fases()
     local SC = require 'src/world/systems/StartCountdown'
-    local ph = SC.phase and { SC.phase(4), SC.phase(3), SC.phase(0.5), SC.phase(-0.1), SC.phase(-1) } or {}
+    local C0, T0 = SC.CARD_TIME, SC.TIME
+    SC.CARD_TIME, SC.TIME = 2, 3                          -- (la lógica, con una cuenta atrás de 3 s)
+    local ph = { SC.phase(4), SC.phase(3), SC.phase(0.5), SC.phase(-0.1), SC.phase(-1) }
     local okPh = ph[1] == 'card' and ph[2] == 'count' and ph[3] == 'count' and ph[4] == 'go' and ph[5] == nil
-    local okTot = SC.total and SC.total(true) == 5 and SC.total(false) == 3
+    local okTot = SC.total(true) == 5 and SC.total(false) == 3
     local play, ticks, gos, early = Sound.play, 0, 0, 0
     Sound.play = function(n)
         if n == 'countTick' then ticks = ticks + 1 elseif n == 'countGo' then gos = gos + 1 end
@@ -212,15 +214,18 @@ function cases.inicio_fases()
         if ticks > nt and rem - 0.1 > 3 then early = early + 1 end
         prev = rem - 0.1; rem = rem - 0.1
     end
+    local gos3 = gos
+    SC.TIME = 0                                            -- (sin cuenta atrás: solo la tarjeta y el ¡YA!)
+    local zero = SC.phase(0.5) == 'card' and SC.phase(0) == 'go' and SC.total(true) == 2
+    local zt, zg = ticks, gos
+    prev, rem = nil, 2
+    while rem > -0.5 do SC.beeps(prev, rem - 0.1); prev = rem - 0.1; rem = rem - 0.1 end
+    zero = zero and ticks == zt and gos == zg + 1
     Sound.play = play
-    local T0 = SC.TIME
-    SC.TIME = 0
-    local zero = SC.phase and SC.phase(0.5) == 'card' and SC.phase(0) == 'go' and SC.total(true) == 2
-    SC.TIME = T0
-    check('inicio_fases', okPh and okTot and ticks == 3 and gos == 1 and early == 0 and zero,
-        ('fases %s/%s/%s/%s/%s; total %s/%s; pitidos %d (antes de tiempo %d), ¡YA! %d; sin cuenta atrás=%s'):format(
-         tostring(ph[1]), tostring(ph[2]), tostring(ph[3]), tostring(ph[4]), tostring(ph[5]),
-         tostring(SC.total and SC.total(true)), tostring(SC.total and SC.total(false)), ticks, early, gos, tostring(zero)))
+    SC.CARD_TIME, SC.TIME = C0, T0
+    check('inicio_fases', okPh and okTot and ticks == 3 and gos3 == 1 and early == 0 and zero,
+        ('fases %s/%s/%s/%s/%s; pitidos %d (antes de tiempo %d), ¡YA! %d; sin cuenta atrás: solo el ¡YA!=%s; ahora tarjeta %.1f s + cuenta atrás %.1f s'):format(
+         tostring(ph[1]), tostring(ph[2]), tostring(ph[3]), tostring(ph[4]), tostring(ph[5]), ticks, early, gos3, tostring(zero), C0, T0))
 end
 
 function cases.onoff_head()

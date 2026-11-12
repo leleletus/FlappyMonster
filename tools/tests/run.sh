@@ -147,7 +147,7 @@ if [ "${1:-}" = all ]; then
           "online_smoke LEVEL=assets/levels/templo_del_eco.json MODE=hunt SECS=14 STALL=4.5"
           "online_smoke LEVEL=assets/levels/laberinto_submarino.json MODE=race SECS=12 WANTOXY=1"
           "online_smoke LEVEL=assets/levels/jardin_gummies.json MODE=race SECS=14 DELAYLOAD=4"
-          "online_smoke LEVEL=assets/levels/jardin_gummies.json MODE=race SECS=14 NOLOAD=1"
+          "online_smoke LEVEL=assets/levels/jardin_gummies.json MODE=race SECS=18 NOLOAD=1"
           "online_smoke LEVEL=assets/levels/jardin_gummies.json MODE=race SECS=12 QUITLOAD=1"
           "online_smoke LEVEL=assets/levels/jardin_gummies.json MODE=race SECS=12 LEAVELOAD=1"
           "online_smoke LEVEL=assets/levels/jardin_gummies.json MODE=race SECS=12 DROPSTART=1"

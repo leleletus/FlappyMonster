@@ -574,6 +574,16 @@ function OnlineAdventureState:update(dt)
 
     -- ── Cuenta atrás del principio: mientras dura, todo quieto (src/world/systems/StartCountdown.lua) ──
     self:_checkRoundStart()
+    if self.introScene then
+        if self:_cardShowing() then
+            self._rebindFn = self._rebindFn or function() self:_rebindGlobals() end
+            self.introScene:update(dt, self.waitingStart, self._rebindFn)
+        else
+            self.introScene:finish(); self.introScene = nil
+            self.afterCardT = 0                       -- (el nivel sale del negro: IntroCard.drawFadeIn)
+        end
+    end
+    if self.afterCardT then self.afterCardT = self.afterCardT + dt end
     local startRem = self:_startRemaining()
     local frozen = startRem ~= nil and startRem > 0
     if startRem and startRem > -StartCountdown.GO_TIME and self.snapBuf and self.snapBuf.clock and not self.showGameOver then

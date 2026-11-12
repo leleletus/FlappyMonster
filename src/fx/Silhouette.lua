@@ -9,7 +9,8 @@
 --   Silhouette.draw(img, x, y, r, sx, sy[, alpha, color])   antes de dibujar el sprite (mismo x, y, giro y escala;
 --                                                           origen = el centro de la imagen, como el monstruo)
 --   Silhouette.on(level, y)   ¿hace falta en ese nivel, a esa altura? (a oscuras, noche, cueva, o bajo la línea
---                             de superficie de un nivel con profundidad: ahí también hay penumbra)
+--                             de superficie de un nivel con profundidad: ahí también hay penumbra; o el nivel lo
+--                             pide siempre: `outline`)
 local Silhouette = {}
 
 Silhouette.COLOR = { 1, 1, 1 }
@@ -50,7 +51,7 @@ end
 
 function Silhouette.on(level, y)
     if not level then return false end
-    if level.dark then return true end
+    if level.dark or level.outline then return true end       -- (`outline`: siempre — la escena de la tarjeta —)
     local m = level.light
     if m == 'night' or m == 'cave' then return true end
     if level.depth and m ~= 'none' and y then

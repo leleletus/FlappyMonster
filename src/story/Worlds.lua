@@ -70,38 +70,39 @@ Worlds.LIST = {
 }
 
 -- LA TARJETA DE PRESENTACIÓN de cada isla (src/ui/IntroCard.lua, docs/design/level-intro-card.md): los colores de sus
--- dos bandas (y la sombra de cada una) y la franja de abajo: casilla de arriba y de debajo, una decoración y un
--- enemigo (sus fotogramas), todo de assets/images/. Una isla nueva = una entrada aquí (sin ella: INTRO_DEFAULT).
+-- dos bandas (y la sombra de cada una) y la ESCENA de abajo (src/ui/IntroScene.lua): las casillas del suelo si el
+-- nivel no tiene uno claro (imágenes de assets/images/, solo para elegir su tile), una decoración (imagen) y el
+-- ENEMIGO de la isla (un tipo de entidad de verdad). Una isla nueva = una entrada aquí (sin ella: INTRO_DEFAULT).
 Worlds.INTRO = {
     pradera      = { bands = { { 0.25, 0.54, 0.16 }, { 1.00, 0.85, 0.29 } }, shade = { { 0.16, 0.36, 0.10 }, { 0.71, 0.54, 0.06 } },
                      top = 'world/tiles/grass.png', under = 'world/tiles/dirt.png', deco = 'world/decorations/meadow/oak_tree.png', decoScale = 4,
-                     enemy = { 'enemies/gummy/gummy1.png', 'enemies/gummy/gummy2.png' } },
+                     enemy = 'gummy' },
     costa        = { bands = { { 0.12, 0.62, 0.70 }, { 0.98, 0.86, 0.58 } }, shade = { { 0.06, 0.40, 0.48 }, { 0.72, 0.58, 0.30 } },
                      top = 'world/tiles/sand.png', under = 'world/tiles/sand.png', deco = 'world/decorations/tropical/bush.png', decoScale = 4,
-                     enemy = { 'enemies/crabby/crab1.png', 'enemies/crabby/crab2.png' } },
+                     enemy = 'crabby' },
     jungla       = { bands = { { 0.10, 0.42, 0.22 }, { 0.92, 0.45, 0.20 } }, shade = { { 0.05, 0.26, 0.13 }, { 0.62, 0.27, 0.10 } },
                      top = 'world/tiles/jungle_grass.png', under = 'world/tiles/mud.png', deco = 'world/decorations/jungle/banana_plant.png', decoScale = 4,
-                     enemy = { 'enemies/gummy_jungle/gummy1.png', 'enemies/gummy_jungle/gummy2.png' } },
+                     enemy = 'gummy_jungle' },
     fortaleza    = { bands = { { 0.36, 0.30, 0.44 }, { 0.80, 0.22, 0.22 } }, shade = { { 0.22, 0.18, 0.28 }, { 0.52, 0.12, 0.12 } },
                      top = 'world/tiles/stone.png', under = 'world/tiles/deep_stone.png', deco = 'world/decorations/fortress/banner.png', decoScale = 4,
-                     enemy = { 'enemies/crabby_fortress/crab1.png', 'enemies/crabby_fortress/crab2.png' } },
+                     enemy = 'crabby_fortress' },
     nieve        = { bands = { { 0.42, 0.66, 0.90 }, { 0.92, 0.96, 1.00 } }, shade = { { 0.24, 0.42, 0.66 }, { 0.62, 0.72, 0.84 } },
                      top = 'world/tiles/snow.png', under = 'world/tiles/packed_snow.png', deco = 'world/decorations/ice/snowy_fir.png', decoScale = 2,
-                     enemy = { 'enemies/crabby_ice/crab1.png', 'enemies/crabby_ice/crab2.png' } },
+                     enemy = 'crabby_ice' },
     costa_helada = { bands = { { 0.16, 0.36, 0.60 }, { 0.62, 0.88, 0.92 } }, shade = { { 0.08, 0.20, 0.38 }, { 0.36, 0.60, 0.66 } },
                      top = 'world/tiles/ice.png', under = 'world/tiles/ice.png', deco = 'world/decorations/frozen_coast/anchor.png', decoScale = 4,
-                     enemy = { 'enemies/gummy_ice/gummy1.png', 'enemies/gummy_ice/gummy2.png' } },
+                     enemy = 'gummy_ice' },
     cuevas       = { bands = { { 0.30, 0.22, 0.52 }, { 0.40, 0.86, 0.80 } }, shade = { { 0.17, 0.12, 0.32 }, { 0.20, 0.56, 0.52 } },
                      top = 'world/tiles/stone.png', under = 'world/tiles/deep_stone.png', deco = 'world/decorations/cave/giant_mushroom.png', decoScale = 2,
-                     enemy = { 'enemies/gummy_cave/gummy1.png', 'enemies/gummy_cave/gummy2.png' } },
+                     enemy = 'gummy_cave' },
     final        = { bands = { { 0.62, 0.10, 0.08 }, { 1.00, 0.56, 0.12 } }, shade = { { 0.36, 0.05, 0.04 }, { 0.70, 0.32, 0.04 } },
                      top = 'world/tiles/ash.png', under = 'world/tiles/basalt.png', deco = 'world/decorations/volcano/charred_tree.png', decoScale = 4,
-                     enemy = { 'enemies/crabby_lava/crab1.png', 'enemies/crabby_lava/crab2.png' } },
+                     enemy = 'crabby_lava' },
 }
 -- (un nivel de ninguna isla: grises neutros y la pradera)
 Worlds.INTRO_DEFAULT = { bands = { { 0.40, 0.42, 0.48 }, { 0.82, 0.82, 0.86 } }, shade = { { 0.24, 0.25, 0.30 }, { 0.54, 0.54, 0.58 } },
                          top = 'world/tiles/grass.png', under = 'world/tiles/dirt.png', deco = 'world/decorations/meadow/boulder.png', decoScale = 4,
-                         enemy = { 'enemies/gummy/gummy1.png', 'enemies/gummy/gummy2.png' } }
+                         enemy = 'gummy' }
 
 -- El aspecto de la tarjeta para el nivel `id` (el de su isla, o el neutro)
 function Worlds.introOf(id)
