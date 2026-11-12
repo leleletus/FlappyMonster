@@ -146,6 +146,17 @@ there to its animation. Used by the player, online players, Flappy mode and both
   passed through, and it BLINKS (`invulnAlpha`; others see `PF_INVULN`).
 
 Player HP: 3 (`pa.hp/hpMax`), `pa:hurt(n)` = n dmg + invulnerability + red flash; 0 → die.
+
+**Damage sources (0.5.205, [design](../design/damage-sources.md)).** `hurt(n, src)`, `die(drown, force, src)` and
+`hazardHit(src)` take where the hit came from: `src = { what, part }` (`src/player/DamageSource.lua`): `what` = an entity
+type, a tile (`danger` = lava) or a cause (`spikes`, `drown`, `time`, `crush`, `explosion`, `fall`); `part` = `body`,
+`spike`, `projectile`, `claw`, `bite`, `dash`, `slam`, `pound`, `wave`, `ice`, `fire`, `shock`, `beam`… A hit that lands
+leaves it in `pa.lastHit` (a shield or invulnerability keeps the previous one; `respawn` clears it). The shared contact
+rule (`Interactions.run`) builds it from the entity and the touched hazard box's `part` (or `body`); tiles, causes and
+every direct call pass theirs (a `mechanics` check scans the code: no `:hurt(` / `:die(` / `:hazardHit(` without one).
+`src/player/DeathCause.lua` reads `lastHit` first ("Te derrotó: Proyectil de Pez globo", `death.part` +
+`part.<part>`), and only guesses from the surroundings when there is none. Online it travels in the own state (index 46,
+protocol 119).
 Respawn grants `SPAWN_INV` (2.5 s) of the same invulnerability (`invT`, see Player).
 `die()` returns false when it was blocked. `invT` is own-state index 27 and others see
 it via `PF_INVULN` (protocol v21: one system for respawn and hits).

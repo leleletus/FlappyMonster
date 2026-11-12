@@ -215,6 +215,8 @@ piece took damage, immortal online), and a rewound "stomp" may hit a boss that i
 
 ## Protocol version history
 
+v119: own state index 46 = the last hit's source (`DamageSource.encode`): the client's death message names what hit it.
+
 v118: the start's lengths change (intro card 5 s, countdown 0): server and client must agree on `StartCountdown`.
 
 v117: the level start WAITS for every player to load — client → server `level_loaded`, server → room `round_start { start }`; `game_init` sends `start` (nil while waiting) and `card` instead of `cd` — and the intro card before the countdown ([start](../gameplay/start-countdown.md)).

@@ -1,6 +1,6 @@
 # Damage sources (2026-11-13)
 
-**Status:** proposed, waiting for the user's approval.
+**Status:** built (0.5.205, approved by the user 2026-11-13); how it works now: [player](../gameplay/player.md) § Damage.
 
 ## Why
 

@@ -64,7 +64,7 @@ yet). Later: loading spinners on slow devices beyond item 6.
   have sizes per resolution; the user suspects they could collide like the score did. Check them in the HUD pass;
   only if they collide: show them for the first seconds of a match and then hide them, and/or make them available
   from the pause menu.
-- **Damage SOURCES (the user: "worth it"):** every hit records exactly what caused it, so the cause of death is certain
+- **Damage SOURCES (the user: "worth it") — BUILT 0.5.205, [damage-sources](damage-sources.md):** every hit records exactly what caused it, so the cause of death is certain
   instead of guessed from the surroundings: a spike tile vs a falling spike vs a Crabby's spike vs a pufferfish's spike
   vs a pufferfish's projectile, lava, a boss's attack by name, explosions, crushing, etc. The source travels with the
   damage (`hurt` / `die` / `hazardHit` get a source descriptor; hazard boxes and entities attach theirs) in single

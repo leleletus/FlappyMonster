@@ -99,6 +99,11 @@ Gummies `artDir`, `helmetDx`, `helmetDy`.
   boxes `getHazardBoxes()` with `effect = 'hurt' | 'freeze'`…). Own rules: `interact(pa)` (side-effect free: the
   client uses it to predict) and the notifications `onStomp`, `onBounced`, `onHurtPlayer`, `onLaunch`,
   `onHelmetBounce`.
+- Every hazard box names WHAT PART hurts: `part = 'spike' | 'projectile' | 'claw' | 'bite' | 'fire' | 'wave' | …`
+  (`src/player/DamageSource.lua` `PARTS`; a new part = a line there + `part.<part>` in the translations). A direct hit
+  (`pa:hurt(n, src)`, `Boss.strike(pa, hit, dir, src)`) passes `DamageSource.of(self, '<part>')`. The death message
+  names it ("Espina de Crabby"); `mechanics` `fuente_partes` / `fuente_entorno` fail on a box or a call without one.
+  The enemy's name for the message: `enemy.<type>` (or its family's) in the translations; a boss uses `boss.<type>`.
 - SHOVING without damage: a hazard box with `effect = 'launch', vx, vy[, jumps][, stompable]` launches the player like a
   trampoline (`pa:launch`; the online client predicts it); never again while the player is still flying from a launch
   (`ctrlLockT`); `stompable` = falling on it from above does not shove (the stomp rules apply). The entity hears it in
