@@ -12,6 +12,7 @@ and describe the real thing in the system's page.
 
 | What | Page |
 |---|---|
+| **UX round (2026-11-11):** items 1-6 built (0.5.200-201); next: touch controls editor, HUD layout pass, damage sources, death message placement | [ux-round-2026-11](ux-round-2026-11.md) |
 | **The tutorial level (2026-11-10):** every mechanic, signs with prompts, teach the verb not the trick (being built) | [tutorial-level](tutorial-level.md) |
 | **Game feel, structure and performance round (2026-11-10):** variable jump, coyote time, rumble, dust, camera lead, boss file split… (hit-stop waiting, off-screen arrow rejected) | [gamefeel-round-2026-11](gamefeel-round-2026-11.md) |
 | **Flappy levels need work (the user, 2026-11-10):** the first zone's attack, cages, power-ups, wheel and boss are built, but its levels are too short, weak and easy | [flappy-prequel](flappy-prequel.md) |
