@@ -32,11 +32,11 @@ every hand-off.
 tracebacks) in the harness or the server log.
 
 **No windows in the user's way, in parallel (2026-10-27, the user: the flashing windows made the computer unusable
-and the battery took 20+ min):** Linux with `xvfb-run` → every harness on a virtual display; macOS (and Linux without
+and the battery took 20+ min):** Linux with `gamescope` → every harness on a headless gamescope display drawing with the GPU (2026-11-12: under xvfb Mesa draws on the CPU with `llvmpipe`, all cores per harness, and the battery ran the CPU at 100 °C; `FM_TEST_XVFB=1` forces xvfb, with `LP_NUM_THREADS=2`); Linux with `xvfb-run` only → every harness on a virtual display; macOS (and Linux without
 xvfb) → windows open OFF-SCREEN and borderless (`src/core/TestWindow.lua`, called at the end of every harness
 `conf.lua`; it also wraps later `setMode` calls); drawing and screenshots are unchanged (verified on macOS). On macOS
 `SDL_MAC_BACKGROUND_APP=1` stops them stealing focus and showing in the Dock. `FM_TEST_SHOW=1` shows them. `all`
-runs groups in parallel (`FM_JOBS`, default half the cores): a harness and its variants in one sequential group (they
+runs groups in parallel (`FM_JOBS`, default a quarter of the cores): a harness and its variants in one sequential group (they
 share a save folder), every online harness (+ `update_boot`, same save folder) in one sequential group (one local
 server and port), and the timing-sensitive ones (`perf`, `gloomy_rules`) alone at the end. The online wait for the
 port uses `ss` on Linux and `lsof` on macOS (before, macOS always waited the full 10 s). Each `════` line prints how

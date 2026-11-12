@@ -23,20 +23,39 @@ cd "$(dirname "$0")/../.." || exit 1
 # (el juego no se pausa al perder el foco de la ventana: game.lua love.focus)
 export FM_TEST=1
 # SIN VENTANAS a la vista (FM_TEST_SHOW=1 para verlas), igual en macOS y Linux:
-#  - Linux con xvfb-run: cada arnés en una pantalla VIRTUAL (invisible; las capturas salen exactas); también en una
-#    sesión Wayland (se le quita WAYLAND_DISPLAY y se fuerza SDL a X11: si no, la ventana salía en el escritorio).
-#  - macOS (y Linux sin xvfb): ventanas FUERA DE LA PANTALLA (src/core/TestWindow.lua: dibujan y capturan igual);
+#  - Linux con gamescope: cada arnés en una pantalla SIN SALIDA de gamescope (`--backend headless`) dibujando con la
+#    TARJETA GRÁFICA (2026-11-12, el usuario: con xvfb la batería ponía la CPU a 100 °C — xvfb no tiene GPU y Mesa dibuja
+#    con llvmpipe en la CPU, con todos los núcleos por arnés —). gamescope le da al juego su propio DISPLAY y le quita
+#    WAYLAND_DISPLAY: nada sale en el escritorio. FM_TEST_XVFB=1 = xvfb como antes.
+#  - Linux con xvfb-run (sin gamescope): pantalla VIRTUAL (invisible; las capturas salen exactas), dibujo en la CPU con
+#    LP_NUM_THREADS hilos por arnés (2: con 8 arneses a la vez, 16 hilos; antes cada uno usaba todos los núcleos y se
+#    pisaban); también en una sesión Wayland (se le quita WAYLAND_DISPLAY y se fuerza SDL a X11: si no, la ventana salía
+#    en el escritorio).
+#  - macOS (y Linux sin ninguno): ventanas FUERA DE LA PANTALLA (src/core/TestWindow.lua: dibujan y capturan igual);
 #    en macOS además no roban el foco ni salen en el Dock (SDL_MAC_BACKGROUND_APP).
 XVFB=0
+GPU=0
+export LP_NUM_THREADS=${LP_NUM_THREADS:-2}
 if [ -z "${FM_TEST_SHOW:-}" ]; then
     if [ "$(uname)" = Darwin ]; then
         export FM_TEST_HIDE=1 SDL_MAC_BACKGROUND_APP=1
+    elif [ -z "${FM_TEST_XVFB:-}" ] && command -v gamescope >/dev/null; then
+        GPU=1
     elif command -v xvfb-run >/dev/null; then
         XVFB=1
     else
         export FM_TEST_HIDE=1
     fi
 fi
+# (la pantalla del arnés: gamescope sin salida con la GPU, o una pantalla virtual de xvfb; -a busca una libre y el número
+# de partida al azar evita que dos arneses en paralelo choquen)
+screen_runner() {
+    if [ $GPU = 1 ]; then
+        runner=(timeout "${TEST_TIMEOUT:-900}" gamescope --backend headless -W 1920 -H 1080 -- env -u WAYLAND_DISPLAY SDL_VIDEODRIVER=x11 love)
+    else
+        runner=(timeout "${TEST_TIMEOUT:-900}" env -u WAYLAND_DISPLAY SDL_VIDEODRIVER=x11 xvfb-run -a -n $((100 + RANDOM % 800)) -s "-screen 0 1920x1080x24" love)
+    fi
+}
 # ¿Escucha el servidor local? (ss en Linux; lsof en macOS, donde no hay ss y se esperaban 10 s enteros)
 port_up() {
     if command -v ss >/dev/null; then ss -lun 2>/dev/null | grep -q ':22122 '
@@ -94,23 +113,23 @@ run_one() {
     # (un error de LÖVE deja la pantalla de error abierta: límite de tiempo)
     local runner=(timeout "${TEST_TIMEOUT:-900}" love)
     # (pantalla virtual: -a busca una libre; el número de partida al azar evita que dos arneses en paralelo choquen)
-    if [ $XVFB = 1 ] || { [ "$name" = level_solve ] && command -v xvfb-run >/dev/null; }; then
+    if [ $GPU = 1 ] || [ $XVFB = 1 ] || { [ "$name" = level_solve ] && command -v xvfb-run >/dev/null; }; then
         # (en una sesión WAYLAND el SDL de LÖVE prefiere Wayland y abría la ventana en el escritorio de verdad aunque
         # corriera dentro de xvfb — el usuario, 2026-10-28 —: sin WAYLAND_DISPLAY y con el vídeo forzado a X11, la
-        # ventana va a la pantalla virtual)
-        runner=(timeout "${TEST_TIMEOUT:-900}" env -u WAYLAND_DISPLAY SDL_VIDEODRIVER=x11 xvfb-run -a -n $((100 + RANDOM % 800)) -s "-screen 0 1920x1080x24" love)
+        # ventana va a la pantalla del arnés)
+        screen_runner
     fi
     env "${envs[@]}" "${runner[@]}" "tools/tests/$name" "${args[@]}" 2>&1 \
-        | grep -v "^\[warning\] Tried to activate trigger" | tee "$out"
+        | grep -v "^\[warning\] Tried to activate trigger\|^\[gamescope\]\|^No CAP_SYS_NICE\|^Performance will be affected\|^(EE) failed to read Wayland events\|^The XKEYBOARD keymap compiler\|^Errors from xkbcomp\|^> " | tee "$out"
     rc=${PIPESTATUS[0]}
-    # (16 arneses a la vez: a veces la pantalla virtual de xvfb no está lista y SDL no arranca — "x11 not available" —;
-    # eso no es un fallo del arnés: se repite UNA vez, en otra pantalla virtual)
+    # (muchos arneses a la vez: a veces la pantalla del arnés no está lista y SDL no arranca — "x11 not available" —;
+    # eso no es un fallo del arnés: se repite UNA vez, en otra pantalla)
     if grep -q "Could not initialize SDL video subsystem" "$out"; then
-        echo "   (la pantalla virtual no arrancó: se repite una vez)"
-        [ ${#runner[@]} -gt 3 ] && runner=(timeout "${TEST_TIMEOUT:-900}" env -u WAYLAND_DISPLAY SDL_VIDEODRIVER=x11 xvfb-run -a -n $((100 + RANDOM % 800)) -s "-screen 0 1920x1080x24" love)
+        echo "   (la pantalla del arnés no arrancó: se repite una vez)"
+        [ ${#runner[@]} -gt 3 ] && screen_runner
         sleep 1
         env "${envs[@]}" "${runner[@]}" "tools/tests/$name" "${args[@]}" 2>&1 \
-            | grep -v "^\[warning\] Tried to activate trigger" | tee "$out"
+            | grep -v "^\[warning\] Tried to activate trigger\|^\[gamescope\]\|^No CAP_SYS_NICE\|^Performance will be affected\|^(EE) failed to read Wayland events\|^The XKEYBOARD keymap compiler\|^Errors from xkbcomp\|^> " | tee "$out"
         rc=${PIPESTATUS[0]}
     fi
     grep -q "^Error: \|stack traceback" "$out" && { echo "!! error de Lua en el arnés"; rc=1; }
@@ -132,7 +151,8 @@ run_one() {
 }
 
 if [ "${1:-}" = all ]; then
-    # Batería. EN PARALELO (FM_JOBS a la vez; por defecto la mitad de los núcleos): cada arnés con sus variantes en un
+    # Batería. EN PARALELO (FM_JOBS a la vez; por defecto la cuarta parte de los núcleos — antes la mitad: con el dibujo
+    # en la CPU la batería quemaba la máquina, el usuario 2026-11-12 —): cada arnés con sus variantes en un
     # grupo seguido (comparten carpeta de guardado); los ONLINE (y los que comparten su carpeta) en un solo grupo seguido
     # (un solo servidor local, un solo puerto); los que miden TIEMPOS (perf, el coste de los lúgubres) al final, solos.
     # FM_JOBS=1 = como antes, uno detrás de otro.
@@ -167,7 +187,7 @@ if [ "${1:-}" = all ]; then
           "online_boss LEVEL=tools/tests/online_boss/gummy_trozos.json NOSHOTS=1 SECS=100 HIT=1 WANTPARTS=3 FM_TEST_LIVES=99 FM_TEST_BOSSDMG=0.5"
           "online_boss LEVEL=assets/levels/mashup_cangrejos.json NOSHOTS=1 SECS=115 MASHUP=full FM_TEST_LIVES=99 FM_TEST_BOSSDMG=0.5")
     ALONE=("gloomy_rules" "perf N=240 PROFILE=0")
-    JOBS=${FM_JOBS:-$(( $( (sysctl -n hw.ncpu 2>/dev/null || nproc 2>/dev/null || echo 2) ) / 2 ))}
+    JOBS=${FM_JOBS:-$(( $( (sysctl -n hw.ncpu 2>/dev/null || nproc 2>/dev/null || echo 2) ) / 4 ))}
     [ "$JOBS" -ge 1 ] 2>/dev/null || JOBS=1
     LOGS=$(mktemp -d "${TMPDIR:-/tmp}/fm_tests.XXXXXX")
     T0=$(date +%s)
