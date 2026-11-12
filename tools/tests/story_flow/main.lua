@@ -62,6 +62,26 @@ function love.load(a)
              tostring(wrote), tostring(fromBak and fromBak.lives), tostring(none), tostring(kept)))
         Save.delete(2); pcall(love.filesystem.remove, 'story2.sav.damaged')
     end
+    -- PLACAS de la tarjeta de presentación (docs/design/level-intro-card.md): el número de cada nivel y el aspecto de
+    -- cada isla (Worlds.plate / Worlds.introOf)
+    do
+        local function eq(p, w, n, k) return p ~= nil and p.w == w and p.n == n and p.kind == k end
+        local ok = Worlds.plate and eq(Worlds.plate('valle_soleado'), 1, 1) and eq(Worlds.plate('bosque_interruptores'), 1, 3)
+            and eq(Worlds.plate('reino_gummy'), 1, nil, 'boss') and eq(Worlds.plate('isla_flotante'), 1, nil, 'bonus')
+            and eq(Worlds.plate('guarida_cangrejo_rey'), 2, nil, 'secret') and Worlds.plate('jardin_gummies') == nil
+            and Worlds.plate('no_existe') == nil
+        local bad = {}
+        for _, W in ipairs(Worlds.LIST) do
+            local I = Worlds.INTRO and Worlds.INTRO[W.id]
+            if not I then bad[#bad + 1] = W.id .. ' (sin datos)' else
+                for _, path in ipairs({ I.top, I.under, I.deco, I.enemy[1], I.enemy[2] }) do
+                    if not pcall(love.graphics.newImage, 'assets/images/' .. path) then bad[#bad + 1] = W.id .. ': ' .. tostring(path) end
+                end
+            end
+        end
+        check('placas', ok and #bad == 0, ('números bien=%s; islas sin aspecto o con imagen que no carga: %s'):format(tostring(ok),
+            #bad == 0 and 'ninguna' or table.concat(bad, ', ')))
+    end
     gStateMachine:change('story_slots')
 end
 
