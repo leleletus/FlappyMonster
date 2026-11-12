@@ -326,6 +326,7 @@ function PlayerAdventure:die(drownDeath, force)
         return false
     end
     self.dying=true; self.vx=0; self.vy=0
+    self.deathFlags = { drown = drownDeath == true, force = force == true }   -- (src/player/DeathCause.lua: de qué murió)
     self.gpPhase=nil; self.stunT=0; self.squashT=0; self.iceT=0; self.gulped=false; self.gulpMash=0; self.frostT=0
     self.deathPhase='freeze'; self.deathTimer=0; self.deathY=self.y
     if not drownDeath then

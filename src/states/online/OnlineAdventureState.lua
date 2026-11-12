@@ -776,6 +776,18 @@ function OnlineAdventureState:_renderBossHUD()
             self.cardT0 = love.timer.getTime()
         end
         if self.card then require('src/ui/LevelCard').draw(self.card, love.timer.getTime() - self.cardT0) end
+        -- (la causa de la muerte del jugador de este cliente, al reaparecer: src/player/DeathCause.lua)
+        local lp = self.localPa
+        if lp and self.localPaInit then
+            if lp.dying and not self._wasDying then
+                self.deathCause = require('src/player/DeathCause').of(lp, self.level, self.enemyRenderers, lp.deathFlags)
+                self.deathT0 = nil
+            elseif not lp.dying and self._wasDying then
+                self.deathT0 = love.timer.getTime()
+            end
+            self._wasDying = lp.dying
+            if self.deathT0 then require('src/ui/DeathBanner').draw(self.deathCause, love.timer.getTime() - self.deathT0) end
+        end
     end
     if not self.showGameOver then BossHud.drawRun(self.level, self.enemyRenderers) end
     if not self.showGameOver then BossHud.drawUndertow(self.level) end

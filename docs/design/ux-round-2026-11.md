@@ -34,3 +34,7 @@ yet). Later: loading spinners on slow devices beyond item 6.
 3. (0.5.200) `src/ui/CollectHud.lua`, top centre (the corners are taken): stars `n/total` and, on Flappy stages, freed
    cages (already freed in a finished run count). `AdventureState:collectedCounts`. Not in bonus games. Harness
    `story_flow` `recogido_hud`.
+4. (0.5.200) `src/player/DeathCause.lua` decides at the moment of death (drowned, out of time, fell, lava, spikes, the
+   nearest enemy by its `enemy.<family>` name or a boss's name, otherwise "too many hits"; `PlayerAdventure.deathFlags`
+   keeps die()'s flags); `src/ui/DeathBanner.lua` shows a skull and the text for 1.8 s after respawning. Single player
+   and the online client (its own player). Harness `mechanics` `causa_muerte`.

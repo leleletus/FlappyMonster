@@ -604,6 +604,7 @@ function AdventureState:update(dt)
             -- Cámara automática: se reaparece en el centro de lo que se ve
             Sim.respawnPoint(self.level, self.player)
             self.player:respawn()
+            self.deathShowT   = 0                                -- (la causa de la muerte, unos segundos)
             self.camFrozen    = false
             self.respawning   = false
             self.respawnTimer = 0
@@ -633,6 +634,7 @@ function AdventureState:update(dt)
 
     -- ── Cuenta atrás del principio: el mundo congelado y sin control ──────────
     if self.card then self.cardT = self.cardT + dt end
+    if self.deathShowT then self.deathShowT = self.deathShowT + dt end
     if self.startCd then
         StartCountdown.beeps(self.startPrev, self.startCd - dt)
         self.startPrev = self.startCd - dt
@@ -717,7 +719,11 @@ function AdventureState:update(dt)
     end
     self.prevHp = self.player.hp
 
-    if self.player.dying and not self._hsDying and not self.demo then HitStop.trigger(HitStop.DEATH) end   -- (al morir)
+    if self.player.dying and not self._hsDying and not self.demo then
+        HitStop.trigger(HitStop.DEATH)                                        -- (al morir)
+        -- (de qué: se dice al reaparecer — src/player/DeathCause.lua, src/ui/DeathBanner.lua —)
+        self.deathCause = require('src/player/DeathCause').of(self.player, self.level, self.enemies, self.player.deathFlags)
+    end
     self._hsDying = self.player.dying
     -- ── Detectar muerte del jugador ───────────────────────────────────────────
     if self.player.dying and not self.player.alive then
@@ -890,6 +896,7 @@ function AdventureState:renderBossHud()
     BossHud.drawScrollCountdown(self.level.autoScroll)
     if self.startCd or self.startGoT then BossHud.drawStartCountdown(self.startCd or -self.startGoT) end
     if self.card then require('src/ui/LevelCard').draw(self.card, self.cardT) end
+    if self.deathShowT then require('src/ui/DeathBanner').draw(self.deathCause, self.deathShowT) end
     BossHud.drawRun(self.level, self.enemies)                     -- (la persecución del Espejo: ¡CORRE!)
     BossHud.drawUndertow(self.level)                              -- (la resaca: ¡RESACA! y hacia dónde)
 end

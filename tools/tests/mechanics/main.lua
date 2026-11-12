@@ -158,7 +158,7 @@ local function room(W, H, put, ents)
         for c = 1, W do row[c] = (r == H or c == 1 or c == W) and 1 or 0 end
         tiles[r] = row
     end
-    for _, p in ipairs(put or {}) do tiles[p[2]][p[1]] = require('src/world/tiles/TileCodec').encode(_G['TILE_' .. p[3]:upper()]) end
+    for _, p in ipairs(put or {}) do tiles[p[2]][p[1]] = (type(p[3]) == 'number') and p[3] or require('src/world/tiles/TileCodec').encode(_G['TILE_' .. p[3]:upper()]) end   -- (un número: el valor crudo)
     local level = Level.fromData({ name = 'test', width = W, height = H, playerStart = { 2, H - 1 },
                                    tiles = tiles, entities = ents or {} })
     local es = {}
@@ -4108,6 +4108,36 @@ function cases.saltarin_ruta()
         ('jugador fuera de su ruta: saltos tras él %d, paseando %d · dentro: tras él %d'):format(c1, r1, c2))
 end
 
+-- (pinchos en las cuatro subceldas, hacia arriba: bit «presente» de cada una — TileCodec —)
+local SPIKES_ALL = 0
+for _, sh in ipairs({ 5, 8, 11, 14 }) do SPIKES_ALL = SPIKES_ALL + 4 * 2 ^ sh end
+-- LA CAUSA DE LA MUERTE (0.5.200): pinchos, lava, caerse, ahogarse, un enemigo (con su nombre)
+function cases.causa_muerte()
+    local DC = require 'src/player/DeathCause'
+    local res, ok = {}, true
+    local function at(put, ents, place, flags)
+        local level0 = room(16, 8, {}, {})
+        local pa = playerAt(level0, 8, 7)                    -- (de pie en una sala limpia; luego, la sala con el peligro)
+        local level, es = room(16, 8, put or {}, ents or {})
+        if place then place(pa, level) end
+        local c = DC.of(pa, level, es, flags)
+        return c
+    end
+    local cs = {
+        { 'pinchos', at({ { 8, 7, SPIKES_ALL } }), 'spikes' },
+        { 'lava', at({ { 8, 8, 'danger' } }), 'lava' },
+        { 'caida', at(nil, nil, function(pa, level) pa.y = level.heightPx + 10 end), 'fall' },
+        { 'ahogado', at(nil, nil, nil, { drown = true }), 'drown' },
+        { 'enemigo', at(nil, { { type = 'gummy', col = 9, row = 7 } }), 'enemy' },
+    }
+    for _, c in ipairs(cs) do
+        local got = c[2] and c[2].kind
+        res[#res + 1] = c[1] .. '=' .. tostring(got) .. ((c[2] and c[2].name) and (' (' .. c[2].name .. ')') or '')
+        if got ~= c[3] then ok = false end
+    end
+    check('causa_muerte', ok and cs[5][2].name ~= nil, table.concat(res, ' · '))
+end
+
 function cases.planta_pisar()
     local function stompIn(st, gp)
         local lv, e = room(20, 9, {}, { { type = 'carnivoreplant', col = 10, row = 8 } })
@@ -4459,7 +4489,7 @@ function love.load()
                          'puffer_through', 'puffer_concave', 'puffer_cycle', 'puffer_dry', 'flyer_anim', 'vuelo_libre', 'boxed_in',
                          'bloque_roto', 'activador', 'tramp_avanza', 'tramp_pinchos', 'ping_icono',
                          'bomba_activa', 'bomba_pisada', 'bomba_radios', 'bomba_mundo', 'bomba_objeto',
-                         'hielo_solido', 'hielo_desgaste', 'hielo_nivel', 'hielo_vuelve', 'mirar', 'salto_variable', 'esquina', 'hitstop', 'poses', 'caida_fuerte', 'tramp_atasco', 'empujables', 'bola_esquina', 'saltarin_ruta', 'polvo_correr', 'tutorial', 'hielo_gp', 'hielo_bomba', 'encerrado', 'trepador_canto', 'hielo_resbala', 'filo_propio', 'saltarin', 'saltarin_cueva', 'persecucion', 'persecucion_cuerpo', 'inofensivos', 'tapa_base', 'manzana',
+                         'hielo_solido', 'hielo_desgaste', 'hielo_nivel', 'hielo_vuelve', 'mirar', 'salto_variable', 'esquina', 'hitstop', 'poses', 'caida_fuerte', 'tramp_atasco', 'empujables', 'bola_esquina', 'saltarin_ruta', 'causa_muerte', 'polvo_correr', 'tutorial', 'hielo_gp', 'hielo_bomba', 'encerrado', 'trepador_canto', 'hielo_resbala', 'filo_propio', 'saltarin', 'saltarin_cueva', 'persecucion', 'persecucion_cuerpo', 'inofensivos', 'tapa_base', 'manzana',
                          'cryo_jugador', 'cryo_enemigo', 'cryo_activador', 'cryo_corte', 'lava', 'pocos_fps', 'ahogo_ganado', 'techo_pinchos',
                          'caja_empuje', 'caja_rota', 'caja_borde', 'cargar', 'bomba_reaparece', 'islas', 'islas_arte', 'viento', 'cuerpo_mueve', 'cajas_golpes', 'balanza', 'soplon', 'semilla', 'ventisca', 'geiser', 'balanza_tope', 'caja_choques', 'cargar_gp', 'gp_radio', 'dejar_encima', 'jump_buffer', 'jefe_puntos', 'persecucion_toque', 'secreto_reina', 'secreto_tifon', 'paredes_falsas', 'aire_caja', 'geiser_peso', 'bomba_cajas', 'cajas_fila', 'balanza_impacto', 'balanza_salto', 'balanza_techo', 'escarabajo', 'escarabajo_lanzado', 'escarabajo_ruta', 'escarabajo_manos', 'escarabajo_arrolla',
                          'topo', 'topo_culetazo', 'topo_suelo', 'topo_borde', 'pirana', 'pirana_pisar', 'pirana_rebota', 'pirana_nada', 'planta', 'planta_pisar', 'planta_traga', 'planta_colgada', 'planta_come', 'planta_bomba' }) do
