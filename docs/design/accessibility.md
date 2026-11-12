@@ -13,7 +13,7 @@ A new settings tab, **AYUDAS / ASSIST** (Settings: AUDIO · CONTROLS · GAME · 
 | SCREEN SHAKE (on) | `shake` | Off: `Particles.shakeOffset` returns 0 — no screen shake from hits, explosions or bosses (one place for all ~96 shake triggers) |
 | FLASHES (on) | `flashes` | Off: nothing blinks fast — the bosses' 12 Hz red blink is steady red, their invulnerability blink and the player's are a steady half-transparency — and full-screen flashes (the Big Snowball's hit) are a third as strong. `src/fx/Flash.lua` (`on`, `blink(hz, t)`, `alpha(a)`) |
 | SIGN TEXT (normal) | `signText` = `'normal'` / `'large'` | Large: the help / tutorial signs (`src/ui/HintBubble.lua`, `HintBubble.font()`) use the medium font |
-| COLOUR-BLIND SYMBOLS (off) | `cbSymbols` | On: the ON / OFF blocks and switches — told apart only by colour (blue / red) — get a ring (ON) or an X (OFF) drawn on top. Generic: a tile type with `cbSymbol = 'on' | 'off'` gets it (`TileTypes.drawTile`); art from `tools/art/ui/make_cb_symbols.py` (`assets/images/world/tiles/cb_on.png`, `cb_off.png`) |
+| COLOUR-BLIND SYMBOLS (off) | `cbSymbols` | On: the ON / OFF blocks — told apart only by colour (blue / red) — get a ring (ON) or an X (OFF) drawn on top (not the switches: they already say ON / OFF — the user, 0.5.209). Generic: a tile type with `cbSymbol = 'on' | 'off'` gets it (`TileTypes.drawTile`); art from `tools/art/ui/make_cb_symbols.py` (`assets/images/world/tiles/cb_on.png`, `cb_off.png`) |
 
 ## How to extend
 
@@ -24,7 +24,7 @@ A new settings tab, **AYUDAS / ASSIST** (Settings: AUDIO · CONTROLS · GAME · 
 
 `mechanics` `accesibilidad` (shake on / off, blink vs steady, flash alpha, the player's blink, the sign font, every ON/OFF
 tile has its symbol and the images load); `menu_flow` `cfg_datos` / `cfg_pestanas` (five tabs, every option with its texts);
-`hud_layout` `simbolos` (capture of the symbols on the six ON/OFF tiles).
+`hud_layout` `simbolos` (capture: the symbols on the four ON/OFF blocks, none on the two switches).
 
 ## Left for later
 

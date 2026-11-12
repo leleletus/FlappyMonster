@@ -2369,7 +2369,7 @@ function cases.accesibilidad()
     local TT = require 'src/world/tiles/TileTypes'
     local cb = TT.byName.switchblock_on.cbSymbol == 'on' and TT.byName.switchblock_on_x.cbSymbol == 'on'
         and TT.byName.switchblock_off.cbSymbol == 'off' and TT.byName.switchblock_off_x.cbSymbol == 'off'
-        and TT.byName.switch_on.cbSymbol == 'on' and TT.byName.switch_off.cbSymbol == 'off'
+        and TT.byName.switch_on.cbSymbol == nil and TT.byName.switch_off.cbSymbol == nil   -- (los activadores ya dicen ON / OFF: el usuario)
         and pcall(love.graphics.newImage, 'assets/images/world/tiles/cb_on.png') and pcall(love.graphics.newImage, 'assets/images/world/tiles/cb_off.png')
     Settings.shake, Settings.flashes, Settings.signText, Settings.cbSymbols = keep[1], keep[2], keep[3], keep[4]
     check('accesibilidad', s1 and not s2 and f1 and f2 and signs and cb,
