@@ -769,13 +769,6 @@ function OnlineAdventureState:_renderBossHUD()
     if not self.showGameOver then
         BossHud.drawScrollCountdown(self.level.autoScroll)
         BossHud.drawStartCountdown(self:_startRemaining(), 0.6)      -- (bajo el cartel del modo)
-        -- (la TARJETA del nivel al empezar la partida: src/ui/LevelCard.lua; sin tiempo objetivo — el modo lleva el suyo —)
-        if self.level and not self.card and self.localPaInit then
-            local path = self.currentRoom and self.currentRoom.level
-            self.card = require('src/ui/LevelCard').new(self.level, path and path:match('([^/]+)%.json$'), { par = false }) or false
-            self.cardT0 = love.timer.getTime()
-        end
-        if self.card then require('src/ui/LevelCard').draw(self.card, love.timer.getTime() - self.cardT0) end
         -- (la causa de la muerte del jugador de este cliente, al reaparecer: src/player/DeathCause.lua)
         local lp = self.localPa
         if lp and self.localPaInit then

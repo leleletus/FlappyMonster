@@ -188,9 +188,58 @@ function love.update(dt)
         shot('level_countdown')
         local s1, s2 = st:collectedCounts()
         check('recogido_hud', s2 > 0 and s1 == 0, ('estrellas en el HUD: %d/%d'):format(s1, s2))
-        local c = st.card
-        check('tarjeta', c ~= nil and c.name ~= nil and c.island ~= nil and c.par ~= nil,
-            ('tarjeta del nivel: «%s» · isla %s · tiempo objetivo %s'):format(tostring(c and c.name), tostring(c and c.island), tostring(c and c.par)))
+        -- TARJETA DE PRESENTACIÓN (docs/design/level-intro-card.md): antes de la cuenta atrás, pantalla negra con el
+        -- nombre, la isla y la placa; mientras sale, el nivel NO se dibuja
+        do
+            local IC = require 'src/ui/IntroCard'
+            local c = st.card
+            local drawn = 0
+            local real = st._renderScene
+            st._renderScene = function(...) drawn = drawn + 1; return real(...) end
+            st:render()
+            st._renderScene = real
+            local ph = st.startPhase and st:startPhase()
+            -- un nivel de Juego Libre de una isla, sin número: tarjeta sin placa
+            local fp = IC.new and IC.new({ name = 'x' }, 'jardin_gummies')
+            -- el nombre MÁS LARGO del juego, a 960 / 1280 / 1600: nada se pisa y todo dentro de la pantalla
+            local longest, bad = '', {}
+            for _, f in ipairs(love.filesystem.getDirectoryItems('assets/levels')) do
+                local raw = f:match('%.json$') and love.filesystem.read('assets/levels/' .. f)
+                local nm = raw and raw:match('"name"%s*:%s*"([^"]*)"')
+                if nm and #nm > #longest then longest = nm end
+            end
+            local W0 = WINDOW_W
+            for _, w in ipairs({ 960, 1280, 1600 }) do
+                WINDOW_W = w
+                local R = IC.rects and IC.rects(IC.new({ name = longest }, 'bosque_interruptores')) or {}
+                local list = { R.name, R.island, R.plate, R.strip }
+                if #list < 4 then bad[#bad + 1] = w .. ': faltan zonas' end
+                for i = 1, #list do
+                    local r = list[i]
+                    if r.x < 0 or r.y < 0 or r.x + r.w > w or r.y + r.h > WINDOW_H then bad[#bad + 1] = w .. ': zona ' .. i .. ' fuera' end
+                    for j = i + 1, #list do
+                        local q = list[j]
+                        if r.x < q.x + q.w and q.x < r.x + r.w and r.y < q.y + q.h and q.y < r.y + r.h then
+                            bad[#bad + 1] = ('%d: %d pisa %d'):format(w, i, j)
+                        end
+                    end
+                end
+                -- capturas de tres islas a esta anchura
+                for _, lv in ipairs({ 'bosque_interruptores', 'lago_helado', 'nido_del_escorpion' }) do
+                    local cv = love.graphics.newCanvas(w, WINDOW_H)
+                    love.graphics.setCanvas(cv); love.graphics.clear(0, 0, 0, 1)
+                    IC.draw(IC.new({ name = lv == 'lago_helado' and 'El Lago Helado' or lv == 'nido_del_escorpion' and 'Nido del Escorpión' or longest }, lv), 3, { waiting = 2 })
+                    love.graphics.setCanvas()
+                    cv:newImageData():encode('png', ('story_intro_%s_%d.png'):format(lv, w))
+                end
+            end
+            WINDOW_W = W0
+            check('tarjeta', c ~= nil and c.name ~= nil and c.island ~= nil and c.plate and c.plate.w == 1 and c.plate.n == 1
+                and ph == 'card' and drawn == 0 and fp ~= nil and fp.plate == nil and #bad == 0,
+                ('«%s» · isla %s · placa %s; fase %s; nivel dibujado %d veces; Juego Libre sin placa=%s; nombre más largo «%s»: %s'):format(
+                 tostring(c and c.name), tostring(c and c.island), c and c.plate and ((c.plate.w or '?') .. '-' .. (c.plate.n or c.plate.kind or '?')) or 'nil',
+                 tostring(ph), drawn, tostring(fp ~= nil and fp.plate == nil), longest, #bad == 0 and 'nada se pisa' or table.concat(bad, ', ')))
+        end
         go('in1b')
     elseif step == 'in1b' and t - T > 1.0 then
         local p = st.player
@@ -224,7 +273,7 @@ function love.update(dt)
                 local SC = require 'src/world/systems/StartCountdown'
                 local cd0, x0, y0 = nst.startCd, nst.player.x, nst.player.y
                 local stays, frames = true, 0
-                Input = setmetatable({ pressed = function(x) return x == 'pause' end, down = function() return false end },
+                Input = setmetatable({ pressed = function(x) return true end, down = function() return false end },   -- (cualquier botón: ni salta ni pausa)
                                      { __index = realInput })
                 while nst.startCd and frames < 600 do
                     nst:pauseGame(); nst:update(1 / 60); frames = frames + 1

@@ -1,7 +1,7 @@
 # Level intro card (2026-11-12)
 
 **Status:** design approved in conversation, not built. Replaces the lower-third card of the UX round
-([ux-round-2026-11](ux-round-2026-11.md) item 2, `src/ui/LevelCard.lua`).
+([ux-round-2026-11](ux-round-2026-11.md) item 2, `LevelCard` (src/ui, removed in 0.5.202)).
 
 ## Why
 

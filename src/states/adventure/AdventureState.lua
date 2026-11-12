@@ -218,9 +218,8 @@ function AdventureState:enter(args)
     -- en los niveles Flappy; reintentar o volver a empezar entra otra vez aquí y la vuelve a mostrar)
     self.introCard = not self.demo and not args.fromEditor and not self.level.flappy
     self.startCd   = (not self.demo) and StartCountdown.total(self.introCard) or nil
-    -- (la TARJETA del nivel: nombre, isla, tiempo objetivo — src/ui/LevelCard.lua —; no en la demo ni en el editor)
-    self.card = (not self.demo and not args.fromEditor) and require('src/ui/LevelCard').new(self.level,
-                    self.levelPath:match('([^/]+)%.json$'), { par = not self.bonus }) or nil
+    -- (la TARJETA DE PRESENTACIÓN: src/ui/IntroCard.lua; se dibuja EN LUGAR del nivel mientras dura su fase)
+    self.card = self.introCard and require('src/ui/IntroCard').new(self.level, self.levelPath:match('([^/]+)%.json$')) or nil
     self.cardT = 0
     self.startPrev = nil            -- (lo que faltaba el frame anterior: para el sonido de cada número)
     self.startGoT  = nil            -- (s desde el ¡YA!: el cartel)
@@ -912,7 +911,6 @@ function AdventureState:renderBossHud()
     end
     BossHud.drawScrollCountdown(self.level.autoScroll)
     if self.startCd or self.startGoT then BossHud.drawStartCountdown(self.startCd or -self.startGoT) end
-    if self.card then require('src/ui/LevelCard').draw(self.card, self.cardT) end
     if self.deathShowT then require('src/ui/DeathBanner').draw(self.deathCause, self.deathShowT) end
     BossHud.drawRun(self.level, self.enemies)                     -- (la persecución del Espejo: ¡CORRE!)
     BossHud.drawUndertow(self.level)                              -- (la resaca: ¡RESACA! y hacia dónde)
@@ -946,6 +944,10 @@ end
 
 -- ── Render ────────────────────────────────────────────────────────────────────
 function AdventureState:render()
+    -- (la tarjeta de presentación: pantalla negra en lugar del nivel; src/ui/IntroCard.lua)
+    if self.card and self:startPhase() == 'card' then
+        return require('src/ui/IntroCard').draw(self.card, self.cardT)
+    end
     -- Temblor de pantalla (impactos, explosiones): solo al dibujar
     local shx, shy = Particles.shakeOffset()
     local realCamX, realCamY = self.camX, self.camY
@@ -1146,7 +1148,7 @@ end
 
 -- En píxeles de pantalla, tras lovesize (game.lua): controles táctiles
 function AdventureState:drawScreen()
-    if TouchControls.visible() and not self.dead then TouchControls.draw(nil, nil, BossHud.hudAlpha()) end
+    if TouchControls.visible() and not self.dead and self:startPhase() ~= 'card' then TouchControls.draw(nil, nil, BossHud.hudAlpha()) end
 end
 
 -- Táctil Switch: tap en botón de game over

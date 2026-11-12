@@ -31,7 +31,7 @@ enemy.bomb,Bomba,Bomb,
 enemy.carnivoreplant,Planta carnívora,Carnivorous Plant,
 enemy.gust,Soplón,Gust,
 loading.text,Cargando,Loading,La pantalla de carga (los puntitos se añaden solos)
-levelcard.par,Tiempo objetivo {t},Target time {t},La tarjeta del nivel al empezar (0.5.200)
+intro.waiting,Esperando jugadores,Waiting for players,La tarjeta de presentación online mientras el servidor espera a los que cargan (los puntitos se añaden solos)
 pause.retry_title,¿REINTENTAR?,RETRY?,La pausa: reintentar cuesta una vida (0.5.200)
 pause.retry_yes,"Sí, reintentar","Yes, retry",
 pause.retry_note,"Reintentar cuesta una vida: te quedarán {n}","Retrying costs a life: you will have {n} left",

@@ -13,7 +13,7 @@ waiting screen.
 card phase (`CARD_TIME`), then the countdown as today (`TIME`, `GO_TIME`). Single player drives it with its own
 timer; the server freezes for `CARD_TIME + TIME` after every player has loaded; the online client derives the phase
 from the server clock. The number and the per-island look are DATA in `src/story/Worlds.lua`. The card drawing is a
-new `src/ui/IntroCard.lua` that replaces `src/ui/LevelCard.lua`; its art comes from one committed generator.
+new `src/ui/IntroCard.lua` that replaces `LevelCard` (src/ui, removed in 0.5.202); its art comes from one committed generator.
 
 **Tech Stack:** LÖVE 11 / Lua; sock (ENet) messages; plain-Python PNG generator (no PIL); harnesses `story_flow`,
 `mechanics`, `online_smoke`, `level_shots` through `tools/tests/run.sh`.
@@ -138,7 +138,7 @@ new `src/ui/IntroCard.lua` that replaces `src/ui/LevelCard.lua`; its art comes f
 
 **Files:**
 - Create: `src/ui/IntroCard.lua`
-- Delete: `src/ui/LevelCard.lua` (and its uses in `AdventureState` and `OnlineAdventureState`)
+- Delete: `LevelCard` (src/ui, removed in 0.5.202) (and its uses in `AdventureState` and `OnlineAdventureState`)
 - Modify: `src/states/adventure/AdventureState.lua` (draw the card while `startPhase() == 'card'`, INSTEAD of the
   level), `assets/lang/translations.csv` (`intro.waiting` es "Esperando jugadores", en "Waiting for players"; the dots
   are drawn, not in the text), `tools/tests/story_flow/main.lua` (rewrite `tarjeta`), `tools/tests/level_shots` or
