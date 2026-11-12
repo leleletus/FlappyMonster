@@ -12,6 +12,7 @@ and describe the real thing in the system's page.
 
 | What | Page |
 |---|---|
+| **Damage sources (2026-11-13):** every hit carries what did it and which part ("Pufferfish spike" vs "Pufferfish projectile"), single player / server / client; the death message reads it instead of guessing (proposed) | [damage-sources](damage-sources.md) |
 | **Level intro card (2026-11-12):** title card before the level over a live scene (the level's background, the real monster and the island's enemy), island-coloured bands, number plate; the server waits for everyone to load (**built 0.5.202-203, approved by the user 2026-11-13**) | [level-intro-card](level-intro-card.md) · [plan](level-intro-card-plan.md) |
 | **UX round (2026-11-11):** items 1-6 built (0.5.200-201), HUD layout pass and death message built (0.5.204); next: damage sources, touch controls editor | [ux-round-2026-11](ux-round-2026-11.md) |
 | **The tutorial level (2026-11-10):** every mechanic, signs with prompts, teach the verb not the trick (being built) | [tutorial-level](tutorial-level.md) |
