@@ -17,6 +17,7 @@ end
 
 function DB.draw(cause, t)
     if not cause or not t or t > DB.SHOW then return end
+    if require('src/core/Settings').deathCause == false then return end      -- (quitado en las opciones: el usuario)
     local a = math.min(1, t / 0.15, (DB.SHOW - t) / 0.4)
     local text = DB.text(cause)
     love.graphics.setFont(FONT_MED)

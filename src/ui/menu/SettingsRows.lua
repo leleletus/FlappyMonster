@@ -58,7 +58,7 @@ local credits = { id = 'credits', kind = 'action', label = 'settings.row_credits
 R.TABS = {
     { id = 'audio',    label = 'settings.tab_audio',    rows = { volume('musicVol'), volume('sfxVol'), switch('muted'), rhythm } },
     { id = 'controls', label = 'settings.tab_controls', rows = { switch('swapAB'), switch('rumble'), wheel } },
-    { id = 'game',     label = 'settings.tab_game',     rows = { language, switch('hitStop'),
+    { id = 'game',     label = 'settings.tab_game',     rows = { language, switch('hitStop'), switch('deathCause'),
                                                                switch('showPerf', function(v) Settings.setShowPerf(v) end) } },
     { id = 'other',    label = 'settings.tab_other',    rows = { credits } },
 }

@@ -19,7 +19,7 @@ Now every element **reports its rectangle** to `src/ui/HudRects.lua` as it draws
 | Top centre | the **boss bar(s)** (the user: "it stays where it belongs"), as wide as the free span between the left and right blocks allows (`centerSpan`; it narrows its segments). If that span is under `BossHud.MIN_TOP_W` (960-wide screens), the bar goes just under the top band, still centred |
 | Top centre, after the boss bar | the **stars / cages** counter (`CollectHud`, `place`): at the top when free, under the boss bar during a fight (the user: "the star counter is the one that moves") |
 | Online, top centre | the mode's objective panel (`place`; a one-line version under the scoreboard on narrow screens) |
-| Under everything above, left | the players' health bars, the Flappy hearts / charges and the power-up bag, then the **death message** (moved from the top centre, where it touched the score — the user) |
+| Under everything above, left | the players' health bars, the Flappy hearts / charges and the power-up bag, then the **death message** (moved from the top centre, where it touched the score — the user; it can be turned off in Settings → GAME → DEATH MESSAGE, `Settings.deathCause`, 0.5.206) |
 | Under everything above, centre | `¡CORRE!` (mirror chase), `¡RESACA!` (undertow), the online mode's big status text |
 | Middle / bottom, transient | the boss intro banner, the start "¡YA!", the online mode intro strip (starts under the HUD and rises in; its 4 s start counting after the intro card), the online notices (under the HUD), the air bar, the ping |
 

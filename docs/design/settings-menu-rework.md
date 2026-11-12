@@ -47,7 +47,7 @@ unpleasant to look at". What bothers them, in their words:
 |---|---|
 | AUDIO | Music (volume) · Sound effects (volume) · Mute (switch) · Rhythm sync (ms) |
 | CONTROLS | A / B swap (switch) · Vibration (switch) · Power-up wheel (`< HOLD / PRESS >`) |
-| GAME | Language (`< name >`) · Hit-stop (switch) · Performance meter (switch) |
+| GAME | Language (`< name >`) · Hit-stop (switch) · Death message (switch, 0.5.206: the user asked for it to be optional) · Performance meter (switch) |
 | OTHER | Credits (action) |
 
 **Input:**

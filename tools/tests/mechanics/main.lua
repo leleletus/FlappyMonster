@@ -2311,6 +2311,24 @@ function cases.fuente_red()
     check('fuente_red', ok1 and ok2, ('ida y vuelta=%s · estado sin el campo → sin fuente=%s'):format(tostring(ok1), tostring(ok2)))
 end
 
+-- EL AVISO DE LA MUERTE se puede quitar en las opciones (Settings.deathCause; el usuario, 0.5.206)
+function cases.aviso_opcion()
+    local Settings = require 'src/core/Settings'
+    local DB = require 'src/ui/DeathBanner'
+    local HR = require 'src/ui/HudRects'
+    local keep = Settings.deathCause
+    FONT_MED = FONT_MED or love.graphics.newFont('assets/fonts/PressStart2P.ttf', 16)   -- (este arnés no carga las del juego)
+    local function drawn(on)
+        Settings.deathCause = on
+        HR.clear(); DB.draw({ kind = 'spikes' }, 0.5)
+        for _, r in ipairs(HR.list()) do if r.name == 'death' then return true end end
+        return false
+    end
+    local on, off = drawn(true), drawn(false)
+    Settings.deathCause = keep
+    check('aviso_opcion', on and not off, ('con la opción se ve=%s · sin ella no=%s'):format(tostring(on), tostring(not off)))
+end
+
 function cases.puffer_cycle()
     local level, es = pond()
     local f = es[1]
@@ -4761,7 +4779,7 @@ local function junglaShot()
 end
 
 function love.load()
-    for _, n in ipairs({ 'fuente_base', 'fuente_contacto', 'fuente_partes', 'fuente_entorno', 'fuente_textos', 'fuente_red', 'inicio_fases', 'onoff_head', 'onoff_pound', 'hidden_up', 'hidden_drop', 'hidden_side', 'hidden_vis',
+    for _, n in ipairs({ 'fuente_base', 'fuente_contacto', 'fuente_partes', 'fuente_entorno', 'fuente_textos', 'fuente_red', 'aviso_opcion', 'inicio_fases', 'onoff_head', 'onoff_pound', 'hidden_up', 'hidden_drop', 'hidden_side', 'hidden_vis',
                          'helmet_jump', 'helmet_ride', 'helmet_gp', 'helmet_side', 'stomp_fast',
                          'puffer_through', 'puffer_concave', 'puffer_cycle', 'puffer_dry', 'flyer_anim', 'vuelo_libre', 'boxed_in',
                          'bloque_roto', 'activador', 'tramp_avanza', 'tramp_pinchos', 'ping_icono',

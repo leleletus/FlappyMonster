@@ -472,7 +472,7 @@ local function run()
     -- LAS OPCIONES como datos (src/ui/menu/SettingsRows.lua): cada una una vez, con sus textos en todos los idiomas
     do
         local okR, Rows = pcall(require, 'src/ui/menu/SettingsRows')
-        local want = { 'musicVol', 'sfxVol', 'muted', 'rhythmOffset', 'swapAB', 'rumble', 'wheelToggle', 'language', 'hitStop', 'showPerf', 'credits' }
+        local want = { 'musicVol', 'sfxVol', 'muted', 'rhythmOffset', 'swapAB', 'rumble', 'wheelToggle', 'language', 'hitStop', 'deathCause', 'showPerf', 'credits' }
         local seen, missing, bad = {}, {}, {}
         if okR then
             for _, tab in ipairs(Rows.TABS) do
