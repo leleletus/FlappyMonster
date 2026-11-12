@@ -100,4 +100,4 @@ level for fixed seconds skip it (`perf`: `st.startCd = nil`) or count after it (
   stomping or being hurt by the enemy; online it waits on screen while the server waits and leaves when the start
   comes. Card 5 s (the user: "neither" 5.3 nor 4.3 s — the walk is scaled to the width to fit), countdown 0 to try it
   ("just to test"), a fade to black and back into the level without covering the ¡YA! (the user). Protocol 118.
-  Not judged by a person yet.
+  The user tried it (2026-11-13): approved and closed, with the countdown at 0.
