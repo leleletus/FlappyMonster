@@ -119,7 +119,10 @@ return {
             local front = { x = (dir > 0) and ob.x + ob.w * 0.5 or ob.x - 8, y = ob.y, w = ob.w * 0.5 + 8, h = ob.h }
             e:sweepAhead(level, front, dir, e.ramSwept or {}, SWEEP_VX, SWEEP_VY)
             if e:fellOut(level) or e:inVoid(level) or e:onDeadlyGround(level) then e:dieBurst(); return end
-            if speed > cfg.speed * 0.5 and math.abs(e.x - x0) < speed * dt * 0.4 then   -- (contra una pared: rebota y se marea)
+            -- (contra una pared: rebota y se marea. SUBIENDO en su salto, no: es el escalón al que salta — sube pegado a él y
+            -- sigue al pasar el borde —; el usuario: se quedaba atascada en la esquina con el jugador encima)
+            local rising = not e.onGround and e.ramJump and e.vy < 0
+            if not rising and speed > cfg.speed * 0.5 and math.abs(e.x - x0) < speed * dt * 0.4 then
                 e.vx, e.vy, e.onGround = -dir * RECOIL_VX * 0.6, -180, false
                 e.cd_ram = cfg.cooldown
                 e:enter('dazed')

@@ -177,7 +177,14 @@ end
 
 -- Sin efectos: abierta, caerle encima no hace nada aquí (caes en su caja de disparo y te traga: update); cerrada o
 -- dormida, el pisotón / ground pound se queda en un REBOTE (stompProof: Interactions.check lo convierte)
+-- LLENA (comiendo y durmiendo): sin colisión ninguna — ni rebote ni choque —, se pasa a través (el usuario, 0.5.199:
+-- «no es necesaria y crea más problemas que mejoras»)
+local FULL = { eat = true, sleep = true }
+function Plant:isFull() return FULL[self.state] == true end
+function Plant:isBodyDisabled() return self:isFull() end
+function Plant:isObstacle() return not self:isFull() and Entity.isObstacle(self) end
 function Plant:interact(pa)
+    if self:isFull() then return nil end
     local r, a, b, c = Interactions.defaultCheck(pa, self)
     if r == 'stomp' and not SHUT[self.state] then return nil end
     return r, a, b, c

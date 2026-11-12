@@ -174,6 +174,8 @@ sprite's pixel grid.
 
 ## Hopper (Saltarín)
 
+0.5.199 (the user): snowball charges, Beetles and the player's shove did nothing to Hoppers — `Entity:canBeKnocked` required `isObstacle()`, and the Hopper was never an obstacle. Now any enemy can be knocked (base rule), and the Hopper is an obstacle while on the ground (walkers turn in front of it; not in mid-hop, when it passes over them). Outside its ROUTE it no longer chases anyone (it used to keep hopping against its invisible edge): `Hopper:target`. Harness `mechanics` `empujables` (every enemy type, 30), `saltarin_ruta`.
+
 0.5.194 (the user: more Hoppers in every level): `tools/levelgen/add_hoppers.py <levels>` placed 202 across the levels (about one every 30 columns, on flat ground, away from the start, the goal, boss zones and other enemies). Left out: Flappy levels, test levels, `tutorial`, and `marea_alta` (no flat ground with room to hop).
 
 - **HOPPER / Saltarín (3.74.0; `types/enemies/hopper.lua`, protocol v48 = new entity type)**: the user's pick, design B
@@ -391,6 +393,8 @@ with its giant: [giantscorpion](../bosses/giantscorpion.md).
 
 ## Mole, Piranha and Carnivorous Plant (0.5.96) — the user's designs
 
+0.5.199 (the user: "not needed, it causes more problems than it fixes"): a FULL plant (`eat`, `sleep`) has no collision at all — no bounce, no block, not an obstacle (`Plant:isFull`, `isBodyDisabled`). Harness `mechanics` `planta_pisar`.
+
 Three enemies designed with the user on 2026-10-29. Art: `tools/art/enemies/make_jungle_enemies.py` (two designs each, A
 and B; the mole's in the 7 islands; previews in `FlappyMonster_pruebas/enemigos_nuevos/`). The user's brief after the
 first round: "not so detailed — many differently coloured pixels at this resolution do not read — and not so chubby:
@@ -579,6 +583,8 @@ it follows the sprite memory best (flat colours, slim original silhouette, not r
   the look at game size not judged by a person.
 
 ## Snowball (`snowball`, «Bola de Nieve») — Frozen Mountains
+
+0.5.199 (the user: it got stuck in the corner of a step with the player right above): data enemies now also see a player ABOVE a step between them (`DataEnemy:seesPlayer`: across at their height, or up then across at the player's height), and the `ram` jump no longer counts the step's side as a wall while rising (no `dazed`; it climbs along it). Harness `mechanics` `bola_esquina`.
 
 The Giant Snowball's normal-enemy counterpart (the user, 2026-10-29: "the giant snowball has no normal-enemy version
 like the other bosses; it could launch itself and shove players like the proposed mountain goat"). A DATA enemy

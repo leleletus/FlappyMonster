@@ -73,7 +73,9 @@ function Hopper:init()
     self.wait = (self.props.jumpEvery or 1.4) * (0.5 + 0.5 * math.random())    -- (no todos a la vez)
 end
 
-function Hopper:isObstacle() return false end          -- (los que andan no se dan la vuelta ante él: salta por encima)
+-- OBSTÁCULO en el suelo, como cualquier enemigo (el usuario, 0.5.199: los que andan se dan la vuelta ante él); en pleno
+-- salto no, que pasa por encima de ellos
+function Hopper:isObstacle() return self.state ~= 'hop' and Entity.isObstacle(self) end
 
 local function clearLine(level, x0, y0, x1, y1)
     local n = math.max(1, math.floor(math.sqrt((x1 - x0) ^ 2 + (y1 - y0) ^ 2) / 16))
@@ -94,8 +96,10 @@ end
 function Hopper:target(level)
     local moth = self:isMoth(level)
     local best, bd = nil, (self.props.range or 7) * TILE_PX * require('src/core/Difficulty').k('sense')
+    -- (FUERA DE SU RUTA no persigue a nadie: antes se quedaba saltando contra su borde invisible; el usuario, 0.5.199)
+    local lo, hi = (self.leftBoundPx or -math.huge) - TILE_PX / 2, (self.rightBoundPx or math.huge) + TILE_PX / 2
     for _, pa in ipairs(level.players or {}) do
-        if not pa.dying and pa.alive ~= false then
+        if not pa.dying and pa.alive ~= false and pa.x >= lo and pa.x <= hi then
             local d = math.abs(pa.x - self.x) + math.abs(pa.y - self.y) * 0.5
             if d < bd and (not moth or self:sees(level, pa)) then best, bd = pa, d end
         end
@@ -108,7 +112,8 @@ end
 function Hopper:goal(level)
     local pa = self:target(level)
     if pa then return pa.x, pa.y end
-    if (self.memT or 0) > 0 then return self.seenX, self.seenY end
+    if (self.memT or 0) > 0 and self.seenX >= (self.leftBoundPx or -math.huge) - TILE_PX / 2
+       and self.seenX <= (self.rightBoundPx or math.huge) + TILE_PX / 2 then return self.seenX, self.seenY end
 end
 
 -- Un ruido fuerte nuevo que le llega (solo la polilla)

@@ -359,8 +359,11 @@ function Entity:canDropNow() return self.state == 'walk' or self.state == 'idle'
 function Entity:isHiding() return false end
 
 -- ¿Le afecta el empujón de un ground pound cercano?
+-- (un ENEMIGO siempre se puede empujar aunque no sea "obstáculo" para los que andan — el Saltarín no lo es, y por eso
+-- las cargas de la Bola de Nieve, los Escarabajos y el empujón del jugador no le hacían nada: el usuario, 0.5.199 —)
 function Entity:canBeKnocked()
-    if not self:isObstacle() then return false end
+    local enemy = self.def and self.def.category == 'Enemigos' and self.alive and self.state ~= 'dead' and not self:isGhost()
+    if not (enemy or self:isObstacle()) then return false end
     local st = self.state
     if st == 'frozen' then return false end
     return st ~= 'drop_shake' and st ~= 'drop_fall' and not st:match('^drop_')

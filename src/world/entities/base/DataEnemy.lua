@@ -164,10 +164,23 @@ function DataEnemy:seesPlayer(level, tiles, height)
         if not pa.dying and pa.alive ~= false then
             local dx, dy = pa.x - self.x, pa.y - self.y
             if math.abs(dx) <= range and math.abs(dy) <= (height or 1.5) * T then
-                local clear = true
-                for i = 1, math.floor(math.abs(dx) / (T / 2)) do
-                    local t = level:collisionAt(self.x + (dx > 0 and 1 or -1) * i * T / 2, self.y)
-                    if t and t.collision == 'solid' then clear = false; break end
+                -- de lado a su altura, o (más arriba) SUBIENDO y luego de lado a la altura del jugador: un escalón entre
+                -- los dos no tapa al que está encima (el usuario: la Bola de Nieve se quedaba en la esquina de un escalón)
+                local function across(y)
+                    for i = 1, math.floor(math.abs(dx) / (T / 2)) do
+                        local t = level:collisionAt(self.x + (dx > 0 and 1 or -1) * i * T / 2, y)
+                        if t and t.collision == 'solid' then return false end
+                    end
+                    return true
+                end
+                local clear = across(self.y)
+                if not clear and dy < 0 then
+                    local up = true
+                    for yy = self.y - T / 2, pa.y, -T / 2 do
+                        local t = level:collisionAt(self.x, yy)
+                        if t and t.collision == 'solid' then up = false; break end
+                    end
+                    clear = up and across(pa.y)
                 end
                 if clear and (not bd or math.abs(dx) < bd) then best, bd = pa, math.abs(dx) end
             end

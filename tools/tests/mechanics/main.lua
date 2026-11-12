@@ -1273,6 +1273,35 @@ function cases.caida_fuerte()
          tostring(lowStop), stop0, tostring(frame0), n1, tostring(held), tostring(moved), vol8 or -1, vol14 or -1))
 end
 
+-- EMPUJABLES (el usuario: «a los Saltarines no les afectan las cargas de la Bola de Nieve, los Escarabajos ni el empujón
+-- del jugador»): TODO enemigo, quieto en el suelo, se puede empujar (canBeKnocked) y al empujarlo sale despedido y se
+-- aturde. Fuera, a propósito: los que el juego declara inmunes (IMMUNE)
+local IMMUNE = { piranha = 'en el agua, no se le empuja', pufferfish = 'se hincha', mortar = 'anclado', carnivoreplant = 'planta',
+                 mole = 'solo asomado', gust = 'es aire' }
+function cases.empujables()
+    local ET = require 'src/world/entities/base/EntityTypes'
+    local bad, n = {}, 0
+    for name, d in pairs(ET.byName) do
+        if d.category == 'Enemigos' and not IMMUNE[name] and d.hide ~= 'all' then
+            local level, es = room(16, 8, {}, { { type = name, col = 8, row = 7 } })
+            level.players = {}
+            local e = es[1]
+            for _ = 1, 40 do if e.alive then e:update(1 / 60, level) end end
+            n = n + 1
+            local ok = e.alive and e:canBeKnocked()
+            if ok then
+                local x0 = e.x
+                e:knockback(1)
+                for _ = 1, 10 do e:update(1 / 60, level) end
+                ok = math.abs(e.x - x0) > 4
+            end
+            if not ok then bad[#bad + 1] = name .. '(' .. tostring(e.state) .. ')' end
+        end
+    end
+    table.sort(bad)
+    check('empujables', #bad == 0 and n > 15, ('%d tipos de enemigo; no se dejan empujar: %s'):format(n, #bad > 0 and table.concat(bad, ', ') or 'ninguno'))
+end
+
 function cases.tutorial()
     local json = require 'libs/json'
     local L = require 'src/core/Lang'
@@ -4032,6 +4061,53 @@ end
 -- ABIERTA te traga; un pisotón o un ground pound con ella cerrada (masticando, con algo dentro) o dormida solo te hace
 -- REBOTAR (ni ella ni tú pierdes nada). Todo lo demás la mata: una explosión cerca, que se rompa el bloque en el que
 -- está (de pie o colgada del techo); la bomba DENTRO, en planta_bomba
+-- LA BOLA DE NIEVE EN UNA ESQUINA (el usuario: «se queda atorada en una esquina y no salta hacia el jugador aunque lo
+-- tenga arriba»):       P
+--                    OXXX
+--                 XXXXXXXX     con el jugador encima del escalón, a varias distancias, se lanza y SUBE al escalón
+function cases.bola_esquina()
+    local res, bad = {}, {}
+    for _, case in ipairs({ { 2, 1 }, { 1, 1 }, { 3, 1 }, { 2, 2 } }) do
+        local dx, h = case[1], case[2]
+        local put = {}
+        for c = 9, 14 do for r = 9 - h, 8 do put[#put + 1] = { c, r, 'solid' } end end   -- (el escalón, sobre el suelo — fila 9 —)
+        local level, es = room(18, 9, put, { { type = 'snowball', col = 8, row = 8, props = { pauses = false } } })
+        local pa = playerAt(level, 8 + dx, 8 - h)
+        local b = es[1]
+        local top
+        sim(level, { pa }, es, 6, function()
+            pa.x, pa.y, pa.vx, pa.vy, pa.invT = (8 + dx - 0.5) * T, pa.y, 0, 0, 9
+            if b.onGround and b.y < (8 - h) * T then top = top or b.x end
+            if b.state == 'recoil' then top = top or 'empujó' end        -- (llegó hasta el jugador y lo empujó)
+        end)
+        res[#res + 1] = ('jugador %d a la derecha, escalón de %d: sube=%s (%s)'):format(dx, h, tostring(top ~= nil), tostring(b.state))
+        if not top then bad[#bad + 1] = dx .. '/' .. h end
+    end
+    check('bola_esquina', #bad == 0, table.concat(res, ' · '))
+end
+
+-- EL SALTARÍN Y SU RUTA (el usuario: «cuando sales de su zona se queda saltando contra su borde invisible»): con el
+-- jugador FUERA de su ruta (aunque a su alcance) no lo persigue — se pasea —; dentro, sí
+function cases.saltarin_ruta()
+    local function run1(pcol)
+        local level, es = room(24, 9, {}, { { type = 'hopper', col = 8, row = 8, props = { patrol = { left = 5, right = 11 } } } })
+        local pa = playerAt(level, pcol, 8)
+        local h = es[1]
+        local chase, roam = 0, 0
+        local was
+        sim(level, { pa }, es, 6, function()
+            pa.x, pa.vx, pa.invT = (pcol - 0.5) * T, 0, 9
+            if h.state == 'hop' and was ~= 'hop' then if h.roaming then roam = roam + 1 else chase = chase + 1 end end
+            was = h.state
+        end)
+        return chase, roam
+    end
+    local c1, r1 = run1(14)                -- (fuera de la ruta, a 6 casillas: a su alcance)
+    local c2 = run1(10)                    -- (dentro de la ruta)
+    check('saltarin_ruta', c1 == 0 and r1 > 0 and c2 > 0,
+        ('jugador fuera de su ruta: saltos tras él %d, paseando %d · dentro: tras él %d'):format(c1, r1, c2))
+end
+
 function cases.planta_pisar()
     local function stompIn(st, gp)
         local lv, e = room(20, 9, {}, { { type = 'carnivoreplant', col = 10, row = 8 } })
@@ -4057,7 +4133,8 @@ function cases.planta_pisar()
     for _, st in ipairs({ 'chew', 'sleep', 'hold' }) do
         for _, gp in ipairs({ false, true }) do
             local r = stompIn(st, gp)
-            local ok = r.alive and r.bounced and not r.hurt and not r.gulped
+            -- (LLENA, durmiendo: sin colisión — se cae a través de ella, ni rebota ni duele —; el usuario, 0.5.199)
+            local ok = r.alive and not r.hurt and not r.gulped and ((st == 'sleep') ~= r.bounced)
             res[#res + 1] = ('%s %s: rebota=%s, sigue viva=%s'):format(st, gp and 'ground pound' or 'pisotón', tostring(r.bounced), tostring(r.alive))
             if not ok then bad[#bad + 1] = st .. (gp and '+gp' or '') .. ' (' .. r.st .. ')' end
         end
@@ -4382,7 +4459,7 @@ function love.load()
                          'puffer_through', 'puffer_concave', 'puffer_cycle', 'puffer_dry', 'flyer_anim', 'vuelo_libre', 'boxed_in',
                          'bloque_roto', 'activador', 'tramp_avanza', 'tramp_pinchos', 'ping_icono',
                          'bomba_activa', 'bomba_pisada', 'bomba_radios', 'bomba_mundo', 'bomba_objeto',
-                         'hielo_solido', 'hielo_desgaste', 'hielo_nivel', 'hielo_vuelve', 'mirar', 'salto_variable', 'esquina', 'hitstop', 'poses', 'caida_fuerte', 'tramp_atasco', 'polvo_correr', 'tutorial', 'hielo_gp', 'hielo_bomba', 'encerrado', 'trepador_canto', 'hielo_resbala', 'filo_propio', 'saltarin', 'saltarin_cueva', 'persecucion', 'persecucion_cuerpo', 'inofensivos', 'tapa_base', 'manzana',
+                         'hielo_solido', 'hielo_desgaste', 'hielo_nivel', 'hielo_vuelve', 'mirar', 'salto_variable', 'esquina', 'hitstop', 'poses', 'caida_fuerte', 'tramp_atasco', 'empujables', 'bola_esquina', 'saltarin_ruta', 'polvo_correr', 'tutorial', 'hielo_gp', 'hielo_bomba', 'encerrado', 'trepador_canto', 'hielo_resbala', 'filo_propio', 'saltarin', 'saltarin_cueva', 'persecucion', 'persecucion_cuerpo', 'inofensivos', 'tapa_base', 'manzana',
                          'cryo_jugador', 'cryo_enemigo', 'cryo_activador', 'cryo_corte', 'lava', 'pocos_fps', 'ahogo_ganado', 'techo_pinchos',
                          'caja_empuje', 'caja_rota', 'caja_borde', 'cargar', 'bomba_reaparece', 'islas', 'islas_arte', 'viento', 'cuerpo_mueve', 'cajas_golpes', 'balanza', 'soplon', 'semilla', 'ventisca', 'geiser', 'balanza_tope', 'caja_choques', 'cargar_gp', 'gp_radio', 'dejar_encima', 'jump_buffer', 'jefe_puntos', 'persecucion_toque', 'secreto_reina', 'secreto_tifon', 'paredes_falsas', 'aire_caja', 'geiser_peso', 'bomba_cajas', 'cajas_fila', 'balanza_impacto', 'balanza_salto', 'balanza_techo', 'escarabajo', 'escarabajo_lanzado', 'escarabajo_ruta', 'escarabajo_manos', 'escarabajo_arrolla',
                          'topo', 'topo_culetazo', 'topo_suelo', 'topo_borde', 'pirana', 'pirana_pisar', 'pirana_rebota', 'pirana_nada', 'planta', 'planta_pisar', 'planta_traga', 'planta_colgada', 'planta_come', 'planta_bomba' }) do

@@ -106,6 +106,7 @@ local function play(level, nav, withTarget, lure, counter)
     local ax, ay, still, worst = bpa.x, bpa.y, 0, 0             -- lo más que pasa PARADO en un sitio fuera de una zona
     local rideIn, rideOn, rideLo, rideHi = 0, 0, nil, nil       -- (zona montada: tiempo dentro, de él en su cuerpo; alto y bajo)
     local sweptT, avHits, avWas = 0, 0, false                   -- (el ALUD: tiempo con la zona entera debajo; golpes al bot)
+    local avPushed, pushedAt = 0, nil                            -- (golpes del alud justo tras un empujón: no cuentan)
     local avs = {}
     for _, e in ipairs(es) do if e.def and e.def.name == 'avalanche' then avs[#avs + 1] = e end end
     local dt = 1 / 60
@@ -215,7 +216,11 @@ local function play(level, nav, withTarget, lure, counter)
                     if ob.x < hb.x + hb.w and hb.x < ob.x + ob.w and ob.y < hb.y + hb.h and hb.y < ob.y + ob.h then inAv = true end
                 end
             end
-            if inAv and not avWas then avHits = avHits + 1 end
+            -- (EMPUJADO por un enemigo — la Bola de Nieve lanza al jugador: es su gracia — y por eso dentro del torrente no
+            -- es que el bot no sepa esquivar: no cuenta. Empujado = sin control por un lanzamiento en los últimos 2 s)
+            if (bpa.ctrlLockT or 0) > 0 then pushedAt = t end
+            local pushed = pushedAt and t - pushedAt < 2
+            if inAv and not avWas then if pushed then avPushed = avPushed + 1 else avHits = avHits + 1 end end
             avWas = inAv
         end
         -- (dentro de la zona ACTIVA; mientras viaja a la parada siguiente, ir hacia ella no es estar parado)
@@ -325,7 +330,17 @@ function love.load(arg)
                 -- justo cuando cae —)
                 local dodges = not x1.avalanche or x1.avHits <= 1
                 local good = arrive ~= nil and arrive < 25 and frac > need and follows and hunted and stuck < 6 and calm and keeps and rides and dodges and #bad == 0     -- (0.5: en cala_de_los_muelles un enemigo lo tira de la zona y tarda en volver)
-                if not good then fails = fails + 1 end
+                if not good then
+                    fails = fails + 1
+                    -- (qué falló: para no adivinar)
+                    local why = {}
+                    for k, v in pairs({ llega = arrive ~= nil and arrive < 25, dentro = frac > need, sigue = follows, caza = hunted,
+                                        parado = stuck < 6, calma = calm, cebo = keeps, monta = rides, alud = dodges, datos = #bad == 0 }) do
+                        if not v then why[#why + 1] = k end
+                    end
+                    table.sort(why)
+                    print(('%-22s   falla: %s%s'):format(name, table.concat(why, ', '), #bad > 0 and (' (' .. table.concat(bad, '; ') .. ')') or ''))
+                end
                 print(('%-22s %s  sola: llega en %s s, dentro el %d %% · caza: %d empujones%s%s, el jugador en la zona el %d %% · cebo: dentro el %s · agua: %.0f s, %.1f saltos/s · parado como mucho %.1f s · paradas alcanzadas %d/%d'):format(
                     name, good and 'OK   ' or 'FALLA', arrive and string.format('%.1f', arrive) or '—', math.floor(frac * 100), pushes,
                     x2.toggles > 0 and (' + ' .. x2.toggles .. ' Activador') or '', x2.breakable and ' (suelo rompible: no ataca)' or '', math.floor(tIn * 100),
