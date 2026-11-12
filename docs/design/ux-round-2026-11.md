@@ -28,4 +28,6 @@ yet). Later: loading spinners on slow devices beyond item 6.
    once; on the last life RETRY is not offered. `PauseState` asks first (`pause.retry_title`, `pause.retry_note`: "you
    will have N left"; cancel or back returns). Free Play and bonus games: no cost, no question. Harness `story_flow`
    `reintentar_vida`.
-
+2. (0.5.200) `src/ui/LevelCard.lua`: name, island (`Worlds.worldOf` → `story.world.<id>`) and target time (`parTime` or
+   `Score.par`) for 3.6 s in the lower third, during the countdown; single player and the online client (no target time
+   there: the mode has its own clock). Not on Flappy stages, the demo or bonus target time. Harness `story_flow` `tarjeta`.

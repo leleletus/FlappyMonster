@@ -215,6 +215,10 @@ function AdventureState:enter(args)
     self.camSnap = true             -- (el primer encuadre, sin barrido desde la esquina: se ve quieto en la cuenta atrás)
     -- CUENTA ATRÁS del principio (src/world/systems/StartCountdown.lua): todo congelado mientras dura (la demo, no)
     self.startCd   = (not self.demo) and StartCountdown.TIME or nil
+    -- (la TARJETA del nivel: nombre, isla, tiempo objetivo — src/ui/LevelCard.lua —; no en la demo ni en el editor)
+    self.card = (not self.demo and not args.fromEditor) and require('src/ui/LevelCard').new(self.level,
+                    self.levelPath:match('([^/]+)%.json$'), { par = not self.bonus }) or nil
+    self.cardT = 0
     self.startPrev = nil            -- (lo que faltaba el frame anterior: para el sonido de cada número)
     self.startGoT  = nil            -- (s desde el ¡YA!: el cartel)
 
@@ -628,6 +632,7 @@ function AdventureState:update(dt)
     end
 
     -- ── Cuenta atrás del principio: el mundo congelado y sin control ──────────
+    if self.card then self.cardT = self.cardT + dt end
     if self.startCd then
         StartCountdown.beeps(self.startPrev, self.startCd - dt)
         self.startPrev = self.startCd - dt
@@ -884,6 +889,7 @@ function AdventureState:renderBossHud()
     end
     BossHud.drawScrollCountdown(self.level.autoScroll)
     if self.startCd or self.startGoT then BossHud.drawStartCountdown(self.startCd or -self.startGoT) end
+    if self.card then require('src/ui/LevelCard').draw(self.card, self.cardT) end
     BossHud.drawRun(self.level, self.enemies)                     -- (la persecución del Espejo: ¡CORRE!)
     BossHud.drawUndertow(self.level)                              -- (la resaca: ¡RESACA! y hacia dónde)
 end

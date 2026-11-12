@@ -183,6 +183,7 @@ function OnlineAdventureState:_buildWorld(data, difficulty)
         if ok then level = lv else print('[online] nivel del servidor invalido: ' .. tostring(lv)) end
     end
     self.level = level or Level.new('assets/levels/nivel01.json')
+    self.card = nil                                -- (nivel nuevo: su tarjeta otra vez)
     Particles.setLevel(self.level)                 -- (las partículas físicas chocan con él)
     require('src/fx/NoiseMarks').clear()
     require('src/world/systems/Noise').bind(nil)                -- (online: los ruidos son cosa del servidor)
@@ -768,6 +769,13 @@ function OnlineAdventureState:_renderBossHUD()
     if not self.showGameOver then
         BossHud.drawScrollCountdown(self.level.autoScroll)
         BossHud.drawStartCountdown(self:_startRemaining(), 0.6)      -- (bajo el cartel del modo)
+        -- (la TARJETA del nivel al empezar la partida: src/ui/LevelCard.lua; sin tiempo objetivo — el modo lleva el suyo —)
+        if self.level and not self.card and self.localPaInit then
+            local path = self.currentRoom and self.currentRoom.level
+            self.card = require('src/ui/LevelCard').new(self.level, path and path:match('([^/]+)%.json$'), { par = false }) or false
+            self.cardT0 = love.timer.getTime()
+        end
+        if self.card then require('src/ui/LevelCard').draw(self.card, love.timer.getTime() - self.cardT0) end
     end
     if not self.showGameOver then BossHud.drawRun(self.level, self.enemyRenderers) end
     if not self.showGameOver then BossHud.drawUndertow(self.level) end

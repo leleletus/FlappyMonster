@@ -6,6 +6,7 @@ common.back,VOLVER,BACK,
 common.ok,ACEPTAR,OK,
 title.press,Presiona {key} para continuar,Press {key} to continue,
 pause.title,PAUSA,PAUSED,
+levelcard.par,Tiempo objetivo {t},Target time {t},La tarjeta del nivel al empezar (0.5.200)
 pause.retry_title,¿REINTENTAR?,RETRY?,La pausa: reintentar cuesta una vida (0.5.200)
 pause.retry_yes,"Sí, reintentar","Yes, retry",
 pause.retry_note,"Reintentar cuesta una vida: te quedarán {n}","Retrying costs a life: you will have {n} left",
