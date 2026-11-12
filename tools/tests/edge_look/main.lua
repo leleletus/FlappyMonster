@@ -120,6 +120,65 @@ case('sombreador', function()
         ('copias=%d · el plano se mantiene=%s · después sin shader=%s'):format(seenInPass, tostring(kept), tostring(after == nil)))
 end)
 
+-- Las copias del modo simple no tienen efectos: lo que el dibujo apunte en el dueño, las partículas y el azar
+case('efectos', function()
+    local prev = Settings.edge
+    Settings.edge = 'simple'
+    local Particles = require 'src/fx/Particles'
+    local owner = { x = 0, y = 0 }
+    local emits, realEmit = 0, Particles.emit
+    local fn = function()
+        owner._lx = (owner._lx or 0) + 1                    -- (un dibujo que lleva la cuenta de algo)
+        owner._new = true
+        Particles.emit('ember', 0, 0)
+        math.random()
+    end
+    Edge.level = { light = 'night' }
+    for i = 0, 5 do at(i * 0.1); Edge.draw(owner, 0, 0, function() end) end       -- (borde entero)
+    Particles.emit = function(...) emits = emits + 1 end
+    math.randomseed(7); local want = (function() math.random(); return math.random() end)()
+    math.randomseed(7)
+    owner._lx, owner._new = 10, nil
+    at(1); Edge.draw(owner, 0, 0, function(...)
+        local inPass = Edge.inPass()
+        fn()
+        if inPass then return end
+    end)
+    local got = math.random()
+    Particles.emit = realEmit
+    Edge.level = nil
+    Settings.edge = prev
+    check('efectos', owner._lx == 11 and owner._new == true and emits == 1 and got == want,
+        ('cuenta del dibujo=%d (quiero 11) · partículas=%d (quiero 1) · el azar sigue igual=%s'):format(owner._lx, emits, tostring(got == want)))
+end)
+
+-- ── El rasgo `edge`: por categoría, y cada tipo puede cambiarlo ─────────────
+case('rasgo', function()
+    local EntityTypes = require 'src/world/entities/base/EntityTypes'
+    local Entities = require 'src/world/entities/Entities'
+    local DataEnemy = require 'src/world/entities/base/DataEnemy'
+    local bad, n = {}, 0
+    for name, t in pairs(EntityTypes.byName) do
+        local cls = t.class
+        local want = EntityTypes.EDGE_DEFAULT[t.category] == true
+        if t.edgeOwn ~= nil then want = t.edgeOwn end          -- (el tipo lo cambia: `edge = true / false`)
+        if (cls.edge == true) ~= want then bad[#bad + 1] = name .. '(' .. t.category .. ')' end
+        n = n + 1
+    end
+    local g = Entities.create({ type = 'gummy', col = 5, row = 5, props = {} })
+    local lava = Entities.create({ type = 'crabby_lava', col = 5, row = 5, props = {} })
+    local spec = DataEnemy.read(DataEnemy.ids()[1])
+    spec.darkEdge, spec.edge = { 1, 1, 1, 1 }, nil
+    local fromDark = DataEnemy.typeDef(spec).class.edge
+    spec.darkEdge, spec.edge = nil, false
+    local off = DataEnemy.typeDef(spec).class.edge
+    check('rasgo', #bad == 0 and n > 20 and g.edge == true and lava.edge == true and g.edgeThin == true
+        and fromDark == true and off == false,
+        ('%d tipos; distintos de su categoría: %s · gummy=%s lava=%s fino=%s · JSON darkEdge=%s edge:false=%s'):format(n,
+            #bad == 0 and 'ninguno' or table.concat(bad, ' '), tostring(g.edge), tostring(lava.edge), tostring(g.edgeThin),
+            tostring(fromDark), tostring(off)))
+end)
+
 -- ── El ajuste ────────────────────────────────────────────────────────────────
 case('ajuste', function()
     local Lang = require 'src/core/Lang'

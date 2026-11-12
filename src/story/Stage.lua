@@ -19,7 +19,12 @@ local LavaFx = require 'src/fx/LavaFx'
 local Particles = require 'src/fx/Particles'
 local DeadEyes = require 'src/player/DeadEyes'
 local Clip = require 'src/ui/Clip'
-local Silhouette = require 'src/fx/Silhouette'
+local Edge = require 'src/fx/Edge'
+-- (quién es el monstruo para el fundido del borde en modo simple: uno para todas las cinemáticas — o.edgeOwner si hay dos —)
+Stage.monsterOwner = {}
+local function monsterShifted(dx, dy, im, x, y, a, sx, sy)
+    love.graphics.draw(im, math.floor(x) + dx, math.floor(y) + dy, a, sx, sy, im:getWidth() / 2, im:getHeight() / 2)
+end
 
 local Stage = {}
 local floor = math.floor
@@ -74,15 +79,16 @@ function Stage.monster(x, y, o)
     if not im then return end
     local s = (o.scale or PLAYER_SCALE) * (o.puff or 1)
     local f = o.facing or 1
-    -- FONDO BLANCO (src/fx/Silhouette.lua): dentro de un decorado (o con o.outline) el mismo sprite, algo más
-    -- grande y en blanco, detrás: el monstruo es casi negro y en la penumbra solo se le veía la cara
-    if (o.outline or (Stage._lit and o.outline ~= false)) and not o.invert and (o.alpha or 1) > 0.5 then
-        Silhouette.draw(im, x, y, o.angle or 0, s * f * (o.sx or 1), s * (o.sy or 1), o.alpha or 1)
-    end
     invert(o.invert)
     local c = o.color or { 1, 1, 1 }
     love.graphics.setColor(c[1], c[2], c[3], o.alpha or 1)
-    love.graphics.draw(im, floor(x), floor(y), o.angle or 0, s * f * (o.sx or 1), s * (o.sy or 1), im:getWidth() / 2, im:getHeight() / 2)
+    -- EL BORDE de contraste (src/fx/Edge.lua), como en el juego; el Reflejo (invert) sin él. (`o.outline` ya no fuerza
+    -- nada: el borde aparece donde hace falta)
+    if o.invert then
+        monsterShifted(0, 0, im, x, y, o.angle or 0, s * f * (o.sx or 1), s * (o.sy or 1))
+    else
+        Edge.draw(o.edgeOwner or Stage.monsterOwner, x, y, monsterShifted, im, x, y, o.angle or 0, s * f * (o.sx or 1), s * (o.sy or 1))
+    end
     if Stage._lit and (o.alpha or 1) > 0.5 and not o.noLight then Stage._lit[#Stage._lit + 1] = { x = x, y = y } end
     if o.eyes and not o.angle then DeadEyes.draw(floor(x), floor(y), s, f) end
     invert(false)

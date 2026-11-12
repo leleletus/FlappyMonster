@@ -242,7 +242,7 @@ function OnlineAdventureState:_buildWorld(data, difficulty)
 end
 
 function OnlineAdventureState:exit()
-    require('src/fx/Silhouette').level = nil
+    require('src/fx/Edge').level = nil
     require('src/ui/View').unlock()
     NC:off("s"); NC:off("ev"); NC:off("game_init"); NC:off("round_start")
     NC.pendingGameInit = nil

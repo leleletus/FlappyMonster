@@ -21,6 +21,7 @@
 local Entity = require 'src/world/entities/base/Entity'
 local Boss   = require 'src/world/entities/base/Boss'
 local BossFx = require 'src/fx/BossFx'
+local Edge   = require 'src/fx/Edge'
 local Anim   = require 'src/fx/Anim'
 
 local TF = Entity.extend(Boss, {
@@ -696,7 +697,7 @@ function TF:render(camX, camY)
     set:drawFrame(fr, x, y, 0, -face * MS, MS, 0.5, 0.5)
     if name == 'stun' then BossFx.stars(x, y + STUN_TOP - 10 * MS, 8 * MS, 1.2 * MS, 5, alpha, 'back') end
     love.graphics.setColor(1, 1, 1, 1)
-    self:renderWeather(camX, camY, alpha)
+    Edge.direct(self.renderWeather, self, camX, camY, alpha)      -- (rachas, marcas, rayos: sin borde — src/fx/Edge.lua —)
 end
 
 -- Rachas, marcas, rayos, arcos y granizo (todo de state + deadTimer + lo que llega en el netPack)

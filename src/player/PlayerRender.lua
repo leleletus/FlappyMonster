@@ -1,5 +1,5 @@
 -- src/player/PlayerRender.lua
--- PARTE de src/player/PlayerAdventure.lua: el dibujo del jugador (sprites, parpadeo, hielo, filo blanco).
+-- PARTE de src/player/PlayerAdventure.lua: el dibujo del jugador (sprites, parpadeo, hielo, borde de contraste).
 -- La carga PlayerAdventure.lua con require(...)(PlayerAdventure, P): añade sus funciones a la tabla PlayerAdventure. P = lo que
 -- antes eran locales del archivo y comparten las partes.
 local DeadEyes = require 'src/player/DeadEyes'
@@ -9,13 +9,21 @@ local SPRITE_H, SQUASH_K = P.SPRITE_H, P.SQUASH_K
 
 -- ── Render ────────────────────────────────────────────────────────────────────
 local IceEncase            -- (solo dibujo: se carga al dibujar el hielo)
-local Silhouette
+local Edge
 local PS = require 'src/player/PlayerSprite'       -- (el sprite del monstruo: animaciones por nombre)
 local function loadSprites() end
 
+-- EL BORDE de contraste (src/fx/Edge.lua): el cuerpo (con el hielo y el escudo) va por Edge.draw; lo que no es el
+-- cuerpo — ráfagas, estrellitas — por Edge.direct
+local function bodyShifted(dx, dy, self, camX, camY) self:_renderBody(camX - dx, camY - dy) end
 function PlayerAdventure:render(camX, camY)
-    self:renderBursts(camX, camY)                    -- (las ráfagas del ataque especial: niveles Flappy — PlayerFlight.lua —)
+    Edge = Edge or require 'src/fx/Edge'
+    Edge.direct(self.renderBursts, self, camX, camY)  -- (las ráfagas del ataque especial: niveles Flappy — PlayerFlight.lua —)
     if self.gulped and not self.dying and (self.gulpKind or 0) == 0 then return end      -- (tragado por una planta: no se ve — PlayerGulp.lua —)
+    Edge.draw(self, self.x, self.y, bodyShifted, self, camX, camY)
+end
+
+function PlayerAdventure:_renderBody(camX, camY)
     -- (acaba de subir un escalón bajo andando: se dibuja lo que le falta por "subir" — stepVis, PlayerCollision —)
     local vis = (not self.dying and self.stepVis) or 0
     if vis > 0 then camY = camY - math.floor(vis + 0.5) end
@@ -39,7 +47,7 @@ function PlayerAdventure:render(camX, camY)
     local stunned = not self.dying and (self.stunT or 0) > 0
     if stunned then                                  -- (aturdido: las estrellitas de DETRÁS de la cabeza, antes del cuerpo)
         local cr, cg, cb, ca = love.graphics.getColor()
-        PlayerAdventure.drawStunStars(self.x - camX, self.y - camY, squashed, 'back')
+        Edge.direct(PlayerAdventure.drawStunStars, self.x - camX, self.y - camY, squashed, 'back')
         love.graphics.setColor(cr, cg, cb, ca)
     end
     if iced then                                     -- (congelado: el cuerpo teñido de hielo)
@@ -52,18 +60,10 @@ function PlayerAdventure:render(camX, camY)
         PS.draw(PS.rec('crouch'), math.floor(self.x-camX), math.floor(self.y-camY+SPRITE_H/2),
             0, s*self.facing, s*SQUASH_K, iw/2, ih)
     else
-        -- En lo oscuro (niveles a oscuras, de noche, cuevas, bajo la superficie) su filo blanco (src/fx/Silhouette.lua).
-        -- CADA monstruo lo decide por SU sitio: quien dibuja solo dice en qué nivel (`PlayerAdventure.lightLevel`);
-        -- antes era un sí/no común y el del jugador local encendía o apagaba el de todos los demás
-        Silhouette = Silhouette or require 'src/fx/Silhouette'
         -- (al aterrizar fuerte: un achatado corto, con los pies en su sitio — landSq, PlayerAdventure —)
         local q = (not self.dying and self.landSq or 0)
         local sx, sy = s * (1 + 0.14 * q), s * (1 - 0.16 * q)
         local dy = (s - sy) * ih / 2
-        if PlayerAdventure.lightLevel and not iced and Silhouette.on(PlayerAdventure.lightLevel, self.y) then
-            local _, _, _, al = love.graphics.getColor()
-            Silhouette.draw(img, self.x-camX, self.y-camY+dy, 0, sx*self.facing, sy, al)
-        end
         PS.draw(img,
             math.floor(self.x-camX), math.floor(self.y-camY+dy),
             0, sx*self.facing, sy, iw/2, ih/2)
@@ -72,7 +72,7 @@ function PlayerAdventure:render(camX, camY)
     if self.dying then
         DeadEyes.draw(math.floor(self.x-camX), math.floor(self.y-camY), s, self.facing)
     elseif stunned then
-        PlayerAdventure.drawStunStars(self.x - camX, self.y - camY, squashed, 'front')
+        Edge.direct(PlayerAdventure.drawStunStars, self.x - camX, self.y - camY, squashed, 'front')
     end
     if not self.dying and (self.iceT or 0) > 0 then
         PlayerAdventure.drawIce(math.floor(self.x-camX), math.floor(self.y-camY), love.timer.getTime(), self.iceT,

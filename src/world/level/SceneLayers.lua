@@ -9,8 +9,7 @@
 --             dibujando con el efecto del agua por encima
 --     ents    las entidades (lista o tabla por índice: se recorre con pairs, el orden de una lista se respeta)
 --     actors  function(camX, camY): lo que va entre las entidades de atrás y las de delante — los jugadores, el
---             fantasma, los bots, el progreso de las zonas de puntos — ya con el filo de lo oscuro de los monstruos
---             (PlayerAdventure.lightLevel)
+--             fantasma, los bots, el progreso de las zonas de puntos — (el borde: src/fx/Edge.lua, Edge.level)
 --     noSky   sin cielo: fondo transparente (los créditos, que dibujan su escena detrás)
 --     reuse   no redibuja el lienzo: vuelve a poner la escena del fotograma anterior (el hit-stop online: solo en esta
 --             pantalla, la partida sigue — src/ui/HitStop.lua —)
@@ -22,7 +21,7 @@ local Snowfall        = require 'src/fx/Snowfall'
 local Darkness        = require 'src/fx/Darkness'
 local Particles       = require 'src/fx/Particles'
 local Ambience        = require 'src/fx/Ambience'
-local Silhouette      = require 'src/fx/Silhouette'
+local Edge            = require 'src/fx/Edge'
 
 local SceneLayers = {}
 
@@ -71,12 +70,10 @@ function SceneLayers.draw(level, camX, camY, canvas, ents, actors, noSky, reuse)
     level:renderVents(camX, camY)
     level:renderFoliageBack(camX, camY)
 
-    Silhouette.level = level                              -- (filo de los enemigos oscuros en lo oscuro: `darkEdge`)
+    Edge.level = level                                    -- (el borde de contraste: src/fx/Edge.lua)
     drawEntities(ents, false, camX, camY)                 -- (entre los bloques y los jugadores)
 
-    PlayerAdventure.lightLevel = level                    -- (en lo oscuro, filo blanco: cada monstruo según SU sitio)
     if actors then actors(camX, camY) end
-    PlayerAdventure.lightLevel = nil
     Particles.render(camX, camY)
 
     drawEntities(ents, true, camX, camY)                  -- (por delante de los jugadores: pez globo, la red…)

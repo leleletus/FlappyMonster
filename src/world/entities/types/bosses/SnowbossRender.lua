@@ -168,6 +168,7 @@ function Snow:drawBody(camX, camY, alpha)
 end
 
 -- Sombra en (x, gy) de ancho w: más oscura cuanto más cerca (k 0..1)
+local Edge = require 'src/fx/Edge'
 local function shadow(x, gy, w, k, camX, camY)
     love.graphics.setColor(0, 0, 0, 0.18 + 0.22 * k)
     love.graphics.rectangle('fill', math.floor(x - camX - w / 2), math.floor(gy - camY - 6), math.floor(w), 6)
@@ -187,7 +188,7 @@ function Snow:render(camX, camY)
     if st == 'hop' or st == 'slam_up' or st == 'slam_hold' or st == 'slam_fall' then
         local gy = self:groundBelow(self.x, self:feetY())
         local k = math.max(0.2, 1 - (gy - self:feetY()) / (6 * T))
-        shadow(self.x, gy, self.outerW * (0.5 + 0.35 * k), k, camX, camY)
+        Edge.direct(shadow, self.x, gy, self.outerW * (0.5 + 0.35 * k), k, camX, camY)      -- (sin borde: src/fx/Edge.lua)
     end
     -- Salto a plataforma: MARCA donde va a caer (parpadea, se cierra al acercarse)
     if st == 'leap_wind' or st == 'leap' then
@@ -238,7 +239,7 @@ function Snow:render(camX, camY)
                 cx = cx + math.floor(math.sin(now * 70) * 3)
                 c.gy = c.gy or self:groundBelow(c.x, c.top + ICE_LEN + 8)
                 local u = math.min(1, c.t / ICE_SHAKE)
-                shadow(c.x, c.gy, 14 + 30 * u, u, camX, camY)
+                Edge.direct(shadow, c.x, c.gy, 14 + 30 * u, u, camX, camY)
             else
                 c.gy = nil
             end

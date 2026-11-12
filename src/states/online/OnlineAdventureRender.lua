@@ -80,7 +80,7 @@ function OnlineAdventureState:_drawActors(camX, camY)
         pa.x, pa.y = self.renderX, self.renderY
         if not RhythmDuel.hides(self.level, pa.x, pa.y) then pa:render(camX, camY) end
         pa.isLocalView = true
-        PointAreas.drawProgress(self.level, pa, self.renderX - camX, self.renderY - camY)
+        require('src/fx/Edge').direct(PointAreas.drawProgress, self.level, pa, self.renderX - camX, self.renderY - camY)   -- (sin borde)
         if DEBUG_HITBOX then self:_renderDebugBoxes(pa, camX, camY) end
         pa.x, pa.y = sx, sy
     end

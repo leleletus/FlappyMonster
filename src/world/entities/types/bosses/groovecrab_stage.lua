@@ -9,6 +9,7 @@
 -- La carga groovecrab.lua con require(...)(GC, P): añade sus funciones a la tabla GC.
 local SIDES = { -1, 1 }        -- (izquierda y derecha: constante, sin una tabla nueva en cada vuelta)
 local BossFx = require 'src/fx/BossFx'
+local Edge = require 'src/fx/Edge'
 local BossWaves = require 'src/world/entities/base/BossWaves'
 local SpriteStrip = require 'src/fx/SpriteStrip'
 
@@ -750,9 +751,11 @@ function GC:render(camX, camY)
     local now = love.timer.getTime()
     -- (`_bodyOnly`: solo él — el director del Mega Mashup lo dibuja pequeño al fondo —, sin pista, platos ni focos)
     local extras = not self._bodyOnly
-    if extras and stageT(self) then self:drawFloor(camX, camY) end
-    if extras and (live(self) or self:isDying()) then self:drawDecks(camX, camY) end
-    if extras and live(self) then self:drawSpotlights(camX, camY) end
+    -- (la pista, los platos, los focos, la diana, las ondas y los destellos: SIN el borde de contraste — src/fx/Edge.lua —;
+    -- solo el cangrejo y sus gafas lo llevan)
+    if extras and stageT(self) then Edge.direct(self.drawFloor, self, camX, camY) end
+    if extras and (live(self) or self:isDying()) then Edge.direct(self.drawDecks, self, camX, camY) end
+    if extras and live(self) then Edge.direct(self.drawSpotlights, self, camX, camY) end
     -- (¿anda? lo que avanzó desde el dibujo anterior)
     self._walking = self._lx ~= nil and math.abs(self.x - self._lx) > 0.05 and st == 'groove'
     self._lx = self.x
@@ -770,20 +773,21 @@ function GC:render(camX, camY)
     if not inDuel then self:drawBody(fx, fy, p, f, alpha, st, now) end
     if not EDITOR_VIEW then self:drawGlasses(camX, camY, alpha) end
     if not extras then love.graphics.setColor(1, 1, 1, 1); return end
-    self:drawOver(camX, camY)
-    if live(self) then self:drawDrop(camX, camY) end
+    Edge.direct(self.drawOver, self, camX, camY)
+    if live(self) then Edge.direct(self.drawDrop, self, camX, camY) end
     -- el destello al empezar cada frase (el primer tiempo de cada 4 compases)
-    if live(self) then
-        local b, sec, k, step = self:whereAt(self.songT or 0)
-        if sec ~= 'I' and k % 4 == 1 and step < 1.2 then
-            local zx0, zx1, zy0, zy1 = self:zoneBounds()
-            love.graphics.setBlendMode('add')
-            love.graphics.setColor(1, 1, 1, 0.16 * (1 - step / 1.2))
-            love.graphics.rectangle('fill', math.floor(zx0 - camX), math.floor(zy0 - 3 * T - camY), zx1 - zx0, zy1 - zy0 + 4 * T)
-            love.graphics.setBlendMode('alpha')
-        end
-    end
+    if live(self) then Edge.direct(self.drawPhraseFlash, self, camX, camY) end
     love.graphics.setColor(1, 1, 1, 1)
+end
+function GC:drawPhraseFlash(camX, camY)
+    local b, sec, k, step = self:whereAt(self.songT or 0)
+    if sec ~= 'I' and k % 4 == 1 and step < 1.2 then
+        local zx0, zx1, zy0, zy1 = self:zoneBounds()
+        love.graphics.setBlendMode('add')
+        love.graphics.setColor(1, 1, 1, 0.16 * (1 - step / 1.2))
+        love.graphics.rectangle('fill', math.floor(zx0 - camX), math.floor(zy0 - 3 * T - camY), zx1 - zx0, zy1 - zy0 + 4 * T)
+        love.graphics.setBlendMode('alpha')
+    end
 end
 
 -- La diana, las ondas, las notas (y la dorada) y el enfado

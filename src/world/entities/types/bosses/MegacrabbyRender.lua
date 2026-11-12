@@ -276,6 +276,7 @@ function Mega:drawLocal(px, py, ang, s, img, withSpike, alpha, nervous, sx, sy, 
 end
 
 -- Marca en el suelo de donde va a caer (parpadea)
+local Edge = require 'src/fx/Edge'
 local function drawTarget(x, y, w, t, col)
     local on = math.floor(t * 8) % 2 == 0
     col = col or { 1, 0.2, 0.2 }
@@ -441,7 +442,7 @@ function Mega:render(camX, camY)
         -- Dónde van a salir los súbditos (marca amarilla y tierra que burbujea)
         for i = 1, (self.summonN or 0) do
             local x, _, fy0 = self:summonSpot(i)
-            drawTarget(math.floor(x - camX), math.floor(fy0 - camY), TILE_PX, now, { 1, 0.85, 0.2 })
+            Edge.direct(drawTarget, math.floor(x - camX), math.floor(fy0 - camY), TILE_PX, now, { 1, 0.85, 0.2 })   -- (sin borde)
             self._sfx = self._sfx or {}
             if now - (self._sfx[i] or 0) > 0.15 then
                 self._sfx[i] = now
@@ -452,7 +453,7 @@ function Mega:render(camX, camY)
     end
     if (st == 'aim' or st == 'wallaim') and not EDITOR_VIEW then
         local mx = (st == 'aim') and self.x or self.markerX
-        drawTarget(math.floor(mx - camX), math.floor(self.landY - camY), self.sprW * 0.9, now)
+        Edge.direct(drawTarget, math.floor(mx - camX), math.floor(self.landY - camY), self.sprW * 0.9, now)
     end
 
     local sx, sy, shx, claws, spikeK = self:pose2d(now, moving, walkPhase)

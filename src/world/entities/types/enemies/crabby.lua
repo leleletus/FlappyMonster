@@ -699,7 +699,7 @@ end
 local Particles
 local DIG = { hide_in = 0.07, hide_out = 0.12, drop_shake = 0.08 }
 function Crabby:renderDig()
-    if self._edgePass then return end                     -- (pasada del filo de lo oscuro: no es un dibujo de verdad)
+    if require('src/fx/Edge').inPass() then return end   -- (copias del borde, modo simple: no es un dibujo de verdad)
     local every = DIG[self.state]
     if not every or EDITOR_VIEW then return end
     local img = self.currentImg

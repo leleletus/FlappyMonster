@@ -10,9 +10,9 @@
 --
 --   Edge.mode()                      'shader' | 'simple' (el ajuste, o el de su aparato; sin shaders, simple)
 --   Edge.level                       el nivel que se está dibujando (lo pone quien dibuja la escena; nil fuera)
---   Edge.draw(owner, x, y, fn)       dibuja a `owner` (en el mundo: x, y) con su borde; fn(dx, dy) lo dibuja corrido
---                                    esos píxeles de pantalla
---   Edge.direct(fn)                  lo que dibuje fn va SIN borde (sombras, marcas, brillos, nombres, barras)
+--   Edge.draw(owner, x, y, fn, ...)  dibuja a `owner` (en el mundo: x, y) con su borde; fn(dx, dy, ...) lo dibuja
+--                                    corrido esos píxeles de pantalla
+--   Edge.direct(fn, ...)             lo que dibuje fn(...) va SIN borde (sombras, marcas, brillos, nombres, barras)
 --   Edge.simpleKind(level, x, y)     'light' | 'dark' | nil: el color del modo simple en ese sitio
 local Silhouette = require 'src/fx/Silhouette'
 local Shaders    = require 'src/fx/Shaders'
@@ -45,7 +45,7 @@ function Edge.mode()
 end
 
 -- ── Modo simple ──────────────────────────────────────────────────────────────
-local Sky, Lights
+local Sky, Lights, Particles
 function Edge.simpleKind(level, x, y)
     if not level then return nil end
     if Silhouette.on(level, y) then
@@ -73,12 +73,33 @@ local DIRS = { { -1, 0 }, { 1, 0 }, { 0, -1 }, { 0, 1 }, { -1, -1 }, { 1, -1 }, 
 local passDepth = 0
 function Edge.inPass() return passDepth > 0 end
 
+-- LAS COPIAS NO TIENEN EFECTOS: el dibujo de un jefe se llama 9 veces (8 copias + la de verdad) y muchos apuntan algo
+-- al dibujar (cuánto se movió desde el dibujo anterior, cuándo soltó polvo...), sueltan partículas o tiran del azar.
+-- Durante las copias: el shader plano no se cambia, las partículas no salen, el azar es otro (el de la partida no se
+-- mueve: el fondo de los menús es una carrera fija) y lo que se apunte en el dueño se deshace al acabar.
 local realSetShader
-local function keepFlat() end                       -- (dentro de las copias: nada cambia el shader plano)
+local function keepFlat() end
+local function noEmit() end
+local passRng
+local function passRandom(a, b)
+    passRng = passRng or love.math.newRandomGenerator(1)
+    if a then return passRng:random(a, b) end
+    return passRng:random()
+end
+local saved, savedKeys = {}, {}                     -- (reutilizadas: sin basura)
+local function snapshot(owner)
+    local n = 0
+    for k, v in pairs(owner) do n = n + 1; savedKeys[n] = k; saved[k] = v end
+    savedKeys.n = n
+end
+local function restore(owner)
+    for k in pairs(owner) do if saved[k] == nil then owner[k] = nil end end
+    for i = 1, savedKeys.n do local k = savedKeys[i]; owner[k] = saved[k]; saved[k] = nil; savedKeys[i] = nil end
+end
 
-local function simpleDraw(owner, x, y, fn)
+local function simpleDraw(owner, x, y, fn, ...)
     local now = Edge.clock()
-    local kind = Edge.simpleKind(Edge.level, x, y)
+    local kind = Edge.simpleKind(owner.edgeLevel or Edge.level, x, y)      -- (edgeLevel: un actor de cinemática)
     local f = fade[owner]
     if not f then f = { a = 0, t = now }; fade[owner] = f end
     local dt = math.max(0, math.min(Edge.FADE, now - f.t))
@@ -93,30 +114,36 @@ local function simpleDraw(owner, x, y, fn)
         local prev = love.graphics.getShader()
         flat:send('tint', { c[1], c[2], c[3], f.a * Edge.MAX_A })
         love.graphics.setShader(flat)
+        Particles = Particles or require 'src/fx/Particles'
         realSetShader = love.graphics.setShader
-        love.graphics.setShader = keepFlat
+        local realEmit, realRandom = Particles.emit, math.random
+        love.graphics.setShader, Particles.emit, math.random = keepFlat, noEmit, passRandom
+        snapshot(owner)
         passDepth = passDepth + 1
+        local ok, err = true, nil
         for _, d in ipairs(DIRS) do
             love.graphics.setColor(1, 1, 1, sa)
-            local ok, err = pcall(fn, d[1] * px, d[2] * px)
-            if not ok then passDepth = passDepth - 1; love.graphics.setShader = realSetShader; realSetShader(prev); error(err, 0) end
+            ok, err = pcall(fn, d[1] * px, d[2] * px, ...)
+            if not ok then break end
         end
         passDepth = passDepth - 1
-        love.graphics.setShader = realSetShader
+        restore(owner)
+        love.graphics.setShader, Particles.emit, math.random = realSetShader, realEmit, realRandom
         love.graphics.setShader(prev)
+        if not ok then error(err, 0) end
         love.graphics.setColor(r, g, b, sa)
     end
-    fn(0, 0)
+    fn(0, 0, ...)
 end
 
-function Edge.draw(owner, x, y, fn)
-    if Edge.mode() == 'simple' then return simpleDraw(owner, x, y, fn) end
-    fn(0, 0)
+function Edge.draw(owner, x, y, fn, ...)
+    if Edge.mode() == 'simple' then return simpleDraw(owner, x, y, fn, ...) end
+    fn(0, 0, ...)
 end
 
-function Edge.direct(fn)
+function Edge.direct(fn, ...)
     if passDepth > 0 then return end                 -- (las copias del modo simple: solo el cuerpo)
-    fn()
+    return fn(...)
 end
 
 return Edge

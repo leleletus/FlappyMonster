@@ -11,7 +11,8 @@
 -- mira cuando está quieto), a.trail (copias detrás, como el Espejo perseguidor).
 local PlayerAdventure = require 'src/player/PlayerAdventure'
 local PS = require 'src/player/PlayerSprite'
-local Silhouette = require 'src/fx/Silhouette'
+local Edge = require 'src/fx/Edge'
+local function bodyShifted(dx, dy, img, x, y, sx, sy) PS.draw(img, math.floor(x) + dx, math.floor(y) + dy, 0, sx, sy, img.w / 2, img.h / 2) end
 
 local Actor = {}
 Actor.__index = Actor
@@ -109,11 +110,15 @@ function Actor:draw(o)
         end
     end
     local img = PS.recOf(self, frameOf(b.frame))
-    -- (el filo blanco, como en el juego: solo donde está oscuro — Silhouette.on —)
-    if not self.invert and alpha > 0.5 and Silhouette.on(self.level, b.y) then Silhouette.draw(img, b.x, b.y, 0, s * f, s, alpha) end
     invert(self.invert)
     love.graphics.setColor(1, 1, 1, alpha)
-    PS.draw(img, math.floor(b.x), math.floor(b.y), 0, s * f, s, img.w / 2, img.h / 2)
+    if self.invert then
+        PS.draw(img, math.floor(b.x), math.floor(b.y), 0, s * f, s, img.w / 2, img.h / 2)
+    else
+        -- (el borde de contraste, como en el juego: src/fx/Edge.lua; el Reflejo, sin él)
+        self.edgeLevel = self.level
+        Edge.draw(self, b.x, b.y, bodyShifted, img, b.x, b.y, s * f, s)
+    end
     invert(false)
     love.graphics.setColor(1, 1, 1, 1)
 end

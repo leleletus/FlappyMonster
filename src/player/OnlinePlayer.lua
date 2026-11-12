@@ -74,6 +74,10 @@ end
 function OnlinePlayer:update(dt)
 end
 
+-- EL BORDE de contraste (src/fx/Edge.lua): el cuerpo (con el hielo) va por Edge.draw; las estrellitas, el nombre, la
+-- corona y las etiquetas, sin borde (Edge.direct)
+local Edge
+local function bodyShifted(dx, dy, self, camX, camY) self:_renderBody(camX - dx, camY - dy) end
 function OnlinePlayer:render(camX, camY)
     local sx = math.floor(self.renderX - camX)
     local sy = math.floor(self.renderY - camY)
@@ -82,6 +86,14 @@ function OnlinePlayer:render(camX, camY)
     -- Solo renderizar si está en pantalla (con margen)
     if sx < -PLAYER_SCALE * 18 or sx > WINDOW_W + PLAYER_SCALE * 18 then return end
     if sy < -PLAYER_SCALE * 18 or sy > WINDOW_H + PLAYER_SCALE * 18 then return end
+    Edge = Edge or require 'src/fx/Edge'
+    Edge.draw(self, self.renderX, self.renderY, bodyShifted, self, camX, camY)
+    Edge.direct(self._renderTags, self, camX, camY)
+end
+
+function OnlinePlayer:_renderBody(camX, camY)
+    local sx = math.floor(self.renderX - camX)
+    local sy = math.floor(self.renderY - camY)
 
     -- Alpha: espectadores son semi-transparentes (los que llegaron a la meta, menos)
     local alpha = self.finished and 0.6 or (self.isSpectator and 0.32 or 1.0)
@@ -120,7 +132,7 @@ function OnlinePlayer:render(camX, camY)
     local stunned = self.stunned and not self.dying
     if stunned then                                  -- (aturdido: las estrellitas de detrás, antes del cuerpo)
         local cr, cg, cb, ca = love.graphics.getColor()
-        PAm.drawStunStars(sx, sy, self.squashed, 'back')
+        Edge.direct(PAm.drawStunStars, sx, sy, self.squashed, 'back')
         love.graphics.setColor(cr, cg, cb, ca)
     end
     if iced then                                     -- (congelado: el cuerpo teñido de hielo)
@@ -132,11 +144,6 @@ function OnlinePlayer:render(camX, camY)
         PS.draw(PS.rec('crouch'), sx, sy + 16 * PLAYER_SCALE / 2, 0, sc * self.facing, sc * PAm.SQUASH_K,
                            iw/2, PS.rec('crouch').h)
     else
-        -- (en lo oscuro: su filo blanco; lo decide SU posición, no la de quien mira)
-        if PAm.lightLevel and require('src/fx/Silhouette').on(PAm.lightLevel, self.renderY) then
-            local _, _, _, al = love.graphics.getColor()
-            require('src/fx/Silhouette').draw(img, sx, sy, 0, sc * self.facing, sc, al)
-        end
         PS.draw(img, sx, sy, 0, sc * self.facing, sc, iw/2, ih/2)
     end
     if iced then love.graphics.setShader() end
@@ -144,12 +151,20 @@ function OnlinePlayer:render(camX, camY)
         DeadEyes.draw(sx, sy, sc, self.facing, 1, 1, 1, alpha)
     end
     if stunned then
-        PAm.drawStunStars(sx, sy, self.squashed, 'front')
+        Edge.direct(PAm.drawStunStars, sx, sy, self.squashed, 'front')
     end
     if self.iced and not self.dying then           -- (congelado: bloque de hielo)
         PAm.drawIce(sx, sy, love.timer.getTime() - (self.icedAt or 0), nil, self.squashed)
     end
+    self._tagIH, self._tagA = ih, alpha              -- (para el nombre y las etiquetas: _renderTags)
+    love.graphics.setColor(1, 1, 1, 1)
+end
 
+function OnlinePlayer:_renderTags(camX, camY)
+    local sx = math.floor(self.renderX - camX)
+    local sy = math.floor(self.renderY - camY)
+    local ih, alpha, sc = self._tagIH or 16, self._tagA or 1, PLAYER_SCALE
+    local r, g, b = self.color[1], self.color[2], self.color[3]
     -- Nombre sobre el sprite
     love.graphics.setFont(FONT_SMALL)
     local nameW = FONT_SMALL:getWidth(self.name)

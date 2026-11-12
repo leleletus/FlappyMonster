@@ -53,6 +53,20 @@ local function shot(path)
         level:update(1 / 60); level:updateFoliage(1 / 60)
         for _, e in ipairs(es) do if e.alive then e:update(1 / 60, level) end end
     end
+    -- EDGE=simple|shader: el borde de contraste en ese modo (src/fx/Edge.lua); el reloj del fundido avanza 1 s por dibujo
+    -- y se dibuja todo una vez antes, para que el borde salga entero desde la primera foto
+    local edgeMode = os.getenv('EDGE')
+    if edgeMode and edgeMode ~= '' then
+        local Edge = require 'src/fx/Edge'
+        require('src/core/Settings').edge = edgeMode
+        local tick = 0
+        Edge.clock = function() tick = tick + 1; return tick end
+        Edge.level = level
+        local scratch = love.graphics.newCanvas(8, 8)
+        love.graphics.setCanvas(scratch)
+        for _ = 1, 2 do for _, e in ipairs(es) do if e.alive then e:render(0, 0) end end end
+        love.graphics.setCanvas()
+    end
     local k = tonumber(os.getenv('SCALE')) or 0.25
     local W, H = level.tileW * TILE_PX, level.tileH * TILE_PX
     -- (CROP: el trozo [x0, x0 + W) x [y0, y0 + H) del nivel, en píxeles)
@@ -94,7 +108,7 @@ local function shot(path)
             Sky.render(level, cx, cy)
             level:render(cx, cy)
             level:renderFoliageBack(cx, cy)
-            require('src/fx/Silhouette').level = level        -- (filo de los enemigos oscuros: `darkEdge`)
+            require('src/fx/Edge').level = level              -- (el borde de contraste: src/fx/Edge.lua)
             for _, e in ipairs(es) do if e.alive and not e:drawsInFront() then e:render(cx, cy) end end
             for _, e in ipairs(es) do if e.alive and e:drawsInFront() then e:render(cx, cy) end end
             level:renderFoliage(cx, cy)

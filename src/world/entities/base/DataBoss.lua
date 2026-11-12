@@ -268,6 +268,7 @@ function DataBoss.typeDef(spec)
     })
     for k, v in pairs(M) do cls[k] = v end
     cls.spec = spec
+    cls.edge = spec.edge                       -- (el borde de contraste: nil = el de su categoría — src/fx/Edge.lua —)
     local b = spec.boss
     local intro = b.intro == nil and DataBoss.DEFAULTS.intro or b.intro
     if intro and intro > 0 then cls.introLength = intro end

@@ -46,7 +46,7 @@ local Props = require 'src/world/entities/base/Props'
 local IceEncase           -- (solo dibujo: el bloque de hielo de lo congelado)
 local StunRing            -- (solo dibujo: el corro de estrellitas de aturdido, por detrás y por delante)
 
-local Silhouette
+local Edge
 local EntityTypes = { byName = {}, list = {}, variants = {} }
 
 -- Categorías de la paleta del editor, en este orden (una categoría nueva que
@@ -134,6 +134,10 @@ function EntityTypes.variantsOf(name)
     return t and t.variant and EntityTypes.variants[t.variant.group] or nil
 end
 
+-- Categorías que llevan el borde de contraste si el tipo no dice nada (src/fx/Edge.lua): lo que es un personaje
+EntityTypes.EDGE_DEFAULT = { Enemigos = true, Jefes = true, Objetos = true }
+local autoEdge = setmetatable({}, { __mode = 'k' })     -- (clases a las que se les puso el de su categoría)
+
 function EntityTypes.register(def)
     assert(type(def) == 'table' and type(def.name) == 'string', "entidad sin nombre")
     assert(not EntityTypes.byName[def.name], "entidad duplicada: " .. def.name)
@@ -142,6 +146,15 @@ function EntityTypes.register(def)
     for k, v in pairs(def) do t[k] = v end
     t.label    = t.label or t.name
     t.category = t.category or 'Enemigos'
+    -- EL BORDE de contraste (src/fx/Edge.lua): por categoría (EDGE_DEFAULT); un tipo lo cambia con `edge = true / false`
+    -- (en su definición o en su clase). `edgeOwn` = lo que dijo el tipo (nil: el de su categoría)
+    local cls0 = t.class
+    local own = t.edge
+    if own == nil and not autoEdge[cls0] then own = rawget(cls0, 'edge') end
+    t.edgeOwn = own
+    if own == nil then own = EntityTypes.EDGE_DEFAULT[t.category] == true; autoEdge[cls0] = true end
+    rawset(cls0, 'edge', own)
+    if rawget(cls0, 'edgeThin') == nil then rawset(cls0, 'edgeThin', true) end      -- (modo simple: 1 px, no el del jugador)
     -- Sonidos suyos que además son RUIDO (lo oyen los Crabbies lúgubres): `noises = { sonido = casillas }`
     if t.noises then require('src/world/systems/Noise').register(t.noises) end
 
@@ -208,20 +221,17 @@ function EntityTypes.register(def)
     local cls = t.class
     if not cls._wrappedRender then
         local drawBody = cls.render
+        local shifted = function(dx, dy, self, camX, camY) drawBody(self, camX - dx, camY - dy) end
         local draw = function(self, camX, camY)
             if self.state ~= 'frozen' then EntityTypes.drawWings(self, camX, camY) end   -- (detrás del cuerpo)
-            -- FILO en lo oscuro (rasgo `darkEdge` = color {r, g, b, a}): enemigos de colores oscuros que se
-            -- pierden de noche, en cuevas, a oscuras... Su propia silueta, 1 px alrededor, conservando sus colores
-            local edge = self.darkEdge
-            if edge and self.state ~= 'frozen' then
-                Silhouette = Silhouette or require 'src/fx/Silhouette'
-                if Silhouette.level and Silhouette.dim(Silhouette.level, self.y) then
-                    self._edgePass = true
-                    Silhouette.around(function(dx, dy) drawBody(self, camX - dx, camY - dy) end, edge)
-                    self._edgePass = nil
-                end
+            -- EL BORDE de contraste (rasgo `edge`, src/fx/Edge.lua): en modo simple, sus copias alrededor; en modo
+            -- shader, la escena ya lo dibuja en el lienzo de los personajes
+            if self.edge and self.state ~= 'frozen' then
+                Edge = Edge or require 'src/fx/Edge'
+                Edge.draw(self, self.x, self.y, shifted, self, camX, camY)
+            else
+                drawBody(self, camX, camY)
             end
-            drawBody(self, camX, camY)
         end
         cls._wrappedRender = true
         cls.render = function(self, camX, camY)

@@ -50,7 +50,7 @@ local ICON_SCALE = 4
 -- Al salir del nivel: cerrar la grabación (si la hay)
 function AdventureState:exit()
     if Entity.onKill and Entity.onKill == self.onKill then Entity.onKill = nil end
-    require('src/fx/Silhouette').level = nil
+    require('src/fx/Edge').level = nil
     require('src/ui/View').unlock()
     -- Música y sonidos de partida a cero (también la pista de jefe): al volver
     -- a entrar (reintentar tras perder todas las vidas, desde el editor...)
@@ -994,7 +994,7 @@ function AdventureState:_drawActors(camX, camY)
     -- (en el duelo de ritmo no está en la arena: sale bailando en el minijuego — src/ui/RhythmDuel.lua —)
     if self.ghost and self.ghost.draw then self.ghost.draw(self.levelTime, camX, camY) end   -- (el fantasma, detrás)
     if not RhythmDuel.hides(self.level, self.player.x, self.player.y) then self.player:render(camX, camY) end
-    PointAreas.drawProgress(self.level, self.player, self.player.x - camX, self.player.y - camY)
+    require('src/fx/Edge').direct(PointAreas.drawProgress, self.level, self.player, self.player.x - camX, self.player.y - camY)   -- (sin borde)
 end
 
 function AdventureState:_renderScene()

@@ -25,7 +25,7 @@ local Scene = require 'src/editor/ScenePreview'
 local E = { ids = {}, id = nil, spec = nil, animDoc = nil, panel = AnimPanel.new(), tab = 'anim', unsaved = false,
             newId = '', previewState = 'idle', pt = 0 }
 E.ORDER = { 'id', 'label', 'category', 'description', 'boss', 'anim', 'variant', 'scale', 'facesLeft', 'breathe', 'crawl', 'hitbox', 'hp', 'hurtTime',
-            'defaults', 'traits', 'darkEdge', 'states', 'leaves', 'behaviors', 'sounds' }
+            'defaults', 'traits', 'edge', 'darkEdge', 'states', 'leaves', 'behaviors', 'sounds' }
 local DataEnemy, DataBoss, Behaviors, EntityTypes       -- (se cargan en load: necesitan los globales del juego)
 
 local TRAITS = {
@@ -258,9 +258,11 @@ local function tabGeneral(x, y, w, h)
     py = field({ key = 'scale', kind = 'number', label = 'Escala (px por píxel de arte)', min = 1, max = 16, step = 0.5 }, S, px, py, pw)
     py = field({ key = 'facesLeft', kind = 'bool', label = 'El dibujo mira a la izquierda' }, S, px, py, pw)
     py = field({ key = 'breathe', kind = 'bool', label = '"Respira" cuando está quieto' }, S, px, py, pw)
-    local edge = S.darkEdge ~= nil
-    local nv, ch = ui.toggle('Filo claro en lo oscuro (sprite oscuro)', edge, px, py, pw); py = py + 28
-    if ch then S.darkEdge = nv and { 1, 0.8, 0.55, 0.9 } or nil; touch() end
+    -- (el borde de contraste — src/fx/Edge.lua —: por defecto el de su categoría; un `darkEdge` de antes cuenta como sí)
+    local edge = S.edge
+    if edge == nil then edge = S.darkEdge ~= nil or require('src/world/entities/base/EntityTypes').EDGE_DEFAULT[S.boss and 'Jefes' or (S.category or 'Enemigos')] == true end
+    local nv, ch = ui.toggle('Borde de contraste (se separa del fondo)', edge, px, py, pw); py = py + 28
+    if ch then S.edge, S.darkEdge = nv, nil; touch() end
     py = ui.caption('Caja de golpe (× el tamaño del sprite)', px, py, pw)
     for _, f in ipairs({ { 'outerW', 'Fuera: ancho' }, { 'outerH', 'Fuera: alto' }, { 'innerW', 'Dentro: ancho' }, { 'innerH', 'Dentro: alto' } }) do
         py = field({ key = f[1], kind = 'number', label = f[2], min = 0.05, max = 1.5, step = 0.02 }, S.hitbox, px, py, pw)

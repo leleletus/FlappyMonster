@@ -16,7 +16,7 @@
 --     "hitbox": { "outerW": 0.72, "outerH": 0.8, "innerW": 0.44, "innerH": 0.5 },   -- × el tamaño del sprite
 --     "hp": 1, "hurtTime": 0.5,                  -- golpes que aguanta; s en el estado 'hurt' (intocable) tras cada uno
 --     "defaults": { "movement": "walk", "speed": 55, "points": 10, "onTouch": "hurt", … },   -- props comunes
---     "traits": { "needsPound": false, … }, "darkEdge": null, "breathe": true,
+--     "traits": { "needsPound": false, … }, "edge": null (borde de contraste; "darkEdge" de antes = true), "breathe": true,
 --     "states": { "idle": "idle", "walk": "walk", "run": "run", "attack": "attack", "special": "special",
 --                 "hurt": "hurt", "dead": "dead" },                  -- estado → secuencia del conjunto
 --     "behaviors": [ { "type": "chase", "range": 5 }, { "type": "melee" } ],          -- en orden de prioridad
@@ -440,7 +440,9 @@ function DataEnemy.typeDef(spec)
         hitbox = { outerW = hb.outerW or 0.72, outerH = hb.outerH or 0.8, innerW = hb.innerW or 0.44, innerH = hb.innerH or 0.5 },
     })
     cls.spec = spec
-    cls.darkEdge = spec.darkEdge
+    -- (el borde de contraste — src/fx/Edge.lua —: `edge`; un `darkEdge` de antes también lo enciende; nil = el de su categoría)
+    cls.edge = spec.edge
+    if cls.edge == nil and spec.darkEdge ~= nil then cls.edge = true end
     -- (el sonido del estado en que entra al LANZAR a un jugador — `launchState` del comportamiento —: el cliente online
     -- predice ese lanzamiento y lo suena él, Interactions / OnlineAdventureState `launchSound`)
     for _, b in ipairs(spec.behaviors or {}) do

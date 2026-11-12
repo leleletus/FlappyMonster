@@ -1450,24 +1450,36 @@ end
 -- jugador propio, otro jugador (OnlinePlayer) o el bot (que se dibuja con un OnlinePlayer). Antes era un sí/no
 -- común que ponía el jugador local.
 function cases.filo_propio()
-    local Sil = require 'src/fx/Silhouette'
+    -- (el borde en modo simple — src/fx/Edge.lua —: las copias de Edge.draw las decide SU posición)
+    local Edge, Settings = require 'src/fx/Edge', require 'src/core/Settings'
     local OnlinePlayer = require 'src/player/OnlinePlayer'
     local level = { depth = 'cave', surfaceRow = 6 }               -- superficie en y = 320
     FONT_SMALL, FONT_MED, FONT_BIG = FONT_SMALL or love.graphics.getFont(), FONT_MED or love.graphics.getFont(), FONT_BIG or love.graphics.getFont()   -- (el nombre sobre el otro jugador)
-    local real, drawn = Sil.draw, {}
-    Sil.draw = function(img, x, y) drawn[#drawn + 1] = y end
-    local function count(fn) drawn = {}; fn(); return #drawn end
+    local prevMode, prevClock = Settings.edge, Edge.clock
+    Settings.edge = 'simple'
+    local t = 0
+    Edge.clock = function() return t end
+    local function copies(fn)                                       -- (borde entero: 0,5 s de fundido, luego cuenta)
+        for i = 1, 6 do t = t + 0.1; fn() end
+        local n = 0
+        local real = Edge.inPass
+        local draw = love.graphics.draw
+        love.graphics.draw = function(...) if real() then n = n + 1 end return draw(...) end
+        t = t + 0.1; fn()
+        love.graphics.draw = draw
+        return n
+    end
     local up, down = PlayerAdventure:new(200, 150), PlayerAdventure:new(300, 600)
     local rUp, rDown = OnlinePlayer:new('a', 'A', { 1, 0.4, 0.3 }), OnlinePlayer:new('b', 'B', { 0.4, 1, 0.3 })
     rUp:applyData({ x = 400, y = 150, facing = 1, frame = 3 }); rDown:applyData({ x = 500, y = 600, facing = 1, frame = 3 })
     rUp.renderX, rUp.renderY, rDown.renderX, rDown.renderY = 400, 150, 500, 600
-    PlayerAdventure.lightLevel = level
-    local a, b = count(function() up:render(0, 0) end), count(function() down:render(0, 0) end)
-    local c, d = count(function() rUp:render(0, 0) end), count(function() rDown:render(0, 0) end)
-    PlayerAdventure.lightLevel = nil
-    local off = count(function() down:render(0, 0); rDown:render(0, 0) end)
-    Sil.draw = real
-    check('filo_propio', a == 0 and b == 1 and c == 0 and d == 1 and off == 0,
+    Edge.level = level
+    local a, b = copies(function() up:render(0, 0) end), copies(function() down:render(0, 0) end)
+    local c, d = copies(function() rUp:render(0, 0) end), copies(function() rDown:render(0, 0) end)
+    Edge.level = nil
+    local off = copies(function() down:render(0, 0); rDown:render(0, 0) end)
+    Settings.edge, Edge.clock = prevMode, prevClock
+    check('filo_propio', a == 0 and b > 0 and c == 0 and d > 0 and off == 0,
         ('arriba (a la luz): jugador %d, otro %d · abajo (penumbra): jugador %d, otro %d · sin nivel: %d'):format(a, c, b, d, off))
 end
 
@@ -1898,9 +1910,8 @@ function cases.persecucion()
 end
 
 -- Crabby escondido: la tapa (pincho) apoya EN la superficie en todas las pieles (las de base dejaban 1 px de arte
--- de hueco); y el filo de lo oscuro (`darkEdge`) lo llevan los de roca volcánica, solo donde está oscuro
+-- de hueco); y el borde de contraste (`edge`, src/fx/Edge.lua) lo llevan todos
 function cases.tapa_base()
-    local Silhouette = require 'src/fx/Silhouette'
     local bad = {}
     for _, ty in ipairs({ 'crabby', 'crabby_fortress', 'crabbytramp', 'crabby_ice', 'crabby_river', 'crabby_cave', 'crabby_lava', 'crabby_jungle' }) do
         local e = Entities.create({ type = ty, col = 5, row = 5, props = {} })
@@ -1910,12 +1921,10 @@ function cases.tapa_base()
     local lava = Entities.create({ type = 'crabby_lava', col = 5, row = 5, props = {} })
     local magma = Entities.create({ type = 'gummy_magma', col = 5, row = 5, props = {} })
     local plain = Entities.create({ type = 'crabby', col = 5, row = 5, props = {} })
-    local edges = lava.darkEdge ~= nil and magma.darkEdge ~= nil and plain.darkEdge == nil
-    local dim = Silhouette.dim({ light = 'night' }, 0) and Silhouette.dim({ light = 'dusk' }, 0) and Silhouette.dim({ dark = true }, 0)
-        and Silhouette.dim({ light = 'cave' }, 0) and not Silhouette.dim({ light = 'day' }, 0) and not Silhouette.dim(nil, 0)
-    check('tapa_base', #bad == 0 and edges and dim,
-        ('tapa con hueco: %s · filo en lava/magma y no en el normal=%s · solo en lo oscuro=%s'):format(
-            #bad == 0 and 'ninguna' or table.concat(bad, ' '), tostring(edges), tostring(dim)))
+    local edges = lava.edge == true and magma.edge == true and plain.edge == true      -- (el borde: rasgo `edge` de la base)
+    check('tapa_base', #bad == 0 and edges,
+        ('tapa con hueco: %s · borde en el Crabby, el de lava y el Gummy de magma=%s'):format(
+            #bad == 0 and 'ninguna' or table.concat(bad, ' '), tostring(edges)))
 end
 
 -- MANZANA: con vida de menos cura 1 (sin puntos); con la vida llena, da sus puntos
