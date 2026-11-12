@@ -27,7 +27,8 @@ local function top() return stack[depth] end
 local forceKind = nil
 
 Edge.W     = 2                                   -- grosor (px de pantalla) en modo shader
-Edge.T_LO, Edge.T_HI = 0.08, 0.22                -- diferencia de luminancia: filo entero / ninguno
+Edge.T_LO, Edge.T_HI = 0.03, 0.10                -- diferencia de luminancia: filo entero / ninguno (antes 0.08 / 0.22: salía
+                                                 -- demasiado; el usuario, 2026-11-12: "que requiera mucha más oscuridad")
 Edge.L_LO, Edge.L_HI = 0.12, 0.3                 -- luz del sitio: sin filo / filo entero (a oscuras no delata nada)
 Edge.LIGHT = { 1, 1, 1 }
 Edge.DARK  = { 0.05, 0.06, 0.10 }

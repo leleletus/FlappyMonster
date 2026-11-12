@@ -34,7 +34,7 @@ Nothing is gameplay: no server change, no protocol change.
   `Objetos`); off for `Trampas`, `Mecanismos`, `Directores`, `Flappy`. A type overrides it with `edge = true / false`
   (definition or class). Data enemies: `"edge"` in the JSON (enemy editor: «Borde de contraste»); an old `"darkEdge"`
   reads as `edge = true`.
-- Values (in `Edge.lua`, to tune by eye): `W` 2 px, `T_LO` 0.08 / `T_HI` 0.22 (luminance difference: full / no edge),
+- Values (in `Edge.lua`, to tune by eye): `W` 2 px, `T_LO` 0.03 / `T_HI` 0.10 (luminance difference: full / no edge; 0.08 / 0.22 until 0.5.212),
   `L_LO` 0.12 / `L_HI` 0.3 (light here: no edge / full — a `dark` level's ambient is 0.055, so nothing is revealed
   outside the flashlight), `LIGHT` white, `DARK` navy, `MAX_A` 0.9, `FADE` 0.3 s.
 - The level JSON field `outline` is still read but does nothing.
@@ -85,5 +85,8 @@ scenes, nested sets, the credits background; `SHOT=1` captures five levels in bo
   after use), nested `Edge.draw` crashed in simple mode, the light map stayed stale when a level left darkness (scenes),
   subclasses with their own render had no edge in simple mode, overlays (front stars, names, spotlights) went UNDER the
   characters in shader mode (→ `Edge.over`), and draws into another canvas inside an open scene were stolen.
+- 0.5.212, the user: "it should need much more darkness to trigger" → `T_LO` / `T_HI` 0.08 / 0.22 → 0.03 / 0.10. The
+  near-black monster now only gets the edge against an almost black background (caves, dark levels, the darkest night
+  skies); medium contrasts (dusk, night mountains) no longer get a partial edge.
 - Not judged by a person yet: the look, the thresholds (partial edges at medium contrast, e.g. the intro card at dusk),
   and the frame rate on real devices.
