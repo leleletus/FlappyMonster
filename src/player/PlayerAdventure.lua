@@ -294,12 +294,18 @@ end
 -- src/player/DamageSource.lua): queda en `lastHit` si el golpe entra (el aviso de la muerte lo nombra).
 function PlayerAdventure:hurt(n, src)
     if self.dying or not self.alive or self:isInvulnerable() then return false end
-    if self.shield and not self.immortal then self:breakShield(); return false end   -- (el ESCUDO para el golpe ENTERO)
+    local KB = require 'src/player/Knockback'
+    if self.shield and not self.immortal then
+        self:breakShield()                                          -- (el ESCUDO para el golpe ENTERO…)
+        if KB.of(src) then KB.apply(self, KB.dirFrom(self, src), KB.PROFILES.weak) end   -- (…con un empujón corto)
+        return false
+    end
     for _ = 1, math.max(1, n or 1) do
         if self:takeDamage(src) then return true end
     end
     self:grantInvulnerability(HIT_INV * Difficulty.k('invuln'))
     self.hurtT, self.hitNow = HURT_FLASH, true
+    KB.hit(self, src)                                               -- (TODO golpe empuja lejos de lo que pegó: Knockback)
     return false
 end
 
@@ -357,6 +363,8 @@ function PlayerAdventure:hazardHit(src)
     if dmg <= 0 then return self:die(nil, nil, src) ~= false end
     if self:isInvulnerable() then return false end
     if self:hurt(dmg, src) then return true end
+    -- (pinchos y lava: el bote hacia ARRIBA de siempre — para salir del foso — y un poco de lado, lejos de ellos)
+    self.vx = (src and src.x) and require('src/player/Knockback').dirFrom(self, src) * 160 or self.vx
     self.vy, self.onGround = -620, false
     self.gpPhase, self.gpT = nil, 0
     return false

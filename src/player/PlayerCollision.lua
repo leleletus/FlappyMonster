@@ -389,8 +389,8 @@ function PlayerAdventure:moveAndCollide(level, dx, dy)
     for _,c in ipairs(corners) do
         local t = level:contactAt(c[1],c[2])
         if t then
-            if t.mat.contact == 'kill' and self:hazardHit(require('src/player/DamageSource').make(t.name)) then return end   -- (la lava: tile `danger`)
-            if t.mat.contact == 'hurt' and not self:ghostPasses(t) and self:hurt(1, require('src/player/DamageSource').make(t.name)) then return end   -- (FANTASMA: PlayerPowerups)
+            if t.mat.contact == 'kill' and self:hazardHit(require('src/player/DamageSource').make(t.name, nil, (math.floor(c[1] / TILE_PX) + 0.5) * TILE_PX)) then return end   -- (la lava: tile `danger`)
+            if t.mat.contact == 'hurt' and not self:ghostPasses(t) and self:hurt(1, require('src/player/DamageSource').make(t.name, nil, (math.floor(c[1] / TILE_PX) + 0.5) * TILE_PX)) then return end   -- (FANTASMA: PlayerPowerups)
         end
     end
 
@@ -398,7 +398,7 @@ function PlayerAdventure:moveAndCollide(level, dx, dy)
     local ob = self:getOuterBounds(SPIKE_OB)
     local spikeList = level:getSpikesInBox(ob.x, ob.y, ob.w, ob.h, SPIKE_L)
     for _, sp in ipairs(spikeList) do
-        if spikeHitsPlayer(sp, ob) and self:hazardHit(require('src/player/DamageSource').make('spikes')) then return end
+        if spikeHitsPlayer(sp, ob) and self:hazardHit(require('src/player/DamageSource').make('spikes', nil, sp.x + sp.w / 2)) then return end
     end
 
     -- Líquidos

@@ -157,6 +157,14 @@ every direct call pass theirs (a `mechanics` check scans the code: no `:hurt(` /
 `src/player/DeathCause.lua` reads `lastHit` first ("Te derrotó: Proyectil de Pez globo", `death.part` +
 `part.<part>`), and only guesses from the surroundings when there is none. Online it travels in the own state (index 46,
 protocol 119).
+
+**Knockback on every hit (0.5.210, `src/player/Knockback.lua`; the user: "all hits push to the other side").** When a hit
+lands (`hurt`), the player is pushed AWAY from where it came from (`src.x`; unknown → backwards from where it faces) with a
+small hop and `ctrlLockT`: `PROFILES.normal` (300 / -300, 0.2 s); `strong` (520 / -380, 0.3 s: explosions, slam / pound /
+wave / blast / dash / stomp parts, a boss's body); `weak` (180 / -200: projectiles, ice); none for drowning, time, crush
+and the Flappy edge, nor while flying. Floor spikes and lava keep their upward bounce (-620, to get out of a pit) plus
+160 sideways. A shield that stops a hit gives a short (`weak`) push. `Boss.strike` applies its own attack table through
+the same `Knockback.apply` (one module for every push). Protocol 120 (the predicted physics changes).
 Respawn grants `SPAWN_INV` (2.5 s) of the same invulnerability (`invT`, see Player).
 `die()` returns false when it was blocked. `invT` is own-state index 27 and others see
 it via `PF_INVULN` (protocol v21: one system for respawn and hits).

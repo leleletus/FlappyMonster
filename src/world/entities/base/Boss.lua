@@ -286,14 +286,9 @@ function Boss.strike(pa, hit, dir, src)
         -- (hit[1] = 0: solo empuja, sin daño ni invulnerabilidad)
         if hit[1] > 0 and pa:hurt(hit[1], src) then return end
         if pa.dying then return end
-        pa.vx, pa.vy = dir * hit[2], hit[3]
-        pa.onGround, pa.crouching = false, false
-        pa.gpPhase, pa.gpT = nil, 0
-        pa.ctrlLockT = math.max(pa.ctrlLockT or 0, hit[4])
-        if hit[5] > 0 then
-            pa.stunT = math.max(pa.stunT or 0, hit[5])
-            Sound.play('stunned')
-        end
+        -- (su empuje propio — la tabla del ataque —, con el módulo de TODOS los golpes: src/player/Knockback.lua)
+        local Knockback = require 'src/player/Knockback'
+        Knockback.apply(pa, dir, { vx = hit[2], vy = hit[3], lock = hit[4], stun = hit[5] })
     end)
     return true
 end

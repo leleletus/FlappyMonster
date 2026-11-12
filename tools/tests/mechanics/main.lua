@@ -2377,6 +2377,48 @@ function cases.accesibilidad()
          tostring(s1), tostring(s2), tostring(f1), tostring(f2), tostring(signs), tostring(cb)))
 end
 
+-- EMPUJE en TODOS los golpes (0.5.210, src/player/Knockback.lua): lejos de lo que pegó, con un saltito y un momento sin
+-- control; más fuerte (explosiones, golpes de jefe, embestidas, el cuerpo de un jefe), más flojo (proyectiles, hielo),
+-- ninguno (ahogarse, tiempo, aplastado); los pinchos y la lava, su bote hacia arriba y un poco de lado; el escudo, un
+-- empujón corto. Boss.strike usa el mismo módulo
+function cases.empuje()
+    local okK, KB = pcall(require, 'src/player/Knockback')
+    local DS = require 'src/player/DamageSource'
+    local level = room(16, 8, {})
+    local function hit(src, fromX, shield)
+        local pa = playerAt(level, 8, 7)
+        pa.vx, pa.vy, pa.ctrlLockT = 0, 0, 0
+        if shield then pa.shield = true end
+        if fromX then src.x = pa.x + fromX end
+        pa:hurt(1, src)
+        return pa
+    end
+    local function g(n) return { what = n, part = 'body' } end
+    local body = hit(g('gummy'), 40)                         -- (le pega desde la DERECHA: sale a la izquierda)
+    local okBody = body.vx < -100 and body.vy < -100 and (body.ctrlLockT or 0) > 0
+    local proj = hit(DS.make('pufferfish', 'projectile'), -40)
+    local boom = hit(DS.make('explosion'), -40)
+    local okSize = proj.vx > 0 and boom.vx > proj.vx and proj.vx < body.vx * -1
+    local crush = hit(DS.make('crush'), 40)
+    local okNone = crush.vx == 0 and crush.vy == 0
+    local sh = hit(g('gummy'), 40, true)
+    local okShield = sh.vx < 0 and not sh.shield
+    local bossBody = hit(DS.make('megagummy', 'body'), 40)
+    local okBoss = bossBody.vx < body.vx                      -- (más fuerte: más a la izquierda)
+    -- pinchos: bote hacia arriba como siempre y un poco de lado
+    local sp = playerAt(level, 8, 7); sp.vx, sp.vy = 0, 0
+    sp:hazardHit({ what = 'spikes', x = sp.x - 30 })
+    local okSpikes = sp.vy <= -600 and sp.vx > 0
+    local okBossMod = false
+    if okK then
+        local src = love.filesystem.read('src/world/entities/base/Boss.lua') or ''
+        okBossMod = src:find('Knockback%.apply') ~= nil
+    end
+    check('empuje', okK and okBody and okSize and okNone and okShield and okBoss and okSpikes and okBossMod,
+        ('cuerpo vx %.0f vy %.0f · proyectil %.0f < explosión %.0f · aplastado %.0f/%.0f · escudo %.0f · jefe %.0f · pinchos %.0f/%.0f · Boss.strike usa el módulo=%s'):format(
+         body.vx, body.vy, proj.vx, boom.vx, crush.vx, crush.vy, sh.vx, bossBody.vx, sp.vx, sp.vy, tostring(okBossMod)))
+end
+
 function cases.puffer_cycle()
     local level, es = pond()
     local f = es[1]
@@ -4827,7 +4869,7 @@ local function junglaShot()
 end
 
 function love.load()
-    for _, n in ipairs({ 'fuente_base', 'fuente_contacto', 'fuente_partes', 'fuente_entorno', 'fuente_textos', 'fuente_red', 'aviso_opcion', 'inicio_fases', 'onoff_head', 'onoff_pound', 'hidden_up', 'hidden_drop', 'hidden_side', 'hidden_vis',
+    for _, n in ipairs({ 'fuente_base', 'fuente_contacto', 'fuente_partes', 'fuente_entorno', 'fuente_textos', 'fuente_red', 'aviso_opcion', 'empuje', 'inicio_fases', 'onoff_head', 'onoff_pound', 'hidden_up', 'hidden_drop', 'hidden_side', 'hidden_vis',
                          'helmet_jump', 'helmet_ride', 'helmet_gp', 'helmet_side', 'stomp_fast',
                          'puffer_through', 'puffer_concave', 'puffer_cycle', 'puffer_dry', 'flyer_anim', 'vuelo_libre', 'boxed_in',
                          'bloque_roto', 'activador', 'tramp_avanza', 'tramp_pinchos', 'ping_icono',

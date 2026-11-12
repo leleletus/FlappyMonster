@@ -17,10 +17,11 @@ DS.PARTS = { 'beam', 'bite', 'blast', 'body', 'claw', 'dash', 'fire', 'gust', 'h
 local PART_IX = {}
 for i, p in ipairs(DS.PARTS) do PART_IX[p] = i end
 
-function DS.make(what, part) return { what = what, part = part } end
+function DS.make(what, part, x) return { what = what, part = part, x = x } end   -- (x: de dónde vino, si se sabe)
+-- (x, y: DE DÓNDE vino — el empuje va hacia el otro lado: src/player/Knockback.lua —)
 function DS.of(e, part)
     local d = e and e.def
-    return { what = (d and d.name) or (e and e.type) or 'enemy', part = part }
+    return { what = (d and d.name) or (e and e.type) or 'enemy', part = part, x = e and e.x, y = e and e.y }
 end
 
 -- El registro (igual en todas las máquinas de la misma versión): las causas, los tipos de entidad y los tiles, ordenados
