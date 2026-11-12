@@ -278,22 +278,24 @@ end
 
 -- INMORTAL (`immortal = true`: los bots rivales del modo historia, src/ai/Bot.lua): los golpes y los empujones
 -- le llegan (destello, invulnerable un momento, sale despedido), pero ni pierde vida ni muere ni se ahoga.
-function PlayerAdventure:takeDamage()
+function PlayerAdventure:takeDamage(src)
     if self.dying or not self.alive or self:isInvulnerable() then return false end
     if self.immortal then return false end
     if self.shield then self:breakShield(); return false end        -- (power-up ESCUDO: PlayerPowerups.lua)
     self.hp=self.hp-1
-    if self.hp<=0 then self.hp=self.hpMax; self:die(); return true end
+    if src then self.lastHit = src end                             -- (de dónde vino: src/player/DamageSource.lua)
+    if self.hp<=0 then self.hp=self.hpMax; self:die(nil, nil, src); return true end
     Sound.play('dies'); Noise.emit(self.x, self.y, Noise.R.hurt, nil, 'hurt'); return false     -- (from 'hurt': el Saltarín Gigante no se asusta de esto)
 end
 
 -- Golpe de `n` de vida (1 por defecto): tiles 'hurt', entidades onTouch='hurt',
--- jefes... Si no lo mata, queda invulnerable HIT_INV s. true si lo mató.
-function PlayerAdventure:hurt(n)
+-- jefes... Si no lo mata, queda invulnerable HIT_INV s. true si lo mató. `src` = de dónde vino ({ what, part }:
+-- src/player/DamageSource.lua): queda en `lastHit` si el golpe entra (el aviso de la muerte lo nombra).
+function PlayerAdventure:hurt(n, src)
     if self.dying or not self.alive or self:isInvulnerable() then return false end
     if self.shield and not self.immortal then self:breakShield(); return false end   -- (el ESCUDO para el golpe ENTERO)
     for _ = 1, math.max(1, n or 1) do
-        if self:takeDamage() then return true end
+        if self:takeDamage(src) then return true end
     end
     self:grantInvulnerability(HIT_INV * Difficulty.k('invuln'))
     self.hurtT, self.hitNow = HURT_FLASH, true
@@ -302,7 +304,7 @@ end
 
 -- Devuelve false si no murió (invulnerable tras reaparecer). `force` = muere
 -- igual (límite de tiempo del nivel).
-function PlayerAdventure:die(drownDeath, force)
+function PlayerAdventure:die(drownDeath, force, src)
     if self.dying then return end
     if self.immortal then                                  -- (pinchos, lava, un aplastón: un bote y sigue)
         if self:isInvulnerable() then return false end
@@ -326,6 +328,7 @@ function PlayerAdventure:die(drownDeath, force)
         return false
     end
     self.dying=true; self.vx=0; self.vy=0
+    if src then self.lastHit = src end                             -- (de qué murió: src/player/DamageSource.lua)
     self.deathFlags = { drown = drownDeath == true, force = force == true }   -- (src/player/DeathCause.lua: de qué murió)
     self.gpPhase=nil; self.stunT=0; self.squashT=0; self.iceT=0; self.gulped=false; self.gulpMash=0; self.frostT=0
     self.deathPhase='freeze'; self.deathTimer=0; self.deathY=self.y
@@ -348,11 +351,11 @@ end
 
 -- Pinchos y lava (y los demás PELIGROS): quitan `hazardDmg` de vida según la dificultad — 0 = matan (Xtra extremo) —:
 -- hacen daño y te sacan de un bote hacia arriba (para poder salir del foso). true = ha muerto.
-function PlayerAdventure:hazardHit()
+function PlayerAdventure:hazardHit(src)
     local dmg = Difficulty.k('hazardDmg', 1)                -- (0 = mata de un toque: Xtra extremo; Difficulty.lua)
-    if dmg <= 0 then return self:die() ~= false end
+    if dmg <= 0 then return self:die(nil, nil, src) ~= false end
     if self:isInvulnerable() then return false end
-    if self:hurt(dmg) then return true end
+    if self:hurt(dmg, src) then return true end
     self.vy, self.onGround = -620, false
     self.gpPhase, self.gpT = nil, 0
     return false
@@ -362,6 +365,7 @@ function PlayerAdventure:respawn()
     self.x=self.spawnX; self.y=self.spawnY
     self.vx=0; self.vy=0; self.onGround=false; self.jumpsLeft=2
     self.dying=false; self.alive=true; self.deathPhase=nil; self.deathTimer=0
+    self.lastHit=nil                                              -- (la fuente del último golpe: otra vida)
     self.frame=3; self.puff=1; self.hp=self.hpMax; self.inWater=false
     self.crouching=false; self.dropHoldT=0; self.dropping=false; self.dropTop=0
     self.liquid=nil; self.prevLiquid=nil; self.groundDef=nil; self.hurtT=0

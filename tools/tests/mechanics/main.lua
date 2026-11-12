@@ -194,6 +194,36 @@ end
 
 local cases = {}
 
+-- FUENTES DEL DAÑO (docs/design/damage-sources.md): el golpe que entra deja su fuente en pa.lastHit; el que no entra
+-- (escudo, invulnerable) no la cambia; al reaparecer se borra; se codifican a un número y vuelven igual
+function cases.fuente_base()
+    local DS = require 'src/player/DamageSource'
+    local level = room(8, 8, {})
+    local pa = playerAt(level, 4, 7)
+    local A, B, C, D = DS.make('crabby', 'spike'), DS.make('pufferfish', 'projectile'), DS.make('danger'), DS.make('spikes')
+    pa.hpMax, pa.hp = 5, 5
+    pa:hurt(1, A)
+    local a1 = pa.lastHit == A
+    pa.invT = 0; pa.shield = true
+    pa:hurt(1, B)
+    local a2 = pa.lastHit == A
+    pa.shield = nil
+    pa:grantInvulnerability(5)
+    pa:die(nil, nil, C)
+    local a3 = pa.lastHit == A and not pa.dying
+    pa.invT = 0
+    pa:die(nil, nil, D)
+    local a4 = pa.lastHit == D and pa.dying
+    pa:respawn()
+    local a5 = pa.lastHit == nil
+    local function same(x, y) return (x == nil and y == nil) or (x and y and x.what == y.what and x.part == y.part) end
+    local rt = same(DS.decode(DS.encode(A)), A) and same(DS.decode(DS.encode(C)), C) and same(DS.decode(DS.encode(DS.make('fall'))), DS.make('fall'))
+    local zero = DS.encode(nil) == 0 and DS.decode(0) == nil
+    check('fuente_base', a1 and a2 and a3 and a4 and a5 and rt and zero,
+        ('entra=%s escudo la deja=%s invulnerable la deja=%s muerte=%s reaparecer borra=%s; ida y vuelta=%s; nada=0=%s'):format(
+         tostring(a1), tostring(a2), tostring(a3), tostring(a4), tostring(a5), tostring(rt), tostring(zero)))
+end
+
 -- INICIO EN DOS FASES (docs/design/level-intro-card.md): tarjeta (CARD_TIME) y luego la cuenta atrás de siempre; los
 -- pitidos solo en la cuenta atrás; con TIME = 0 queda solo la tarjeta
 function cases.inicio_fases()
@@ -4518,7 +4548,7 @@ local function junglaShot()
 end
 
 function love.load()
-    for _, n in ipairs({ 'inicio_fases', 'onoff_head', 'onoff_pound', 'hidden_up', 'hidden_drop', 'hidden_side', 'hidden_vis',
+    for _, n in ipairs({ 'fuente_base', 'inicio_fases', 'onoff_head', 'onoff_pound', 'hidden_up', 'hidden_drop', 'hidden_side', 'hidden_vis',
                          'helmet_jump', 'helmet_ride', 'helmet_gp', 'helmet_side', 'stomp_fast',
                          'puffer_through', 'puffer_concave', 'puffer_cycle', 'puffer_dry', 'flyer_anim', 'vuelo_libre', 'boxed_in',
                          'bloque_roto', 'activador', 'tramp_avanza', 'tramp_pinchos', 'ping_icono',
