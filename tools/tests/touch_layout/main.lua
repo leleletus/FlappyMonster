@@ -121,6 +121,41 @@ function love.load()
     check('grandes', ok.grandes, 'cruceta ≥ 24 % del alto, salto ≥ 17 %')
     check('zonas', ok.zonas, 'brazos, botón y diagonal abajo-izq')
     check('especial', ok.especial, 'el botón extra (linterna / ataque especial) dentro, sin tocar cruceta ni salto, y tocarlo dispara el especial')
+    -- DISPOSICIÓN PROPIA (0.5.207, docs/design/touch-editor.md: el editor de los controles táctiles): sitio y tamaño de cada
+    -- botón como fracciones de la pantalla; cada uno responde ALLÍ (y no donde estaba); la cruceta se desliza; colocarla
+    -- la deja dentro, bajo la franja del HUD y sin pisarse
+    do
+        local okC, okZ, okL, okA, why = true, true, true, true, {}
+        local custom = { pad = { 0.75, 0.72, 1.4 }, jump = { 0.18, 0.78, 0.8 }, run = { 0.40, 0.85, 1 }, extra = { 0.52, 0.62, 1 }, alpha = 0.5, moved = true }
+        for _, S in ipairs({ { 2400, 1080 }, { 1280, 720 }, { 2048, 1536 } }) do
+            local sw, sh = S[1], S[2]
+            local D = TC.layout(sw, sh)
+            local L = TC.layout(sw, sh, custom)
+            if not (L.custom and math.abs(L.padX - 0.75 * sw) < 2 and math.abs(L.jumpY - 0.78 * sh) < 2 and L.padPx > D.padPx and L.jumpPx < D.jumpPx) then
+                okC = false; why[#why + 1] = sw .. ' sitio/tamaño'
+            end
+            if L.alpha ~= 0.5 then okA = false end
+            local arm = L.padW * 0.36
+            local function rd(x, y) return TC.read(L, { { x, y } }, 'light', true) end
+            local r1, r2, j1, old = rd(L.padX + arm, L.padY), rd(L.padX - arm, L.padY), rd(L.jumpX, L.jumpY), rd(D.padX - D.padW * 0.36, D.padY)
+            local ru, ex = rd(L.runX, L.runY), rd(L.lightX, L.lightY)
+            if not (r1.r and r2.l and j1.j and not j1.l and ru.rn and ex.f and not old.l) then okZ = false; why[#why + 1] = sw .. ' zonas' end
+            -- colocar: fuera de la pantalla, en la franja del HUD y unos encima de otros → dentro, debajo y separados
+            local bad = { pad = { -0.5, 0.0, 1.6 }, jump = { 1.4, 0.75, 1.6 }, run = { 1.4, 0.75, 1 }, extra = { 1.4, 0.75, 1 } }
+            local C = TC.layout(sw, sh, TC.clampLayout(bad, sw, sh))
+            local list = TC.buttons(C, 'light', true)
+            for i, a in ipairs(list) do
+                if a.x - a.r < 0 or a.x + a.r > sw or a.y + a.r > sh or a.y - a.r < sh * TC.TOP_FRAC - 1 then okL = false; why[#why + 1] = sw .. ' ' .. a.key .. ' fuera' end
+                for j = i + 1, #list do
+                    local b = list[j]
+                    if (a.x - b.x) ^ 2 + (a.y - b.y) ^ 2 < (a.r + b.r) ^ 2 - 1 then okL = false; why[#why + 1] = sw .. ' ' .. a.key .. '/' .. b.key end
+                end
+            end
+        end
+        check('propia', okC and okA, 'la disposición propia pone cada botón en su sitio, con su tamaño y la opacidad' .. (#why > 0 and (': ' .. table.concat(why, ', ')) or ''))
+        check('propia_zonas', okZ, 'cada botón responde donde está ahora (no donde estaba); la cruceta a los dos lados')
+        check('colocar', okL, 'colocados: dentro, bajo la franja del HUD y sin pisarse')
+    end
     canvas:newImageData():encode('png', 'touch_layout.png')
     print('captura: ' .. love.filesystem.getSaveDirectory() .. '/touch_layout.png')
     print(fails == 0 and 'TODO OK' or (fails .. ' FALLOS'))

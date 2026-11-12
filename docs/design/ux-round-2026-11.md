@@ -49,7 +49,7 @@ yet). Later: loading spinners on slow devices beyond item 6.
 
 ## Next (written down 2026-11-12, at the user's request; not started)
 
-- **Item 7, touch controls:** the user chose FREE placement — on an edit screen each on-screen button is dragged
+- **Item 7, touch controls — the editor BUILT 0.5.207, [touch-editor](touch-editor.md); accessibility next:** the user chose FREE placement — on an edit screen each on-screen button is dragged
   wherever the player wants — plus size and opacity sliders. The rest of item 7 as above (reduce shake / flashes,
   bigger sign text, colour-blind-friendly hazards).
 - **HUD layout pass (the user found it) — BUILT 0.5.204, [hud](../architecture/hud.md):** the death message sits right against the score counter, and during a boss

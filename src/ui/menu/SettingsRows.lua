@@ -52,12 +52,17 @@ local rhythm = { id = 'rhythmOffset', kind = 'number', label = 'settings.row_rhy
     value = function() return Settings.rhythmOffset or 0 end,
     step = function(d) Settings.setRhythmOffset((Settings.rhythmOffset or 0) + d * 10); beep(d) end }
 
+-- (el EDITOR de los controles táctiles: src/states/menu/TouchEditorState.lua)
+local touchEdit = { id = 'touchEdit', kind = 'action', label = 'settings.row_touchEdit', desc = 'settings.desc_touchEdit',
+    value = function() return nil end,
+    go = function() Sound.play('select', 1.15); gStateMachine:change('touch_editor') end }
+
 local credits = { id = 'credits', kind = 'action', label = 'settings.row_credits', desc = 'settings.desc_credits',
     value = function() return nil end, go = function(state) return state:_credits() end }
 
 R.TABS = {
     { id = 'audio',    label = 'settings.tab_audio',    rows = { volume('musicVol'), volume('sfxVol'), switch('muted'), rhythm } },
-    { id = 'controls', label = 'settings.tab_controls', rows = { switch('swapAB'), switch('rumble'), wheel } },
+    { id = 'controls', label = 'settings.tab_controls', rows = { switch('swapAB'), switch('rumble'), wheel, touchEdit } },
     { id = 'game',     label = 'settings.tab_game',     rows = { language, switch('hitStop'), switch('deathCause'),
                                                                switch('showPerf', function(v) Settings.setShowPerf(v) end) } },
     { id = 'other',    label = 'settings.tab_other',    rows = { credits } },

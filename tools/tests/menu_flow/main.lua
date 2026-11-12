@@ -472,7 +472,7 @@ local function run()
     -- LAS OPCIONES como datos (src/ui/menu/SettingsRows.lua): cada una una vez, con sus textos en todos los idiomas
     do
         local okR, Rows = pcall(require, 'src/ui/menu/SettingsRows')
-        local want = { 'musicVol', 'sfxVol', 'muted', 'rhythmOffset', 'swapAB', 'rumble', 'wheelToggle', 'language', 'hitStop', 'deathCause', 'showPerf', 'credits' }
+        local want = { 'musicVol', 'sfxVol', 'muted', 'rhythmOffset', 'swapAB', 'rumble', 'wheelToggle', 'touchEdit', 'language', 'hitStop', 'deathCause', 'showPerf', 'credits' }
         local seen, missing, bad = {}, {}, {}
         if okR then
             for _, tab in ipairs(Rows.TABS) do
@@ -609,6 +609,48 @@ local function run()
         local L3 = st:layout()
         check('cfg_scroll', L2.scroll ~= nil and inside and L3.scroll == nil,
             ('14 filas: barra=%s, la elegida dentro=%s · 4 filas: barra=%s'):format(tostring(L2.scroll ~= nil), tostring(inside), tostring(L3.scroll ~= nil)))
+    end
+    -- EL EDITOR DE LOS CONTROLES TÁCTILES (0.5.207, docs/design/touch-editor.md): desde CONTROLES; arrastrar la cruceta la
+    -- mueve, la barra de TAMAÑO la agranda, la de OPACIDAD baja; LISTO guarda (options.cfg) y vuelve a esa fila;
+    -- RESTABLECER deja la de siempre
+    do
+        local S = require 'src/core/Settings'
+        local TC = require 'src/ui/TouchControls'
+        local RowsM = require 'src/ui/menu/SettingsRows'
+        local keepT = S.touchLayout
+        gStateMachine:change('settings', { tab = 'controls', row = 'touchEdit' }); wait(0.4)
+        local st0 = top()
+        local rowId = function(st) local t = RowsM.TABS[st.tab]; local r = t and t.rows[st.row]; return r and r.id end
+        local fromRow = rowId(st0) == 'touchEdit'
+        if fromRow then st0:_go(); wait(0.3) end
+        local ed = top()
+        local opened = name(ed) == 'TouchEditorState'
+        local moved, sized, faded, saved, back, reset = false, false, false, false, false, false
+        if opened then
+            local L0 = ed:layout()
+            local px, py = L0.padX, L0.padY
+            ed:pointer(px, py, true); ed:pointer(px + ed.sw * 0.3, py - ed.sh * 0.05, false); ed:release()
+            moved = ed:layout().padX > px + ed.sw * 0.2 and ed.sel == 'pad'
+            local P = ed:panel()
+            local gx, gy, _, _, gs = TC.gameRect(ed.sw, ed.sh)
+            ed:pointer(gx + (P.size.x + P.size.w - 1) * gs, gy + (P.size.y + 5) * gs, true); ed:release()
+            sized = ed.work.pad[3] > 1.5
+            ed:pointer(gx + (P.alpha.x + 1) * gs, gy + (P.alpha.y + 5) * gs, true); ed:release()
+            faded = ed.work.alpha < 0.3
+            ed.work.alpha = 0.8; shot('touch_editor')            -- (la captura, con la opacidad a la vista)
+            ed:done(); wait(0.3)
+            local cfg = love.filesystem.read('options.cfg') or ''
+            saved = S.touchLayout ~= nil and S.touchLayout.moved and S.touchLayout.pad[3] > 1.5 and cfg:find('touchLayout = {', 1, true) ~= nil
+            back = name(top()) == 'SettingsState' and rowId(top()) == 'touchEdit'
+            top():_go(); wait(0.3)
+            if name(top()) == 'TouchEditorState' then top():reset(); top():done(); wait(0.3) end
+            reset = S.touchLayout == nil
+        end
+        S.touchLayout = keepT; S.save()
+        check('editor_tactil', fromRow and opened and moved and sized and faded and saved and back and reset,
+            ('fila=%s abre=%s · arrastrar mueve=%s · tamaño=%s · opacidad=%s · guardado=%s · vuelve a la fila=%s · restablecer=%s'):format(
+             tostring(fromRow), tostring(opened), tostring(moved), tostring(sized), tostring(faded), tostring(saved), tostring(back), tostring(reset)))
+        gStateMachine:change('settings', {}); wait(0.3)
     end
     press('back', 0.6)
     check('vuelve cfg', top().gearSel == true, 'atrás → menú con el ENGRANAJE elegido: ' .. tostring(top().gearSel))

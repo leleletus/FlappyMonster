@@ -31,6 +31,7 @@ function Settings.load()
                 Settings.tutorialOffered = data.tutorialOffered == true  -- (la oferta del tutorial, una vez: TutorialOfferState)
                 Settings.hitStop = data.hitStop ~= false              -- (congelar los golpes fuertes: src/ui/HitStop.lua)
                 Settings.deathCause = data.deathCause ~= false        -- (el aviso de la muerte: src/ui/DeathBanner.lua)
+                Settings.touchLayout = Settings.cleanTouch(data.touchLayout)   -- (los controles táctiles a su gusto: el editor)
                 -- (jugadores bloqueados, en minúsculas: src/network/Blocks.lua)
                 if type(data.blocked) == 'table' then
                     for _, n in ipairs(data.blocked) do
@@ -42,6 +43,30 @@ function Settings.load()
     end
     Lang.set(Settings.language)
     Settings.apply()
+end
+
+-- LA DISPOSICIÓN PROPIA de los controles táctiles (0.5.207, src/states/menu/TouchEditorState.lua): solo números en su
+-- sitio; lo raro se descarta (nil = la de siempre)
+local TOUCH_KEYS = { 'pad', 'jump', 'run', 'extra' }
+function Settings.cleanTouch(t)
+    if type(t) ~= 'table' then return nil end
+    local out = { moved = t.moved == true, alpha = math.max(0.2, math.min(1, tonumber(t.alpha) or 1)) }
+    for _, k in ipairs(TOUCH_KEYS) do
+        local v = t[k]
+        if type(v) == 'table' and tonumber(v[1]) and tonumber(v[2]) and tonumber(v[3]) then
+            out[k] = { math.max(0, math.min(1, v[1])), math.max(0, math.min(1, v[2])), math.max(0.6, math.min(1.6, v[3])) }
+        elseif out.moved then return nil end
+    end
+    return out
+end
+local function touchString(t)
+    t = Settings.cleanTouch(t)
+    if not t then return 'nil' end
+    local parts = { ('moved = %s, alpha = %.3f'):format(tostring(t.moved), t.alpha) }
+    for _, k in ipairs(TOUCH_KEYS) do
+        if t[k] then parts[#parts + 1] = ('%s = { %.4f, %.4f, %.3f }'):format(k, t[k][1], t[k][2], t[k][3]) end
+    end
+    return '{ ' .. table.concat(parts, ', ') .. ' }'
 end
 
 -- Lo guardado, a lo que suena y a los botones (también al arrancar: game.lua, tras cargar Sound e Input)
@@ -60,9 +85,9 @@ end
 function Settings.save()
     local bl = {}
     for _, n in ipairs(Settings.blocked or {}) do bl[#bl + 1] = string.format('%q', n) end
-    local s = string.format('return { language = %q, onlineName = %q, rhythmOffset = %d, showPerf = %s, musicVol = %d, sfxVol = %d, muted = %s, swapAB = %s, wheelToggle = %s, rumble = %s, hitStop = %s, deathCause = %s, tutorialOffered = %s, blocked = { %s } }\n',
+    local s = string.format('return { language = %q, onlineName = %q, rhythmOffset = %d, showPerf = %s, musicVol = %d, sfxVol = %d, muted = %s, swapAB = %s, wheelToggle = %s, rumble = %s, hitStop = %s, deathCause = %s, tutorialOffered = %s, touchLayout = %s, blocked = { %s } }\n',
         Settings.language, Settings.onlineName, Settings.rhythmOffset or 0, tostring(Settings.showPerf == true),
-        Settings.musicVol, Settings.sfxVol, tostring(Settings.muted == true), tostring(Settings.swapAB == true), tostring(Settings.wheelToggle == true), tostring(Settings.rumble ~= false), tostring(Settings.hitStop ~= false), tostring(Settings.deathCause ~= false), tostring(Settings.tutorialOffered == true), table.concat(bl, ', '))
+        Settings.musicVol, Settings.sfxVol, tostring(Settings.muted == true), tostring(Settings.swapAB == true), tostring(Settings.wheelToggle == true), tostring(Settings.rumble ~= false), tostring(Settings.hitStop ~= false), tostring(Settings.deathCause ~= false), tostring(Settings.tutorialOffered == true), touchString(Settings.touchLayout), table.concat(bl, ', '))
     pcall(love.filesystem.write, FILE, s)
 end
 

@@ -397,6 +397,7 @@ settings.row_wheelToggle,RUEDA DE POWER-UPS,POWER-UP WHEEL,
 settings.row_language,IDIOMA,LANGUAGE,
 settings.row_hitStop,CONGELAR LOS GOLPES,HIT-STOP,
 settings.row_deathCause,AVISO DE LA MUERTE,DEATH MESSAGE,
+settings.row_touchEdit,EDITAR CONTROLES TÁCTILES,EDIT TOUCH CONTROLS,
 settings.row_showPerf,MEDIDOR DE RENDIMIENTO,PERFORMANCE METER,
 settings.row_credits,VER LOS CRÉDITOS,WATCH THE CREDITS,
 settings.desc_musicVol,El volumen de la música,How loud the music is,Filas: la línea de abajo
@@ -409,6 +410,7 @@ settings.desc_wheelToggle,"Mantener y soltar, o pulsar para abrir y otra vez par
 settings.desc_language,El idioma de todo el juego,The language of the whole game,
 settings.desc_hitStop,Un instante congelado al morir,A brief freeze when you die,
 settings.desc_deathCause,Al reaparecer dice qué te mató,When you respawn it says what killed you,
+settings.desc_touchEdit,Mueve los botones de la pantalla y cambia su tamaño y opacidad,Move the on-screen buttons and change their size and opacity,
 settings.desc_showPerf,Muestra los fotogramas por segundo,Shows the frames per second,
 settings.desc_credits,Quién hizo el juego,Who made the game,
 settings.val_hold,MANTENER,HOLD,
@@ -806,3 +808,12 @@ story.tut_desc_yes,"Un nivel guiado para aprender a jugar, y luego empieza la hi
 story.tut_desc_no,Directo a la historia: el tutorial seguirá en el menú de Aventura,Straight to the story: the tutorial stays in the Adventure menu,
 adv.tutorial,TUTORIAL,TUTORIAL,El menú de Aventura: el nivel tutorial
 adv.desc_tutorial,"Aprende a jugar: moverse, saltar, los objetos y todo lo básico","Learn to play: moving, jumping, objects and all the basics",
+touched.title,CONTROLES TÁCTILES,TOUCH CONTROLS,El editor de los controles táctiles (0.5.207)
+touched.size,TAMAÑO,SIZE,
+touched.alpha,OPACIDAD,OPACITY,
+touched.reset,RESTABLECER,RESET,
+touched.done,LISTO,DONE,
+touched.btn_pad,CRUCETA,D-PAD,
+touched.btn_jump,SALTO,JUMP,
+touched.btn_run,CORRER,RUN,
+touched.btn_extra,BOTÓN EXTRA,EXTRA BUTTON,

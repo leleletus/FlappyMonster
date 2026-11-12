@@ -58,6 +58,7 @@ local OnlineAdventureState        = require 'src/states/online/OnlineAdventureSt
 local OnlineErrorState            = require 'src/states/online/OnlineErrorState'
 local OnlineResultsState          = require 'src/states/online/OnlineResultsState'
 local SettingsState               = require 'src/states/menu/SettingsState'
+local TouchEditorState            = require 'src/states/menu/TouchEditorState'
 local SoundTestState              = require 'src/states/menu/SoundTestState'
 local FilmTestState               = require 'src/states/menu/FilmTestState'
 local UpdateState                 = require 'src/states/menu/UpdateState'
@@ -97,6 +98,7 @@ function love.load()
         main_menu          = function() local s = TitleState:new(); s.startInMenu = true; return s end,   -- (la misma pantalla, con los botones)
         difficulty         = function() return DifficultySelectionState:new() end,
         settings           = function() return SettingsState:new() end,
+        touch_editor       = function() return TouchEditorState:new() end,   -- (los controles táctiles a su gusto)
         debug_menu         = function() return require('src/states/menu/DebugMenuState'):new() end,   -- (secreto: ver TitleState)
         flappy_campaign    = function() return require('src/states/flappy/FlappyCampaignState'):new() end, -- FLAPPY: la campaña
         flappy_map         = function() return require('src/states/flappy/FlappyMapState'):new() end,      -- FLAPPY: el mapa de zonas

@@ -33,6 +33,14 @@ Actions (`input.lua`): `move_left`, `move_right`, `jump`, `crouch`, `light` (lev
 
 - Mouse/touch → logical coords in `main.lua` with the same scale as lovesize.
 
+- **The player's own layout (0.5.207, [design](../design/touch-editor.md)):** Settings → CONTROLS → EDIT TOUCH CONTROLS
+  (`src/states/menu/TouchEditorState.lua`): drag each button (d-pad, jump, run, extra), a SIZE per button (60–160 %),
+  one OPACITY (20–100 %), RESET, DONE. Saved as `Settings.touchLayout` (`{ pad/jump/run/extra = {fx, fy, size}, alpha,
+  moved }`, fractions of the screen) in `options.cfg`. `TouchControls.layout(sw, sh[, custom])` applies it; with
+  `moved`, each button answers in a circle around it (`ZONE_K` 1.35, the d-pad `PAD_ZONE_K` 1.5, nearest wins; the
+  d-pad still slides) instead of the half-screen zones; `clampLayout` keeps every button inside, below the HUD strip
+  (`TOP_FRAC`) and without overlaps (the dragged one first). The editor's panel sits in that top strip, where no button
+  can go.
 - **Touch controls in levels** (`src/ui/TouchControls.lua`, shared by Adventure/OnlineAdventure):
   drawn in SCREEN pixels after lovesize (`game.lua` calls `top:drawScreen()`), so on wide phones
   they sit in the black letterbox bands. D-pad (left: ←/→/↓, diagonals ↓+dir for the crouch
