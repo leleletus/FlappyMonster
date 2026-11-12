@@ -2358,12 +2358,14 @@ function cases.accesibilidad()
         local n = 0; for _ in pairs(pa) do n = n + 1 end
         f2 = steady['true'] and not steady['false'] and Flash.alpha(0.45) <= 0.15 and n == 1
     end
-    FONT_SMALL = FONT_SMALL or love.graphics.newFont('assets/fonts/PressStart2P.ttf', 10)
-    FONT_MED = FONT_MED or love.graphics.newFont('assets/fonts/PressStart2P.ttf', 16)
+    local fs, fm = FONT_SMALL, FONT_MED              -- (las del juego; otros casos ponen las suyas)
+    FONT_SMALL = love.graphics.newFont('assets/fonts/PressStart2P.ttf', 10)
+    FONT_MED = love.graphics.newFont('assets/fonts/PressStart2P.ttf', 16)
     local HB = require 'src/ui/HintBubble'
     Settings.signText = 'normal'; local n1 = HB.font and HB.font()
     Settings.signText = 'large';  local n2 = HB.font and HB.font()
     local signs = n1 == FONT_SMALL and n2 ~= nil and n2:getHeight() > n1:getHeight()
+    FONT_SMALL, FONT_MED = fs, fm
     local TT = require 'src/world/tiles/TileTypes'
     local cb = TT.byName.switchblock_on.cbSymbol == 'on' and TT.byName.switchblock_on_x.cbSymbol == 'on'
         and TT.byName.switchblock_off.cbSymbol == 'off' and TT.byName.switchblock_off_x.cbSymbol == 'off'
@@ -4825,7 +4827,7 @@ local function junglaShot()
 end
 
 function love.load()
-    for _, n in ipairs({ 'fuente_base', 'fuente_contacto', 'fuente_partes', 'fuente_entorno', 'fuente_textos', 'fuente_red', 'aviso_opcion', 'accesibilidad', 'inicio_fases', 'onoff_head', 'onoff_pound', 'hidden_up', 'hidden_drop', 'hidden_side', 'hidden_vis',
+    for _, n in ipairs({ 'fuente_base', 'fuente_contacto', 'fuente_partes', 'fuente_entorno', 'fuente_textos', 'fuente_red', 'aviso_opcion', 'inicio_fases', 'onoff_head', 'onoff_pound', 'hidden_up', 'hidden_drop', 'hidden_side', 'hidden_vis',
                          'helmet_jump', 'helmet_ride', 'helmet_gp', 'helmet_side', 'stomp_fast',
                          'puffer_through', 'puffer_concave', 'puffer_cycle', 'puffer_dry', 'flyer_anim', 'vuelo_libre', 'boxed_in',
                          'bloque_roto', 'activador', 'tramp_avanza', 'tramp_pinchos', 'ping_icono',
@@ -4833,7 +4835,8 @@ function love.load()
                          'hielo_solido', 'hielo_desgaste', 'hielo_nivel', 'hielo_vuelve', 'mirar', 'salto_variable', 'esquina', 'hitstop', 'poses', 'caida_fuerte', 'tramp_atasco', 'empujables', 'bola_esquina', 'saltarin_ruta', 'causa_muerte', 'polvo_correr', 'tutorial', 'hielo_gp', 'hielo_bomba', 'encerrado', 'trepador_canto', 'hielo_resbala', 'filo_propio', 'saltarin', 'saltarin_cueva', 'persecucion', 'persecucion_cuerpo', 'inofensivos', 'tapa_base', 'manzana',
                          'cryo_jugador', 'cryo_enemigo', 'cryo_activador', 'cryo_corte', 'lava', 'pocos_fps', 'ahogo_ganado', 'techo_pinchos',
                          'caja_empuje', 'caja_rota', 'caja_borde', 'cargar', 'bomba_reaparece', 'islas', 'islas_arte', 'viento', 'cuerpo_mueve', 'cajas_golpes', 'balanza', 'soplon', 'semilla', 'ventisca', 'geiser', 'balanza_tope', 'caja_choques', 'cargar_gp', 'gp_radio', 'dejar_encima', 'jump_buffer', 'jefe_puntos', 'persecucion_toque', 'secreto_reina', 'secreto_tifon', 'paredes_falsas', 'aire_caja', 'geiser_peso', 'bomba_cajas', 'cajas_fila', 'balanza_impacto', 'balanza_salto', 'balanza_techo', 'escarabajo', 'escarabajo_lanzado', 'escarabajo_ruta', 'escarabajo_manos', 'escarabajo_arrolla',
-                         'topo', 'topo_culetazo', 'topo_suelo', 'topo_borde', 'pirana', 'pirana_pisar', 'pirana_rebota', 'pirana_nada', 'planta', 'planta_pisar', 'planta_traga', 'planta_colgada', 'planta_come', 'planta_bomba' }) do
+                         'topo', 'topo_culetazo', 'topo_suelo', 'topo_borde', 'pirana', 'pirana_pisar', 'pirana_rebota', 'pirana_nada', 'planta', 'planta_pisar', 'planta_traga', 'planta_colgada', 'planta_come', 'planta_bomba',
+                         'accesibilidad' }) do   -- (accesibilidad al final: usa el azar y puffer_concave depende del que dejan los de antes)
         if not os.getenv('ONLY') or (',' .. os.getenv('ONLY') .. ','):find(',' .. n .. ',', 1, true) then cases[n]() end
     end
     if os.getenv('SHOT_BOMB') then bombShot() end
