@@ -865,7 +865,7 @@ function GC:finishDuel(level)
             pa.frozen = false                                            -- (ya no: si no, el golpe no le llegaría)
             local r = d.res[pa]
             if r and r.failed then
-                if (cfg.kills or (pa.hp or 0) > 1) and pa.hurt then pa:hurt(1) end
+                if (cfg.kills or (pa.hp or 0) > 1) and pa.hurt then pa:hurt(1, require('src/player/DamageSource').of(self, 'slam')) end
             elseif r and r.acc >= cfg.koAt then winners[#winners + 1] = pa end
             pa.invT = math.max(pa.invT or 0, DUEL_AFTER)
         end

@@ -130,7 +130,7 @@ function TC:crush(level, box)
                 local dmg = self.props.crushDamage or 1
                 PlayerAdventure.asOwner(pa, function()
                     pa:squash(dir)
-                    pa:hurt(dmg)
+                    pa:hurt(dmg, require('src/player/DamageSource').of(self, 'slam'))
                 end)
                 -- Protegido mientras está aplastado y un poco después: si no,
                 -- se levanta sin protección con el Crabby encima y muere

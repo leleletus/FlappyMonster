@@ -446,7 +446,7 @@ local function makeSimHooks(room, sim)
         if not sim.level.autoScroll then return end
         for _, ps in pairs(sim.playerSims) do if ps.finished then sim.level.finishReached = true end end
         local evs = S.AutoScroll.update(sim.level, TICK_DT, function(pa)
-            S.PlayerAdventure.asOwner(pa, function() pa:die(nil, true) end)
+            S.PlayerAdventure.asOwner(pa, function() pa:die(nil, true, require('src/player/DamageSource').make('crush')) end)
         end)
         for _, ev in ipairs(evs) do pushEvent(sim, ev) end
     end
@@ -519,7 +519,7 @@ local function stepRoom(room)
             if not ps.isSpectator and not ps.pa.dying then
                 ps.pa.lives = 1   -- die() restará 1 → 0 vidas → espectador → game over
                 S.soundOwner = pid
-                ps.pa:die(nil, true)
+                ps.pa:die(nil, true, require('src/player/DamageSource').make('time'))
                 S.soundOwner = nil
             end
         end

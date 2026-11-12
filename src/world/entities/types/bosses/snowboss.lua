@@ -396,7 +396,7 @@ function Snow:hitPlayers(level, crush)
         if not pa.dying and pa.alive ~= false and not pa:isInvulnerable() and overlap(pa:getOuterBounds(), box) then
             local dir = (pa.x >= self.x) and 1 or -1
             Boss.withPlayer(pa, function()
-                pa:hurt(1)
+                pa:hurt(1, require('src/player/DamageSource').of(self, 'body'))
                 if not pa.dying then
                     if crush then pa:squash(dir) else pa:knockback(dir) end
                 end

@@ -172,7 +172,7 @@ function MG:crush(level)
         if not pa.dying and pa.alive ~= false and not pa:isInvulnerable() and overlap(pa:getOuterBounds(), box) then
             local dir = (pa.x >= self.x) and 1 or -1
             Boss.withPlayer(pa, function()
-                pa:hurt(2)
+                pa:hurt(2, require('src/player/DamageSource').of(self, 'slam'))
                 if not pa.dying then pa:squash(dir) end
             end)
         end

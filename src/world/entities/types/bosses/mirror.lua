@@ -840,7 +840,7 @@ function Mirror:hitPlayers(level)
                and gob.y + gob.h * 0.5 < pob.y then
                 -- (en pleno ground pound le cae encima: 2, como el del jugador a él)
                 local n = (b.gpPhase == 'fall') and GP_DAMAGE or 1
-                Boss.withPlayer(pa, function() pa:hurt(n) end)
+                Boss.withPlayer(pa, function() pa:hurt(n, require('src/player/DamageSource').of(self, (b.gpPhase == 'fall') and 'pound' or 'stomp')) end)
                 if b.gpPhase == 'fall' then self.gpHit = true end
                 b.vy, b.onGround, b.jumpsLeft = HEAD_BOUNCE, false, 2
                 b.vx = (self.x < pa.x and -1 or 1) * HEAD_PUSH
@@ -859,7 +859,7 @@ function Mirror:hitPlayers(level)
             if not pa.dying and pa.alive ~= false then
                 local dx = pa.x - b.x
                 if Boss.overlap(z, pa:getInnerBounds()) then
-                    Boss.withPlayer(pa, function() pa:hurt(GP_DAMAGE) end)
+                    Boss.withPlayer(pa, function() pa:hurt(GP_DAMAGE, require('src/player/DamageSource').of(self, 'pound')) end)
                 -- (la misma regla que el del jugador: el usuario, 2026-11-02; `filmGp`: la pelea de los créditos, coreografiada con el de antes)
                 elseif (self.filmGp and math.abs(dx) <= 170 and math.abs(pa.y - self.y) <= 110) or (not self.filmGp and Interactions.poundReaches(b, pa)) then
                     pa:knockback(dx >= 0 and 1 or -1)

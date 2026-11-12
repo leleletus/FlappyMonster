@@ -85,7 +85,7 @@ function Scorpion:hitAt(level, x, y, r)
     local box = { x = x - r, y = y - r, w = r * 2, h = r * 2 }
     for _, pa in ipairs(level.players or {}) do
         if not pa.dying and pa.alive ~= false and not pa.peaceful and not pa:isInvulnerable() and overlap(box, pa:getOuterBounds()) then
-            if not pa:hurt(1) and pa.recoil then pa:recoil((pa.x >= self.x) and 1 or -1) end
+            if not pa:hurt(1, require('src/player/DamageSource').of(self, 'spike')) and pa.recoil then pa:recoil((pa.x >= self.x) and 1 or -1) end
         end
     end
 end

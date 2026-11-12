@@ -104,7 +104,7 @@ function G:onLaunch(pa)
     Entity.emitFx('mirror_shards', pa.x, self.y1 - 8)
     if not pa:isInvulnerable() then
         local hp0 = pa.hp
-        require('src/player/PlayerAdventure').asOwner(pa, function() pa:hurt(self.props.damage or 1) end)
+        require('src/player/PlayerAdventure').asOwner(pa, function() pa:hurt(self.props.damage or 1, require('src/player/DamageSource').of(self, 'spike')) end)
         if pa.hp < hp0 and pa.dying then return end
     end
 end

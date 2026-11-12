@@ -423,7 +423,7 @@ function Mega:hitPlayers(level)
             for _, b in ipairs(boxes) do
                 if Boss.overlap(pob, b) then
                     local dir = (pa.x >= self.x) and 1 or -1
-                    Boss.withPlayer(pa, function() pa:hurt() end)
+                    Boss.withPlayer(pa, function() pa:hurt(1, require('src/player/DamageSource').of(self, 'claw')) end)
                     if not pa.dying then self:pushAway(level, pa, dir) end
                     self.graceT = CONTACT_GRACE           -- (no encadena golpes)
                     self.backoffT = BACKOFF_T             -- (y se aparta: ver KEEP_GAP)
@@ -450,8 +450,8 @@ function Mega:hitPlayers(level)
 end
 
 -- Quita `n` de vida de un golpe (luego queda invulnerable: ver PlayerAdventure)
-local function hurtN(pa, n)
-    Boss.withPlayer(pa, function() pa:hurt(n) end)
+local function hurtN(pa, n, src)
+    Boss.withPlayer(pa, function() pa:hurt(n, src) end)
 end
 
 -- ¿Tiene el jugador una pared (o el borde de la zona) justo detrás, hacia `dir`?
@@ -493,7 +493,7 @@ function Mega:landShock(level, dmg)
             -- debajo del centro del cangrejo): el que está encima o al lado
             -- (p. ej. el que acaba de pisarlo) solo sale empujado
             if Boss.overlap(pa:getOuterBounds(), ob) and pa.y > self.y then
-                hurtN(pa, dmg or 1)
+                hurtN(pa, dmg or 1, require('src/player/DamageSource').of(self, 'slam'))
                 if not pa.dying then self:pushAway(level, pa, dir) end
             elseif Boss.overlap(pa:getOuterBounds(), ob) then
                 pa:knockback(dir)
@@ -951,7 +951,7 @@ function Mega:updateBoss(dt, level)
                    and Boss.overlap(pa:getOuterBounds(), ob) then
                     self.crushed[pa] = true
                     if Mega.onEvent then Mega.onEvent('aplasta', pa) end
-                    hurtN(pa, p.pounceDamage or 2)
+                    hurtN(pa, p.pounceDamage or 2, require('src/player/DamageSource').of(self, 'pound'))
                     if not pa.dying then self:pushAway(level, pa, (pa.x >= self.x) and 1 or -1) end
                 end
             end

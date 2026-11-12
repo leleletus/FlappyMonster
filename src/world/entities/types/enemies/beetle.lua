@@ -186,7 +186,7 @@ function Beetle:chargeHits(level, f, dt)
             if overlap(ob, pb) and pb.y + pb.h > feetTop and (pa.x - self.x) * f > -ob.w * 0.25 then
                 -- (arrollado: quita 1 aquí — el empujón lo saca de su caja antes de Interactions —)
                 self.swept[pa] = true
-                if not pa.peaceful and pa:hurt(1) then return false end
+                if not pa.peaceful and pa:hurt(1, require('src/player/DamageSource').of(self, 'dash')) then return false end
                 local edge = (f > 0) and (ob.x + ob.w - pb.x) or (pb.x + pb.w - ob.x)
                 if edge > 0 and pa.moveSteps then
                     local px0 = pa.x
@@ -229,7 +229,7 @@ function Beetle:whileCarried(dt, level)
     self.vy, self.onGround = -FLIP_HOP * 0.5, false
     if pa and not pa.dying then
         local dir = (pa.x >= self.x) and 1 or -1
-        pa:hurt(HIT_CARRY)
+        pa:hurt(HIT_CARRY, require('src/player/DamageSource').of(self, 'body'))
         if pa.recoil then pa:recoil(dir) end
     end
     Sound.play('crabPop', 0.8, 0.9)

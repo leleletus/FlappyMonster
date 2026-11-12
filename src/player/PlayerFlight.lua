@@ -172,7 +172,7 @@ function PlayerAdventure:updateFlight(dt, level, pJump, inX)
     if self.onGround or out then
         self.onGround = false
         self.vy = EDGE_HOP
-        if not self:isInvulnerable() and self:hurt() then return end
+        if not self:isInvulnerable() and self:hurt(1, require('src/player/DamageSource').make('fall')) then return end
     end
 
     -- Mira hacia la última dirección que pidió a los lados (la del ataque especial; el dibujo se gira con ella)

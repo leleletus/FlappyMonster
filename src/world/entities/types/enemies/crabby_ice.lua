@@ -178,7 +178,7 @@ function Ice:burst(level)
            and overlap(pa:getOuterBounds(), box) then
             local dir = (pa.x >= self.x) and 1 or -1
             PlayerAdventure.asOwner(pa, function()
-                if not pa:hurt(1) then pa:recoil(dir) end
+                if not pa:hurt(1, require('src/player/DamageSource').of(self, 'ice')) then pa:recoil(dir) end
             end)
         end
     end
@@ -244,7 +244,7 @@ function Ice:updateDrop(dt, level)
         if not pa.dying and pa.alive ~= false and not pa:isInvulnerable() and pa.y > self.y
            and overlap(pa:getOuterBounds(), box) then
             PlayerAdventure.asOwner(pa, function()
-                if not pa:hurt(1) then
+                if not pa:hurt(1, require('src/player/DamageSource').of(self, 'ice')) then
                     pa.stunT = math.max(pa.stunT or 0, LUMP_STUN)
                     Sound.play('stunned')
                 end

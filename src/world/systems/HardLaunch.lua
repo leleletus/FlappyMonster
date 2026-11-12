@@ -46,7 +46,7 @@ function H.player(pa, level, vy0)
     Sound.play('headBump')
     Entity.emitFx('shake_small', pa.x, pb.y)
     if pa.dying or pa.alive == false or pa:isInvulnerable() then return true end
-    if pa:hurt(H.HURT) or pa.dying then return true end
+    if pa:hurt(H.HURT, require('src/player/DamageSource').make('crush')) or pa.dying then return true end
     pa.vx, pa.vy = 0, H.PUSH_VY
     pa.onGround, pa.crouching = false, false
     pa.gpPhase, pa.gpT = nil, 0

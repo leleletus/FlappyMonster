@@ -71,7 +71,7 @@ function PlayerAdventure:updateDrowning(dt, level)
             if (self.invT or 0) > 0 then return end           -- (ya ganado / recién reaparecido: espera)
             Sound.stopTracked('drowning')
             Sound.play('glugluglu')
-            self:die(true)   -- true = muerte por ahogamiento, sin dies2
+            self:die(true, nil, require('src/player/DamageSource').make('drown'))   -- true = muerte por ahogamiento, sin dies2
         end
         return
     end

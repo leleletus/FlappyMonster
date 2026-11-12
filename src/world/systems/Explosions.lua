@@ -54,9 +54,9 @@ function Explosions.blast(level, x, y, radii, source)
             local d = boxDist(x, y, pa:getOuterBounds())
             local k = 1 - math.min(1, d / pushR)
             if d <= killR then
-                PA.asOwner(pa, function() pa:hazardHit() end)      -- (el centro: un peligro, según la dificultad — 0.5.190 —)
+                PA.asOwner(pa, function() pa:hazardHit(require('src/player/DamageSource').make('explosion')) end)      -- (el centro: un peligro, según la dificultad — 0.5.190 —)
             elseif d <= hurtR then
-                PA.asOwner(pa, function() pa:hurt(1) end)
+                PA.asOwner(pa, function() pa:hurt(1, require('src/player/DamageSource').make('explosion')) end)
                 pushPlayer(pa, x, y, k)
             elseif d <= pushR then
                 pushPlayer(pa, x, y, k)

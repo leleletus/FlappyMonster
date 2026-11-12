@@ -710,7 +710,7 @@ function AdventureState:update(dt)
     -- Límite de 10 minutos: muerte instantánea con todas las vidas
     if self.levelTime >= Sim.TIME_LIMIT and not self.player.dying then
         self.player.lives = 1   -- die() restará 1, quedando en 0 → game over
-        self.player:die(nil, true)
+        self.player:die(nil, true, require('src/player/DamageSource').make('time'))
     end
 
     -- (solo dibujo / solo de este jugador: decoraciones, bloques escondidos que ve, la espuma de las inundaciones)

@@ -72,11 +72,14 @@ function PlayerAdventure:gulpBite()
     local kind = GULP_KINDS[self.gulpKind or 0] or GULP_KINDS[0]
     Sound.play(kind[1], kind[2], kind[3])
     if self.immortal then return false end                 -- (los bots rivales: les llega el golpe, no pierden vida)
+    -- (de dónde: la planta que muerde o la pinza del escorpión — src/player/DamageSource.lua —)
+    local src = (self.gulpKind == 1) and require('src/player/DamageSource').make('scorpion', 'claw') or require('src/player/DamageSource').make('carnivoreplant', 'bite')
+    self.lastHit = src
     self.hp = self.hp - 1
     if self.hp <= 0 then
         self.hp = self.hpMax
         self:gulpClear()
-        self:die(false, true)
+        self:die(false, true, src)
         return true
     end
     Sound.play('dies')

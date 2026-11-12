@@ -243,7 +243,7 @@ function IM:updateFields(dt, level)
                     for _, pa in ipairs(level.players or {}) do
                         if not pa.dying and pa.alive ~= false and not pa:isInvulnerable()
                            and Boss.overlap(pa:getOuterBounds(), box) then
-                            Boss.withPlayer(pa, function() pa:hurt() end)
+                            Boss.withPlayer(pa, function() pa:hurt(1, require('src/player/DamageSource').of(self, 'ice')) end)
                             if not pa.dying then pa:recoil((pa.x >= sp.x) and 1 or -1) end
                         end
                     end

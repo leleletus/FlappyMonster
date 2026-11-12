@@ -143,7 +143,7 @@ function AutoScroll.update(level, dt, killFn)
         local limit = a.x - a.margin * TILE_PX
         for _, pa in ipairs(players) do
             if not pa.dying and pa.x < limit then
-                if killFn then killFn(pa) else pa:die(nil, true) end
+                if killFn then killFn(pa) else pa:die(nil, true, require('src/player/DamageSource').make('crush')) end
             end
         end
         if a.x >= a.endX then

@@ -2161,6 +2161,75 @@ function cases.fuente_partes()
     check('fuente_partes', #keep == 0, #keep == 0 and 'todas las cajas de peligro y los golpes de jefe nombran su fuente' or table.concat(keep, ' · '))
 end
 
+-- FUENTE de lo demás: lava (tile `danger`), el mordisco de la planta, una explosión; y TODA llamada directa a
+-- hurt / die / hazardHit del juego pasa su fuente (si no, el aviso de la muerte tendría que adivinar)
+function cases.fuente_entorno()
+    local function show(h) return h and (tostring(h.what) .. '/' .. tostring(h.part)) or 'nil' end
+    local put = {}
+    for c = 3, 7 do put[#put + 1] = { c, 7, 'danger' } end
+    local level = room(10, 8, put)
+    local pa = PlayerAdventure:new(5 * T - T / 2, 6 * T - 20)
+    level.players = { pa }
+    clear()
+    for _ = 1, 60 do pa:update(1 / 60, level); if pa.lastHit then break end end
+    local lava = pa.lastHit and pa.lastHit.what == 'danger'
+    local lavaS = show(pa.lastHit)
+    local lv2 = room(10, 8, {})
+    local p2 = playerAt(lv2, 5, 7)
+    p2:swallow(p2.x, p2.y + 30, 0, -1, 0)
+    for _ = 1, 6 do if p2.dying then break end; p2:gulpBite() end
+    local bite = p2.dying and p2.lastHit and p2.lastHit.what == 'carnivoreplant' and p2.lastHit.part == 'bite'
+    local biteS = show(p2.lastHit)
+    local lv3 = room(10, 8, {})
+    local p3 = playerAt(lv3, 5, 7)
+    lv3.players = { p3 }
+    require('src/world/systems/Explosions').blast(lv3, p3.x, p3.y)
+    local boom = p3.lastHit and p3.lastHit.what == 'explosion'
+    local boomS = show(p3.lastHit)
+    -- las llamadas directas
+    local bad = {}
+    local skip = { ['src/states/flappy'] = true, ['src/flappy'] = true, ['src/ui/menu/MenuScene.lua'] = true }
+    local function walk(dir)
+        for _, n in ipairs(love.filesystem.getDirectoryItems(dir)) do
+            local p = dir .. '/' .. n
+            local skipped = false
+            for k in pairs(skip) do if p:sub(1, #k) == k then skipped = true end end
+            local info = love.filesystem.getInfo(p)
+            if skipped then
+            elseif info and info.type == 'directory' then walk(p)
+            elseif n:match('%.lua$') then
+                local ln = 0
+                for line in ((love.filesystem.read(p) or '') .. '\n'):gmatch('(.-)\n') do
+                    ln = ln + 1
+                    local code = line:gsub('%-%-.*$', '')
+                    for _, call in ipairs({ 'hurt', 'die', 'hazardHit' }) do
+                        local pos = 1
+                        while true do
+                            local i, j = code:find(':' .. call .. '%(', pos)
+                            if not i then break end
+                            local args = code:match('%b()', j)
+                            pos = j + 1
+                            if args and not code:sub(1, i):find('function [%w_%.:]*$') then
+                                local need = (call == 'die') and 3 or ((call == 'hurt') and 2 or 1)
+                                local n = args:match('^%(%s*%)$') and 0 or (select(2, args:gsub(',', ',')) + 1)
+                                if n < need and not args:find('src') and not args:find('DamageSource') then
+                                    bad[#bad + 1] = p .. ':' .. ln
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+    -- (src y server son enlaces en la carpeta del arnés: se recorren sus carpetas de dentro)
+    for _, d in ipairs({ 'ai', 'audio', 'core', 'editor', 'fx', 'network', 'player', 'states', 'story', 'ui', 'update', 'world' }) do walk('src/' .. d) end
+    walk('server/srv')
+    check('fuente_entorno', lava and bite and boom and #bad == 0,
+        ('lava=%s · mordisco de la planta=%s · explosión=%s · llamadas sin fuente: %s'):format(lavaS, biteS, boomS,
+         #bad == 0 and 'ninguna' or table.concat(bad, ', ')))
+end
+
 function cases.puffer_cycle()
     local level, es = pond()
     local f = es[1]
@@ -4611,7 +4680,7 @@ local function junglaShot()
 end
 
 function love.load()
-    for _, n in ipairs({ 'fuente_base', 'fuente_contacto', 'fuente_partes', 'inicio_fases', 'onoff_head', 'onoff_pound', 'hidden_up', 'hidden_drop', 'hidden_side', 'hidden_vis',
+    for _, n in ipairs({ 'fuente_base', 'fuente_contacto', 'fuente_partes', 'fuente_entorno', 'inicio_fases', 'onoff_head', 'onoff_pound', 'hidden_up', 'hidden_drop', 'hidden_side', 'hidden_vis',
                          'helmet_jump', 'helmet_ride', 'helmet_gp', 'helmet_side', 'stomp_fast',
                          'puffer_through', 'puffer_concave', 'puffer_cycle', 'puffer_dry', 'flyer_anim', 'vuelo_libre', 'boxed_in',
                          'bloque_roto', 'activador', 'tramp_avanza', 'tramp_pinchos', 'ping_icono',
