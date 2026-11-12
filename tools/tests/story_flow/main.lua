@@ -180,6 +180,35 @@ function love.update(dt)
             ('al acabar la cuenta atrás el primer paso lo mueve %.1f px (en el suelo=%s)'):format(p.y - y0, tostring(p.onGround)))
         CD_DONE = true
         st.startCd = nil
+        -- REINTENTAR desde la pausa cuesta una vida y lo pregunta antes (0.5.200): pregunta, cancelar vuelve, SÍ reintenta con
+        -- una vida menos (guardada); con la última vida no se ofrece
+        do
+            local before = st.player.lives
+            gStateMachine:push('pause')
+            local ps = top()
+            ps:_choose(2)
+            local asked = ps.confirm == true
+            ps:_choose(2)
+            local cancelled = not ps.confirm and top() == ps
+            ps:_choose(2); ps:_choose(1)
+            local nst = top()
+            local cost = nst ~= st and nst.player.lives == before - 1 and Run.data.lives == before - 1
+            nst.startCd = nil
+            local keep = nst.player.lives
+            nst.player.lives = 1
+            gStateMachine:push('pause')
+            local noRetry = top().options[2] ~= 'common.retry'
+            gStateMachine:pop()
+            nst.player.lives = keep
+            local lost = nst.player.lives
+            -- (lo demás del recorrido cuenta con las vidas de antes: se devuelven)
+            nst.player.lives, nst.startLives = before, before
+            Run.setLives(before)
+            check('reintentar_vida', asked and cancelled and cost and noRetry,
+                ('pregunta=%s · cancelar vuelve=%s · sí: vidas %d → %d (guardadas %s) · con 1 vida no se ofrece=%s'):format(tostring(asked),
+                 tostring(cancelled), before, lost, tostring(before - 1), tostring(noRetry)))
+            st = nst
+        end
         IN1 = st.levelPath == Worlds.path(W1[1].id) and st.returnTo == 'story_map' and st.level.difficulty == 'easy'
               and st.player.hpMax == 4
         LIVES0 = st.player.lives

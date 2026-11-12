@@ -471,12 +471,22 @@ function AdventureState:retryArgs()
 end
 
 -- REINTENTAR desde la pausa (el usuario, 2026-11-02): el nivel otra vez desde el principio, con los mismos argumentos.
--- Las vidas NO se reponen: las que traía la aventura (historia, Boss Rush) siguen siendo las de ahora. Lo conseguido en
--- este intento no se guarda (no ha terminado: regla 7); las vidas perdidas ya se guardaron al perderlas.
-function AdventureState:canRetry() return not self.demo and not self.won and not self.endingT end
+-- Lo conseguido en este intento no se guarda (no ha terminado: regla 7). Con VIDAS (historia, Flappy, Boss Rush)
+-- cuesta UNA, como morir, para que no se abuse (el usuario, 0.5.200; la pausa avisa antes): se cuenta como una muerte y
+-- se guarda al momento. Con la última vida no se puede.
+function AdventureState:retryCostsLife() return (self.enterArgs or {}).lives ~= nil and not self.bonus end
+function AdventureState:canRetry()
+    if self.demo or self.won or self.endingT then return false end
+    return not self:retryCostsLife() or self.player.lives > 1
+end
 function AdventureState:retryNow()
     local a = {}
     for k, v in pairs(self.enterArgs or {}) do a[k] = v end
+    if self:retryCostsLife() then
+        self.player.lives = self.player.lives - 1
+        self.stats.deaths = (self.stats.deaths or 0) + 1
+        self:_saveLostLives()
+    end
     if a.lives then a.lives = math.max(1, self.player.lives) end
     if self.level.eventCheckpointNow then a.eventCheckpoint = self.level.eventCheckpointNow end   -- (Mega Mashup)
     gStateMachine:change('adventure', a)
