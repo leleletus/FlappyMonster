@@ -1022,6 +1022,8 @@ end
 -- Desplazamiento de cámara del temblor actual (sumar a camX/camY al dibujar)
 function Particles.shakeOffset()
     if shakeT <= 0 then return 0, 0 end
+    local S = package.loaded['src/core/Settings']
+    if S and S.shake == false then return 0, 0 end          -- (ACCESIBILIDAD: sin temblor de pantalla)
     local k = shakePow * (shakeT / shakeDur)
     return math.floor((math.random() * 2 - 1) * k + 0.5), math.floor((math.random() * 2 - 1) * k + 0.5)
 end

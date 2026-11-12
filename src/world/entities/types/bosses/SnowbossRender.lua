@@ -300,7 +300,7 @@ function Snow:renderSplat(camX, camY, now)
     local u = now - s
     if u > 1.6 then return end
     if u < 0.09 then                                               -- destello del golpe
-        love.graphics.setColor(1, 1, 1, 0.45 * (1 - u / 0.09))
+        love.graphics.setColor(1, 1, 1, require('src/fx/Flash').alpha(0.45 * (1 - u / 0.09)))   -- (sin destellos: suave)
         love.graphics.rectangle('fill', 0, 0, WINDOW_W, WINDOW_H)
     end
     local slide = math.max(0, u - 0.55) * 180

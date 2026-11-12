@@ -386,6 +386,7 @@ settings.language,IDIOMA,LANGUAGE,
 settings.tab_audio,AUDIO,AUDIO,La configuración rehecha (0.5.197): pestañas
 settings.tab_controls,CONTROLES,CONTROLS,
 settings.tab_game,JUEGO,GAME,
+settings.tab_access,AYUDAS,ASSIST,Accesibilidad (0.5.208): corto para que quepa en la pestaña
 settings.tab_other,OTROS,OTHER,
 settings.row_musicVol,MÚSICA,MUSIC,Filas: el nombre de cada opción
 settings.row_sfxVol,EFECTOS DE SONIDO,SOUND EFFECTS,
@@ -398,6 +399,10 @@ settings.row_language,IDIOMA,LANGUAGE,
 settings.row_hitStop,CONGELAR LOS GOLPES,HIT-STOP,
 settings.row_deathCause,AVISO DE LA MUERTE,DEATH MESSAGE,
 settings.row_touchEdit,EDITAR CONTROLES TÁCTILES,EDIT TOUCH CONTROLS,
+settings.row_shake,TEMBLOR DE PANTALLA,SCREEN SHAKE,
+settings.row_flashes,DESTELLOS,FLASHES,
+settings.row_signText,LETRA DE LOS CARTELES,SIGN TEXT,
+settings.row_cbSymbols,SÍMBOLOS PARA DALTÓNICOS,COLOUR-BLIND SYMBOLS,
 settings.row_showPerf,MEDIDOR DE RENDIMIENTO,PERFORMANCE METER,
 settings.row_credits,VER LOS CRÉDITOS,WATCH THE CREDITS,
 settings.desc_musicVol,El volumen de la música,How loud the music is,Filas: la línea de abajo
@@ -411,6 +416,12 @@ settings.desc_language,El idioma de todo el juego,The language of the whole game
 settings.desc_hitStop,Un instante congelado al morir,A brief freeze when you die,
 settings.desc_deathCause,Al reaparecer dice qué te mató,When you respawn it says what killed you,
 settings.desc_touchEdit,Mueve los botones de la pantalla y cambia su tamaño y opacidad,Move the on-screen buttons and change their size and opacity,
+settings.desc_shake,Apágalo y la pantalla no tiembla con los golpes y explosiones,Turn it off and the screen won't shake with hits and explosions
+settings.desc_flashes,Apágalo y nada parpadea deprisa: los destellos son suaves,Turn it off and nothing blinks fast: flashes are soft
+settings.desc_signText,El tamaño del texto de los carteles de ayuda,The size of the text on the help signs
+settings.desc_cbSymbols,Un aro en lo que es ON y una X en lo que es OFF,A ring on ON blocks and an X on OFF blocks
+settings.val_normal,NORMAL,NORMAL,
+settings.val_large,GRANDE,LARGE,
 settings.desc_showPerf,Muestra los fotogramas por segundo,Shows the frames per second,
 settings.desc_credits,Quién hizo el juego,Who made the game,
 settings.val_hold,MANTENER,HOLD,

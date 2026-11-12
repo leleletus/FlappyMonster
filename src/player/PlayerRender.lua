@@ -112,9 +112,11 @@ function PlayerAdventure.hurtTint(hurtT, a)
 end
 
 -- Parpadeo (transparencia) mientras es invulnerable (por lo que sea)
-function PlayerAdventure.invulnAlpha(invT, a)
-    if (invT == true or (tonumber(invT) or 0) > 0) and math.floor(love.timer.getTime() * 15) % 2 == 0 then
-        return (a or 1) * 0.25
+function PlayerAdventure.invulnAlpha(invT, a, t)
+    if invT == true or (tonumber(invT) or 0) > 0 then
+        local Flash = require 'src/fx/Flash'
+        if not Flash.on() then return (a or 1) * 0.6 end      -- (sin destellos: medio transparente fijo, sin parpadeo)
+        if math.floor((t or love.timer.getTime()) * 15) % 2 == 0 then return (a or 1) * 0.25 end
     end
     return a or 1
 end

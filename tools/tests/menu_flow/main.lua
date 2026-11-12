@@ -472,7 +472,7 @@ local function run()
     -- LAS OPCIONES como datos (src/ui/menu/SettingsRows.lua): cada una una vez, con sus textos en todos los idiomas
     do
         local okR, Rows = pcall(require, 'src/ui/menu/SettingsRows')
-        local want = { 'musicVol', 'sfxVol', 'muted', 'rhythmOffset', 'swapAB', 'rumble', 'wheelToggle', 'touchEdit', 'language', 'hitStop', 'deathCause', 'showPerf', 'credits' }
+        local want = { 'musicVol', 'sfxVol', 'muted', 'rhythmOffset', 'swapAB', 'rumble', 'wheelToggle', 'touchEdit', 'language', 'hitStop', 'deathCause', 'showPerf', 'shake', 'flashes', 'signText', 'cbSymbols', 'credits' }
         local seen, missing, bad = {}, {}, {}
         if okR then
             for _, tab in ipairs(Rows.TABS) do
@@ -486,7 +486,7 @@ local function run()
             end
         end
         for _, id in ipairs(want) do if seen[id] ~= 1 then missing[#missing + 1] = id .. '×' .. tostring(seen[id] or 0) end end
-        check('cfg_datos', okR and #missing == 0 and #bad == 0 and #Rows.TABS == 4,
+        check('cfg_datos', okR and #missing == 0 and #bad == 0 and #Rows.TABS == 5,
             ('pestañas %s · opciones que faltan o se repiten: %s · textos que faltan: %s'):format(okR and #Rows.TABS or 'sin módulo',
              #missing > 0 and table.concat(missing, ',') or 'ninguna', #bad > 0 and table.concat(bad, ',', 1, math.min(#bad, 6)) or 'ninguno'))
     end
@@ -512,14 +512,14 @@ local function run()
         local function tabId() return Rows.TABS[st.tab] and Rows.TABS[st.tab].id end
         local function rowId() local t = Rows.TABS[st.tab]; local r = t and t.rows[st.row]; return r and r.id end
         shot('settings_audio')
-        -- pestañas: siguiente ×4 da la vuelta; anterior vuelve
+        -- pestañas: siguiente ×5 da la vuelta; anterior vuelve
         local seq = {}
-        for _ = 1, 4 do seq[#seq + 1] = tabId(); press('tab_next', 0.05) end
+        for _ = 1, 5 do seq[#seq + 1] = tabId(); press('tab_next', 0.05) end
         local wrapped = tabId()
         press('tab_prev', 0.05)
         local back1 = tabId()
         press('tab_next', 0.05)
-        check('cfg_pestanas', table.concat(seq, ',') == 'audio,controls,game,other' and wrapped == 'audio' and back1 == 'other',
+        check('cfg_pestanas', table.concat(seq, ',') == 'audio,controls,game,access,other' and wrapped == 'audio' and back1 == 'other',
             ('siguiente: %s → %s · anterior: %s'):format(table.concat(seq, ','), tostring(wrapped), tostring(back1)))
         -- volumen de la música (se aplica y se guarda), silencio, A / B
         S.set('musicVol', 10)                                     -- (lo guardado por una pasada anterior no cuenta)

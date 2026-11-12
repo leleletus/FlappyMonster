@@ -12,10 +12,11 @@ and describe the real thing in the system's page.
 
 | What | Page |
 |---|---|
+| **Accessibility options (2026-11-13):** ASSIST tab — screen shake, flashes, sign text, colour-blind symbols on ON/OFF (**built 0.5.208**) | [accessibility](accessibility.md) |
 | **Touch-control editor (2026-11-13):** drag each on-screen button, size per button, one opacity; saved per device (**built 0.5.207**) | [touch-editor](touch-editor.md) |
 | **Damage sources (2026-11-13):** every hit carries what did it and which part ("Pufferfish spike" vs "Pufferfish projectile"), single player / server / client; the death message reads it instead of guessing (**built 0.5.205**) | [damage-sources](damage-sources.md) |
 | **Level intro card (2026-11-12):** title card before the level over a live scene (the level's background, the real monster and the island's enemy), island-coloured bands, number plate; the server waits for everyone to load (**built 0.5.202-203, approved by the user 2026-11-13**) | [level-intro-card](level-intro-card.md) · [plan](level-intro-card-plan.md) |
-| **UX round (2026-11-11):** items 1-6 built (0.5.200-201), HUD layout pass and death message built (0.5.204), damage sources built (0.5.205), touch-control editor built (0.5.207); next: accessibility (less shake / flashes, bigger sign text, colour-blind-friendly hazards) | [ux-round-2026-11](ux-round-2026-11.md) |
+| **UX round (2026-11-11):** items 1-6 built (0.5.200-201), HUD layout pass and death message built (0.5.204), damage sources built (0.5.205), touch-control editor built (0.5.207), accessibility built (0.5.208): the round is done | [ux-round-2026-11](ux-round-2026-11.md) |
 | **The tutorial level (2026-11-10):** every mechanic, signs with prompts, teach the verb not the trick (being built) | [tutorial-level](tutorial-level.md) |
 | **Game feel, structure and performance round (2026-11-10):** variable jump, coyote time, rumble, dust, camera lead, boss file split… (hit-stop waiting, off-screen arrow rejected) | [gamefeel-round-2026-11](gamefeel-round-2026-11.md) |
 | **Flappy levels need work (the user, 2026-11-10):** the first zone's attack, cages, power-ups, wheel and boss are built, but its levels are too short, weak and easy | [flappy-prequel](flappy-prequel.md) |

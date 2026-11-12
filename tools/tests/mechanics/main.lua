@@ -2329,6 +2329,52 @@ function cases.aviso_opcion()
     check('aviso_opcion', on and not off, ('con la opción se ve=%s · sin ella no=%s'):format(tostring(on), tostring(not off)))
 end
 
+-- ACCESIBILIDAD (0.5.208, Opciones → ACCESIBILIDAD): sin temblor de pantalla; destellos suaves (sin parpadeo rápido:
+-- jefes, jugador invulnerable, el destello de pantalla); letras de los carteles grandes; símbolos en los bloques ON/OFF
+function cases.accesibilidad()
+    local Settings = require 'src/core/Settings'
+    local Particles = require 'src/fx/Particles'
+    local okF, Flash = pcall(require, 'src/fx/Flash')
+    local keep = { Settings.shake, Settings.flashes, Settings.signText, Settings.cbSymbols }
+    local function shaken()
+        Particles.clear(); Particles.emit('shake_big', 0, 0)
+        for _ = 1, 10 do local x, y = Particles.shakeOffset(); if x ~= 0 or y ~= 0 then return true end end
+        return false
+    end
+    Settings.shake = true;  local s1 = shaken()
+    Settings.shake = false; local s2 = shaken()
+    Particles.clear()
+    local f1, f2 = false, false
+    if okF then
+        Settings.flashes = true
+        local seen = {}
+        for k = 0, 20 do seen[tostring(Flash.blink(12, k / 50))] = true end
+        f1 = seen['true'] and seen['false'] and Flash.alpha(0.45) == 0.45
+        Settings.flashes = false
+        local steady = {}
+        for k = 0, 20 do steady[tostring(Flash.blink(12, k / 50))] = true end
+        local pa = {}
+        for k = 0, 20 do pa[PlayerAdventure.invulnAlpha(true, 1, k / 50)] = true end
+        local n = 0; for _ in pairs(pa) do n = n + 1 end
+        f2 = steady['true'] and not steady['false'] and Flash.alpha(0.45) <= 0.15 and n == 1
+    end
+    FONT_SMALL = FONT_SMALL or love.graphics.newFont('assets/fonts/PressStart2P.ttf', 10)
+    FONT_MED = FONT_MED or love.graphics.newFont('assets/fonts/PressStart2P.ttf', 16)
+    local HB = require 'src/ui/HintBubble'
+    Settings.signText = 'normal'; local n1 = HB.font and HB.font()
+    Settings.signText = 'large';  local n2 = HB.font and HB.font()
+    local signs = n1 == FONT_SMALL and n2 ~= nil and n2:getHeight() > n1:getHeight()
+    local TT = require 'src/world/tiles/TileTypes'
+    local cb = TT.byName.switchblock_on.cbSymbol == 'on' and TT.byName.switchblock_on_x.cbSymbol == 'on'
+        and TT.byName.switchblock_off.cbSymbol == 'off' and TT.byName.switchblock_off_x.cbSymbol == 'off'
+        and TT.byName.switch_on.cbSymbol == 'on' and TT.byName.switch_off.cbSymbol == 'off'
+        and pcall(love.graphics.newImage, 'assets/images/world/tiles/cb_on.png') and pcall(love.graphics.newImage, 'assets/images/world/tiles/cb_off.png')
+    Settings.shake, Settings.flashes, Settings.signText, Settings.cbSymbols = keep[1], keep[2], keep[3], keep[4]
+    check('accesibilidad', s1 and not s2 and f1 and f2 and signs and cb,
+        ('temblor con / sin=%s/%s · destellos parpadean / fijos=%s/%s · carteles grandes=%s · símbolos ON/OFF=%s'):format(
+         tostring(s1), tostring(s2), tostring(f1), tostring(f2), tostring(signs), tostring(cb)))
+end
+
 function cases.puffer_cycle()
     local level, es = pond()
     local f = es[1]
@@ -4779,7 +4825,7 @@ local function junglaShot()
 end
 
 function love.load()
-    for _, n in ipairs({ 'fuente_base', 'fuente_contacto', 'fuente_partes', 'fuente_entorno', 'fuente_textos', 'fuente_red', 'aviso_opcion', 'inicio_fases', 'onoff_head', 'onoff_pound', 'hidden_up', 'hidden_drop', 'hidden_side', 'hidden_vis',
+    for _, n in ipairs({ 'fuente_base', 'fuente_contacto', 'fuente_partes', 'fuente_entorno', 'fuente_textos', 'fuente_red', 'aviso_opcion', 'accesibilidad', 'inicio_fases', 'onoff_head', 'onoff_pound', 'hidden_up', 'hidden_drop', 'hidden_side', 'hidden_vis',
                          'helmet_jump', 'helmet_ride', 'helmet_gp', 'helmet_side', 'stomp_fast',
                          'puffer_through', 'puffer_concave', 'puffer_cycle', 'puffer_dry', 'flyer_anim', 'vuelo_libre', 'boxed_in',
                          'bloque_roto', 'activador', 'tramp_avanza', 'tramp_pinchos', 'ping_icono',

@@ -57,6 +57,12 @@ local touchEdit = { id = 'touchEdit', kind = 'action', label = 'settings.row_tou
     value = function() return nil end,
     go = function() Sound.play('select', 1.15); gStateMachine:change('touch_editor') end }
 
+-- (ACCESIBILIDAD, 0.5.208: la letra de los carteles — src/ui/HintBubble.lua —)
+local signText = { id = 'signText', kind = 'choice', label = 'settings.row_signText', desc = 'settings.desc_signText',
+    value = function() return L(Settings.signText == 'large' and 'settings.val_large' or 'settings.val_normal') end,
+    step = function(d) Settings.set('signText', Settings.signText == 'large' and 'normal' or 'large'); beep(d) end }
+signText.go = function() signText.step(1) end
+
 local credits = { id = 'credits', kind = 'action', label = 'settings.row_credits', desc = 'settings.desc_credits',
     value = function() return nil end, go = function(state) return state:_credits() end }
 
@@ -65,6 +71,8 @@ R.TABS = {
     { id = 'controls', label = 'settings.tab_controls', rows = { switch('swapAB'), switch('rumble'), wheel, touchEdit } },
     { id = 'game',     label = 'settings.tab_game',     rows = { language, switch('hitStop'), switch('deathCause'),
                                                                switch('showPerf', function(v) Settings.setShowPerf(v) end) } },
+    -- (ACCESIBILIDAD: sin temblor, destellos suaves — src/fx/Flash.lua —, carteles grandes, símbolos para daltónicos)
+    { id = 'access',   label = 'settings.tab_access',   rows = { switch('shake'), switch('flashes'), signText, switch('cbSymbols') } },
     { id = 'other',    label = 'settings.tab_other',    rows = { credits } },
 }
 

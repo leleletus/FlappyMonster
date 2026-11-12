@@ -110,6 +110,20 @@ function love.load(a)
     case('flappy', 'valle_redcoptero', { boss = true, prep = function(st)
         st.powerups = st.powerups or { items = function() return { { id = 'shield', count = 2 } } end }
     end }, { 'score', 'flappy', 'bag', 'death' })
+    -- 6. ACCESIBILIDAD: los símbolos para daltónicos sobre los bloques y activadores ON / OFF (captura hud_simbolos_*)
+    require('src/core/Settings').cbSymbols = true
+    case('simbolos', 'valle_soleado', { prep = function(st)
+        local c0 = math.floor(st.player.x / TILE_PX) + 2
+        local r0 = math.floor(st.player.y / TILE_PX) - 1
+        local TT = require 'src/world/tiles/TileTypes'
+        for i, n in ipairs({ 'switchblock_on', 'switchblock_on_x', 'switchblock_off', 'switchblock_off_x', 'switch_on', 'switch_off' }) do
+            st.level:setTileRaw(c0 + i, r0, require('src/world/tiles/TileCodec').encode(TT.byName[n].id))
+        end
+        st.camX = math.max(0, (c0 + 3) * TILE_PX - WINDOW_W / 2)
+        st.camY = math.max(0, (r0 - 1) * TILE_PX - WINDOW_H / 2)
+        st.camFrozen = true
+    end }, { 'score' })
+    require('src/core/Settings').cbSymbols = false
     print(fails == 0 and 'TODO OK' or (fails .. ' FALLOS'))
     love.event.quit(fails == 0 and 0 or 1)
 end

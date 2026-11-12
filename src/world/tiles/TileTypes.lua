@@ -516,7 +516,36 @@ function TileTypes.drawSkin(t, ctx)
 end
 
 -- Dibuja un tile completo (aspecto del tipo) en ctx.x, ctx.y, tamaño ctx.size.
+-- SÍMBOLO PARA DALTÓNICOS (ACCESIBILIDAD, 0.5.208): los tiles que solo se distinguían por el color (`cbSymbol` = 'on' |
+-- 'off': los bloques y activadores ON / OFF) llevan encima un aro o una X si la opción está puesta
+local cbImgs = {}
+local function cbSymbol(t, ctx)
+    local S = package.loaded['src/core/Settings']
+    if not (S and S.cbSymbols) then return end
+    local im = cbImgs[t.cbSymbol]
+    if im == nil then
+        local ok, res = pcall(love.graphics.newImage, 'assets/images/world/tiles/cb_' .. t.cbSymbol .. '.png')
+        im = ok and res or false
+        if im then im:setFilter('nearest', 'nearest') end
+        cbImgs[t.cbSymbol] = im
+    end
+    if not im then return end
+    local k = math.max(1, math.floor(ctx.size / 16 * 0.75))
+    local w = 16 * k
+    love.graphics.setColor(1, 1, 1, 0.95)
+    love.graphics.draw(im, math.floor(ctx.x + (ctx.size - w) / 2), math.floor(ctx.y + (ctx.size - w) / 2), 0, k, k)
+    love.graphics.setColor(1, 1, 1, 1)
+end
+
 function TileTypes.drawTile(t, ctx)
+    if t.cbSymbol then
+        TileTypes._drawTileBase(t, ctx)
+        return cbSymbol(t, ctx)
+    end
+    return TileTypes._drawTileBase(t, ctx)
+end
+
+function TileTypes._drawTileBase(t, ctx)
     if t.draw then
         t.draw(t, ctx)
     elseif t.skin then

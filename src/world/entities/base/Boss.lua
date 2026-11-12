@@ -510,14 +510,18 @@ end
 -- ¿Se dibuja en rojo ahora? (tras un golpe y mientras explota)
 function Boss:flashRed()
     if self.state == 'dying_hold' or (self.inv > 0 and not self.ghost) then
-        return math.floor(love.timer.getTime() * 12) % 2 == 0
+        return require('src/fx/Flash').blink(12)          -- (sin destellos: rojo fijo, sin parpadeo)
     end
     return false
 end
 
 -- Transparencia al dibujar: parpadea mientras dura la invulnerabilidad larga
 function Boss:ghostAlpha()
-    if self.ghost and self.inv > 0 and math.floor(love.timer.getTime() * 15) % 2 == 0 then return 0.3 end
+    if self.ghost and self.inv > 0 then
+        local Flash = require 'src/fx/Flash'
+        if not Flash.on() then return 0.55 end            -- (sin destellos: medio transparente fijo)
+        if Flash.blink(15) then return 0.3 end
+    end
     return 1
 end
 

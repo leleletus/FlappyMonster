@@ -31,7 +31,7 @@ end
 -- guarda (la entidad); `vars` = otras variables del texto ({n}…; si cambian, cambia `sig`)
 local function layout(c, key, vars, sig, font)
     local dev, lang, pad = Input.lastDevice, L.current(), Input.usingPad() and Input.label('jump') or ''
-    if c._lines and c._dev == dev and c._lang == lang and c._pad == pad and c._tkey == key and c._sig == sig then
+    if c._lines and c._dev == dev and c._lang == lang and c._pad == pad and c._tkey == key and c._sig == sig and c._font == font then
         return c._lines, c._w, c._acts
     end
     local subs = MARK
@@ -80,7 +80,7 @@ local function layout(c, key, vars, sig, font)
         curW = curW + add
     end
     if #cur > 0 then lines[#lines + 1] = { parts = cur, w = curW }; maxW = math.max(maxW, curW) end
-    c._lines, c._w, c._acts, c._dev, c._lang, c._pad, c._tkey, c._sig = lines, maxW, acts, dev, lang, pad, key, sig
+    c._lines, c._w, c._acts, c._dev, c._lang, c._pad, c._tkey, c._sig, c._font = lines, maxW, acts, dev, lang, pad, key, sig, font
     c._lh = math.max(gh, 11 * sc) + 4
     return lines, maxW, acts
 end
@@ -88,9 +88,15 @@ end
 -- Dibuja el bocadillo (en px de pantalla) sobre lo que señala: `cx` = su centro, `top` / `bottom` = su borde de arriba /
 -- de abajo. Va ENCIMA; si no cabe en la pantalla, DEBAJO (con la punta hacia arriba). `show` = 0..1 (el fundido);
 -- `lit` = mientras sea true, con el dedo, el botón de la pantalla que nombra brilla y bota.
+-- La letra de los carteles: la de siempre o GRANDE (ACCESIBILIDAD: Opciones → LETRA DE LOS CARTELES)
+function B.font()
+    local S = package.loaded['src/core/Settings']
+    return (S and S.signText == 'large') and FONT_MED or FONT_SMALL
+end
+
 function B.draw(c, key, vars, sig, cx, top, bottom, show, lit)
     if (show or 0) <= 0 then return end
-    local font = FONT_SMALL
+    local font = B.font()
     local lines, w, acts = layout(c, key, vars, sig, font)
     if lit and Input.lastDevice == 'touch' then
         for a in pairs(acts) do TouchControls.highlight(a) end

@@ -7,7 +7,7 @@
 local Lang = require 'src/core/Lang'
 
 local Settings = { language = Lang.DEFAULT, onlineName = '', rhythmOffset = 0, showPerf = false,
-                   musicVol = 10, sfxVol = 10, muted = false, swapAB = false, wheelToggle = false, rumble = true, hitStop = true, deathCause = true, tutorialOffered = false,
+                   musicVol = 10, sfxVol = 10, muted = false, swapAB = false, wheelToggle = false, rumble = true, hitStop = true, deathCause = true, shake = true, flashes = true, signText = 'normal', cbSymbols = false, tutorialOffered = false,
                    blocked = {} }   -- (volúmenes 0..10; swapAB: A / B al revés, mandos de Xbox; (rhythmOffset: ms de retardo del audio, duelo de ritmo; showPerf: src/ui/PerfOverlay.lua)
 local FILE = 'options.cfg'
 
@@ -32,6 +32,11 @@ function Settings.load()
                 Settings.hitStop = data.hitStop ~= false              -- (congelar los golpes fuertes: src/ui/HitStop.lua)
                 Settings.deathCause = data.deathCause ~= false        -- (el aviso de la muerte: src/ui/DeathBanner.lua)
                 Settings.touchLayout = Settings.cleanTouch(data.touchLayout)   -- (los controles táctiles a su gusto: el editor)
+                -- (ACCESIBILIDAD: temblor de pantalla, destellos — src/fx/Flash.lua —, letras de los carteles, símbolos ON/OFF)
+                Settings.shake = data.shake ~= false
+                Settings.flashes = data.flashes ~= false
+                Settings.signText = (data.signText == 'large') and 'large' or 'normal'
+                Settings.cbSymbols = data.cbSymbols == true
                 -- (jugadores bloqueados, en minúsculas: src/network/Blocks.lua)
                 if type(data.blocked) == 'table' then
                     for _, n in ipairs(data.blocked) do
@@ -85,9 +90,9 @@ end
 function Settings.save()
     local bl = {}
     for _, n in ipairs(Settings.blocked or {}) do bl[#bl + 1] = string.format('%q', n) end
-    local s = string.format('return { language = %q, onlineName = %q, rhythmOffset = %d, showPerf = %s, musicVol = %d, sfxVol = %d, muted = %s, swapAB = %s, wheelToggle = %s, rumble = %s, hitStop = %s, deathCause = %s, tutorialOffered = %s, touchLayout = %s, blocked = { %s } }\n',
+    local s = string.format('return { language = %q, onlineName = %q, rhythmOffset = %d, showPerf = %s, musicVol = %d, sfxVol = %d, muted = %s, swapAB = %s, wheelToggle = %s, rumble = %s, hitStop = %s, deathCause = %s, shake = %s, flashes = %s, signText = %q, cbSymbols = %s, tutorialOffered = %s, touchLayout = %s, blocked = { %s } }\n',
         Settings.language, Settings.onlineName, Settings.rhythmOffset or 0, tostring(Settings.showPerf == true),
-        Settings.musicVol, Settings.sfxVol, tostring(Settings.muted == true), tostring(Settings.swapAB == true), tostring(Settings.wheelToggle == true), tostring(Settings.rumble ~= false), tostring(Settings.hitStop ~= false), tostring(Settings.deathCause ~= false), tostring(Settings.tutorialOffered == true), touchString(Settings.touchLayout), table.concat(bl, ', '))
+        Settings.musicVol, Settings.sfxVol, tostring(Settings.muted == true), tostring(Settings.swapAB == true), tostring(Settings.wheelToggle == true), tostring(Settings.rumble ~= false), tostring(Settings.hitStop ~= false), tostring(Settings.deathCause ~= false), tostring(Settings.shake ~= false), tostring(Settings.flashes ~= false), Settings.signText == 'large' and 'large' or 'normal', tostring(Settings.cbSymbols == true), tostring(Settings.tutorialOffered == true), touchString(Settings.touchLayout), table.concat(bl, ', '))
     pcall(love.filesystem.write, FILE, s)
 end
 

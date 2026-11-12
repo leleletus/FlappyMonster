@@ -4,7 +4,7 @@
 -- Bloques ON/OFF que dependen de él (switchblock_*.lua). Texturas:
 -- assets/images/world/tiles/switch_on.png / switch_off.png.
 return {
-    id = 13, name = 'switch_on', label = 'Activador ON', category = 'Mecanismos',
+    id = 13, name = 'switch_on', cbSymbol = 'on', label = 'Activador ON', category = 'Mecanismos',
     collision = 'solid', material = 'stone', toggle = 'switch_off',
     editorColor = { 0.1, 0.35, 0.95 },
     texture = { image = 'assets/images/world/tiles/switch_on.png' },
