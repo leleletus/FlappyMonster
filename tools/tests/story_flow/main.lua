@@ -166,6 +166,8 @@ function love.update(dt)
         -- ENTRAR desde el mapa: iris + fundido (Transition, estilo 'level') y la cuenta atrás con todo congelado
         CD1 = { x = st.player.x, y = st.player.y, cd = st.startCd }
         shot('level_countdown')
+        local s1, s2 = st:collectedCounts()
+        check('recogido_hud', s2 > 0 and s1 == 0, ('estrellas en el HUD: %d/%d'):format(s1, s2))
         local c = st.card
         check('tarjeta', c ~= nil and c.name ~= nil and c.island ~= nil and c.par ~= nil,
             ('tarjeta del nivel: «%s» · isla %s · tiempo objetivo %s'):format(tostring(c and c.name), tostring(c and c.island), tostring(c and c.par)))

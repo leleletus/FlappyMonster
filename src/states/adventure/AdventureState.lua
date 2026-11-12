@@ -1078,6 +1078,7 @@ function AdventureState:_drawHud()
     printOutlined(timeStr,  valueEndX - tw,  row2Y, vr, vg, vb, va)
 
     if not self.bonus then renderLivesHud(self.player, self.level.dark) end     -- (en el bonus no hay vidas: ver BonusMatch)
+    if not self.bonus then self:_drawCollected() end                            -- (estrellas y jaulas: src/ui/CollectHud.lua)
     if self.level.dark then LightHud.draw(self.player, WINDOW_W - 206, 76) end      -- (bajo las vidas)
     self:renderBossHud()
     RhythmDuel.draw()
@@ -1085,6 +1086,22 @@ function AdventureState:_drawHud()
     self.player:renderAirBar()
     self.player:renderDrownCountdown(self.player.x - self.camX, self.player.y - self.camY)
     self:renderPopups()
+end
+
+-- Estrellas cogidas y flappies liberados del nivel (lo de antes cuenta: las jaulas vacías ya liberadas)
+function AdventureState:collectedCounts()
+    local st = self.stats or {}
+    local cages, freed = 0, 0
+    for _, e in ipairs(self.enemies or {}) do
+        if e.def and e.def.name == 'cage' then
+            cages = cages + 1
+            if e.rescuedNow or e.freed or e.state == 'open' or e.state == 'empty' then freed = freed + 1 end
+        end
+    end
+    return st.stars or 0, st.starsTotal or 0, freed, cages
+end
+function AdventureState:_drawCollected()
+    require('src/ui/CollectHud').draw(self:collectedCounts())
 end
 
 -- Las opciones del fin de partida: textos, colores y opciones de la ventana (historia: solo seguir, con su nota)
