@@ -1,6 +1,13 @@
-# Start countdown (3, 2, 1, GO!)
+# Level start: intro card + countdown (3, 2, 1, GO!)
 
-Every level starts with a countdown so the player has time to react: **3, 2, 1, ¡YA!**. While it runs EVERYTHING is
+Since 0.5.202 every level starts with **two phases**, defined once in `StartCountdown` and run the same in single
+player, on the server and in the online client: first the **intro card** (`CARD_TIME` 2 s: a black title card with the
+level's name, island and number — [design](../design/level-intro-card.md)), then the **countdown** (`TIME` 3 s:
+**3, 2, 1, ¡YA!**). Neither can be skipped and there is **no pause** during either (the user). Online, before the card,
+the server **waits for every player to load** the level. `TIME` can be set to 0 (card only) with nothing else
+changing — the user will decide after trying it.
+
+The countdown gives the player time to react. While it runs EVERYTHING is
 frozen — player, enemies, traps, water, the level clock, the auto-scroll camera — and the player cannot control the
 character. It applies to single player (story, Free Play, bonus matches, editor playtest) and to online rounds. The
 menu background demo has none.
@@ -9,24 +16,38 @@ menu background demo has none.
 
 | File | What |
 |---|---|
-| `src/world/systems/StartCountdown.lua` | shared: `TIME` (3 s), `GO_TIME` (0.8 s the GO! stays), `ticks(tickDt)` (server), `beeps(prev, rem)` (the sound of each number and of GO) |
+| `src/world/systems/StartCountdown.lua` | shared: `CARD_TIME` (2 s), `TIME` (3 s), `GO_TIME` (0.8 s the GO! stays); `total(card)`, `phase(rem)` → `'card'` / `'count'` / `'go'` / nil (`rem` = seconds until play starts), `ticks(tickDt, card)` (server), `beeps(prev, rem)` (the sound of each number and of GO; silent during the card) |
+| `src/ui/IntroCard.lua` | the card: `new(level, id)`, `draw(card, t, { waiting })`, `rects(card)` (layout, for the overlap test). Bands slide in (level name from the left, island from the right) in the island's colours, a small plate drops left of the island band (`1-3`, `1-B` bonus, `1-?` secret — also the secret bosses —, `1-` + the world-map castle for bosses; none when the level has no story number), the island's ground strip with a decoration and an enemy, the monster (white outline) runs in and stops; while waiting it stays alive (hops, turns, band shimmer) and after 1 s extra shows `intro.waiting` with dots bottom-left |
+| `src/story/Worlds.lua` | `Worlds.plate(id)` (the number) and `Worlds.INTRO` / `INTRO_DEFAULT` / `introOf(id)` (each island's band colours, tiles, decoration, enemy frames) |
+| `tools/art/ui/make_intro_card.py` | the card art in `assets/images/ui/intro/` (outlined monster, band piece + cap, plate) |
 | `src/ui/BossHud.lua` | `drawStartCountdown(rem)`: the big pixel-font number (enters big and shrinks), then GO! in green fading out |
 | `assets/sounds/ui/count_tick.wav`, `count_go.wav` | the sounds (`countTick`, `countGo`), written by `tools/sounds/ui.py` |
 
 ## Single player / server / client
 
-- **Single player** (`AdventureState`): `self.startCd` = seconds left. While > 0, `update` only advances the camera
-  (snapped to its target on the first frame: `camSnap`) and returns — nothing else updates. Then `startGoT` runs the
-  GO! for `GO_TIME`. Pause still works.
-- **Server** (`server/main.lua`): `sim.startTicks = StartCountdown.ticks(TICK_DT)`. In `stepRoom`, while
-  `sim.tick <= startTicks` the inputs are drained and acknowledged (`drainFrozenInputs`) but nobody steps, the
-  entity history is still recorded, and nothing else runs. Floods use `(tick - startTicks) * TICK_DT` as their time.
-  `startTicks` travels in `game_init` as `cd`.
-- **Client** (`OnlineAdventureState`): the time left is `(startTicks - snapBuf.clock) * TICK_DT`
-  (`_startRemaining`); while > 0 the level visuals, level clock and floods don't advance. The prediction numbers and
+- **Single player** (`AdventureState`): `self.introCard` (not the demo, not an editor playtest, not a Flappy stage;
+  RETRY and restarts re-enter the state and show it again; checkpoint respawns don't) and `self.startCd =
+  StartCountdown.total(self.introCard)` = seconds left. While > 0, `update` only advances the camera (snapped to its
+  target on the first frame: `camSnap`) and returns — nothing else updates. During the `'card'` phase `render` draws
+  the card INSTEAD of the level (and no touch controls). Then `startGoT` runs the GO! for `GO_TIME`. `startPhase()`;
+  `pauseGame()` and the pause input do nothing in the card and countdown phases (`_startLocked`). The level music
+  starts on entering the state, so it starts with the card.
+- **Server** (`server/srv/sim.lua`): `sim.startTicks` is nil while it WAITS: every player of the room at the start
+  (`sim.waitFor`) must send `level_loaded` (the client does it at the end of `_onGameInit`; `server/srv/lobby.lua`),
+  unless they disconnect; or the wait ends 8 s after the first `level_loaded` or 20 s after `game_init`
+  (`S.startWaitOver`). Then `startTicks = tick + StartCountdown.ticks(TICK_DT, true)` and `round_start { start }` goes
+  to the room. While waiting and until `startTicks` the inputs are drained and acknowledged (`drainFrozenInputs`) but
+  nobody steps, the entity history is still recorded, and nothing else runs. Floods use `(tick - startTicks) *
+  TICK_DT` as their time. `game_init` carries `start` (nil while waiting) and `card` (its ticks).
+- **Client** (`OnlineAdventureState`): `waitingStart` until `round_start` (or `start` in `game_init`); the time left is
+  `(startTicks - snapBuf.clock) * TICK_DT` (`_startRemaining`; while waiting, more than the whole start: the `'card'`
+  phase); while > 0 the level visuals, level clock and floods don't advance. `_cardShowing()` draws the card instead of
+  the level; its animation time is local (`cardT0`), its LENGTH is the server clock. `_introWaiting()` = seconds of
+  wait past the card's normal end. Late joiners and players who arrive after the card phase get no card. The
+  pause / leave overlay can't be opened during the card and the countdown. The prediction numbers and
   sends every input, but `Predictor:tick(bits, frozen)` doesn't move the player for inputs the server will still
   process frozen (`_startFrozenAhead`: clock + ping < startTicks, like the floods estimate); those history entries
-  are skipped on replay too. An old server (no `cd`) means no countdown. Protocol v64.
+  are skipped on replay too. Protocol v64 (countdown), v117 (wait + card).
 
 ## Auto-scroll
 
@@ -37,7 +58,12 @@ event is `quiet` — no second GO! banner). Its own countdown only happens if so
 
 ## Tests
 
-`story_flow` (`entrar`: the map's iris transition, the countdown running with the player still and the level clock at
+`mechanics` `inicio_fases` (phases, totals, beeps only in the countdown, `TIME` = 0). `story_flow`: `tarjeta` (the card
+before the countdown, the level not drawn, the plate, Free Play without plate, the longest level name at 960 / 1280 /
+1600 with nothing overlapping; captures `story_intro_<level>_<width>.png`), `placas` (`Worlds.plate`, every island's
+look loads), `sin_pausa_inicio` (any button every frame during card + countdown: no pause, no movement; pause works
+after GO). `online_smoke` `espera_carga` / `tarjeta_online` (bot loads at once, `DELAYLOAD=4`, `NOLOAD=1`,
+`QUITLOAD=1`). Also `story_flow` (`entrar`: the map's iris transition, the countdown running with the player still and the level clock at
 0) and `online_smoke` (the countdown exists and the own player doesn't move during it). Harnesses that measure a
 level for fixed seconds skip it (`perf`: `st.startCd = nil`) or count after it (`tool_editors FLOW=runtime`).
 
@@ -52,3 +78,13 @@ level for fixed seconds skip it (`perf`: `st.startCd = nil`) or count after it (
   `PlayerAdventure:settle(level)` puts the feet on the ground below (same top face as the landing in
   `moveAndCollide`); called when the player is created in `AdventureState` and in the server's `initRoomSim` (the
   client gets it in `game_init`). `story_flow` `apoyado`: the first step after the countdown moves it 0 px.
+- 0.5.202 (2026-11-12): the **intro card** before the countdown (the user: "like the classic platformer title cards",
+  a black screen made of real assets, the island, the level name and its number "1 - 3"). Chosen from mockups: the
+  sliding bands of one idea + the island strip with the running monster of another; the number on a small plate left
+  of the island band; band colours per island (the user). The user's rules: about 2 s, it CANNOT be skipped, no pause
+  during the card nor the countdown, shown in story and Free Play and online, no number when it is not known, bonus
+  `w-B`, secret `w-?` (also for the secret bosses), bosses `w-` + the castle (my recommendation, accepted). "Fix it for
+  real" online (the user rejected letting the card just cover part of the old 3 s freeze): one start sequence, the
+  server waits for everyone to load (the user: with a limit; the card IS the waiting screen and must stay alive, with
+  "Esperando jugadores..." bottom-left if it takes long). The countdown stays as it was until the user tries it (they
+  may remove it). Not judged by a person yet (looks, timing, feel).

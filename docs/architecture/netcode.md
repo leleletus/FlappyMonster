@@ -96,8 +96,9 @@ once at load (`local MAX_BUDGET = S.MAX_BUDGET`), and mutable state and function
 
 - `game_init` sends roster (idx,id,name,color) + the level JSON text + `cd` (start countdown ticks).
 
-- Start countdown (v64): the first `startTicks` ticks of a round simulate nothing (inputs drained and acked); the
-  client predicts those inputs without moving. See [start-countdown](../gameplay/start-countdown.md).
+- Start (v64, v117): the server first waits for every starting player's `level_loaded` (8 s after the first, 20 s
+  max), then sends `round_start` and simulates nothing until `startTicks` (intro card + countdown; inputs drained and
+  acked); the client predicts those inputs without moving. See [start-countdown](../gameplay/start-countdown.md).
 
 Server load (0.5.11): the level catalog keeps each level's info with its file's modtime (a rescan only loads new or
 changed levels — before, every 10 s it rebuilt all 44 with previews on the match thread) and builds the
@@ -213,6 +214,8 @@ piece took damage, immortal online), and a rewound "stomp" may hit a boss that i
   tool. Harness: `online_menus` `bloquear`.
 
 ## Protocol version history
+
+v117: the level start WAITS for every player to load — client → server `level_loaded`, server → room `round_start { start }`; `game_init` sends `start` (nil while waiting) and `card` instead of `cd` — and the intro card before the countdown ([start](../gameplay/start-countdown.md)).
 
 v116: own-state `landStopT` (43, before `jumpV0`), the stop after a hard landing; `landHard` is a shared sound.
 

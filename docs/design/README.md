@@ -12,7 +12,7 @@ and describe the real thing in the system's page.
 
 | What | Page |
 |---|---|
-| **Level intro card (2026-11-12):** black title card before the countdown — island-coloured bands, number plate, island strip, the monster running in; the server waits for everyone to load (approved; plan written) | [level-intro-card](level-intro-card.md) · [plan](level-intro-card-plan.md) |
+| **Level intro card (2026-11-12):** black title card before the countdown — island-coloured bands, number plate, island strip, the monster running in; the server waits for everyone to load (**built, 0.5.202**) | [level-intro-card](level-intro-card.md) · [plan](level-intro-card-plan.md) |
 | **UX round (2026-11-11):** items 1-6 built (0.5.200-201); next: touch controls editor, HUD layout pass, damage sources, death message placement | [ux-round-2026-11](ux-round-2026-11.md) |
 | **The tutorial level (2026-11-10):** every mechanic, signs with prompts, teach the verb not the trick (being built) | [tutorial-level](tutorial-level.md) |
 | **Game feel, structure and performance round (2026-11-10):** variable jump, coyote time, rumble, dust, camera lead, boss file split… (hit-stop waiting, off-screen arrow rejected) | [gamefeel-round-2026-11](gamefeel-round-2026-11.md) |
