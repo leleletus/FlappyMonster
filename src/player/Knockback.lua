@@ -3,7 +3,8 @@
 -- algunos — los de los jefes, algún enemigo — y era incoherente). Un módulo para todo: el daño del jugador
 -- (PlayerAdventure:hurt / hazardHit, con la fuente del golpe — src/player/DamageSource.lua —) y los golpes de los
 -- jefes (Boss.strike, con su tabla propia). Sin dibujo: lo comparten un jugador, el servidor y el cliente.
---   Knockback.apply(pa, dir, k)   empuja a pa hacia dir (±1) con k = { vx, vy, lock[, stun] } (vy hacia arriba < 0)
+--   Knockback.apply(pa, dir, k)   empuja a pa hacia dir (±1) con k = { vx, vy, lock[, stun] } (vy hacia arriba < 0);
+--                                 pa.knockK (1 por defecto) lo escala
 --   Knockback.of(src)             el empuje de una fuente: una de PROFILES o nil (ninguno)
 --   Knockback.dirFrom(pa, src)    hacia dónde: lejos de donde vino (src.x); sin sitio, hacia atrás de donde mira
 --   Knockback.hit(pa, src)        of + dirFrom + apply (lo que hace el daño del jugador)
@@ -42,7 +43,8 @@ end
 
 function Knockback.apply(pa, dir, k)
     if not k or pa.dying then return end
-    pa.vx, pa.vy = dir * (k.vx or 0), k.vy or 0
+    local m = pa.knockK or 1                             -- (cuánto le afecta: 1; la escena de la tarjeta, menos)
+    pa.vx, pa.vy = dir * (k.vx or 0) * m, (k.vy or 0) * m
     pa.onGround, pa.crouching = false, false
     pa.gpPhase, pa.gpT = nil, 0
     pa.ctrlLockT = math.max(pa.ctrlLockT or 0, k.lock or 0)

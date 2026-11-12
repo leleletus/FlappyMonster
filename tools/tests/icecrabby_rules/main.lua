@@ -309,19 +309,27 @@ local function ceilingDrop(type, wantDmg, name)
     step(level, es, 0.3)
     local hp0 = pa.hp
     local maxStun = 0
-    step(level, es, 4, function() maxStun = math.max(maxStun, pa.stunT or 0) end)
+    -- (lo que quita EL PEGOTE: la vida a los 1,5 s; luego el cangrejo anda y puede volver a tocarlo — con el empuje de
+    --  todos los golpes, 0.5.210, el jugador queda a su paso —)
+    local t, hpDrop = 0, nil
+    step(level, es, 4, function()
+        maxStun = math.max(maxStun, pa.stunT or 0)
+        t = t + 1 / 60
+        if not hpDrop and t >= 1.5 then hpDrop = pa.hp end
+    end)
+    pa.hpDrop = hpDrop or pa.hp
     return level, es, e, pa, hp0, maxStun
 end
 
 function cases.nieve_techo()
     local _, _, e, pa, hp0, stun = ceilingDrop('crabby_ice_snow')
-    check('nieve_techo', pa.hp == hp0 - 1 and stun > 0.3 and not e.flipped and (e.state == 'walk' or e.state == 'idle' or e:isHiding()),
-        ('vida %d→%d, aturdido %.2f s, cangrejo %s en el suelo=%s'):format(hp0, pa.hp, stun, e.state, tostring(not e.flipped)))
+    check('nieve_techo', pa.hpDrop == hp0 - 1 and stun > 0.3 and not e.flipped and (e.state == 'walk' or e.state == 'idle' or e:isHiding()),
+        ('vida %d→%d, aturdido %.2f s, cangrejo %s en el suelo=%s'):format(hp0, pa.hpDrop, stun, e.state, tostring(not e.flipped)))
 end
 
 function cases.carambano_techo()
     local _, _, e, pa, hp0 = ceilingDrop('crabby_ice_icicle')
-    check('carambano_techo', pa.hp == hp0 - 2, ('vida %d→%d (cangrejo %s)'):format(hp0, pa.hp, e.state))
+    check('carambano_techo', pa.hpDrop == hp0 - 2, ('vida %d→%d (cangrejo %s)'):format(hp0, pa.hpDrop, e.state))
 end
 
 -- Clavado boca abajo tras caer del techo (Crabby helado Y normal): la caja de pisotón está donde se

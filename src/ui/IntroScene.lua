@@ -17,7 +17,7 @@ local IntroScene = {}
 IntroScene.__index = IntroScene
 
 IntroScene.FILE = 'intro_scene.json'    -- (la tira se escribe en la carpeta de guardado, como la prueba del editor)
-IntroScene.CROSS = 4.4                  -- s en cruzar la pantalla sin esperar (dentro de los CARD_TIME de la tarjeta)
+IntroScene.CROSS = 4.2                  -- s en cruzar la pantalla sin esperar (dentro de los CARD_TIME de la tarjeta)
 IntroScene.HOLD_AT = 0.3                -- … esperando: se para a este tanto del ancho
 IntroScene.OUTCOMES = { 'jump', 'stomp', 'hurt' }
 
@@ -107,6 +107,7 @@ function IntroScene.new(level, id, o)
     local dist = W + 2 * TILE_PX
     self.player.moveK = math.max(1, math.min(1.5, dist / (ADV_MOVE_SPD * IntroScene.CROSS)))
     self.player.facing = 1
+    self.player.knockK = 0.35                 -- (el golpe se nota pero no lo devuelve atrás: sale a tiempo por la derecha)
     return self
 end
 

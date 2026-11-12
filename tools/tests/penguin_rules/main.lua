@@ -115,13 +115,17 @@ function cases.ve()
     local hp0 = pa.hp
     local seen, slid, maxV, rose, walkAgain = false, false, 0, false, false
     local tr = 0
-    stepAll(level, es, { pa }, 5, function()
+    -- (8 s: con el empuje de todos los golpes, 0.5.210, el jugador sale despedido, el pingüino sigue deslizando hasta la
+    --  pared, queda aturdido y luego se levanta)
+    stepAll(level, es, { pa }, 8, function()
         tr = tr + 1
         if os.getenv('TRACE') and tr % 15 == 0 then print(('  %s x=%.0f y=%.0f suelo=%s cd=%.2f f=%s vx=%.0f'):format(p.state, p.x, p.y, tostring(p.onGround), p.cd or -1, tostring(p.facing), p.vx)) end
         if p.state == 'dive' then seen = true end
         if p.state == 'slide' then slid = true; maxV = math.max(maxV, math.abs(p.vx)) end
         if slid and p.state == 'getup' then rose = true end
-        if rose and p.state == 'walk' then walkAgain = true; return true end
+        -- (tras levantarse vuelve a andar; con el empuje de todos los golpes, 0.5.210, puede que ya vea al jugador y se
+        --  tire otra vez: también vale)
+        if rose and (p.state == 'walk' or p.state == 'dive') then walkAgain = true; return true end
     end)
     local hurt = pa.hp < hp0
     check('ve', seen and slid and maxV >= 280 and hurt and rose and walkAgain,
