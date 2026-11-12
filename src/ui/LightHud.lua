@@ -12,6 +12,8 @@ function LightHud.draw(pa, x, y)
     local bat, cd = pa.lightBat or 1, pa.lightCd or 0
     local icon = require('src/fx/Anim').clip('ui', (cd > 0) and 'flashlight_empty' or (pa.lightOn and 'flashlight_on' or 'flashlight_off'))
     local blink = cd > 0 and math.floor(love.timer.getTime() * 6) % 2 == 0
+    -- (bajo las vidas; si ahí está el botón de pausa, más abajo: src/ui/HudRects.lua)
+    x, y = require('src/ui/HudRects').place('light', x, y, 12 * SCALE + 10 + SEG * 16 + 3, math.max(12 * SCALE, 27))
     love.graphics.setColor(0, 0, 0, 0.6)
     icon:show(x + 3, y + 3, 0, SCALE, SCALE)
     love.graphics.setColor(1, 1, 1, blink and 0.5 or 1)

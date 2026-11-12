@@ -52,15 +52,15 @@ yet). Later: loading spinners on slow devices beyond item 6.
 - **Item 7, touch controls:** the user chose FREE placement — on an edit screen each on-screen button is dragged
   wherever the player wants — plus size and opacity sliders. The rest of item 7 as above (reduce shake / flashes,
   bigger sign text, colour-blind-friendly hazards).
-- **HUD layout pass (the user found it):** the death message sits right against the score counter, and during a boss
+- **HUD layout pass (the user found it) — BUILT 0.5.204, [hud](../architecture/hud.md):** the death message sits right against the score counter, and during a boss
   fight the boss health bar covers the score completely. Every HUD element must have its own place, nothing on top of
   anything else, at every resolution (960 / 1280 / 1600, phones with bands): score and time, lives, light, collectibles
   (top centre), the level card, the death message, the boss bar and its player bars, the Flappy HUD and bag, the
   pause button, the countdown, online mode banners. Make a harness that draws them all together and checks their
   rectangles do not overlap.
-- **Death message placement:** move it somewhere it does not get in the way (it now sits top centre, under the
+- **Death message placement — BUILT 0.5.204 (left, under the top HUD):** move it somewhere it does not get in the way (it now sits top centre, under the
   collectibles, against the score).
-- **Online instruction banners (to CHECK, not a confirmed bug):** the mode's how-to-play banners sit top centre and
+- **Online instruction banners (to CHECK) — CHECKED 0.5.204: no overlap once placed under the HUD; they were never seen since the intro card (fixed):** the mode's how-to-play banners sit top centre and
   have sizes per resolution; the user suspects they could collide like the score did. Check them in the HUD pass;
   only if they collide: show them for the first seconds of a match and then hide them, and/or make them available
   from the pause menu.

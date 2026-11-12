@@ -28,7 +28,7 @@ function CollectHud.draw(stars, starsTotal, cages, cagesTotal)
     love.graphics.setFont(font)
     local gap, w = 28, 0
     for i, p in ipairs(parts) do w = w + p.w + 8 + font:getWidth(p.text) + (i > 1 and gap or 0) end
-    local x, y = math.floor((WINDOW_W - w) / 2), 18
+    local x, y = require('src/ui/HudRects').place('collect', math.floor((WINDOW_W - w) / 2), 18, w, 48)
     for _, p in ipairs(parts) do
         local iy = y + math.floor((48 - p.h) / 2)
         love.graphics.setColor(0, 0, 0, 0.5)

@@ -265,11 +265,12 @@ function OnlineAdventureState:_renderModeHUD()
         -- sí se ve, debajo de las barras)
         local n = 0
         for _, b in ipairs(boss.bosses) do if b.alive then n = n + 1 end end
-        ph, pyBottom = 0, 48 + 72 * math.max(1, n)
+        ph, pyBottom = 0, require('src/ui/HudRects').below() - 10      -- (bajo las barras de la pelea)
     elseif w <= topFree then
         local py = 6
         ph = 8 + FONT_MED:getHeight() + 6 + FONT_SMALL:getHeight() + (line and (6 + FONT_MED:getHeight()) or 0) + 8
         local px = math.floor(cx - w / 2)
+        px, py = require('src/ui/HudRects').place('mode', px, py, w, ph)
         love.graphics.setColor(0, 0, 0, 0.62)
         love.graphics.rectangle('fill', px, py, w, ph)
         love.graphics.setColor(col[1], col[2], col[3], 0.12 + 0.35 * flash)
@@ -313,9 +314,10 @@ function OnlineAdventureState:_renderModeHUD()
         local tw = font:getWidth(text) + iconW
         local lw = tw + 24
         local lh = 26
-        -- Justo debajo del marcador
-        local py = 100
+        -- Justo debajo del marcador (o de lo que haya ahí: src/ui/HudRects.lua)
         local px = math.floor(cx - lw / 2)
+        local py
+        px, py = require('src/ui/HudRects').place('mode', px, 100, lw, lh)
         love.graphics.setColor(0, 0, 0, 0.62)
         love.graphics.rectangle('fill', px, py, lw, lh)
         love.graphics.setColor(col[1], col[2], col[3], 0.12 + 0.35 * flash)
@@ -352,7 +354,9 @@ function OnlineAdventureState:_renderModeHUD()
         local t  = self.introT
         local a  = math.min(1, t / 0.3) * math.min(1, (INTRO_DUR - t) / 0.6)
         local slide = (1 - math.min(1, t / 0.35)) ^ 3 * 60
-        local y  = WINDOW_H * 0.26 - slide
+        -- (bajo todo el HUD de arriba, nunca encima: src/ui/HudRects.lua)
+        local y  = math.max(WINDOW_H * 0.26, require('src/ui/HudRects').below() + 14) + slide   -- (entra subiendo: nunca pasa por encima del HUD)
+        require('src/ui/HudRects').add('intro', 0, y - 14, WINDOW_W, 104)
         love.graphics.setColor(0, 0, 0, 0.6 * a)
         love.graphics.rectangle('fill', 0, y - 14, WINDOW_W, 104)
         love.graphics.setColor(col[1], col[2], col[3], a)
@@ -372,8 +376,8 @@ function OnlineAdventureState:_renderModeHUD()
         FONT_SMALL:setLineHeight(lh)
     end
 
-    -- Avisos grandes
-    local y = WINDOW_H * 0.36
+    -- Avisos grandes (bajo todo el HUD de arriba)
+    local y = math.max(WINDOW_H * 0.36, require('src/ui/HudRects').below() + 20)
     for _, b in ipairs(self.banners) do
         local t = b.t
         local a = math.min(1, t / 0.2) * math.min(1, (BANNER_DUR - t) / 0.5)

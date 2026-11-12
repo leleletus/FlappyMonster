@@ -909,18 +909,21 @@ function AdventureState:renderBossHud()
             FlappyHud.drawBag(n)
         end
     end
+    -- (la barra del jefe ARRIBA EN EL CENTRO — su sitio, el usuario —, estrechada entre los puntos y las vidas para no
+    --  taparlos; las ESTRELLAS se apartan: bajo ella. Lo demás de la pelea, debajo: src/ui/HudRects.lua)
+    local HudRects = require 'src/ui/HudRects'
+    if z then BossHud.drawZone(z, 18, math.min(1, self.bossFightT / 0.8)) end
+    if not self.bonus then self:_drawCollected() end                            -- (estrellas y jaulas: src/ui/CollectHud.lua)
     if z and self.level.flappy then
-        BossHud.drawZone(z, 18, math.min(1, self.bossFightT / 0.8))
+        -- (Flappy: su HUD ya va a la izquierda)
     elseif z then
-        local y = 18
-        y = BossHud.drawZone(z, y, math.min(1, self.bossFightT / 0.8))
         local p = self.player
         BossHud.drawPlayers({ { name = L('hud.you'), color = { 1, 0.95, 0.2 }, hp = p.hp, hpMax = p.hpMax,
-                                key = p, dead = p.dying } }, 20, 110)
+                                key = p, dead = p.dying } }, 20, HudRects.below())
     elseif self.player.hp < self.player.hpMax and not self.player.dying and not self.level.flappy then
         -- Fuera de una pelea: la vida solo si le falta algo
         local p = self.player
-        BossHud.drawPlayers({ { name = L('hud.you'), color = { 1, 0.95, 0.2 }, hp = p.hp, hpMax = p.hpMax, key = p } }, 20, 110)
+        BossHud.drawPlayers({ { name = L('hud.you'), color = { 1, 0.95, 0.2 }, hp = p.hp, hpMax = p.hpMax, key = p } }, 20, HudRects.below())
     end
     if self.bossBanner then
         BossHud.drawBanner(self.bossBanner.text, self.bossBanner.t, 2.2, self.bossBanner.col)
@@ -949,6 +952,7 @@ local function renderLivesHud(player, dark)
     love.graphics.setColor(1, 1, 1, 1)
     love.graphics.draw(imgIcon, sx, sy, 0, ICON_SCALE, ICON_SCALE)
 
+    require('src/ui/HudRects').add('lives', sx, sy, totalW, iconH)
     local lx, ly = sx + iconW + gap, sy + iconH/2 - FONT_BIG:getHeight()/2
     -- SIEMPRE blanco con sombra negra, como el resto del HUD: en negro no se leía de noche, al atardecer, en cuevas
     -- ni sobre fondos oscuros (antes solo se cambiaba en los niveles a oscuras)
@@ -1073,6 +1077,12 @@ end
 -- El HUD de la partida: puntos, tiempo, vidas, luz, jefe, aire... (dentro de BossHud.fadeHud: se desvanece en la entrada
 -- de un jefe)
 function AdventureState:_drawHud()
+    -- (lo que ocupa cada cosa del HUD, para colocar lo de debajo sin pisarse: src/ui/HudRects.lua)
+    local HudRects = require 'src/ui/HudRects'
+    HudRects.clear()
+    if not self.dead and CornerButtons.pointerMode() then
+        local r = CornerButtons.pauseRect(); HudRects.add('pause', r.x, r.y, r.w, r.h)
+    end
     -- HUD: SCORE y TIME  (sin fondo, valores alineados a la derecha)
     love.graphics.setFont(FONT_BIG)
     local fh = FONT_BIG:getHeight()
@@ -1120,9 +1130,9 @@ function AdventureState:_drawHud()
     end
     printOutlined(L('hud.time'),   labelX,          row2Y, tr, tg, tb, ta)
     printOutlined(timeStr,  valueEndX - tw,  row2Y, vr, vg, vb, va)
+    HudRects.add('score', labelX, row1Y, valueEndX - labelX + 2, row2Y + fh + 2 - row1Y)
 
     if not self.bonus then renderLivesHud(self.player, self.level.dark) end     -- (en el bonus no hay vidas: ver BonusMatch)
-    if not self.bonus then self:_drawCollected() end                            -- (estrellas y jaulas: src/ui/CollectHud.lua)
     if self.level.dark then LightHud.draw(self.player, WINDOW_W - 206, 76) end      -- (bajo las vidas)
     self:renderBossHud()
     RhythmDuel.draw()

@@ -356,7 +356,24 @@ function love.update(dt)
         print('Estados del jefe vistos en el cliente:')
         print('  ' .. table.concat(log.states, '  '))
         print(('Salto máximo del dibujo trepando: %.1f px por fotograma'):format(log.maxJump))
+        do
+            local bad, seen = {}, {}
+            for k, n in pairs(HUDBAD or {}) do bad[#bad + 1] = k .. ' (' .. n .. ')' end
+            for k in pairs(HUDSEEN or {}) do seen[#seen + 1] = k end
+            table.sort(bad); table.sort(seen)
+            print(('%s hud_online: [%s] %s'):format(#bad == 0 and 'OK   ' or 'FALLA', table.concat(seen, ','), #bad == 0 and 'nada se pisa' or table.concat(bad, ' · ')))
+            if #bad > 0 then log.fail = true end
+        end
         love.event.quit(log.fail and 1 or 0)
     end
 end
-function love.draw() lovesize.begin(); if gStateMachine:_top() then gStateMachine:render() end; lovesize.finish() end
+function love.draw()
+    lovesize.begin(); if gStateMachine:_top() then gStateMachine:render() end; lovesize.finish()
+    -- (el HUD sin pisarse: lo que se haya pisado en algún fotograma — src/ui/HudRects.lua —)
+    if gStateMachine:_top() and gStateMachine:_top().localPaInit then
+        HUDBAD = HUDBAD or {}
+        for _, o in ipairs(require('src/ui/HudRects').overlaps()) do HUDBAD[o] = (HUDBAD[o] or 0) + 1 end
+        HUDSEEN = HUDSEEN or {}
+        for _, r in ipairs(require('src/ui/HudRects').list()) do HUDSEEN[r.name] = true end
+    end
+end

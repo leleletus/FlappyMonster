@@ -24,7 +24,11 @@ function DB.draw(cause, t)
     local iw = 9 * px
     local w = iw + 14 + FONT_MED:getWidth(text) + 40
     local h = 52
-    local x, y = math.floor((WINDOW_W - w) / 2), 74
+    -- (a la IZQUIERDA, bajo todo lo de arriba — puntos, barras de los jefes y de vida —: el usuario, 0.5.204: pegado a
+    --  los puntos estorbaba; src/ui/HudRects.lua)
+    local HudRects = require 'src/ui/HudRects'
+    local x, y = 20, HudRects.below()
+    HudRects.add('death', x, y, w, h)
     require('src/ui/menu/MenuButton').panel(x, y, w, h, 0.9 * a)
     PixelIcons.draw('skull', x + 20, y + math.floor((h - iw) / 2), px, a)
     love.graphics.setColor(1, 0.86, 0.8, a)

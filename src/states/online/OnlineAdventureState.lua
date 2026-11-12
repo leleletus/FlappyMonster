@@ -512,7 +512,8 @@ function OnlineAdventureState:update(dt)
         return
     end
 
-    self.introT = self.introT + dt
+    -- (el cartel del modo cuenta desde que se ve el nivel: tapado por la tarjeta de presentación no se leía nunca)
+    if not self:_cardShowing() then self.introT = self.introT + dt end
     for i = #self.banners, 1, -1 do
         local b = self.banners[i]
         b.t = b.t + dt
@@ -757,8 +758,9 @@ end
 function OnlineAdventureState:_renderBossHUD()
     local z = BossZones.fighting(self.level)
     if z and not self.showGameOver then
-        local y = 48
-        y = BossHud.drawZone(z, y, math.min(1, self.bossFightT / 0.8))
+        -- (arriba en el centro, estrechada entre los puntos y las vidas: src/ui/HudRects.lua)
+        local HudRects = require 'src/ui/HudRects'
+        BossHud.drawZone(z, 18, math.min(1, self.bossFightT / 0.8))
         -- Un jugador por fila, con su color de la sala
         local list = {}
         for idx = 1, 16 do
@@ -783,13 +785,13 @@ function OnlineAdventureState:_renderBossHUD()
                 if e then list[#list+1] = e end
             end
         end
-        BossHud.drawPlayers(list, 20, 110)
+        BossHud.drawPlayers(list, 20, HudRects.below())
     elseif self.localPaInit and not self.ownData.isSpectator and not self.showGameOver then
         -- Fuera de una pelea: la vida propia solo si le falta algo
         local pa, r = self.localPa, self.roster[self.myIdx]
         if pa.hp < pa.hpMax and not pa.dying then
             BossHud.drawPlayers({ { name = r and r.name or L('hud.you'), color = r and r.color, hp = pa.hp,
-                                    hpMax = pa.hpMax, key = r or pa } }, 20, 110)
+                                    hpMax = pa.hpMax, key = r or pa } }, 20, require('src/ui/HudRects').below())
         end
     end
     -- Esperando a que lleguen todos a la zona

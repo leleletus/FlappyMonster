@@ -70,7 +70,9 @@ function BossHud.drawBoss(boss, y, appear)
     appear = appear or 1
     if appear < 1 then hp = math.min(hp, math.floor(hpMax * appear)) end
     local segW, gap, segH = 16, 4, 30
-    local maxW = WINDOW_W * 0.7
+    -- (ARRIBA EN EL CENTRO, su sitio — el usuario —, pero sin pisar los puntos ni las vidas: tan ancha como quepa entre
+    --  ellos; si no, segmentos más estrechos — src/ui/HudRects.lua —)
+    local maxW = math.min(WINDOW_W * 0.7, math.max(120, require('src/ui/HudRects').centerSpan()))
     while hpMax * segW + (hpMax - 1) * gap > maxW and segW > 4 do
         segW = segW - 2; gap = math.max(2, gap - 1)
     end
@@ -78,6 +80,8 @@ function BossHud.drawBoss(boss, y, appear)
     local x = math.floor((WINDOW_W - w) / 2)
     love.graphics.setFont(FONT_MED)
     local title = boss.title and boss:title() or L('boss.default')
+    local tw = FONT_MED:getWidth(title)
+    require('src/ui/HudRects').add('boss', math.min(x, math.floor(WINDOW_W / 2 - tw / 2)), y, math.max(w, tw), 26 + segH)
     outlined(title, math.floor(WINDOW_W / 2 - FONT_MED:getWidth(title) / 2), y, { 1, 0.35, 0.35 })
     segments(boss, x, y + 26, hp, hpMax, segW, segH, gap, { 0.92, 0.16, 0.22 })
     love.graphics.setColor(1, 1, 1, 1)
@@ -97,7 +101,11 @@ local function duoName(list)
 end
 BossHud.duoName = duoName
 
+BossHud.MIN_TOP_W = 240         -- (ancho libre mínimo entre los puntos y las vidas para ir arriba del todo)
 function BossHud.drawZone(z, y, appear)
+    -- (pantalla estrecha: entre los puntos y las vidas no cabe → justo debajo de esa franja, centrada igual)
+    local HudRects = require 'src/ui/HudRects'
+    if HudRects.centerSpan() < BossHud.MIN_TOP_W then y = math.max(y, HudRects.below()) end
     -- (una BARRA COMPARTIDA que pone otro: el director de un evento — z.barOf = { hp, hpMax, title() } —)
     if z.barOf then BossHud.drawBoss(z.barOf, y, appear); return y + 72 end
     local pair = {}
@@ -126,6 +134,9 @@ function BossHud.drawPlayers(list, x, y)
     love.graphics.setFont(FONT_MED)
     local nameW = 0
     for _, p in ipairs(list) do nameW = math.max(nameW, FONT_MED:getWidth(p.name or '')) end
+    local maxHp = 1
+    for _, p in ipairs(list) do maxHp = math.max(maxHp, p.hpMax or 3) end
+    require('src/ui/HudRects').add('players', x, y, nameW + 20 + maxHp * 20, #list * 38 - 14)
     for i, p in ipairs(list) do
         local yy = y + (i - 1) * 38
         local c  = p.color or { 1, 1, 1 }
@@ -177,7 +188,8 @@ function BossHud.drawRun(level, entities)
     if s < 6 then s = 6 end
     local beat = 0.5 + 0.5 * math.sin(now * 10)
     local w = PixelFont.width(text, s)
-    local x, y = math.floor((WINDOW_W - w) / 2 + ((t < 0.5) and math.sin(now * 80) * 4 or 0)), 44
+    local x, y = math.floor((WINDOW_W - w) / 2 + ((t < 0.5) and math.sin(now * 80) * 4 or 0)), require('src/ui/HudRects').below()
+    require('src/ui/HudRects').add('run', x, y, w, PixelFont.height(s))
     PixelFont.shadow(text, x, y, s, 1, { 1, 0.25 + 0.35 * beat, 0.25 + 0.2 * beat })
     love.graphics.setColor(1, 1, 1, 1)
 end
@@ -204,7 +216,8 @@ function BossHud.drawUndertow(level)
     local gap = 3 * px
     local shake = (t < 0.4) and math.floor(math.sin(now * 80) * 4) or 0
     local x = math.floor((WINDOW_W - tw) / 2) + shake
-    local y = 150
+    local y = require('src/ui/HudRects').below()                       -- (bajo lo de arriba y las barras de la pelea)
+    require('src/ui/HudRects').add('undertow', x - gap - iw, y, tw + 2 * (gap + iw), math.max(th, ih))
     local slide = math.floor((now * 3 % 1) * 3) * px * dir              -- (las flechas avanzan a saltos hacia allí)
     local iy = y + math.floor((th - ih) / 2)
     for k = -1, 1, 2 do

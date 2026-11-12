@@ -21,6 +21,7 @@ are never edited by hand.
 | add a difficulty modifier | [gameplay/difficulty](gameplay/difficulty.md) |
 | make or edit a level | [levels/editor](levels/editor.md), [levels/level-format](levels/level-format.md), [levels/generator-and-solver](levels/generator-and-solver.md), [levels/retheme](levels/retheme.md) |
 | see the level review and the proposals (Gusts, reworks, new levels) | [levels/level-review-2026-10](levels/level-review-2026-10.md) |
+| move or add something on the in-game HUD without covering anything | [architecture/hud](architecture/hud.md) |
 | change the intro card or the countdown at the start of every level (single player and online) | [gameplay/start-countdown](gameplay/start-countdown.md) |
 | change the story order, saves, results, the Collection (collectibles screen, worn boss pieces) | [story/story-mode](story/story-mode.md) |
 | change the world map | [story/world-map](story/world-map.md) |

@@ -7,7 +7,7 @@
 local FlappyHud = {}
 
 local S = 4                      -- escala del arte (8 px → 32: la de los objetos y el icono de las vidas)
-local X0, Y0 = 20, 108           -- (el sitio de la barra de vida de BossHud.drawPlayers)
+local X0, Y0 = 20, 108           -- (Y0: bajo lo de arriba — src/ui/HudRects.lua —; se fija al dibujar)
 local img, quads
 
 local function load()
@@ -35,6 +35,7 @@ function FlappyHud.drawBag(n)
         bagImg:setFilter('nearest', 'nearest')
     end
     local b = FlappyHud.bagRect()
+    require('src/ui/HudRects').add('bag', b.x, b.y, b.w, b.h)
     love.graphics.setColor(1, 1, 1, n > 0 and 1 or 0.45)
     love.graphics.draw(bagImg, b.x, b.y, 0, S, S)
     if n > 0 then require('src/ui/PixelFont').shadow(tostring(n), b.x + b.w - 10, b.y + b.h - 18, 3, 1) end
@@ -69,8 +70,10 @@ end
 function FlappyHud.draw(pa)
     if not pa then return end
     load()
+    Y0 = require('src/ui/HudRects').below()        -- (bajo los puntos y lo de arriba; la bolsa va a su lado: bagRect)
     local Ly = FlappyHud.layout()
     local PA = require 'src/player/PlayerAdventure'
+    require('src/ui/HudRects').add('flappy', Ly.hearts.x, Ly.hearts.y, math.max(pa.hpMax or 3, PA.CHARGE_MAX or 5) * 8 * S, 9 * S + 8 * S)
     love.graphics.setColor(1, 1, 1, 1)
     for i = 1, pa.hpMax or 3 do
         local full = not pa.dying and i <= (pa.hp or 0)

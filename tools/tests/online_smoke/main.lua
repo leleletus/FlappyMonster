@@ -334,6 +334,16 @@ function love.update(dt)
         print(('OK: %d fotogramas de partida sin errores; iconos: skull %dx%d, flag %dx%d, hill %dx%d, corona %dx%d'):format(frames,
             PixelIcons.size('skull'), select(2, PixelIcons.size('skull')), PixelIcons.size('flag'), select(2, PixelIcons.size('flag')),
             PixelIcons.size('hill'), select(2, PixelIcons.size('hill')), PixelIcons.CROWN_W, PixelIcons.CROWN_H))
+        do
+            local bad, seen = {}, {}
+            for k, n in pairs(HUDBAD or {}) do bad[#bad + 1] = k .. ' (' .. n .. ')' end
+            for k in pairs(HUDSEEN or {}) do seen[#seen + 1] = k end
+            table.sort(bad); table.sort(seen)
+            print(('%s hud_online: [%s] %s'):format(#bad == 0 and 'OK   ' or 'FALLA', table.concat(seen, ','), #bad == 0 and 'nada se pisa' or table.concat(bad, ' · ')))
+            if #bad > 0 then print('Error: el HUD online se pisa') end
+            -- (el cartel de presentación del modo se llega a VER: no se gasta tapado por la tarjeta)
+            if not (HUDSEEN or {}).intro then print('Error: el cartel del modo no se vio (se gastó bajo la tarjeta)') end
+        end
         love.event.quit()
     end
 end
@@ -343,5 +353,12 @@ function love.draw()
     if gStateMachine:_top() then gStateMachine:render() end
     if PERFLOG then PERFLOG.draw = PERFLOG.draw + love.timer.getTime() - perfT0 end
     for i, n in ipairs({ 'skull', 'flag', 'hill', 'crown' }) do PixelIcons.draw(n, 20 + i * 40, 600, 3) end
+    -- (el HUD sin pisarse: lo que se haya pisado en algún fotograma — src/ui/HudRects.lua —)
+    if gStateMachine:_top() and gStateMachine:_top().localPaInit then
+        HUDBAD = HUDBAD or {}
+        for _, o in ipairs(require('src/ui/HudRects').overlaps()) do HUDBAD[o] = (HUDBAD[o] or 0) + 1 end
+        HUDSEEN = HUDSEEN or {}
+        for _, r in ipairs(require('src/ui/HudRects').list()) do HUDSEEN[r.name] = true end
+    end
     lovesize.finish()
 end

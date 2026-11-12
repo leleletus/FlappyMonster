@@ -67,8 +67,11 @@ end
 
 
 function OnlineAdventureState:_renderHUD()
-    if self.level and self.level.dark and self.localPaInit and not self.ownData.isSpectator then
-        LightHud.draw(self.localPa, WINDOW_W - 206, 76)             -- (bajo las vidas)
+    -- (lo que ocupa cada cosa del HUD, para colocar lo de debajo sin pisarse: src/ui/HudRects.lua)
+    local HudRects = require 'src/ui/HudRects'
+    HudRects.clear()
+    if not self.showGameOver and not self.showPause and not self.specOverlay and CornerButtons.pointerMode() then
+        local r = CornerButtons.pauseRect(); HudRects.add('pause', r.x, r.y, r.w, r.h)
     end
     -- Antena de conexión: abajo a la izquierda; con los controles táctiles a la
     -- vista, abajo en el CENTRO (a los lados van la cruceta y el salto, y
@@ -130,6 +133,7 @@ function OnlineAdventureState:_renderHUD()
     end
     printOut(L('hud.time'),  labelX,          row2Y, tr, tg, tb)
     printOut(timeStr,  valueEndX - tw, row2Y, vr, vg, vb)
+    HudRects.add('score', labelX, row1Y, valueEndX - labelX + 2, row2Y + fh + 2 - row1Y)
 
     -- Vidas e indicadores del jugador local
     if not od.isSpectator then
@@ -142,6 +146,7 @@ function OnlineAdventureState:_renderHUD()
         local sy     = 14
         love.graphics.setColor(1, 1, 1, 1)
         love.graphics.draw(imgIcon, sx, sy, 0, ICON_SCALE, ICON_SCALE)
+        HudRects.add('lives', sx, sy, totalW, iconH)
         local lx, ly = sx+iconW+gap, sy+iconH/2-FONT_BIG:getHeight()/2
         -- SIEMPRE blanco con sombra negra, como el resto del HUD (en negro no se leía en niveles oscuros)
         love.graphics.setColor(0, 0, 0, 0.9)
@@ -162,6 +167,11 @@ function OnlineAdventureState:_renderHUD()
         love.graphics.setFont(FONT_SMALL)
         love.graphics.setColor(0.7, 0.7, 1, 0.8)
         love.graphics.printf(L('oadv.spectator'), WINDOW_W-180, 16, 160, 'right')
+    end
+
+    -- La linterna, bajo las vidas (y bajo la pausa si está ahí: HudRects.place)
+    if self.level and self.level.dark and self.localPaInit and not self.ownData.isSpectator then
+        LightHud.draw(self.localPa, WINDOW_W - 206, 76)
     end
 
     -- Indicador ONLINE
