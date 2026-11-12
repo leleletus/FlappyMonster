@@ -219,7 +219,9 @@ function EntityTypes.register(def)
     -- aparición con partículas y temblor antes de caer (funciona igual online:
     -- solo depende de state/deadTimer, que viajan en el snapshot).
     local cls = t.class
-    if not cls._wrappedRender then
+    -- (rawget: una subclase con su PROPIO render — semilla, bola de nieve, Mega Crabby de hielo — también se envuelve; si
+    -- llama al de su base, el borde no se repite: Edge.draw del mismo dueño dentro de sí mismo dibuja sin copias)
+    if rawget(cls, 'render') and not rawget(cls, '_wrappedRender') then
         local drawBody = cls.render
         local shifted = function(dx, dy, self, camX, camY) drawBody(self, camX - dx, camY - dy) end
         local draw = function(self, camX, camY)

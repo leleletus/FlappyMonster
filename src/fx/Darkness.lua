@@ -173,7 +173,8 @@ end
 -- `scene` = el lienzo de la escena (opcional): con él, lo incandescente del fondo sigue brillando de noche
 local built, builtLevel = false, nil
 function Darkness.lightCanvas(level)
-    if not built or (level and level ~= builtLevel) then return nil end
+    -- (y el nivel tiene que seguir a oscuras: con escenas — la cueva del tutorial — deja de estarlo sin otro build)
+    if not built or (level and (level ~= builtLevel or not Darkness.active(level))) then return nil end
     return canvas
 end
 

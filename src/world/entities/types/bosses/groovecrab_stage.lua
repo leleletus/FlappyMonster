@@ -752,10 +752,10 @@ function GC:render(camX, camY)
     -- (`_bodyOnly`: solo él — el director del Mega Mashup lo dibuja pequeño al fondo —, sin pista, platos ni focos)
     local extras = not self._bodyOnly
     -- (la pista, los platos, los focos, la diana, las ondas y los destellos: SIN el borde de contraste — src/fx/Edge.lua —;
-    -- solo el cangrejo y sus gafas lo llevan)
+    -- solo el cangrejo y sus gafas lo llevan. Pista y platos detrás — Edge.direct —; focos, diana, ondas y destellos encima — Edge.over —)
     if extras and stageT(self) then Edge.direct(self.drawFloor, self, camX, camY) end
     if extras and (live(self) or self:isDying()) then Edge.direct(self.drawDecks, self, camX, camY) end
-    if extras and live(self) then Edge.direct(self.drawSpotlights, self, camX, camY) end
+    if extras and live(self) then Edge.over(self.drawSpotlights, self, camX, camY) end
     -- (¿anda? lo que avanzó desde el dibujo anterior)
     self._walking = self._lx ~= nil and math.abs(self.x - self._lx) > 0.05 and st == 'groove'
     self._lx = self.x
@@ -773,10 +773,10 @@ function GC:render(camX, camY)
     if not inDuel then self:drawBody(fx, fy, p, f, alpha, st, now) end
     if not EDITOR_VIEW then self:drawGlasses(camX, camY, alpha) end
     if not extras then love.graphics.setColor(1, 1, 1, 1); return end
-    Edge.direct(self.drawOver, self, camX, camY)
-    if live(self) then Edge.direct(self.drawDrop, self, camX, camY) end
+    Edge.over(self.drawOver, self, camX, camY)
+    if live(self) then Edge.over(self.drawDrop, self, camX, camY) end
     -- el destello al empezar cada frase (el primer tiempo de cada 4 compases)
-    if live(self) then Edge.direct(self.drawPhraseFlash, self, camX, camY) end
+    if live(self) then Edge.over(self.drawPhraseFlash, self, camX, camY) end
     love.graphics.setColor(1, 1, 1, 1)
 end
 function GC:drawPhraseFlash(camX, camY)

@@ -430,6 +430,109 @@ case('fondo_propio', function()
     check('fondo_propio', r > 0.9 and g < 0.1 and a > 0.9, ('esquina de la escena=%.2f,%.2f,%.2f,%.2f (el fondo rojo)'):format(r, g, b, a))
 end)
 
+-- ── Lo que encontró la revisión final (2026-11-12) ────────────────────────────
+-- C1: en modo simple, una cinemática fuerza el filo claro del monstruo; un escenario de nivel dentro (los créditos) NO
+case('simple_escena', function()
+    local prev = Settings.edge
+    Settings.edge = 'simple'
+    local owner = { x = 0, y = 0 }
+    local inner = { x = 0, y = 0 }
+    Edge.level = nil                                   -- (de día, sin nivel: solo el filo forzado lo enciende)
+    for i = 0, 6 do
+        at(i * 0.1)
+        Edge.scene(function()
+            Edge.draw(owner, 0, 0, function() end)
+            Edge.suspendForce(function() Edge.draw(inner, 0, 0, function() end) end)
+        end, { simple = 'light' })
+    end
+    local a, b = Edge.alphaOf(owner), Edge.alphaOf(inner)
+    Settings.edge = prev
+    check('simple_escena', a == 1 and b == 0, ('monstruo de la película=%.2f (quiero 1) · personaje de un escenario dentro=%.2f (quiero 0)'):format(a, b))
+end)
+-- I1: un Edge.draw dentro de otro (un jefe que dibuja a otro, una subclase que llama al dibujo de su base) no rompe
+case('anidado_simple', function()
+    local prev = Settings.edge
+    Settings.edge = 'simple'
+    local Particles = require 'src/fx/Particles'
+    local emit, rnd, ss = Particles.emit, math.random, love.graphics.setShader
+    local outer, other = { x = 0, y = 0, hp = 3 }, { x = 0, y = 0 }
+    Edge.level = { light = 'night' }
+    local ok, err = pcall(function()
+        for i = 0, 6 do
+            at(i * 0.1)
+            Edge.draw(outer, 0, 0, function()
+                Edge.draw(other, 0, 0, function() end)
+                Edge.draw(outer, 0, 0, function() end)
+            end)
+        end
+    end)
+    Edge.level = nil
+    Settings.edge = prev
+    local restored = Particles.emit == emit and math.random == rnd and love.graphics.setShader == ss
+    check('anidado_simple', ok and outer.hp == 3 and restored, ('sin error=%s%s · el dueño conserva sus campos=%s · funciones de vuelta=%s'):format(
+        tostring(ok), ok and '' or (' (' .. tostring(err) .. ')'), tostring(outer.hp == 3), tostring(restored)))
+end)
+-- I2: un nivel que deja de estar a oscuras (escenas: la cueva del tutorial) no se queda con la luz de antes
+case('luz_vieja', function()
+    local Darkness = require 'src/fx/Darkness'
+    local level = { light = 'cave', tileW = 0, tileH = 0, decorations = {} }
+    Darkness.build(level, 0, 0, {}, {})
+    local before = Darkness.lightCanvas(level) ~= nil
+    level.light = 'day'
+    local after = Darkness.lightCanvas(level)
+    check('luz_vieja', before and after == nil, ('a oscuras: luz=%s · ya de día: luz vieja=%s (quiero nil)'):format(tostring(before), tostring(after)))
+end)
+-- I3: las subclases con su propio dibujo (semilla, bola de nieve) también llevan el borde en modo simple
+case('subclases', function()
+    local prev = Settings.edge
+    Settings.edge = 'simple'
+    local Entities = require 'src/world/entities/Entities'
+    local out = {}
+    for _, ty in ipairs({ 'seed', 'snowball_ball' }) do
+        local e = Entities.create({ type = ty, col = 5, row = 5, props = {} })
+        Edge.level = { light = 'night' }
+        local n = 0
+        for i = 0, 6 do at(i * 0.1); e:render(0, 0) end
+        n = Edge.alphaOf(e)
+        Edge.level = nil
+        out[#out + 1] = ty .. '=' .. n
+        if n ~= 1 then out.bad = true end
+    end
+    Settings.edge = prev
+    check('subclases', not out.bad, table.concat(out, ' · ') .. ' (quiero 1)')
+end)
+-- I4: lo que va ENCIMA (estrellas de delante, nombres, focos) queda encima de los personajes en modo shader
+case('encima', function()
+    local img = composite(DARKBG, { 0.5, 0.5, 0.5 }, { extra = function()
+        Edge.over(function()
+            love.graphics.setColor(1, 0, 0, 1)
+            love.graphics.rectangle('fill', 28, 28, 4, 4)                   -- (sobre el sprite)
+        end)
+    end })
+    local r, g = px(img, 29, 29)
+    check('encima', r > 0.9 and g < 0.1, ('lo de Edge.over sobre el sprite=%.2f,%.2f (quiero rojo)'):format(r, g))
+end)
+-- I5: dentro de una escena abierta, lo que se dibuja en OTRO lienzo se queda en ese lienzo
+case('otro_lienzo', function()
+    local prev = Settings.edge
+    Settings.edge = 'shader'
+    local other = love.graphics.newCanvas(32, 32)
+    local target = love.graphics.newCanvas(64, 64)
+    love.graphics.push('all'); love.graphics.origin()
+    love.graphics.setCanvas(target)
+    Edge.scene(function()
+        love.graphics.setCanvas(other); love.graphics.clear(0, 0, 0, 0)
+        Edge.draw({ x = 0, y = 0 }, 0, 0, function()
+            love.graphics.setColor(0, 1, 0, 1); love.graphics.rectangle('fill', 0, 0, 32, 32)
+        end)
+        love.graphics.setCanvas(target)
+    end, {})
+    love.graphics.pop()
+    local g = select(2, other:newImageData():getPixel(4, 4))
+    Settings.edge = prev
+    check('otro_lienzo', g > 0.9, ('lo dibujado en el otro lienzo=%.2f (quiero 1)'):format(g))
+end)
+
 -- Capturas de escenas de verdad en modo shader (SHOT=1): para mirarlas
 case('capturas', function()
     if os.getenv('SHOT') ~= '1' then return end

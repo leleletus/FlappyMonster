@@ -14,11 +14,11 @@ local PS = require 'src/player/PlayerSprite'       -- (el sprite del monstruo: a
 local function loadSprites() end
 
 -- EL BORDE de contraste (src/fx/Edge.lua): el cuerpo (con el hielo y el escudo) va por Edge.draw; lo que no es el
--- cuerpo — ráfagas, estrellitas — por Edge.direct
+-- cuerpo — ráfagas, estrellitas — sin borde: Edge.over (encima) / Edge.direct (las de detrás)
 local function bodyShifted(dx, dy, self, camX, camY) self:_renderBody(camX - dx, camY - dy) end
 function PlayerAdventure:render(camX, camY)
     Edge = Edge or require 'src/fx/Edge'
-    Edge.direct(self.renderBursts, self, camX, camY)  -- (las ráfagas del ataque especial: niveles Flappy — PlayerFlight.lua —)
+    Edge.over(self.renderBursts, self, camX, camY)    -- (las ráfagas del ataque especial: niveles Flappy — PlayerFlight.lua —)
     if self.gulped and not self.dying and (self.gulpKind or 0) == 0 then return end      -- (tragado por una planta: no se ve — PlayerGulp.lua —)
     Edge.draw(self, self.x, self.y, bodyShifted, self, camX, camY)
 end
@@ -72,7 +72,7 @@ function PlayerAdventure:_renderBody(camX, camY)
     if self.dying then
         DeadEyes.draw(math.floor(self.x-camX), math.floor(self.y-camY), s, self.facing)
     elseif stunned then
-        Edge.direct(PlayerAdventure.drawStunStars, self.x - camX, self.y - camY, squashed, 'front')
+        Edge.over(PlayerAdventure.drawStunStars, self.x - camX, self.y - camY, squashed, 'front')
     end
     if not self.dying and (self.iceT or 0) > 0 then
         PlayerAdventure.drawIce(math.floor(self.x-camX), math.floor(self.y-camY), love.timer.getTime(), self.iceT,

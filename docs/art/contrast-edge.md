@@ -48,13 +48,19 @@ real frame.
 ## How to extend
 
 - **A new character type**: nothing. Its category decides; set `edge = false` if it is not a character.
-- **A render that draws things that are not the body** (shadows, target marks, glows, text, bars, weather, additive
-  light): wrap them in `Edge.direct(fn, ...)`. Additive drawing into the empty character canvas would be read as a
-  sprite. `BossFx.stars/target/sleepZ/anger` already go through it.
+- **A render that draws things that are not the body**: `Edge.direct(fn, ...)` for what goes BEHIND the characters
+  (shadows, the floor, the back stun stars) and `Edge.over(fn, ...)` for what goes ON TOP (front stars, names, tags, bars,
+  spotlights, target marks, weather). In shader mode `over` draws into a third canvas laid over the composited scene.
+  Additive drawing into the empty character canvas would be read as a sprite. `BossFx.target/sleepZ/anger` and the front
+  `stars` already go `over`, the back `stars` `direct`.
 - **A render with side effects** (records deltas, emits particles, uses `math.random`): fine. In simple mode the 8
-  copies run with the owner's fields snapshotted and restored, `Particles.emit` muted and a separate RNG.
+  copies run with the owner's fields snapshotted and restored, `Particles.emit` muted and a separate RNG. An `Edge.draw`
+  inside the copies, or of the same owner inside itself (a subclass calling its base render), draws without copies.
+- **A subclass with its own `render`** is wrapped too (`rawget`), so it gets the edge in both modes.
 - **A new scene that is not a level** (a film shot, a screen with characters): wrap its drawing in `Edge.scene(fn, o)`;
-  characters drawn by `Edge.draw` inside get the edge.
+  characters drawn by `Edge.draw` inside get the edge (only when drawn on that scene's canvas: a reflection or a boss's
+  own canvas keeps its draws). `o.simple = 'light'` forces the simple mode's edge (films); a level drawn inside
+  (`SceneLayers`, the credits) suspends it.
 
 ## Tests
 
@@ -75,5 +81,9 @@ scenes, nested sets, the credits background; `SHOT=1` captures five levels in bo
   only draws the light edge; shader mode doesn't edge them because their outline already contrasts.
 - Measured on PC at 1280×720: draw time shader / simple: menu 4.2 / 2.7 ms, a level 4.0 / 2.7 ms, a boss 4.8 / 3.0 ms;
   textures +7 MB (the character canvas and the scene's partner). Not yet measured on Switch / Android.
+- Final review (2026-11-12) found and fixed before release: films lost the forced simple-mode edge (a `local` declared
+  after use), nested `Edge.draw` crashed in simple mode, the light map stayed stale when a level left darkness (scenes),
+  subclasses with their own render had no edge in simple mode, overlays (front stars, names, spotlights) went UNDER the
+  characters in shader mode (→ `Edge.over`), and draws into another canvas inside an open scene were stolen.
 - Not judged by a person yet: the look, the thresholds (partial edges at medium contrast, e.g. the intro card at dusk),
   and the frame rate on real devices.

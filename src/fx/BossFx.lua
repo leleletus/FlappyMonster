@@ -158,11 +158,17 @@ function BossFx.fury(boss, camX, camY, render)
     for i = #anchors + 1, #holders do holders[i] = nil end      -- (los de trozos que ya no están)
 end
 
--- (todo esto va SIN el borde de contraste — src/fx/Edge.lua —: estrellas, dianas, zetas y enfados no son el cuerpo)
+-- (todo esto va SIN el borde de contraste — src/fx/Edge.lua —: estrellas, dianas, zetas y enfados no son el cuerpo; van
+-- ENCIMA de los personajes, menos las estrellas de detrás de la cabeza)
 local Edge = require 'src/fx/Edge'
+local starsRaw = BossFx.stars
 for _, k in ipairs({ 'stars', 'target', 'sleepZ', 'anger' }) do
     local f = BossFx[k]
-    BossFx[k] = function(...) return Edge.direct(f, ...) end
+    BossFx[k] = function(...) return Edge.over(f, ...) end
+end
+BossFx.stars = function(cx, cy, rx, ry, scale, alpha, part)
+    local put = (part == 'back') and Edge.direct or Edge.over
+    return put(starsRaw, cx, cy, rx, ry, scale, alpha, part)
 end
 
 return BossFx

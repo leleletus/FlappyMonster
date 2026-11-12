@@ -75,7 +75,7 @@ function OnlinePlayer:update(dt)
 end
 
 -- EL BORDE de contraste (src/fx/Edge.lua): el cuerpo (con el hielo) va por Edge.draw; las estrellitas, el nombre, la
--- corona y las etiquetas, sin borde (Edge.direct)
+-- corona y las etiquetas, sin borde y encima (Edge.over; las estrellitas de detrás, Edge.direct)
 local Edge
 local function bodyShifted(dx, dy, self, camX, camY) self:_renderBody(camX - dx, camY - dy) end
 function OnlinePlayer:render(camX, camY)
@@ -88,7 +88,7 @@ function OnlinePlayer:render(camX, camY)
     if sy < -PLAYER_SCALE * 18 or sy > WINDOW_H + PLAYER_SCALE * 18 then return end
     Edge = Edge or require 'src/fx/Edge'
     Edge.draw(self, self.renderX, self.renderY, bodyShifted, self, camX, camY)
-    Edge.direct(self._renderTags, self, camX, camY)
+    Edge.over(self._renderTags, self, camX, camY)
 end
 
 function OnlinePlayer:_renderBody(camX, camY)
@@ -151,7 +151,7 @@ function OnlinePlayer:_renderBody(camX, camY)
         DeadEyes.draw(sx, sy, sc, self.facing, 1, 1, 1, alpha)
     end
     if stunned then
-        Edge.direct(PAm.drawStunStars, sx, sy, self.squashed, 'front')
+        Edge.over(PAm.drawStunStars, sx, sy, self.squashed, 'front')
     end
     if self.iced and not self.dying then           -- (congelado: bloque de hielo)
         PAm.drawIce(sx, sy, love.timer.getTime() - (self.icedAt or 0), nil, self.squashed)

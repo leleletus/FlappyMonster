@@ -12,7 +12,8 @@
 --   Edge.level                       el nivel que se está dibujando (lo pone quien dibuja la escena; nil fuera)
 --   Edge.draw(owner, x, y, fn, ...)  dibuja a `owner` (en el mundo: x, y) con su borde; fn(dx, dy, ...) lo dibuja
 --                                    corrido esos píxeles de pantalla
---   Edge.direct(fn, ...)             lo que dibuje fn(...) va SIN borde (sombras, marcas, brillos, nombres, barras)
+--   Edge.direct(fn, ...)             lo que dibuje fn(...) va SIN borde y DETRÁS de los personajes (sombras, el suelo)
+--   Edge.over(fn, ...)               SIN borde y ENCIMA (estrellas de delante, nombres, focos, marcas, lo que cae)
 --   Edge.simpleKind(level, x, y)     'light' | nil: ¿lleva el filo claro del modo simple en ese sitio?
 local Silhouette = require 'src/fx/Silhouette'
 local Shaders    = require 'src/fx/Shaders'
@@ -20,8 +21,10 @@ local Shaders    = require 'src/fx/Shaders'
 local Edge = {}
 
 -- (escenas abiertas del modo shader — ver Edge.open —: aquí arriba porque Edge.draw las mira)
-local stack, depth, actorPool = {}, 0, {}
+local stack, depth, actorPool, overPool = {}, 0, {}, {}
 local function top() return stack[depth] end
+-- (el filo del modo simple forzado por una cinemática — Edge.scene —; un escenario de nivel dentro lo suspende)
+local forceKind = nil
 
 Edge.W     = 2                                   -- grosor (px de pantalla) en modo shader
 Edge.T_LO, Edge.T_HI = 0.08, 0.22                -- diferencia de luminancia: filo entero / ninguno
@@ -80,7 +83,6 @@ function Edge.inPass() return passDepth > 0 end
 -- al dibujar (cuánto se movió desde el dibujo anterior, cuándo soltó polvo...), sueltan partículas o tiran del azar.
 -- Durante las copias: el shader plano no se cambia, las partículas no salen, el azar es otro (el de la partida no se
 -- mueve: el fondo de los menús es una carrera fija) y lo que se apunte en el dueño se deshace al acabar.
-local realSetShader
 local function keepFlat() end
 local function noEmit() end
 local passRng
@@ -100,7 +102,10 @@ local function restore(owner)
     for i = 1, savedKeys.n do local k = savedKeys[i]; owner[k] = saved[k]; saved[k] = nil; savedKeys[i] = nil end
 end
 
+local busy = setmetatable({}, { __mode = 'k' })     -- dueños que se están dibujando ahora (Edge.draw dentro de otro)
 local function simpleDraw(owner, x, y, fn, ...)
+    -- (dentro de las copias de otro, o el mismo dueño otra vez — una subclase que llama al dibujo de su base —: sin copias)
+    if passDepth > 0 or busy[owner] then return fn(0, 0, ...) end
     local now = Edge.clock()
     local kind = forceKind or Edge.simpleKind(owner.edgeLevel or Edge.level, x, y)  -- (edgeLevel: un actor de cinemática)
     local f = fade[owner]
@@ -118,7 +123,7 @@ local function simpleDraw(owner, x, y, fn, ...)
         flat:send('tint', { c[1], c[2], c[3], f.a * Edge.MAX_A })
         love.graphics.setShader(flat)
         Particles = Particles or require 'src/fx/Particles'
-        realSetShader = love.graphics.setShader
+        local realSetShader = love.graphics.setShader
         local realEmit, realRandom = Particles.emit, math.random
         love.graphics.setShader, Particles.emit, math.random = keepFlat, noEmit, passRandom
         snapshot(owner)
@@ -136,13 +141,18 @@ local function simpleDraw(owner, x, y, fn, ...)
         if not ok then error(err, 0) end
         love.graphics.setColor(r, g, b, sa)
     end
-    fn(0, 0, ...)
+    busy[owner] = true
+    local ok, err = pcall(fn, 0, 0, ...)
+    busy[owner] = nil
+    if not ok then error(err, 0) end
 end
 
 function Edge.draw(owner, x, y, fn, ...)
     if Edge.mode() == 'simple' then return simpleDraw(owner, x, y, fn, ...) end
     local f = top()
-    if f and not f.on then                           -- (una escena abierta: el cuerpo, al lienzo de los personajes)
+    -- (una escena abierta y se dibuja EN ella: el cuerpo, al lienzo de los personajes; en otro lienzo — un reflejo, un
+    -- lienzo propio de un jefe — se queda donde está)
+    if f and not f.on and love.graphics.getCanvas() == f.scene then
         f.on = true
         love.graphics.setCanvas(f.actor)
         fn(0, 0, ...)
@@ -151,6 +161,16 @@ function Edge.draw(owner, x, y, fn, ...)
         return
     end
     fn(0, 0, ...)
+end
+
+-- Lo que se dibuje por fn(...) en una cinemática va con el filo forzado SUSPENDIDO (un escenario de nivel dentro)
+function Edge.pauseForce() local p = forceKind; forceKind = nil; return p end
+function Edge.resumeForce(p) forceKind = p end
+function Edge.suspendForce(fn, ...)
+    local p = Edge.pauseForce()
+    local ok, err = pcall(fn, ...)
+    Edge.resumeForce(p)
+    if not ok then error(err, 0) end
 end
 
 -- ── Modo shader ──────────────────────────────────────────────────────────────
@@ -213,7 +233,7 @@ function Edge.open(scene)
     stack[depth] = f
     local w, h = scene:getDimensions()
     actorPool[depth] = sized(actorPool[depth], w, h)
-    f.scene, f.actor, f.on = scene, actorPool[depth], false
+    f.scene, f.actor, f.on, f.overUsed = scene, actorPool[depth], false, false
     love.graphics.setCanvas(f.actor)
     love.graphics.clear(0, 0, 0, 0)
     love.graphics.setCanvas(scene)
@@ -231,8 +251,8 @@ end
 function Edge.finish(light)
     local f = top()
     depth = depth - 1
-    local scene, actorCv = f.scene, f.actor
-    f.scene, f.actor, f.on = nil, nil, false
+    local scene, actorCv, overCv = f.scene, f.actor, f.overUsed and f.over
+    f.scene, f.actor, f.on, f.overUsed = nil, nil, false, false
     local w, h = scene:getDimensions()
     local out = sized(partner[scene], w, h)
     partner[scene] = out
@@ -259,6 +279,11 @@ function Edge.finish(light)
     love.graphics.setBlendMode('replace', 'premultiplied')
     love.graphics.setColor(1, 1, 1, 1)
     love.graphics.draw(scene, 0, 0)
+    love.graphics.setShader()
+    if overCv then                                   -- (lo de ENCIMA de los personajes: Edge.over)
+        love.graphics.setBlendMode('alpha', 'premultiplied')
+        love.graphics.draw(overCv, 0, 0)
+    end
     love.graphics.pop()
     love.graphics.setCanvas(out)
     return out
@@ -270,7 +295,7 @@ function Edge.wants(e) return e.edge == true end
 function Edge.direct(fn, ...)
     if passDepth > 0 then return end                 -- (las copias del modo simple: solo el cuerpo)
     local f = top()
-    if f and f.on then                               -- (modo shader: a la escena, no al lienzo de los personajes)
+    if f and f.on and love.graphics.getCanvas() == f.actor then   -- (modo shader: a la escena, no a los personajes)
         f.on = false
         love.graphics.setCanvas(f.scene)
         local a, b, c = fn(...)
@@ -281,11 +306,33 @@ function Edge.direct(fn, ...)
     return fn(...)
 end
 
+-- Lo que dibuje fn(...) va SIN borde y ENCIMA de los personajes (estrellas de delante, nombres, focos, lo que cae
+-- encima): en modo shader, a un lienzo que se pone sobre la escena ya juntada; si no, como Edge.direct
+function Edge.over(fn, ...)
+    if passDepth > 0 then return end
+    local f = top()
+    local cur = love.graphics.getCanvas()
+    if f and (cur == f.actor or cur == f.scene) then
+        if not f.overUsed then
+            local w, h = f.scene:getDimensions()
+            overPool[depth] = sized(overPool[depth], w, h)
+            f.over, f.overUsed = overPool[depth], true
+            love.graphics.setCanvas(f.over)
+            love.graphics.clear(0, 0, 0, 0)
+        end
+        love.graphics.setCanvas(f.over)
+        local a, b, c = fn(...)
+        love.graphics.setCanvas(cur)
+        return a, b, c
+    end
+    return fn(...)
+end
+
 -- UNA ESCENA SUELTA (cada plano de una cinemática: src/story/Film.lua): fn(...) se dibuja en un lienzo propio con una
 -- escena abierta — los monstruos (Edge.draw) a los personajes, lo demás de fondo — y el resultado, ya con el filo, va
 -- a donde se estaba dibujando. `o.simple` = el filo del modo simple, forzado mientras dura ('light': el monstruo es
 -- casi negro y en las cinemáticas siempre lo llevaba)
-local sceneCvs, forceKind = {}, nil
+local sceneCvs = {}
 function Edge.scene(fn, o, ...)
     if Edge.mode() ~= 'shader' then
         local prevForce = forceKind

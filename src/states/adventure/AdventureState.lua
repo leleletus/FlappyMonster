@@ -994,7 +994,7 @@ function AdventureState:_drawActors(camX, camY)
     -- (en el duelo de ritmo no está en la arena: sale bailando en el minijuego — src/ui/RhythmDuel.lua —)
     if self.ghost and self.ghost.draw then self.ghost.draw(self.levelTime, camX, camY) end   -- (el fantasma, detrás)
     if not RhythmDuel.hides(self.level, self.player.x, self.player.y) then self.player:render(camX, camY) end
-    require('src/fx/Edge').direct(PointAreas.drawProgress, self.level, self.player, self.player.x - camX, self.player.y - camY)   -- (sin borde)
+    require('src/fx/Edge').over(PointAreas.drawProgress, self.level, self.player, self.player.x - camX, self.player.y - camY)   -- (sin borde)
 end
 
 function AdventureState:_renderScene()
