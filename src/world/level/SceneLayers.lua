@@ -82,6 +82,8 @@ function SceneLayers.draw(level, camX, camY, canvas, ents, actors, noSky, reuse)
 
     Edge.level = level                                    -- (el borde de contraste: src/fx/Edge.lua)
     local force = Edge.pauseForce()                       -- (un nivel dentro de una cinemática: sin el filo forzado)
+    local pcx, pcy = Edge.camX, Edge.camY
+    Edge.camX, Edge.camY = camX, camY                     -- (las entidades se dibujan en mundo − cámara: sus zonas)
     local out = canvas
     if Edge.mode() == 'shader' then
         -- MODO SHADER: lo que no lleva borde, en la escena; los personajes (entidades con `edge`, jugadores, fantasma,
@@ -106,6 +108,7 @@ function SceneLayers.draw(level, camX, camY, canvas, ents, actors, noSky, reuse)
     Snowfall.render(level, camX, camY)                    -- (nieve cayendo: solo dibujo)
 
     Edge.resumeForce(force)
+    Edge.camX, Edge.camY = pcx, pcy
     love.graphics.setCanvas(outCanvas)
     if scX then love.graphics.setScissor(scX, scY, scW, scH) end
     love.graphics.pop()

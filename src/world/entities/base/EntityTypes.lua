@@ -228,8 +228,9 @@ function EntityTypes.register(def)
             if self.state ~= 'frozen' then EntityTypes.drawWings(self, camX, camY) end   -- (detrás del cuerpo)
             -- EL BORDE de contraste (rasgo `edge`, src/fx/Edge.lua): en modo simple, sus copias alrededor; en modo
             -- shader, la escena ya lo dibuja en el lienzo de los personajes
-            if self.edge and self.state ~= 'frozen' then
-                Edge = Edge or require 'src/fx/Edge'
+            -- (lo que da luz propia — el Saltarín de cueva con su farol — no: él es la fuente de luz)
+            Edge = Edge or require 'src/fx/Edge'
+            if self.edge and self.state ~= 'frozen' and not Edge.selfLit(self) then
                 Edge.draw(self, self.x, self.y, shifted, self, camX, camY)
             else
                 drawBody(self, camX, camY)

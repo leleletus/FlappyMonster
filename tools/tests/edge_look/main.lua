@@ -198,10 +198,14 @@ local function scene(level, o)
 end
 local function photo(st, name)
     local cv = love.graphics.newCanvas(WINDOW_W, WINDOW_H)
-    love.graphics.setCanvas(cv); love.graphics.clear(0, 0, 0, 1)
-    math.randomseed(7); love.math.setRandomSeed(7)
-    st:render()
-    love.graphics.setCanvas()
+    -- (varios fotogramas con el reloj del filo avanzando: tiene fundido)
+    for _ = 1, 6 do
+        at(clockT + 0.1)
+        love.graphics.setCanvas(cv); love.graphics.clear(0, 0, 0, 1)
+        math.randomseed(7); love.math.setRandomSeed(7)
+        st:render()
+        love.graphics.setCanvas()
+    end
     local data = cv:newImageData()
     data:encode('png', 'edge_' .. name .. '.png')
     return data
@@ -221,33 +225,41 @@ end
 
 
 -- ── Modo shader: la pasada, píxel a píxel, en lienzos pequeños ─────────────────
--- Fondo liso de 64x64; un "sprite" de 16x16 en (24, 24) por Edge.begin / finish; se lee el resultado
+-- Fondo liso de 64x64; un "sprite" de 16x16 en (24, 24) dibujado por Edge.draw (un personaje: su dueño, su zona) entre
+-- Edge.begin / finish, `o.frames` fotogramas de 0,1 s (el filo tiene fundido); se lee el último resultado
 local function composite(bg, sprite, o)
     o = o or {}
     local W, H = o.w or 64, o.h or 64
     local scene = love.graphics.newCanvas(W, H)
-    love.graphics.setCanvas(scene)
-    if o.split then
-        love.graphics.clear(bg[1], bg[2], bg[3], 1)
-        love.graphics.setColor(o.split[1], o.split[2], o.split[3], 1)
-        love.graphics.rectangle('fill', W / 2, 0, W / 2, H)
-    else
-        love.graphics.clear(bg[1], bg[2], bg[3], 1)
-    end
-    love.graphics.setCanvas()
     local light
     if o.light then
         light = love.graphics.newCanvas(math.ceil(W / 4), math.ceil(H / 4))
         love.graphics.setCanvas(light); love.graphics.clear(o.light, o.light, o.light, 1); love.graphics.setCanvas()
     end
-    Edge.begin(scene)
-    love.graphics.setColor(sprite[1], sprite[2], sprite[3], sprite[4] or 1)
-    love.graphics.rectangle('fill', o.sx or 24, o.sy or 24, o.sw or 16, 16)
-    if o.extra then o.extra() end
-    love.graphics.setColor(1, 1, 1, 1)
-    local out = Edge.finish(light)
-    love.graphics.setCanvas()
-    return out:newImageData(), out
+    local sx, sy, sw = o.sx or 24, o.sy or 24, o.sw or 16
+    local owner = { x = sx + sw / 2, y = sy + 8, edgeW = sw, edgeH = 16 }
+    local prevMode = Settings.edge
+    Settings.edge = 'shader'
+    local out
+    for i = 1, (o.frames or 6) do
+        at(i * 0.1)
+        love.graphics.setCanvas(scene)
+        love.graphics.clear(bg[1], bg[2], bg[3], 1)
+        if o.paint then o.paint(W, H) end
+        love.graphics.setCanvas()
+        Edge.camX, Edge.camY = 0, 0
+        Edge.begin(scene)
+        Edge.draw(owner, owner.x, owner.y, function()
+            love.graphics.setColor(sprite[1], sprite[2], sprite[3], sprite[4] or 1)
+            love.graphics.rectangle('fill', sx, sy, sw, 16)
+        end)
+        if o.extra then o.extra() end
+        love.graphics.setColor(1, 1, 1, 1)
+        out = Edge.finish(light)
+        love.graphics.setCanvas()
+    end
+    Settings.edge = prevMode
+    return out:newImageData(), out, owner
 end
 local function px(img, x, y) local r, g, b, a = img:getPixel(x, y); return r, g, b, a end
 local DARKBG, DARKSP = { 0.05, 0.05, 0.08 }, { 0.08, 0.08, 0.1 }
@@ -276,12 +288,34 @@ case('pixel_contraste', function()
     local r1 = px(img, 23, 30)
     check('pixel_contraste', r1 < 0.02, ('negro contra blanco, a 1 px=%.2f (sin filo)'):format(r1))
 end)
-case('pixel_mitad', function()
-    -- fondo oscuro a la izquierda y blanco a la derecha; un sprite oscuro ancho que cruza la mitad
-    local img = composite(DARKBG, DARKSP, { split = { 1, 1, 1 }, sx = 16, sw = 32 })
-    local left = px(img, 15, 30)                   -- (fuera, por la izquierda: fondo oscuro → filo)
-    local right = px(img, 48, 30)                  -- (fuera, por la derecha: fondo blanco → el sprite ya contrasta)
-    check('pixel_mitad', left > 0.7 and right > 0.95, ('izquierda=%.2f (filo) · derecha=%.2f (fondo blanco, sin filo)'):format(left, right))
+-- SPRITE ENTERO (el usuario, 2026-11-12: "lo hace o no lo hace"): si casi todo el contorno se pierde, el filo rodea
+-- todo el sprite, también por donde contrasta (una franja gris a su derecha)
+case('entero', function()
+    local img = composite(DARKBG, DARKSP, { paint = function(W, H)
+        love.graphics.setColor(0.5, 0.5, 0.5, 1); love.graphics.rectangle('fill', 40, 0, 6, H)
+    end })
+    local left, right = px(img, 23, 30), px(img, 40, 30)
+    check('entero', left > 0.7 and right > 0.8, ('izquierda=%.2f (filo) · derecha, sobre la franja gris=%.2f (también filo)'):format(left, right))
+end)
+-- y si solo un trozo pequeño se pierde, nada en ningún sitio
+case('nada', function()
+    local img = composite({ 0, 0, 0 }, { 1, 1, 1 }, { paint = function()
+        love.graphics.setColor(0.97, 0.97, 0.97, 1); love.graphics.rectangle('fill', 20, 22, 6, 4)
+    end })
+    local r = px(img, 23, 24)
+    check('nada', near(r, 0.97, 0.02), ('un trozo pequeño que se pierde (arriba a la izquierda)=%.2f (sin filo)'):format(r))
+end)
+-- el fundido del modo shader: sube en FADE s, no de golpe
+case('fundido_shader', function()
+    local _, _, owner = composite(DARKBG, DARKSP, { frames = 1 })
+    local a1 = Edge.stateOf(owner)
+    local img = composite(DARKBG, DARKSP, { frames = 3 })
+    local _, _, o2 = composite(DARKBG, DARKSP, { frames = 3 })
+    local a3 = Edge.stateOf(o2)
+    local _, _, o3 = composite(DARKBG, DARKSP, { frames = 6 })
+    local a6 = Edge.stateOf(o3)
+    check('fundido_shader', a1 < 0.05 and a3 > 0.4 and a3 < 0.85 and a6 > 0.97,
+        ('1er fotograma=%.2f · a los 0,2 s=%.2f · a los 0,5 s=%.2f'):format(a1, a3, a6))
 end)
 case('oscuridad', function()
     local img = composite(DARKBG, DARKSP, { light = 0.055 })
@@ -357,14 +391,17 @@ local function sceneShot(bg, inner)
     local target = love.graphics.newCanvas(200, 120)
     love.graphics.push('all')
     love.graphics.origin()
-    love.graphics.setCanvas(target)
-    love.graphics.clear(0, 0, 0, 1)
-    Edge.scene(function()
-        love.graphics.setColor(bg[1], bg[2], bg[3], 1)
-        love.graphics.rectangle('fill', 0, 0, 200, 120)
-        if inner then inner() end
-        require('src/story/Stage').monster(100, 60, { frame = 1, scale = 5 })
-    end, { simple = 'light' })
+    for i = 1, 6 do
+        at(i * 0.1)
+        love.graphics.setCanvas(target)
+        love.graphics.clear(0, 0, 0, 1)
+        Edge.scene(function()
+            love.graphics.setColor(bg[1], bg[2], bg[3], 1)
+            love.graphics.rectangle('fill', 0, 0, 200, 120)
+            if inner then inner() end
+            require('src/story/Stage').monster(100, 60, { frame = 1, scale = 5 })
+        end, { simple = 'light' })
+    end
     love.graphics.pop()
     return target:newImageData()
 end
@@ -394,6 +431,7 @@ case('escena', function()
     check('escena', total > 5 and found >= total * 0.6 and lr > 0.85,
         ('fondo oscuro: filo claro en %d de %d filas del contorno · fondo claro intacto=%.2f'):format(found, total, lr))
 end)
+local nestedOwner = { edgeW = 16, edgeH = 16 }
 case('anidado', function()
     local prev = Settings.edge
     Settings.edge = 'shader'
@@ -402,9 +440,11 @@ case('anidado', function()
         local cv = love.graphics.newCanvas(200, 120)
         local outer = love.graphics.getCanvas()
         love.graphics.setCanvas(cv); love.graphics.clear(0.04, 0.04, 0.06, 1)
-        Edge.begin(cv)
-        love.graphics.setColor(0.06, 0.06, 0.08, 1)
-        love.graphics.rectangle('fill', 20, 20, 16, 16)
+        Edge.open(cv)
+        Edge.draw(nestedOwner, 28, 28, function()
+            love.graphics.setColor(0.06, 0.06, 0.08, 1)
+            love.graphics.rectangle('fill', 20, 20, 16, 16)
+        end)
         local out = Edge.finish(nil)
         love.graphics.setCanvas(outer)
         love.graphics.setColor(1, 1, 1, 1)
@@ -537,6 +577,42 @@ case('otro_lienzo', function()
     local g = select(2, other:newImageData():getPixel(4, 4))
     Settings.edge = prev
     check('otro_lienzo', g > 0.9, ('lo dibujado en el otro lienzo=%.2f (quiero 1)'):format(g))
+end)
+
+-- Números de personaje: con muchos vivos (entidades de niveles anteriores que aún no recogió la basura) uno nuevo
+-- también tiene número — el que lleva más tiempo sin dibujarse —
+case('numeros', function()
+    local keep = {}
+    for i = 1, 400 do
+        at(i * 0.01)
+        keep[i] = {}
+        Edge._slotFor(keep[i])
+    end
+    at(10)
+    local fresh = {}
+    local s = Edge._slotFor(fresh)
+    check('numeros', s ~= nil and s >= 1 and s <= Edge.SLOTS, ('400 vivos y uno nuevo: número=%s'):format(tostring(s)))
+end)
+
+-- Lo que da LUZ PROPIA (el Saltarín de cueva con su farol: él es la fuente de luz) no lleva filo (el usuario, 2026-11-12);
+-- una luz lejos de él (las bolas de fuego del mortero) no cuenta
+case('luz_propia', function()
+    local prev = Settings.edge
+    Settings.edge = 'simple'
+    local Entities = require 'src/world/entities/Entities'
+    local function edgeWith(lightAt)
+        local e = Entities.create({ type = 'gummy', col = 5, row = 5, props = {} })
+        e.state = 'idle'
+        if lightAt then e.lights = function(self) return { { x = self.x + lightAt, y = self.y, r = 80 } } end end
+        Edge.level = { light = 'night' }
+        for i = 0, 6 do at(i * 0.1); e:render(0, 0) end
+        Edge.level = nil
+        return Edge.alphaOf(e)
+    end
+    local own, far, none = edgeWith(0), edgeWith(600), edgeWith(nil)
+    Settings.edge = prev
+    check('luz_propia', own == 0 and far == 1 and none == 1,
+        ('con luz propia=%.2f (quiero 0) · con una luz lejos=%.2f · sin luz=%.2f'):format(own, far, none))
 end)
 
 -- Capturas de escenas de verdad en modo shader (SHOT=1): para mirarlas

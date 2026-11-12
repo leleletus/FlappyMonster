@@ -10,7 +10,7 @@ Two modes, chosen in Settings → ASSIST → **EDGE / BORDE** (`Settings.edge`):
 
 | Mode | Default on | How |
 |---|---|---|
-| `shader` | PC (Windows, macOS, Linux) | Characters draw into their own transparent canvas. One full-screen pass composites it over the scene and, **per pixel**, compares the character's luminance with the background's (both × the light map). Where they are too close it fades in a 2 px edge: light on a dark background, dark on a light one. |
+| `shader` | PC (Windows, macOS, Linux) | **Per character, whole sprite** (0.5.213). Characters draw into their own transparent canvas and, once more without side effects, their NUMBER into an ID canvas. A small pass per character measures what share of its OUTLINE is lost (character and background luminance close, both × the light map; places too dark to see don't count). At least `NEED` (30 %) → its edge rises to 1, otherwise falls to 0, in `FADE` s; that state lives in a tiny GPU texture (nothing is read back). The composite draws a 2 px edge around the WHOLE sprite with that alpha: light on a dark background, dark on a light one (by the character's background). |
 | `simple` | Android, Switch; any device without shaders | The old silhouette: 8 offset copies of the body in one flat colour (`src/fx/Silhouette.lua`). LIGHT edge only, where the level is dark (`Silhouette.on`: dark, night, cave, under the depth surface; in `dark` levels only where a flashlight or a player's halo reaches). 0.3 s fade per character. |
 
 Nothing is gameplay: no server change, no protocol change.
@@ -34,9 +34,13 @@ Nothing is gameplay: no server change, no protocol change.
   `Objetos`); off for `Trampas`, `Mecanismos`, `Directores`, `Flappy`. A type overrides it with `edge = true / false`
   (definition or class). Data enemies: `"edge"` in the JSON (enemy editor: «Borde de contraste»); an old `"darkEdge"`
   reads as `edge = true`.
-- Values (in `Edge.lua`, to tune by eye): `W` 2 px, `T_LO` 0.03 / `T_HI` 0.10 (luminance difference: full / no edge; 0.08 / 0.22 until 0.5.212),
+- Values (in `Edge.lua`, to tune by eye): `NEED` 0.3 (share of the outline that must be lost), `SLOTS` 255 character
+  numbers (when they run out, the one longest undrawn is reused), `W` 2 px, `T_LO` 0.03 / `T_HI` 0.10 (luminance difference: full / no edge; 0.08 / 0.22 until 0.5.212),
   `L_LO` 0.12 / `L_HI` 0.3 (light here: no edge / full — a `dark` level's ambient is 0.055, so nothing is revealed
   outside the flashlight), `LIGHT` white, `DARK` navy, `MAX_A` 0.9, `FADE` 0.3 s.
+- **Light sources get no edge** (the user, 2026-11-12: the cave Hopper with its lantern IS the light): `Edge.selfLit(e)`
+  = the entity's `lights()` gives a light centred on it this frame (inside its box with a margin). Lights it gives far
+  away (the Mortar's fireballs) don't count. Generic, for any type with `lights()`.
 - The level JSON field `outline` is still read but does nothing.
 
 ## SP / server / client
@@ -88,5 +92,8 @@ scenes, nested sets, the credits background; `SHOT=1` captures five levels in bo
 - 0.5.212, the user: "it should need much more darkness to trigger" → `T_LO` / `T_HI` 0.08 / 0.22 → 0.03 / 0.10. The
   near-black monster now only gets the edge against an almost black background (caves, dark levels, the darkest night
   skies); medium contrasts (dusk, night mountains) no longer get a partial edge.
+- 0.5.213, the user: "make it the whole sprite, I'm not convinced by only the darker parts: it does it or it doesn't
+  (but with the fade)". Shader mode now decides per character (share of the outline lost ≥ `NEED`) and draws the
+  whole outline with a fade kept on the GPU per character number. The simple mode already worked like that.
 - Not judged by a person yet: the look, the thresholds (partial edges at medium contrast, e.g. the intro card at dusk),
   and the frame rate on real devices.

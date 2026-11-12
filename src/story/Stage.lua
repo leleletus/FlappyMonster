@@ -346,6 +346,8 @@ function Stage.drawSet(set, camX, camY, actors, lights, glow)
     local prevLevel = Edge.level
     Edge.level = level
     local shader = Edge.mode() == 'shader'
+    local pcx, pcy = Edge.camX, Edge.camY
+    Edge.camX, Edge.camY = 0, 0                          -- (los actores van ya trasladados: la transformación lo dice)
     if shader then Edge.open(set.canvas) end
     -- (cada monstruo que se dibuje aquí lleva su halo de luz: es casi negro y el decorado está en penumbra)
     Stage._lit = {}
@@ -366,6 +368,7 @@ function Stage.drawSet(set, camX, camY, actors, lights, glow)
         love.graphics.origin()
     end
     Edge.level = prevLevel
+    Edge.camX, Edge.camY = pcx, pcy
     Particles.render(camX, camY)
     level:renderFoliage(camX, camY)
     love.graphics.setCanvas(prev)
