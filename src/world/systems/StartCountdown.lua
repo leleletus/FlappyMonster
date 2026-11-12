@@ -14,18 +14,39 @@
 
 local StartCountdown = {}
 
-StartCountdown.TIME    = 3        -- s
-StartCountdown.GO_TIME = 0.8      -- s que se ve "¡YA!" al acabar
+-- INICIO EN DOS FASES (0.5.202, docs/design/level-intro-card.md): primero la TARJETA de presentación del nivel
+-- (CARD_TIME, src/ui/IntroCard.lua: pantalla negra, no se salta) y luego la cuenta atrás de siempre (TIME). Las dos
+-- con el mundo congelado y SIN pausa. `rem` = lo que falta para empezar a jugar (s): > TIME tarjeta, (0, TIME] cuenta
+-- atrás, (−GO_TIME, 0] el ¡YA!. TIME = 0 deja solo la tarjeta (el usuario la probará en el juego).
+StartCountdown.CARD_TIME = 2.0    -- s de tarjeta
+StartCountdown.TIME      = 3      -- s de cuenta atrás
+StartCountdown.GO_TIME   = 0.8    -- s que se ve "¡YA!" al acabar
 
--- Ticks de la cuenta atrás a paso fijo (servidor)
-function StartCountdown.ticks(tickDt) return math.floor(StartCountdown.TIME / tickDt + 0.5) end
+-- Lo que dura el inicio entero (s): con tarjeta o sin ella (demo, niveles Flappy, prueba del editor)
+function StartCountdown.total(card) return (card and StartCountdown.CARD_TIME or 0) + StartCountdown.TIME end
+
+-- En qué fase está un inicio al que le faltan `rem` s: 'card' | 'count' | 'go' | nil (ya se juega)
+function StartCountdown.phase(rem)
+    if not rem then return nil end
+    if rem > StartCountdown.TIME then return 'card' end
+    if rem > 0 then return 'count' end
+    if rem > -StartCountdown.GO_TIME then return 'go' end
+    return nil
+end
+
+-- Ticks del inicio a paso fijo (servidor); `card` = con la tarjeta delante
+function StartCountdown.ticks(tickDt, card) return math.floor(StartCountdown.total(card) / tickDt + 0.5) end
 
 -- Sonido de cada número y del ¡YA! (un jugador y cliente; el servidor no la llama). `prev` = lo que faltaba en el
--- frame anterior (nil = primer frame: suena el primer número), `rem` = lo que falta ahora.
+-- frame anterior (nil = primer frame), `rem` = lo que falta ahora. Callado durante la tarjeta: el primer número suena
+-- al entrar en la cuenta atrás.
 function StartCountdown.beeps(prev, rem)
+    local T = StartCountdown.TIME
     if rem <= 0 then
         if prev and prev > 0 then Sound.play('countGo') end
-    elseif prev == nil or math.ceil(rem) < math.ceil(prev) then
+    elseif rem > T then
+        return
+    elseif prev == nil or prev > T or math.ceil(rem) < math.ceil(prev) then
         Sound.play('countTick')
     end
 end

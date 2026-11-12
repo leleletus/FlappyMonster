@@ -220,7 +220,7 @@ end
 -- centro (fracción de la pantalla; 0.4 por defecto — online va más abajo, bajo el cartel del modo —).
 function BossHud.drawStartCountdown(rem, fy)
     local SC = require 'src/world/systems/StartCountdown'
-    if not rem or rem <= -SC.GO_TIME then return end
+    if not rem or rem <= -SC.GO_TIME or rem > SC.TIME then return end      -- (durante la tarjeta, nada)
     local PixelFont = require 'src/ui/PixelFont'
     local go = rem <= 0
     local text = go and L('hud.go') or tostring(math.ceil(rem))

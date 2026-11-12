@@ -198,6 +198,27 @@ function love.update(dt)
             ps:_choose(2); ps:_choose(1)
             local nst = top()
             local cost = nst ~= st and nst.player.lives == before - 1 and Run.data.lives == before - 1
+            -- SIN PAUSA durante la tarjeta ni la cuenta atrás (docs/design/level-intro-card.md): pausa en cada fotograma
+            -- (tecla y pérdida del foco) no abre nada ni mueve al jugador; tras el ¡YA! la pausa vuelve a funcionar
+            do
+                local SC = require 'src/world/systems/StartCountdown'
+                local cd0, x0, y0 = nst.startCd, nst.player.x, nst.player.y
+                local stays, frames = true, 0
+                Input = setmetatable({ pressed = function(x) return x == 'pause' end, down = function() return false end },
+                                     { __index = realInput })
+                while nst.startCd and frames < 600 do
+                    nst:pauseGame(); nst:update(1 / 60); frames = frames + 1
+                    if top() ~= nst then stays = false; break end
+                end
+                Input = realInput
+                local still = nst.player.x == x0 and nst.player.y == y0
+                nst:pauseGame()
+                local after = top() ~= nst
+                if after then gStateMachine:pop() end
+                check('sin_pausa_inicio', cd0 ~= nil and math.abs(cd0 - SC.total(true)) < 0.05 and stays and still and after,
+                    ('inicio %.2f s (tarjeta + cuenta atrás = %s); pausa cada fotograma: sigue en el nivel=%s, quieto=%s; tras el ¡YA! pausa=%s'):format(
+                     cd0 or -1, tostring(SC.total and SC.total(true)), tostring(stays), tostring(still), tostring(after)))
+            end
             nst.startCd = nil
             local keep = nst.player.lives
             nst.player.lives = 1

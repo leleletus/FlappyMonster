@@ -194,6 +194,35 @@ end
 
 local cases = {}
 
+-- INICIO EN DOS FASES (docs/design/level-intro-card.md): tarjeta (CARD_TIME) y luego la cuenta atrás de siempre; los
+-- pitidos solo en la cuenta atrás; con TIME = 0 queda solo la tarjeta
+function cases.inicio_fases()
+    local SC = require 'src/world/systems/StartCountdown'
+    local ph = SC.phase and { SC.phase(4), SC.phase(3), SC.phase(0.5), SC.phase(-0.1), SC.phase(-1) } or {}
+    local okPh = ph[1] == 'card' and ph[2] == 'count' and ph[3] == 'count' and ph[4] == 'go' and ph[5] == nil
+    local okTot = SC.total and SC.total(true) == 5 and SC.total(false) == 3
+    local play, ticks, gos, early = Sound.play, 0, 0, 0
+    Sound.play = function(n)
+        if n == 'countTick' then ticks = ticks + 1 elseif n == 'countGo' then gos = gos + 1 end
+    end
+    local prev, rem = nil, 5
+    while rem > -0.5 do
+        local nt = ticks
+        SC.beeps(prev, rem - 0.1)
+        if ticks > nt and rem - 0.1 > 3 then early = early + 1 end
+        prev = rem - 0.1; rem = rem - 0.1
+    end
+    Sound.play = play
+    local T0 = SC.TIME
+    SC.TIME = 0
+    local zero = SC.phase and SC.phase(0.5) == 'card' and SC.phase(0) == 'go' and SC.total(true) == 2
+    SC.TIME = T0
+    check('inicio_fases', okPh and okTot and ticks == 3 and gos == 1 and early == 0 and zero,
+        ('fases %s/%s/%s/%s/%s; total %s/%s; pitidos %d (antes de tiempo %d), ¡YA! %d; sin cuenta atrás=%s'):format(
+         tostring(ph[1]), tostring(ph[2]), tostring(ph[3]), tostring(ph[4]), tostring(ph[5]),
+         tostring(SC.total and SC.total(true)), tostring(SC.total and SC.total(false)), ticks, early, gos, tostring(zero)))
+end
+
 function cases.onoff_head()
     local level = room(8, 8, { { 4, 5, 'switch_on' } })
     local pa = playerAt(level, 4, 7)
@@ -4484,7 +4513,7 @@ local function junglaShot()
 end
 
 function love.load()
-    for _, n in ipairs({ 'onoff_head', 'onoff_pound', 'hidden_up', 'hidden_drop', 'hidden_side', 'hidden_vis',
+    for _, n in ipairs({ 'inicio_fases', 'onoff_head', 'onoff_pound', 'hidden_up', 'hidden_drop', 'hidden_side', 'hidden_vis',
                          'helmet_jump', 'helmet_ride', 'helmet_gp', 'helmet_side', 'stomp_fast',
                          'puffer_through', 'puffer_concave', 'puffer_cycle', 'puffer_dry', 'flyer_anim', 'vuelo_libre', 'boxed_in',
                          'bloque_roto', 'activador', 'tramp_avanza', 'tramp_pinchos', 'ping_icono',

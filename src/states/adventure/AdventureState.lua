@@ -214,7 +214,10 @@ function AdventureState:enter(args)
     self.camFrozen = false
     self.camSnap = true             -- (el primer encuadre, sin barrido desde la esquina: se ve quieto en la cuenta atrás)
     -- CUENTA ATRÁS del principio (src/world/systems/StartCountdown.lua): todo congelado mientras dura (la demo, no)
-    self.startCd   = (not self.demo) and StartCountdown.TIME or nil
+    -- (con la TARJETA de presentación delante — src/ui/IntroCard.lua —: no en la demo, ni probando desde el editor, ni
+    -- en los niveles Flappy; reintentar o volver a empezar entra otra vez aquí y la vuelve a mostrar)
+    self.introCard = not self.demo and not args.fromEditor and not self.level.flappy
+    self.startCd   = (not self.demo) and StartCountdown.total(self.introCard) or nil
     -- (la TARJETA del nivel: nombre, isla, tiempo objetivo — src/ui/LevelCard.lua —; no en la demo ni en el editor)
     self.card = (not self.demo and not args.fromEditor) and require('src/ui/LevelCard').new(self.level,
                     self.levelPath:match('([^/]+)%.json$'), { par = not self.bonus }) or nil
@@ -297,7 +300,21 @@ function AdventureState:usePowerupAt(n)
     if self.player:canUse(it.id) and self.powerups.spend(it.id) then self.player:usePowerup(it.id) else Sound.play('headBump') end
 end
 
+-- Fase del inicio: 'card' (tarjeta), 'count' (cuenta atrás), 'go' (el ¡YA!) o nil (ya se juega)
+function AdventureState:startPhase()
+    if self.startCd then return require('src/world/systems/StartCountdown').phase(self.startCd) end
+    if self.startGoT then return 'go' end
+    return nil
+end
+
+-- (sin pausa durante la tarjeta ni la cuenta atrás: el usuario)
+function AdventureState:_startLocked()
+    local ph = self:startPhase()
+    return ph == 'card' or ph == 'count'
+end
+
 function AdventureState:pauseGame()
+    if self:_startLocked() then return end
     if not self.dead and not self.won and not self.endingT then gStateMachine:push('pause') end
 end
 
@@ -620,7 +637,7 @@ function AdventureState:update(dt)
     if not self.demo then TouchControls.update(not self.dead, self.level.flappy and 'special' or self.level.dark, not self.level.flappy) end
 
     -- (en la escena final no hay pausa, ni ya ganado: salir en la celebración perdía el nivel)
-    if not self.demo and Input.pressed('pause') and not (self.runOut and self.runOut.active) and not self.won and not self.endingT then
+    if not self.demo and Input.pressed('pause') and not self:_startLocked() and not (self.runOut and self.runOut.active) and not self.won and not self.endingT then
         gStateMachine:push('pause')
         return
     end
