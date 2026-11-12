@@ -1,10 +1,13 @@
 # Contrast edge for every entity (2026-11-12)
 
+**Status:** built 0.5.211 — the system page is [contrast-edge](../../art/contrast-edge.md) (it wins where they differ). Simple mode: no dark edge on snow (the user).
+
+
 **Status:** design, approved approach (B, "layer pass"); not built.
 
 ## Why
 
-Today the white edge ([`src/fx/Silhouette.lua`](../../src/fx/Silhouette.lua)) is all-or-nothing and decided by
+Today the white edge ([`src/fx/Silhouette.lua`](../../../src/fx/Silhouette.lua)) is all-or-nothing and decided by
 *theory*: `Silhouette.on(level, y)` says "it is dark here" from the level's flags (`dark`, light mood night / cave,
 below the depth surface, or the forced `outline` flag), and then the whole sprite gets 8 offset white copies behind it.
 Enemies only get one if their type declares `darkEdge` (crabby_lava, gummy_magma: a warm 1 px edge, also on dusk).
@@ -146,7 +149,7 @@ the point-zone progress bar. The user's words — "solo en las partes del sprite
 - `Silhouette`'s role as the ONLY edge: it stays as the `simple` mode, generalised. The `darkEdge` trait (crabby_lava,
   gummy_magma) is folded into the base `edge` trait; the per-call `Silhouette.on` checks in `PlayerRender`,
   `OnlinePlayer`, `Story/Actor` and `Stage.monster`'s forced edge move into the one base path that picks the mode.
-- `outline = true` in [`src/ui/IntroScene.lua`](../../src/ui/IntroScene.lua) and in the films (`Stage.monster{ outline =
+- `outline = true` in [`src/ui/IntroScene.lua`](../../../src/ui/IntroScene.lua) and in the films (`Stage.monster{ outline =
   true }`). The level JSON field `outline` is still read (ids and fields are never renamed) but no longer does anything.
 
 ### Cinematics (the user: they must have it too)

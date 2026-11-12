@@ -134,3 +134,17 @@ per-frame system: run `perf GARB=1` before committing it.
   seams) overlap their neighbours at chunk borders, plus 12-24 MB of canvases. Worth it only if a device's F3 meter
   shows drawing CPU as the bottleneck.
 
+## The contrast edge (0.5.211)
+
+[contrast-edge](../art/contrast-edge.md) has two modes; `run.sh perf EDGE=shader|simple` measures each. This PC, 1280×720:
+
+| draw CPU, ms | shader | simple |
+|---|---|---|
+| menu (live background) | 4.23 | 2.69 |
+| `fortaleza_malvada` | 4.02 | 2.72 |
+| boss (`guarida_cangrejo_rey`) | 4.78 | 2.95 |
+| textures | 15.2–15.9 MB | 8.3–8.4 MB |
+
+The shader mode adds a screen-size character canvas, the scene's partner canvas and one full-screen pass with 16
+samples per pixel: it is GPU work, so on a device read the F3 meter (low FPS with low CPU ms = the GPU). Switch and
+Android default to `simple`.

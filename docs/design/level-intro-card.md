@@ -107,7 +107,7 @@ graphics there), used identically by the three places:
 
 ## Rules that apply
 
-- Every image is a real asset file: the bands' look, the plate, the castle icon and the monster's white outline come
+- Every image is a real asset file: the bands' look, the plate, the castle icon and the monster's white outline (since 0.5.211 no forced outline: the [contrast edge](../art/contrast-edge.md) decides) come
   from files (generator in `tools/art/ui/` for anything new, committed; the outline as a generated outlined copy of the
   monster's run frames, like `make_loading.py` made white ones). Never overwrite a hand-edited sprite.
 - Pixel art, integer positions, stepped motion. No stencils; clip with `src/ui/Clip.lua`.

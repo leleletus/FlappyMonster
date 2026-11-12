@@ -137,7 +137,7 @@ Protocol 107.
   stomp removes them). (6) Stage = night rave + beach concert (level `time` night): crowd of crabs and Gummies in
   silhouette with glow sticks (no outline: background), speakers, equalizer, disco ball + lasers, phrase flash —
   drawn by the new generic hook `Entities.renderBack` (behind the tiles); it APPEARS during the intro. Floor panels
-  only light for the attack. Conga crabs get their species' `darkEdge` at night; the monster its white outline.
+  only light for the attack. Conga crabs and the monster get the [contrast edge](../art/contrast-edge.md); the stage, decks, spotlights and flashes go through `Edge.direct` (no edge).
   Drawing moved to the part `groovecrab_stage.lua`. Protocol 69. `sp_boss` gained `FIGHT_SHOTS=` and `GOD=1`.
 - 0.5.48, the user's second round (6 points): (1) the CONGA is gone (code, net, test); (2) fewer golden notes — every
   8 bars instead of 4, and only bar 5 of the solo (half as many per loop); (3) HP 10 → 13; (4) the knockout did not

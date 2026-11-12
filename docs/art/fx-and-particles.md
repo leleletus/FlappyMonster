@@ -2,7 +2,7 @@
 
 Render-side effects in `src/fx/`: `Particles.lua` (every particle kind; `Particles.emit(kind, x, y, opts)`),
 `SpriteStrip.lua` (animation strips), `BossFx.lua`, `IceEncase.lua`, `IceDrips.lua`, `LavaFx.lua`, `Snowfall.lua`,
-`WaterSurface.lua`, `NoiseMarks.lua`, `Darkness.lua`, `Silhouette.lua`, `Sky.lua`, `Ambience.lua`; shared UI
+`WaterSurface.lua`, `NoiseMarks.lua`, `Darkness.lua`, `Silhouette.lua` + `Edge.lua` (the [contrast edge](contrast-edge.md)), `Sky.lua`, `Ambience.lua`; shared UI
 celebration (confetti, fireworks) in `src/ui/Celebration.lua`.
 
 **From the simulation** use `Entity.emitFx(kind, x, y)`: it reaches every client as an `fx` event (no options — a

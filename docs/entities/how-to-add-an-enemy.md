@@ -66,7 +66,7 @@ return {
 | `renderFront = true` | Drawn in front of the players |
 | `wantsLevel = true` | Gets `levelRef` when the level loads (to draw according to the terrain) |
 | `freezeFloats = true` | Frozen, it stays where it is (does not fall) |
-| `darkEdge = { r, g, b, a }` | Dark sprite: draws a thin outline of that colour around it where the level is dark |
+| `edge = true / false` | The [contrast edge](../art/contrast-edge.md): on by default for enemies, bosses and items. Set false if it is not a character. Wrap parts of `render` that are not the body (shadows, marks, glows, text) in `Edge.direct` |
 | `noWings = true` (class field) | A flyer that is not drawn with the generic wings (the Gust: a cloud) |
 | `edible = true` (class field) | The Carnivorous Plant eats it when it enters its trigger (thrown, walking…): `Entity:dieEaten()` (gone at once, counts as a kill, respawns with `respawn`). Since 0.5.97 every non-boss ENEMY is eaten anyway (`Entity:canBeEaten`); `edible` adds other categories. Override `canBeEaten()` to refine (only out of water, only above ground…) |
 | `inedible = true` (class field) | The Carnivorous Plant never eats it (the pufferfish, other plants) |

@@ -15,7 +15,7 @@ Separately, every level has a render-only **light mood** (day, dusk, night, cave
 | `src/fx/NoiseMarks.lua` | the red "!" where a noise happened |
 | `src/fx/Ambience.lua`, `src/audio/Sound.lua` (`setEcho`) | ambience (by island) and echo |
 | `src/ui/LightHud.lua` | the battery HUD |
-| `src/fx/Silhouette.lua` | white edge of the player / outline of dark enemies where it is dark |
+| `src/fx/Edge.lua` | the contrast edge of characters (uses `Darkness.build` / `lightCanvas`: [contrast-edge](../art/contrast-edge.md)) |
 
 **Level JSON:** `dark`, `light` (day | dusk | night | cave | none; automatic by default), `echo`.
 **To make something audible to enemies:** declare `noises = { soundName = tiles }` on the entity type (or `noise` on

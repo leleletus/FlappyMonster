@@ -310,6 +310,7 @@ user: the gravity "is stronger than it should be", and going left "everything fe
 
 ## The white edge (visibility of the almost-black monster)
 
+- **Since 0.5.211** this is the [contrast edge](../art/contrast-edge.md) (`src/fx/Edge.lua`): per pixel in shader mode, this silhouette in simple mode. The history below is how it got here.
 - **WHITE EDGE of the monster (3.68.6)**: `src/fx/Silhouette.lua` — the monster's own sprite, fully white, drawn
   BEHIND it shifted to the 8 sides by `Silhouette.WIDTH` (1/3 of an art pixel = 2 px at scale 6): an even thin white
   edge. HISTORY: a blue 4-offset rim (3.68.2) → the user's idea "same sprite scaled up, white, behind" (looked

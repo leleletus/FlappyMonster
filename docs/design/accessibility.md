@@ -13,6 +13,7 @@ A new settings tab, **AYUDAS / ASSIST** (Settings: AUDIO · CONTROLS · GAME · 
 | SCREEN SHAKE (on) | `shake` | Off: `Particles.shakeOffset` returns 0 — no screen shake from hits, explosions or bosses (one place for all ~96 shake triggers) |
 | FLASHES (on) | `flashes` | Off: nothing blinks fast — the bosses' 12 Hz red blink is steady red, their invulnerability blink and the player's are a steady half-transparency — and full-screen flashes (the Big Snowball's hit) are a third as strong. `src/fx/Flash.lua` (`on`, `blink(hz, t)`, `alpha(a)`) |
 | SIGN TEXT (normal) | `signText` = `'normal'` / `'large'` | Large: the help / tutorial signs (`src/ui/HintBubble.lua`, `HintBubble.font()`) use the medium font |
+| EDGE (by device) | `edge` | Added 0.5.211: `shader` (per-pixel contrast edge; PC) or `simple` (the light silhouette where it is dark; Android / Switch): [contrast-edge](../art/contrast-edge.md) |
 | COLOUR-BLIND SYMBOLS (off) | `cbSymbols` | On: the ON / OFF blocks — told apart only by colour (blue / red) — get a ring (ON) or an X (OFF) drawn on top (not the switches: they already say ON / OFF — the user, 0.5.209). Generic: a tile type with `cbSymbol = 'on' | 'off'` gets it (`TileTypes.drawTile`); art from `tools/art/ui/make_cb_symbols.py` (`assets/images/world/tiles/cb_on.png`, `cb_off.png`) |
 
 ## How to extend

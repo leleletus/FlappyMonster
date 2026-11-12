@@ -1,5 +1,8 @@
 # Contrast edge — Implementation Plan
 
+**Status:** executed (0.5.211); rulings in the commit history. System page: [contrast-edge](../../art/contrast-edge.md).
+
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Replace the level-flag white silhouette with a per-pixel contrast edge for every character (shader mode), keep an improved silhouette as the simple mode, switchable in settings.

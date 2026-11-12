@@ -32,7 +32,7 @@ and a level already cleared never plays it. Today: `chase` before `huida_del_esp
 - **Real physics:** in these two films the monster and the Reflection are ACTORS (`src/story/Actor.lua`): a real
   `PlayerAdventure` inside the set, driven by scripted inputs (`mx`, `crouch`, `jump()`) through a stub `Input`, the
   way the Mirror boss drives its body. So walking, braking, jumps and the double jump (and their sounds and
-  animations) are exactly the game's. The white rim only shows where the game shows it (`Silhouette.on`). Only what
+  animations) are exactly the game's. The edge is the game's [contrast edge](../art/contrast-edge.md). Only what
   is magic in the game too is scripted: the floating mirror, the dive and the pounce.
 Test saves to watch them: `python3 tools/story/test_saves.py 2=lluvia_pinchos 3=huida_del_espejo` (overwrites those
 slots; the films stay unseen, so re-run it to watch them again).
@@ -114,7 +114,8 @@ conflicts with the sections above, the sections above describe the current behav
   background slides away with its edge and the real (meadow) sky appears, a glint far away, then a cut to the WORLD
   MAP: the monster flaps across the sea from the Meadow to the volcano (the old crossfade into the volcano sky "didn't
   feel right"); cue beats unchanged, so the music still fits. (2) The monster is almost black: inside a set it gets a
-  thin light-blue RIM (`Stage.monster` silhouette at 4 offsets; `o.outline`). (3) REFLECTION = `K.reflect(x, y, o)`:
+  thin light-blue RIM (`Stage.monster` silhouette at 4 offsets; `o.outline`) — since 0.5.211 every shot is an `Edge.scene`
+  ([contrast edge](../art/contrast-edge.md)); `o.outline` no longer forces anything, `outline = false` removes it (the reflection). (3) REFLECTION = `K.reflect(x, y, o)`:
   the monster's real mirror image (same pose, flipped, smaller with distance, moving the opposite way), drawn into a
   canvas and cut to the GLASS SHAPE with a mask shader, glass sheen on top. (4) Monster poses as in the levels
   (`K.pose`: idle = frame 3, walk = 3↔2 at 8 fps + puff + 'step' every other frame via `K.steps`, rising 2, falling
