@@ -77,7 +77,7 @@ function IntroScene.new(level, id, o)
     local data = {
         name = 'intro', width = cols, height = rows, playerStart = { 2, groundRow - 1 }, tiles = tiles,
         entities = { { type = look.enemy or 'gummy', col = ec, row = groundRow - 1, props = { patrol = { left = ec - 1, right = ec + 1 } } } },
-        foliage = {}, vents = {}, outline = true,
+        foliage = {}, vents = {},
         -- el FONDO del nivel que empieza (src/fx/Sky.lua) y su luz; sin profundidad ni oscuridad (es un escenario)
         background = level and level.background, time = level and level.timeOfDay, clouds = level and level.clouds,
         light = level and level.light ~= 'cave' and level.light or nil,

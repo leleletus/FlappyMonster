@@ -19,6 +19,10 @@ local Shaders    = require 'src/fx/Shaders'
 
 local Edge = {}
 
+-- (escenas abiertas del modo shader — ver Edge.open —: aquí arriba porque Edge.draw las mira)
+local stack, depth, actorPool = {}, 0, {}
+local function top() return stack[depth] end
+
 Edge.W     = 2                                   -- grosor (px de pantalla) en modo shader
 Edge.T_LO, Edge.T_HI = 0.08, 0.22                -- diferencia de luminancia: filo entero / ninguno
 Edge.L_LO, Edge.L_HI = 0.12, 0.3                 -- luz del sitio: sin filo / filo entero (a oscuras no delata nada)
@@ -98,7 +102,7 @@ end
 
 local function simpleDraw(owner, x, y, fn, ...)
     local now = Edge.clock()
-    local kind = Edge.simpleKind(owner.edgeLevel or Edge.level, x, y)      -- (edgeLevel: un actor de cinemática)
+    local kind = forceKind or Edge.simpleKind(owner.edgeLevel or Edge.level, x, y)  -- (edgeLevel: un actor de cinemática)
     local f = fade[owner]
     if not f then f = { a = 0, t = now }; fade[owner] = f end
     local dt = math.max(0, math.min(Edge.FADE, now - f.t))
@@ -137,6 +141,15 @@ end
 
 function Edge.draw(owner, x, y, fn, ...)
     if Edge.mode() == 'simple' then return simpleDraw(owner, x, y, fn, ...) end
+    local f = top()
+    if f and not f.on then                           -- (una escena abierta: el cuerpo, al lienzo de los personajes)
+        f.on = true
+        love.graphics.setCanvas(f.actor)
+        fn(0, 0, ...)
+        f.on = false
+        love.graphics.setCanvas(f.scene)
+        return
+    end
     fn(0, 0, ...)
 end
 
@@ -185,26 +198,41 @@ Shaders.define('edge_composite', [[
 ]])
 
 local partner = setmetatable({}, { __mode = 'k' })  -- lienzo de la escena → su pareja (mismo tamaño)
-local actorCv, whiteImg
+local whiteImg
 local function sized(cv, w, h)
     if cv and cv:getWidth() == w and cv:getHeight() == h then return cv end
     return love.graphics.newCanvas(w, h)
 end
-local actorOn, sceneCv = false, nil
+-- ESCENAS ABIERTAS, una dentro de otra (una cinemática entera — Edge.scene — y dentro un decorado — Stage.drawSet —):
+-- cada nivel con su lienzo de personajes. `on` = el destino es ahora el de los personajes
 
--- Empieza a dibujar personajes: el lienzo de los personajes (vacío) pasa a ser el destino
-function Edge.begin(scene)
+-- Abre una escena en `scene` (el destino sigue siendo la escena): lo que se dibuje por Edge.draw irá a los personajes
+function Edge.open(scene)
+    depth = depth + 1
+    local f = stack[depth] or {}
+    stack[depth] = f
     local w, h = scene:getDimensions()
-    actorCv = sized(actorCv, w, h)
-    sceneCv, actorOn = scene, true
-    love.graphics.setCanvas(actorCv)
+    actorPool[depth] = sized(actorPool[depth], w, h)
+    f.scene, f.actor, f.on = scene, actorPool[depth], false
+    love.graphics.setCanvas(f.actor)
     love.graphics.clear(0, 0, 0, 0)
+    love.graphics.setCanvas(scene)
+end
+
+-- Abre una escena y empieza a dibujar personajes: el lienzo de los personajes pasa a ser el destino
+function Edge.begin(scene)
+    Edge.open(scene)
+    local f = top()
+    f.on = true
+    love.graphics.setCanvas(f.actor)
 end
 
 -- Junta la escena y los personajes con el filo en la pareja de la escena; la deja de destino y la devuelve
 function Edge.finish(light)
-    local scene = sceneCv
-    actorOn, sceneCv = false, nil
+    local f = top()
+    depth = depth - 1
+    local scene, actorCv = f.scene, f.actor
+    f.scene, f.actor, f.on = nil, nil, false
     local w, h = scene:getDimensions()
     local out = sized(partner[scene], w, h)
     partner[scene] = out
@@ -241,13 +269,50 @@ function Edge.wants(e) return e.edge == true end
 
 function Edge.direct(fn, ...)
     if passDepth > 0 then return end                 -- (las copias del modo simple: solo el cuerpo)
-    if actorOn then                                  -- (modo shader: a la escena, no al lienzo de los personajes)
-        love.graphics.setCanvas(sceneCv)
+    local f = top()
+    if f and f.on then                               -- (modo shader: a la escena, no al lienzo de los personajes)
+        f.on = false
+        love.graphics.setCanvas(f.scene)
         local a, b, c = fn(...)
-        love.graphics.setCanvas(actorCv)
+        f.on = true
+        love.graphics.setCanvas(f.actor)
         return a, b, c
     end
     return fn(...)
+end
+
+-- UNA ESCENA SUELTA (cada plano de una cinemática: src/story/Film.lua): fn(...) se dibuja en un lienzo propio con una
+-- escena abierta — los monstruos (Edge.draw) a los personajes, lo demás de fondo — y el resultado, ya con el filo, va
+-- a donde se estaba dibujando. `o.simple` = el filo del modo simple, forzado mientras dura ('light': el monstruo es
+-- casi negro y en las cinemáticas siempre lo llevaba)
+local sceneCvs, forceKind = {}, nil
+function Edge.scene(fn, o, ...)
+    if Edge.mode() ~= 'shader' then
+        local prevForce = forceKind
+        forceKind = o and o.simple
+        local ok, err = pcall(fn, ...)
+        forceKind = prevForce
+        if not ok then error(err, 0) end
+        return
+    end
+    local d = depth + 1
+    sceneCvs[d] = sized(sceneCvs[d], WINDOW_W, WINDOW_H)
+    local cv = sceneCvs[d]
+    love.graphics.push('all')
+    love.graphics.origin()
+    love.graphics.setScissor()
+    love.graphics.setCanvas(cv)
+    love.graphics.clear(0, 0, 0, 1)
+    Edge.open(cv)
+    local ok, err = pcall(fn, ...)
+    if not ok then while depth >= d do depth = depth - 1 end; love.graphics.pop(); error(err, 0) end
+    local out = Edge.finish(nil)
+    love.graphics.pop()
+    love.graphics.push('all')
+    love.graphics.setColor(1, 1, 1, 1)
+    love.graphics.setBlendMode('alpha', 'premultiplied')
+    love.graphics.draw(out, 0, 0)
+    love.graphics.pop()
 end
 
 return Edge

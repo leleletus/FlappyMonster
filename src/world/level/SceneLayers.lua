@@ -11,7 +11,8 @@
 --     ents    las entidades (lista o tabla por índice: se recorre con pairs, el orden de una lista se respeta)
 --     actors  function(camX, camY): lo que va entre las entidades de atrás y las de delante — los jugadores, el
 --             fantasma, los bots, el progreso de las zonas de puntos — (el borde: src/fx/Edge.lua, Edge.level)
---     noSky   sin cielo: fondo transparente (los créditos, que dibujan su escena detrás)
+--     noSky   sin cielo: fondo transparente (los créditos, que dibujan su escena detrás); una función = un fondo
+--             propio dibujado en la escena (en pantalla), que el borde de contraste tiene en cuenta
 --     reuse   no redibuja el lienzo: vuelve a poner la escena del fotograma anterior (el hit-stop online: solo en esta
 --             pantalla, la partida sigue — src/ui/HitStop.lua —)
 -- La oscuridad, los fragmentos, las ayudas y el HUD van DESPUÉS, fuera del lienzo: los pone cada estado.
@@ -61,6 +62,8 @@ function SceneLayers.draw(level, camX, camY, canvas, ents, actors, noSky, reuse)
     love.graphics.setCanvas(canvas)
     if noSky then
         love.graphics.clear(0, 0, 0, 0)                    -- (sin cielo: se ve lo que haya detrás; los créditos)
+        -- (o un fondo propio — noSky es una función —: los créditos ponen el suyo, y el borde lo compara con él)
+        if type(noSky) == 'function' then noSky(); love.graphics.setColor(1, 1, 1, 1) end
     else
         love.graphics.clear(0, 0, 0, 1)
         Sky.punch = Darkness.active(level) and not level.dark      -- (lo incandescente del fondo: ver Sky.lua)

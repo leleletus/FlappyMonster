@@ -102,7 +102,7 @@ F.glint = {
                 local x, y = lerp(hx, vx - 30, u), lerp(hy - 120, vy - 110, u) + bob
                 love.graphics.setColor(0, 0, 0, 0.25)
                 love.graphics.rectangle('fill', math.floor(x) - 16, math.floor(lerp(hy, vy, u)) + 6, 32, 8)   -- su sombra
-                Stage.monster(x, y, { frame = (ph < 0.35) and 2 or 1, scale = 5, puff = K.puff(t, ft), outline = true })
+                Stage.monster(x, y, { frame = (ph < 0.35) and 2 or 1, scale = 5, puff = K.puff(t, ft) })
                 love.graphics.pop()
             end })
         end
@@ -377,7 +377,7 @@ F.scatter = {
             -- el monstruo, lanzado desde el volcán hasta la Pradera
             local u = c.k(c.b(0.3), c.dur - c.b(0.4))
             if u < 1 then
-                Stage.monster(lerp(vx, hx, u), lerp(vy - 40, hy - 20, u) - math.sin(u * math.pi) * 420, { frame = 4, angle = t * 7, scale = 5, outline = true })
+                Stage.monster(lerp(vx, hx, u), lerp(vy - 40, hy - 20, u) - math.sin(u * math.pi) * 420, { frame = 4, angle = t * 7, scale = 5 })
             end
             Stage.drawSparks()
             love.graphics.pop()

@@ -20,13 +20,13 @@ local Particles = require 'src/fx/Particles'
 local DeadEyes = require 'src/player/DeadEyes'
 local Clip = require 'src/ui/Clip'
 local Edge = require 'src/fx/Edge'
--- (quién es el monstruo para el fundido del borde en modo simple: uno para todas las cinemáticas — o.edgeOwner si hay dos —)
-Stage.monsterOwner = {}
 local function monsterShifted(dx, dy, im, x, y, a, sx, sy)
     love.graphics.draw(im, math.floor(x) + dx, math.floor(y) + dy, a, sx, sy, im:getWidth() / 2, im:getHeight() / 2)
 end
 
 local Stage = {}
+-- (quién es el monstruo para el fundido del borde en modo simple: uno para todas las cinemáticas — o.edgeOwner si hay dos —)
+Stage.monsterOwner = {}
 local floor = math.floor
 
 Stage.MIRROR_S = 4                     -- escala del espejo (48x64 px de arte → 192x256)
@@ -83,8 +83,8 @@ function Stage.monster(x, y, o)
     local c = o.color or { 1, 1, 1 }
     love.graphics.setColor(c[1], c[2], c[3], o.alpha or 1)
     -- EL BORDE de contraste (src/fx/Edge.lua), como en el juego; el Reflejo (invert) sin él. (`o.outline` ya no fuerza
-    -- nada: el borde aparece donde hace falta)
-    if o.invert then
+    -- nada: el borde aparece donde hace falta; `outline = false` lo quita — un reflejo —)
+    if o.invert or o.outline == false then
         monsterShifted(0, 0, im, x, y, o.angle or 0, s * f * (o.sx or 1), s * (o.sy or 1))
     else
         Edge.draw(o.edgeOwner or Stage.monsterOwner, x, y, monsterShifted, im, x, y, o.angle or 0, s * f * (o.sx or 1), s * (o.sy or 1))
@@ -341,6 +341,12 @@ function Stage.drawSet(set, camX, camY, actors, lights, glow)
     LavaFx.render(level, camX, camY)
     level:renderFoliageBack(camX, camY)
     love.graphics.setColor(1, 1, 1, 1)
+    -- EL BORDE de contraste (src/fx/Edge.lua), como en el juego: los monstruos (Edge.draw) van a su lienzo y se juntan
+    -- con el decorado; la luz se calcula antes de juntarlos (sus halos dependen de dónde se dibujaron)
+    local prevLevel = Edge.level
+    Edge.level = level
+    local shader = Edge.mode() == 'shader'
+    if shader then Edge.open(set.canvas) end
     -- (cada monstruo que se dibuje aquí lleva su halo de luz: es casi negro y el decorado está en penumbra)
     Stage._lit = {}
     if actors then
@@ -353,14 +359,21 @@ function Stage.drawSet(set, camX, camY, actors, lights, glow)
     for _, l in ipairs(lights or {}) do all[#all + 1] = l end
     for _, m in ipairs(Stage._lit) do all[#all + 1] = Stage.light(m.x, m.y, 210, 0.6, { 1, 0.93, 0.82 }) end
     Stage._lit = nil
+    local lit = mood and Darkness.build(level, camX, camY, {}, all)
+    local out = set.canvas
+    if shader then
+        out = Edge.finish(lit and Darkness.lightCanvas(level) or nil)
+        love.graphics.origin()
+    end
+    Edge.level = prevLevel
     Particles.render(camX, camY)
     level:renderFoliage(camX, camY)
     love.graphics.setCanvas(prev)
     if scX then love.graphics.setScissor(scX, scY, scW, scH) end
     love.graphics.pop()
     love.graphics.setColor(1, 1, 1, 1)
-    level:renderWaterEffect(camX, camY, set.canvas)
-    if mood then Darkness.render(level, camX, camY, {}, all, set.canvas) end
+    level:renderWaterEffect(camX, camY, out)
+    if lit then Darkness.apply(level, out) end
     love.graphics.push()
     love.graphics.translate(-camX, -camY)
     if glow then glow(camX, camY) end

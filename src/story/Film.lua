@@ -107,6 +107,7 @@ function Film:update(dt)
     c.stage.update(dt)
 end
 
+local SCENE_EDGE = { simple = 'light' }
 function Film:draw()
     local sc, c = self.tl.scenes[self.index], self.ctx
     love.graphics.setColor(0, 0, 0, 1)
@@ -114,7 +115,8 @@ function Film:draw()
     if not sc then return end
     local S = self.impl[sc.id]
     love.graphics.setColor(1, 1, 1, 1)
-    if S and S.draw then S.draw(c, c.t) end
+    -- (cada plano con el borde de contraste de los monstruos — src/fx/Edge.lua —; en modo simple, el filo claro)
+    if S and S.draw then require('src/fx/Edge').scene(S.draw, SCENE_EDGE, c, c.t) end
     love.graphics.setShader()
     love.graphics.setBlendMode('alpha')
     -- cómo entra la escena: fundido desde negro o desde blanco

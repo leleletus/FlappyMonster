@@ -7,7 +7,8 @@
 -- A pasos fijos de 1/60 s con su propio generador de azar: lo mismo cada vez que se ven los créditos. Las
 -- partículas y las decoraciones usan el azar normal (se crean al dibujar: ver MenuScene).
 --   local s = LiveStage.new('credits_pradera', seed[, opts])   opts.pilot(st) → quien lleva al monstruo en vez del bot
---                             (algo con :step(dt, level), p. ej. src/story/CreditsFight.lua), opts.immortal
+--                             (algo con :step(dt, level), p. ej. src/story/CreditsFight.lua), opts.immortal,
+--                             opts.background() → el fondo que hay detrás (en pantalla), para el borde de contraste
 --   s:update(dt)              s:draw(y)   (la franja, con lo de arriba del nivel en la y de pantalla `y`)
 --   s.h                       alto de la franja en píxeles;   s.stats = { kills, deaths, booms, goals, jumps, inPlace } (para
 --                             las pruebas; inPlace = lo más que SONÓ un salto en el mismo sitio —32 px— en 3 s; flips = lo
@@ -119,7 +120,9 @@ function LiveStage.new(name, seed, opts)
     local me = self
     self:_wrap(function()
         st:enter({ level = 'assets/story/sets/' .. name .. '.json', returnTo = 'main_menu',
-                   demo = { noSky = true, noBossCtl = true,
+                   -- (noSky: el fondo de quien la dibuja — opts.background, en pantalla — dentro de la escena: el borde de
+                   -- contraste de src/fx/Edge.lua lo compara con él; sin él, transparente)
+                   demo = { noSky = opts.background or true, noBossCtl = true,
                             camera = function() return me.cx or 0, me.cy or 0 end,
                             step = function(dt, level)
                                 me.clock = me.clock + dt

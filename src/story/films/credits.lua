@@ -26,6 +26,7 @@ local F = {}
 local stages                              -- los escenarios vivos de la película en curso (c.shared.stages)
 local tickStages
 local newFight, fightY, fightStage
+local background                          -- (el fondo de la película: también dentro de los escenarios, LiveStage)
 
 local DATA = require 'assets/story/credits'
 local ENTER_Y = 0.92                      -- (a esta altura de la pantalla entra cada bloque al empezar su canción)
@@ -171,7 +172,7 @@ tickStages = function(c)
             local top = b.y - s + blockH(b.list) + MARGIN - STAGE_OVER     -- (el borde de arriba de la franja en pantalla)
             local h = STAGE_ROWS * TILE_PX
             if top < WINDOW_H + START_BELOW and top + h > -20 then
-                if not stages[id] then stages[id] = LiveStage.new(id, 100 + i) end
+                if not stages[id] then stages[id] = LiveStage.new(id, 100 + i, { background = function() background(c) end }) end
                 -- (quieto e invisible hasta que empieza a aparecer: si no, las cosas explotaban y morían antes de verse)
                 if stageIn(top) > 0 then stages[id]:update(dt) end
             elseif stages[id] and top + h <= -20 then
@@ -209,7 +210,7 @@ end
 local BG_COLORS = { { 0.50, 0.80, 1.00 }, { 0.55, 1.00, 0.55 }, { 0.60, 0.90, 1.00 }, { 1.00, 0.60, 0.40 },
                     { 0.70, 1.00, 0.40 }, { 0.40, 0.65, 1.00 }, { 1.00, 0.45, 0.55 }, { 0.45, 1.00, 0.75 } }
 local BG_DARK, BG_SECS = 0.5, 6           -- oscurecido; segundos por color
-local function background(c)
+background = function(c)
     local gt = c.film.t
     local k = gt / BG_SECS
     local i = math.floor(k) % #BG_COLORS + 1
@@ -262,8 +263,8 @@ local FIGHT_SEED = 31
 local FIGHT_WINDOWS = { 3.0, 12.5 }
 -- (la arena, a pantalla completa: su suelo cerca del borde de abajo)
 fightY = function(st) return WINDOW_H - st.h + 16 end
-newFight = function()
-    return LiveStage.new('credits_espejo', FIGHT_SEED, { immortal = true, pilot = function(st)
+newFight = function(c)
+    return LiveStage.new('credits_espejo', FIGHT_SEED, { immortal = true, background = function() if c then background(c) end end, pilot = function(st)
         local boss
         for _, e in ipairs(st.enemies) do if e.def.name == 'mirror' then boss = e end end
         boss.DEATH_HOLD = math.huge          -- (vencido, explota sin parar hasta que la película se lo lleva: F.finale)
@@ -277,7 +278,7 @@ end
 -- primer instante de la pelea)
 fightStage = function(c)
     if not c.shared.fight then
-        local st = newFight()
+        local st = newFight(c)
         c.shared.fight = st
         for _, e in ipairs(st.st.enemies) do if e.def.name == 'mirror' then c.shared.boss = e end end
         st:draw(fightY(st), 0)                                    -- (su cámara, ya: ver LiveStage:draw)
@@ -430,7 +431,7 @@ F.finale = {
 }
 
 -- (para las pruebas: la disposición de los bloques — dónde está cada uno y a qué velocidad sube —)
-function F._newFight() return newFight() end
+function F._newFight(c) return newFight(c) end
 function F._fightY(st) return fightY(st) end
 function F._layout(c) return getLayout(c) end
 function F._scrollAt(c, gt) return scrollAt(getLayout(c), gt) end

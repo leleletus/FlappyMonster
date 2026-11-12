@@ -346,6 +346,90 @@ case('reuse', function()
     check('reuse', out ~= st.sceneCanvas and ok, ('el golpe congelado vuelve a poner la escena YA juntada: %s'):format(ok and 'sí' or (d .. ' píxeles distintos')))
 end)
 
+-- ── Escenas sueltas (cinemáticas): Edge.scene, también con un decorado dentro ──
+local function sceneShot(bg, inner)
+    local target = love.graphics.newCanvas(200, 120)
+    love.graphics.push('all')
+    love.graphics.origin()
+    love.graphics.setCanvas(target)
+    love.graphics.clear(0, 0, 0, 1)
+    Edge.scene(function()
+        love.graphics.setColor(bg[1], bg[2], bg[3], 1)
+        love.graphics.rectangle('fill', 0, 0, 200, 120)
+        if inner then inner() end
+        require('src/story/Stage').monster(100, 60, { frame = 1, scale = 5 })
+    end, { simple = 'light' })
+    love.graphics.pop()
+    return target:newImageData()
+end
+-- la columna más a la izquierda del monstruo (frame 1 a ×5) y el píxel justo fuera
+local function leftEdge(img, y)
+    for x = 0, img:getWidth() - 1 do
+        local r, g, b = img:getPixel(x, y)
+        if r < 0.15 and g < 0.15 and b < 0.15 then return x end
+    end
+end
+case('escena', function()
+    local prev = Settings.edge
+    Settings.edge = 'shader'
+    local darkImg = sceneShot({ 0.12, 0.12, 0.18 })
+    local lightImg = sceneShot({ 0.9, 0.9, 0.95 })
+    local found, total = 0, 0
+    for y = 40, 80 do
+        local x = leftEdge(lightImg, y)
+        if x and x > 0 then
+            total = total + 1
+            local r = darkImg:getPixel(x - 1, y)
+            if r > 0.5 then found = found + 1 end
+        end
+    end
+    local lr = lightImg:getPixel(5, 5)
+    Settings.edge = prev
+    check('escena', total > 5 and found >= total * 0.6 and lr > 0.85,
+        ('fondo oscuro: filo claro en %d de %d filas del contorno · fondo claro intacto=%.2f'):format(found, total, lr))
+end)
+case('anidado', function()
+    local prev = Settings.edge
+    Settings.edge = 'shader'
+    -- un "decorado" dentro de la escena (Edge.begin/finish en su propio lienzo, como Stage.drawSet) y el monstruo fuera
+    local inner = function()
+        local cv = love.graphics.newCanvas(200, 120)
+        local outer = love.graphics.getCanvas()
+        love.graphics.setCanvas(cv); love.graphics.clear(0.12, 0.12, 0.18, 1)
+        Edge.begin(cv)
+        love.graphics.setColor(0.1, 0.1, 0.14, 1)
+        love.graphics.rectangle('fill', 20, 20, 16, 16)
+        local out = Edge.finish(nil)
+        love.graphics.setCanvas(outer)
+        love.graphics.setColor(1, 1, 1, 1)
+        love.graphics.draw(out, 0, 0)
+    end
+    local img = sceneShot({ 0.12, 0.12, 0.18 }, inner)
+    local innerEdge = img:getPixel(19, 28)
+    local x = leftEdge(sceneShot({ 0.9, 0.9, 0.95 }), 60)
+    local outerEdge = x and img:getPixel(x - 1, 60) or 0
+    Settings.edge = prev
+    check('anidado', innerEdge > 0.5 and outerEdge > 0.5,
+        ('filo dentro del decorado=%.2f · filo del monstruo de fuera=%.2f'):format(innerEdge, outerEdge))
+end)
+case('fondo_propio', function()
+    -- sin cielo pero con fondo propio (los créditos: SceneLayers con noSky = función): el fondo entra en la escena
+    local prev = Settings.edge
+    Settings.edge = 'shader'
+    local st = scene('fortaleza_malvada')
+    local SceneLayers = require 'src/world/level/SceneLayers'
+    local target = love.graphics.newCanvas(WINDOW_W, WINDOW_H)
+    love.graphics.setCanvas(target)
+    local out = SceneLayers.draw(st.level, st.camX, st.camY, st.sceneCanvas, st.enemies, st._actorsFn, function()
+        love.graphics.setColor(1, 0, 0, 1); love.graphics.rectangle('fill', 0, 0, WINDOW_W, WINDOW_H)
+    end)
+    love.graphics.setCanvas()
+    local r, g, b, a = out:newImageData():getPixel(math.floor(WINDOW_W / 2), 4)
+    love.timer.getTime = realGetTime
+    Settings.edge = prev
+    check('fondo_propio', r > 0.9 and g < 0.1 and a > 0.9, ('esquina de la escena=%.2f,%.2f,%.2f,%.2f (el fondo rojo)'):format(r, g, b, a))
+end)
+
 -- Capturas de escenas de verdad en modo shader (SHOT=1): para mirarlas
 case('capturas', function()
     if os.getenv('SHOT') ~= '1' then return end
