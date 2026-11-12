@@ -59,8 +59,33 @@ function DS.decode(n)
     return { what = what, part = DS.PARTS[p] }
 end
 
-function DS.text(src)
-    return nil                                   -- (Task 4)
+-- El NOMBRE de lo que hace daño en el idioma del jugador: un jefe, el suyo (Lang.bossName); lo demás, `enemy.<tipo>` o
+-- el de su familia (`enemy.gummy` para gummy_ice…); nil si no tiene
+function DS.name(what, props)
+    local L = require 'src/core/Lang'
+    local ok, ET = pcall(require, 'src/world/entities/base/EntityTypes')
+    local def = ok and ET.byName and ET.byName[what]
+    if def and (def.boss or def.category == 'Jefes') then
+        local n = L.bossName(what, props)
+        if n then return n end
+    end
+    for _, k in ipairs({ what, (what or ''):match('^(%a+)') }) do
+        if k and L.has('enemy.' .. k) then return L('enemy.' .. k) end
+    end
+    return nil
+end
+
+-- «Proyectil de Pez globo» / «Pufferfish projectile» (`death.part`); el cuerpo, solo su nombre. nil = no es una entidad
+-- con nombre (los tiles y las causas tienen su frase: src/player/DeathCause.lua)
+function DS.text(src, props)
+    if not src or not src.what then return nil end
+    local name = DS.name(src.what, props)
+    if not name then return nil end
+    if not src.part or src.part == 'body' or src.part == 'hazard' then return name end
+    local L = require 'src/core/Lang'
+    local key = 'part.' .. src.part
+    if not L.has(key) then return name end
+    return L('death.part', { part = L(key), name = name })
 end
 
 return DS

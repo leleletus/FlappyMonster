@@ -2230,6 +2230,47 @@ function cases.fuente_entorno()
          #bad == 0 and 'ninguna' or table.concat(bad, ', ')))
 end
 
+-- EL AVISO con la fuente: «Proyectil de Pez globo» / «Pufferfish projectile»; pinchos y lo demás, su frase de siempre; sin
+-- fuente, la suposición de antes. Cada parte y cada cosa que hace daño tiene su texto en todos los idiomas
+function cases.fuente_textos()
+    local L = require 'src/core/Lang'
+    local DS = require 'src/player/DamageSource'
+    local DC = require 'src/player/DeathCause'
+    local DB = require 'src/ui/DeathBanner'
+    local ET = require 'src/world/entities/base/EntityTypes'
+    local lang0 = L.current()
+    local bad, said = {}, {}
+    local pa = PlayerAdventure:new(100, 100)
+    for _, lang in ipairs({ 'es', 'en' }) do
+        L.set(lang)
+        local K = L.keys(lang)
+        for _, p in ipairs(DS.PARTS) do if not K['part.' .. p] then bad[#bad + 1] = lang .. ': part.' .. p end end
+        for _, k in ipairs({ 'death.part', 'death.crush', 'death.explosion' }) do if not K[k] then bad[#bad + 1] = lang .. ': ' .. k end end
+        for name, def in pairs(ET.byName) do
+            local cat = def.category
+            if cat == 'Enemigos' or cat == 'Jefes' or cat == 'Trampas' or name == 'bossglass' or name == 'crabmashup' then
+                if not DS.text({ what = name, part = 'spike' }) then bad[#bad + 1] = lang .. ': sin nombre ' .. name end
+            end
+        end
+        pa.lastHit = DS.make('pufferfish', 'projectile')
+        local t1 = DB.text(DC.of(pa, nil, {}, {})) or ''
+        said[#said + 1] = t1
+        if not (t1:find(L('part.projectile'), 1, true) and t1:find(L('enemy.pufferfish'), 1, true)) then bad[#bad + 1] = lang .. ': «' .. t1 .. '»' end
+        pa.lastHit = DS.make('spikes')
+        if DB.text(DC.of(pa, nil, {}, {})) ~= L('death.spikes') then bad[#bad + 1] = lang .. ': pinchos' end
+        pa.lastHit = DS.make('danger')
+        if DB.text(DC.of(pa, nil, {}, {})) ~= L('death.lava') then bad[#bad + 1] = lang .. ': lava' end
+        pa.lastHit = DS.make('gummy', 'body')
+        local t3 = DB.text(DC.of(pa, nil, {}, {})) or ''
+        if t3 ~= L('death.enemy', { name = L('enemy.gummy') }) then bad[#bad + 1] = lang .. ': cuerpo «' .. t3 .. '»' end
+    end
+    pa.lastHit = nil
+    local old = DC.of(pa, nil, {}, {})
+    L.set(lang0)
+    check('fuente_textos', #bad == 0 and old and old.kind == 'hit',
+        ('%s · sin fuente: %s · %s'):format(table.concat(said, ' / '), tostring(old and old.kind), #bad == 0 and 'todo traducido' or table.concat(bad, ', ')))
+end
+
 function cases.puffer_cycle()
     local level, es = pond()
     local f = es[1]
@@ -4680,7 +4721,7 @@ local function junglaShot()
 end
 
 function love.load()
-    for _, n in ipairs({ 'fuente_base', 'fuente_contacto', 'fuente_partes', 'fuente_entorno', 'inicio_fases', 'onoff_head', 'onoff_pound', 'hidden_up', 'hidden_drop', 'hidden_side', 'hidden_vis',
+    for _, n in ipairs({ 'fuente_base', 'fuente_contacto', 'fuente_partes', 'fuente_entorno', 'fuente_textos', 'inicio_fases', 'onoff_head', 'onoff_pound', 'hidden_up', 'hidden_drop', 'hidden_side', 'hidden_vis',
                          'helmet_jump', 'helmet_ride', 'helmet_gp', 'helmet_side', 'stomp_fast',
                          'puffer_through', 'puffer_concave', 'puffer_cycle', 'puffer_dry', 'flyer_anim', 'vuelo_libre', 'boxed_in',
                          'bloque_roto', 'activador', 'tramp_avanza', 'tramp_pinchos', 'ping_icono',

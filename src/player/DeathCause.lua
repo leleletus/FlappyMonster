@@ -26,8 +26,20 @@ local function boxOf(e)
     return { x = (e.x or 0) - w / 2, y = (e.y or 0) - h / 2, w = w, h = h }
 end
 
+-- (las causas sin entidad: su frase `death.<kind>`)
+local CAUSE_KIND = { drown = 'drown', time = 'time', fall = 'fall', crush = 'crush', explosion = 'explosion',
+                     spikes = 'spikes', danger = 'lava' }
+
 function DC.of(pa, level, entities, flags)
     flags = flags or {}
+    -- LA FUENTE del último golpe (0.5.205, src/player/DamageSource.lua): lo que de verdad lo mató, sin adivinar
+    local src = pa.lastHit
+    if src and src.what then
+        if CAUSE_KIND[src.what] then return { kind = CAUSE_KIND[src.what] } end
+        local text = require('src/player/DamageSource').text(src)
+        if text then return { kind = 'enemy', name = text } end
+    end
+    -- (sin fuente — algo que aún no la pasa —: se mira alrededor, como antes)
     if flags.drown or pa.drownDead then return { kind = 'drown' } end
     if flags.force then return { kind = 'time' } end
     local T = TILE_PX
