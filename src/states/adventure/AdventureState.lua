@@ -487,7 +487,8 @@ end
 function AdventureState:retryArgs()
     return { level = self.levelPath, returnTo = self.returnTo, onFinish = self.onFinish, difficulty = self.level.difficulty,
              shards = self.shardArgs, outro = self.outroArgs, taken = self.takenArg, rescued = self.rescuedArg,
-             eventCheckpoint = self.level.eventCheckpointNow }      -- (Mega Mashup: se reintenta en el cangrejo en que estabas)
+             eventCheckpoint = self.level.eventCheckpointNow,     -- (Mega Mashup: se reintenta en el cangrejo en que estabas)
+             fromEditor = (self.enterArgs or {}).fromEditor }
 end
 
 -- REINTENTAR desde la pausa (el usuario, 2026-11-02): el nivel otra vez desde el principio, con los mismos argumentos.

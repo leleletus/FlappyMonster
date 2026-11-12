@@ -498,7 +498,7 @@ local function startPlay(fromCursor)
     E.model.playerStart = start
     if not E.gameReady then G.load(E.gameArgs or {}); E.gameReady = true end
     if G.resize then G.resize(love.graphics.getDimensions()) end
-    gStateMachine:change('adventure', { level = PLAYTEST })
+    gStateMachine:change('adventure', { level = PLAYTEST, fromEditor = true })   -- (sin la tarjeta de presentación)
     E.mode = 'play'
 end
 

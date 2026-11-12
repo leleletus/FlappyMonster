@@ -49,7 +49,14 @@ function OnlineAdventureState:_onGameInit(data)
     -- presentación (src/ui/IntroCard.lua) sale mientras se espera y su fase; quien entra con la partida ya en marcha (o
     -- pasada la tarjeta) no la ve
     self.startTicks = tonumber(data.start)
+    -- (un round_start que llegó antes que nosotros: el de ESTA partida si es posterior a su game_init)
+    local pend = NC.pendingRoundStart
+    if not self.startTicks and type(pend) == 'table' and tonumber(pend.start) and tonumber(pend.start) > (tonumber(data.tick) or 0) then
+        self.startTicks = tonumber(pend.start)
+    end
+    NC.pendingRoundStart = nil
     self.waitingStart = self.startTicks == nil
+    self.initTick = tonumber(data.tick) or 0
     local cdTicks = math.floor(StartCountdown.TIME / TICK_DT + 0.5)
     local seeCard = not data.late and (self.waitingStart or (tonumber(data.tick) or 0) < self.startTicks - cdTicks)
     local path = self.currentRoom and self.currentRoom.level
@@ -89,8 +96,20 @@ end
 
 -- El servidor ya tiene a todos (o se cansó de esperar): el tick en que se empieza a jugar
 function OnlineAdventureState:_onRoundStart(data)
-    if type(data) ~= 'table' or not tonumber(data.start) then return end
+    if type(data) ~= 'table' or not tonumber(data.start) or not self.waitingStart then return end
+    if NC.pendingRoundStart == data then NC.pendingRoundStart = nil end
     self.startTicks, self.waitingStart = tonumber(data.start), false
+end
+
+-- Mientras se espera (cada fotograma): un round_start guardado que no nos llegó como evento; y si el reloj del
+-- servidor pasa del límite de la espera sin aviso, se deja de esperar (nunca se queda congelado para siempre)
+function OnlineAdventureState:_checkRoundStart()
+    if not self.waitingStart then return end
+    if NC.pendingRoundStart then return self:_onRoundStart(NC.pendingRoundStart) end
+    local clock = self.snapBuf and self.snapBuf.clock
+    if clock and clock - (self.initTick or 0) > (20 + StartCountdown.total(true) + 1) / TICK_DT then
+        self.waitingStart, self.startTicks = false, clock
+    end
 end
 
 -- ── Snapshots ─────────────────────────────────────────────────────────────────

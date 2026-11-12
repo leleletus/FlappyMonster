@@ -154,7 +154,7 @@ function Shell.play(levelData)
     love.filesystem.write(PLAYTEST, json.encode(levelData))
     if not Shell.gameReady then G.load(Shell.gameArgs or {}); Shell.gameReady = true end
     if G.resize then G.resize(love.graphics.getDimensions()) end
-    gStateMachine:change('adventure', { level = PLAYTEST })
+    gStateMachine:change('adventure', { level = PLAYTEST, fromEditor = true })   -- (sin la tarjeta de presentación)
     Shell.mode = 'play'
 end
 function Shell.stopPlay()

@@ -35,7 +35,9 @@
 -- hace esos segundos tarde (la tarjeta del cliente espera viva y sale «Esperando jugadores»), con NOLOAD=1 nunca (se
 -- empieza 8 s después del primero) y con QUITLOAD=1 se desconecta antes de cargar (se empieza enseguida). Siempre:
 -- tras empezar, la tarjeta dura CARD_TIME por el reloj del servidor y luego la cuenta atrás (checks espera_carga,
--- tarjeta_online)
+-- tarjeta_online). LEAVELOAD=1: el bot SALE de la sala antes de cargar, sin desconectarse (se empieza enseguida).
+-- DROPSTART=1: el cliente pierde el aviso round_start (llega antes de que el estado escuche): tiene que empezar igual
+-- (NC.pendingRoundStart). Mientras se espera, un espectador sí puede abrir su menú (`espectador_libre`)
 io.stdout:setvbuf("no")
 love.filesystem.setSymlinksEnabled(true)
 lovesize = require 'libs/lovesize'
@@ -80,6 +82,10 @@ function love.load()
             bot.roomId = d.id end        -- (el bot entra cuando haya iniciado sesión)
     end)
     NC:connect('localhost', 22122, 'Prueba')     -- (nunca el servidor real)
+    if os.getenv('DROPSTART') then                 -- (el aviso round_start no llega al estado: se pierde por el camino)
+        local fire = NC._fire
+        NC._fire = function(self, ev, data) if ev == 'round_start' then return end return fire(self, ev, data) end
+    end
     if os.getenv('LAG') or os.getenv('LOSS') then
         local lag, loss = (tonumber(os.getenv('LAG')) or 0) / 1000, (tonumber(os.getenv('LOSS')) or 0) / 100
         local rng = love.math.newRandomGenerator(5)
@@ -103,6 +109,7 @@ function love.load()
     bot.c:on('game_init', function()
         bot.inGame = true
         if os.getenv('QUITLOAD') then bot.quitAt = t + 1
+        elseif os.getenv('LEAVELOAD') then bot.leaveAt = t + 1
         elseif not os.getenv('NOLOAD') then bot.loadAt = t + (tonumber(os.getenv('DELAYLOAD')) or 0) end
     end)
     bot.c:on('s', function(d) if d.a then bot.ack = d.a end end)
@@ -138,6 +145,7 @@ function love.update(dt)
         bot.c:send('set_ready', { ready = true }); NC:send('set_ready', { ready = true }); bot.startAt = t + 0.6 end
     if bot.startAt and t > bot.startAt then bot.startAt = nil; NC:send('start_game', {}) end
     if bot.loadAt and t >= bot.loadAt then bot.loadAt = nil; bot.c:send('level_loaded', {}) end
+    if bot.leaveAt and t >= bot.leaveAt then bot.leaveAt = nil; bot.gone = true; bot.c:send('leave_room', {}) end
     if bot.quitAt and t >= bot.quitAt then bot.quitAt = nil; bot.gone = true; bot.c:disconnectNow() end
     if bot.inGame and not bot.gone then
         bot.acc = bot.acc + dt
@@ -197,6 +205,12 @@ function love.update(dt)
     if st and st.localPaInit then
         intro = intro or { gi = t }
         if st.startTicks and not intro.rs then intro.rs = t end
+        if st.waitingStart and st.ownData and intro.specFree == nil then     -- (un espectador, mientras se espera)
+            local was = st.ownData.isSpectator
+            st.ownData.isSpectator = true
+            intro.specFree = not st:_startLocked()
+            st.ownData.isSpectator = was
+        end
         if st._introWaiting then intro.wait = math.max(intro.wait or 0, st:_introWaiting() or 0) end
         local showing = st._cardShowing and st:_cardShowing()
         if showing and not intro.rs then intro.cardWait = true end
@@ -241,7 +255,7 @@ function love.update(dt)
             if os.getenv('DELAYLOAD') then want = tonumber(os.getenv('DELAYLOAD')); okWait = gap >= want - 0.3 and gap < want + 1.2
                 and intro.cardWait and (intro.wait or 0) > (want > SC.CARD_TIME + 1 and 0.5 or -1)
             elseif os.getenv('NOLOAD') then want = 8; okWait = gap >= 7.5 and gap < 9.2
-            elseif os.getenv('QUITLOAD') then want = 1; okWait = gap >= 0.7 and gap < 2.2
+            elseif os.getenv('QUITLOAD') or os.getenv('LEAVELOAD') then want = 1; okWait = gap >= 0.7 and gap < 2.2
             else want = 0; okWait = gap >= 0 and gap < 1.0 end
             print(('%s espera_carga: game_init → empieza %.2f s (se esperaba ~%s); tarjeta esperando=%s; «esperando» %.1f s'):format(
                 okWait and 'OK   ' or 'FALLA', gap, tostring(want), tostring(intro and intro.cardWait), intro and intro.wait or 0))
@@ -250,6 +264,10 @@ function love.update(dt)
             local okCard = math.abs(cardLen - SC.CARD_TIME) < 0.45
             print(('%s tarjeta_online: tras empezar, la tarjeta dura %.2f s (CARD_TIME %.1f)'):format(okCard and 'OK   ' or 'FALLA', cardLen, SC.CARD_TIME))
             if not okCard then print('Error: la tarjeta online no sigue el reloj del servidor') end
+            if intro and intro.specFree ~= nil then
+                print(('%s espectador_libre: mientras se espera, un espectador puede abrir su menú=%s'):format(intro.specFree and 'OK   ' or 'FALLA', tostring(intro.specFree)))
+                if not intro.specFree then print('Error: un espectador no puede abrir su menú mientras se espera') end
+            end
         end
         print(('cuenta atrás: %s (desde %.1f s), el jugador se movió %.1f px'):format(tostring(startCd ~= nil),
               startCd and startCd.max or -1, startCd and startCd.moved or -1))

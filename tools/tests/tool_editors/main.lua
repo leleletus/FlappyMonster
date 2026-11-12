@@ -176,6 +176,10 @@ runtimeFlow = function(dt)
                                   { type = 'bomb', col = 16, row = 11, props = { patrol = { left = 11, right = 21 }, trigger = 0 } },
                                   { type = 'trampoline', col = 7, row = 11 } } })
         RT.start = frame
+        -- (probar desde el editor: sin la tarjeta de presentación, solo la cuenta atrás — docs/design/level-intro-card.md —)
+        local pst = gStateMachine:_top()
+        check('sin_tarjeta', pst and pst.card == nil and not pst.introCard,
+              ('probar desde el editor: tarjeta=%s'):format(tostring(pst and pst.card ~= nil)))
     elseif RT.start and frame > RT.start + 2 and not (gStateMachine and (gStateMachine:_top() or {}).startCd) then
         -- (se cuenta tras la cuenta atrás del principio del nivel, StartCountdown: durante ella todo está quieto)
         RT.t = RT.t + dt

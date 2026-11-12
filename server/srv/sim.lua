@@ -469,7 +469,8 @@ function S.startWaitOver(room)
     local sim = room.sim
     local all = true
     for pid in pairs(sim.waitFor) do
-        if not sim.loaded[pid] and S.findClientById(pid) then all = false; break end
+        -- (sigue en la partida: conectado y con su jugador — salir o ser expulsado se lo quita —)
+        if not sim.loaded[pid] and S.findClientById(pid) and sim.playerSims[pid] then all = false; break end
     end
     if all then return true end
     if sim.firstLoadedTick and (sim.tick - sim.firstLoadedTick) * TICK_DT >= LOAD_WAIT then return true end

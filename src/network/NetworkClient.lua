@@ -132,6 +132,12 @@ function NC:_open(host, port, name)
         NC.pendingGameInit = data
         NC:_fire("game_init", data)
     end)
+    -- (el principio de la partida: se GUARDA como game_init — puede llegar antes de que el estado escuche —; el estado lo
+    -- recoge mientras espera)
+    self.client:on("round_start", function(data)
+        NC.pendingRoundStart = data
+        NC:_fire("round_start", data)
+    end)
 
     -- Dispatchers estáticos para el resto de eventos del juego
     local events = {
@@ -139,7 +145,6 @@ function NC:_open(host, port, name)
         "room_left", "kicked", "banned", "room_closed", "reported", "records",
         "room_error", "level_catalog", "s", "ev",
         "rhythm_pose",                              -- (la pose de otro jugador en el duelo de ritmo)
-        "round_start",                              -- (el servidor empieza la tarjeta + cuenta atrás: StartCountdown)
     }
     for _, evt in ipairs(events) do
         local e = evt
@@ -170,6 +175,7 @@ function NC:disconnect()
     self._connectTimer = nil
     self._resolving    = nil   -- (si el DNS responde luego, se ignora)
     self.pendingGameInit = nil
+    self.pendingRoundStart = nil
     -- Avisar al servidor para que libere el slot al instante (no esperar timeout)
     -- y cerrar el socket
     dropClient(c)

@@ -34,7 +34,7 @@ menu background demo has none.
   starts on entering the state, so it starts with the card.
 - **Server** (`server/srv/sim.lua`): `sim.startTicks` is nil while it WAITS: every player of the room at the start
   (`sim.waitFor`) must send `level_loaded` (the client does it at the end of `_onGameInit`; `server/srv/lobby.lua`),
-  unless they disconnect; or the wait ends 8 s after the first `level_loaded` or 20 s after `game_init`
+  unless they disconnect or leave / are kicked (no `playerSims` entry); or the wait ends 8 s after the first `level_loaded` or 20 s after `game_init`
   (`S.startWaitOver`). Then `startTicks = tick + StartCountdown.ticks(TICK_DT, true)` and `round_start { start }` goes
   to the room. While waiting and until `startTicks` the inputs are drained and acknowledged (`drainFrozenInputs`) but
   nobody steps, the entity history is still recorded, and nothing else runs. Floods use `(tick - startTicks) *
@@ -44,7 +44,10 @@ menu background demo has none.
   phase); while > 0 the level visuals, level clock and floods don't advance. `_cardShowing()` draws the card instead of
   the level; its animation time is local (`cardT0`), its LENGTH is the server clock. `_introWaiting()` = seconds of
   wait past the card's normal end. Late joiners and players who arrive after the card phase get no card. The
-  pause / leave overlay can't be opened during the card and the countdown. The prediction numbers and
+  pause / leave overlay can't be opened during the card and the countdown (a spectator's overlay can). `round_start`
+  is kept in `NC.pendingRoundStart` (like `game_init`) and checked every frame while waiting (`_checkRoundStart`), so
+  one that arrives before the state listens is not lost; if the server clock passes the longest possible wait without
+  it, the client stops waiting anyway. Editor playtests pass `fromEditor` (kept on retry): no card. The prediction numbers and
   sends every input, but `Predictor:tick(bits, frozen)` doesn't move the player for inputs the server will still
   process frozen (`_startFrozenAhead`: clock + ping < startTicks, like the floods estimate); those history entries
   are skipped on replay too. Protocol v64 (countdown), v117 (wait + card).

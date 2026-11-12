@@ -191,6 +191,7 @@ end
 
 -- (sin pausa durante la tarjeta ni la cuenta atrás: el usuario)
 function OnlineAdventureState:_startLocked()
+    if self.ownData and self.ownData.isSpectator then return false end      -- (un espectador puede abrir su menú y salir)
     local ph = StartCountdown.phase(self:_startRemaining())
     return ph == 'card' or ph == 'count'
 end
@@ -572,6 +573,7 @@ function OnlineAdventureState:update(dt)
     self.sceneCanvas = require('src/fx/SceneCanvas').get()   -- (el mismo; otro si la pantalla cambió)
 
     -- ── Cuenta atrás del principio: mientras dura, todo quieto (src/world/systems/StartCountdown.lua) ──
+    self:_checkRoundStart()
     local startRem = self:_startRemaining()
     local frozen = startRem ~= nil and startRem > 0
     if startRem and startRem > -StartCountdown.GO_TIME and self.snapBuf and self.snapBuf.clock and not self.showGameOver then
