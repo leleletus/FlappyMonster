@@ -275,7 +275,7 @@ function love.update(dt)
         local function steps(n) for _ = 1, n do top():update(1 / 60) end end
         for _, f in ipairs(list) do
             gStateMachine:change('adventure', { level = 'assets/levels/' .. f, returnTo = 'free_play', atBoss = true, endOnBoss = true })
-            steps(300)
+            steps(300 + math.floor(require('src/world/systems/StartCountdown').CARD_TIME * 60))                                -- (+ la tarjeta de presentación)
             local z = top().level.bossZones[1]
             if not (z and (z.state == 'intro' or z.state == 'fight')) then bad[#bad + 1] = f .. '=' .. tostring(z and z.state) end
         end
@@ -286,12 +286,12 @@ function love.update(dt)
         BossRush.levels = function() return { list[1], list[2] } end
         BossRush.start(nil)
         local first = top().levelPath
-        steps(200)                                                 -- (la cuenta atrás del principio)
+        steps(200 + math.floor(require('src/world/systems/StartCountdown').CARD_TIME * 60))   -- (la tarjeta y la cuenta atrás del principio)
         for _, zz in ipairs(top().level.bossZones) do zz.state = 'cleared' end
         steps(240)                                                 -- (la celebración, y al siguiente)
         local second = top().levelPath
         local chained = second ~= first and top().rush and top().rush.i == 2
-        steps(200)
+        steps(200 + math.floor(require('src/world/systems/StartCountdown').CARD_TIME * 60))
         for _, zz in ipairs(top().level.bossZones) do zz.state = 'cleared' end
         steps(240)
         local fp2 = top()
@@ -312,7 +312,7 @@ function love.update(dt)
         local function run(secs)
             gStateMachine:change('adventure', { level = path, returnTo = 'free_play', ghost = true })
             local st0 = top()
-            steps(200 + math.floor(secs * 60))                       -- (la cuenta atrás y la carrera)
+            steps(200 + math.floor(require('src/world/systems/StartCountdown').CARD_TIME * 60) + math.floor(secs * 60))   -- (la tarjeta, la cuenta atrás y la carrera)
             st0:win()
             return st0
         end
