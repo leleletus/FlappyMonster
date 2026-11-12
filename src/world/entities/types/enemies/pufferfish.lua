@@ -73,7 +73,7 @@ function Puffer:getHazardBoxes()
     local h = (BODY_Y1 - BODY_Y0) * S * HURT_K
     local cx = ((BODY_X0 + BODY_X1) / 2 - 8) * S * self.facing
     local cy = ((BODY_Y0 + BODY_Y1) / 2 - 8) * S
-    return { { x = self.x + cx - w / 2, y = self.y + cy - h / 2, w = w, h = h, effect = 'hurt' } }
+    return { { x = self.x + cx - w / 2, y = self.y + cy - h / 2, w = w, h = h, effect = 'hurt', part = 'spike' } }
 end
 
 -- El jugador más cercano que esté en el agua y a su alcance

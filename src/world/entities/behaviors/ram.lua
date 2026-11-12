@@ -145,14 +145,14 @@ return {
         local dir = e.facing ~= 0 and e.facing or 1
         local w, h = e.outerW * 0.7 + 6, e.outerH
         local x = (dir > 0) and (e.x + e.outerW / 2 + 6 - w) or (e.x - e.outerW / 2 - 6)
-        return { { x = x, y = e.y - h / 2, w = w, h = h, effect = 'launch', vx = dir * cfg.push, vy = -cfg.lift,
+        return { { x = x, y = e.y - h / 2, w = w, h = h, effect = 'launch', part = 'dash', vx = dir * cfg.push, vy = -cfg.lift,
                    jumps = 1, stompable = true } }
     end,
     -- Interactions.run, tras lanzar a un jugador (en un jugador y en el servidor): rebota hacia atrás y se ríe
     onLaunch = function(e, cfg, pa)
         if e.state ~= 'charge' then return end
         local dir = e.facing ~= 0 and e.facing or 1
-        if (cfg.damage or 0) > 0 and pa.hurt and not pa.peaceful then pa:hurt(cfg.damage) end
+        if (cfg.damage or 0) > 0 and pa.hurt and not pa.peaceful then pa:hurt(cfg.damage, require('src/player/DamageSource').of(e, 'dash')) end
         e.vx, e.vy, e.onGround = -dir * RECOIL_VX, RECOIL_VY, false
         e.cd_ram = cfg.cooldown
         e:enter('recoil')

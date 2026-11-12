@@ -278,12 +278,13 @@ end
 -- (Sus súbditos de reserva: Entity:minions / Entity:freeMinion, genéricos)
 -- (el jugador vivo más cercano: Entity:nearestPlayer, en la base)
 -- Golpe del jefe a un jugador: hit = { vida, vx, vy, s sin control, s aturdido }, dir = ±1.
--- false si no le da (invulnerable, muriendo). El daño queda atribuido (Boss.withPlayer).
-function Boss.strike(pa, hit, dir)
+-- false si no le da (invulnerable, muriendo). El daño queda atribuido (Boss.withPlayer). `src` = la fuente del golpe
+-- (src/player/DamageSource.lua: el jefe y la parte — su ataque —): el aviso de la muerte la nombra.
+function Boss.strike(pa, hit, dir, src)
     if pa.dying or pa.alive == false or pa:isInvulnerable() then return false end
     Boss.withPlayer(pa, function()
         -- (hit[1] = 0: solo empuja, sin daño ni invulnerabilidad)
-        if hit[1] > 0 and pa:hurt(hit[1]) then return end
+        if hit[1] > 0 and pa:hurt(hit[1], src) then return end
         if pa.dying then return end
         pa.vx, pa.vy = dir * hit[2], hit[3]
         pa.onGround, pa.crouching = false, false

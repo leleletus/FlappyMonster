@@ -540,6 +540,7 @@ end
 
 function Crabby:getHazardBoxes()
     local s = self:getSpikeHitbox()
+    if s then s.part = 'spike' end                    -- (la fuente del daño: src/player/DamageSource.lua)
     return s and { s } or nil
 end
 

@@ -73,7 +73,8 @@ function Ice:getHazardBoxes()
     if self.cover == 'snow' then return nil end
     local b = self:getSpikeHitbox()
     if not b then return nil end
-    if self.cover == 'icicle' then b.effect, b.dmg = 'hurt', ICICLE_DMG end
+    b.part = 'spike'
+    if self.cover == 'icicle' then b.effect, b.dmg, b.part = 'hurt', ICICLE_DMG, 'ice' end
     return { b }
 end
 

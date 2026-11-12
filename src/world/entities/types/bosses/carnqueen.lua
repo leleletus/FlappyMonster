@@ -615,7 +615,7 @@ function Q:updateBoss(dt, level)
             local b = pa:getOuterBounds()
             if not pa.dying and pa.alive ~= false and not pa.gulped and not pa:isInvulnerable() and b.x + b.w > self.vx0 and b.x < self.vx1
                and b.y + b.h > self.vy0 - VINE_H and b.y < self.vy0 + 4 then
-                Boss.strike(pa, HIT_VINE, (pa.x >= self.x) and 1 or -1)
+                Boss.strike(pa, HIT_VINE, (pa.x >= self.x) and 1 or -1, require('src/player/DamageSource').of(self, 'bite'))
             end
         end
         if t >= VINE_T[ph] then

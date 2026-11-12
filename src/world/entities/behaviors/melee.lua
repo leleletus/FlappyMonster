@@ -42,6 +42,6 @@ return {
         if e.state ~= 'attack' or t < cfg.windup or t >= cfg.windup + cfg.active then return nil end
         local w, h = cfg.reach * T, e.outerH * 0.8
         local x = e.facing > 0 and (e.x + e.outerW / 2) or (e.x - e.outerW / 2 - w)
-        return { { x = x, y = e.y - h / 2, w = w, h = h, effect = 'hurt', dmg = cfg.damage } }
+        return { { x = x, y = e.y - h / 2, w = w, h = h, effect = 'hurt', dmg = cfg.damage, part = cfg.part or 'bite' } }
     end,
 }

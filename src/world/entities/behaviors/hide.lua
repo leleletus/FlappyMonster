@@ -48,7 +48,7 @@ return {
     hazards = function(e, cfg)
         if cfg.cover == 'none' or phase(e, cfg) ~= 'hidden' then return nil end
         local b = e:getOuterBounds()
-        return { { x = b.x + b.w * 0.2, y = b.y, w = b.w * 0.6, h = b.h, effect = cfg.cover } }
+        return { { x = b.x + b.w * 0.2, y = b.y, w = b.w * 0.6, h = b.h, effect = cfg.cover, part = 'spike' } }
     end,
     anim = function(e, cfg, set, map)
         local ph, t = phase(e, cfg)

@@ -311,7 +311,7 @@ function Ship:getHazardBoxes()
     box.x, box.w = self.x - w / 2, w
     box.y = self.y + self.sprH * 0.1
     box.h = self.sprH * 0.4 + SPIKE_LEN * self.spike
-    box.effect = 'kill'
+    box.effect, box.part = 'kill', 'spike'
     return b
 end
 

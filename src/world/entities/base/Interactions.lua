@@ -138,7 +138,7 @@ function Interactions.defaultCheck(pa, e)
                 local fromAbove = hb.stompable and (pa.vy > 0 or prevDy(pa) > 0) and pob.y + pob.h - prevDy(pa) <= hb.y + 8
                 if not fromAbove then return 'launch', hb.vx or 0, hb.vy or 0, hb.jumps end
             else
-                return hb.effect or 'kill', hb.time or hb.dmg, 'hazard'
+                return hb.effect or 'kill', hb.time or hb.dmg, 'hazard', hb       -- (hb: su `part`, la fuente del daño)
             end
         end
     end
@@ -261,14 +261,22 @@ function Interactions.run(pa, entities, cb, rewind)
         else
             result, a, b, c = Interactions.check(pa, e)
         end
+        -- (la FUENTE del daño — src/player/DamageSource.lua —: la parte de la caja de peligro que tocó — su `part`, o la
+        --  del tipo, `hazardPart` — o el cuerpo de la entidad)
+        local src
+        if result == 'kill' or result == 'hurt' then
+            local DS = require 'src/player/DamageSource'
+            if b == 'hazard' then src = DS.of(e, (type(c) == 'table' and c.part) or (e.def and e.def.hazardPart) or 'hazard')
+            else src = DS.of(e, 'body') end
+        end
         if result == 'kill' then
             local died
-            if b == 'hazard' then died = pa:hazardHit() else died = pa:die() ~= false end
+            if b == 'hazard' then died = pa:hazardHit(src) else died = pa:die(nil, nil, src) ~= false end
             if died then Noise.src(nil); return end                   -- (invulnerable al reaparecer: sigue)
         elseif result == 'hurt' then
             -- (e:onHurtPlayer: solo si de verdad le quitó vida; p. ej. el pinchazo del pez globo)
             local hp0 = pa.hp
-            local killed = pa:hurt(a)                       -- (a = vida que quita: hb.dmg; nil = 1)
+            local killed = pa:hurt(a, src)                  -- (a = vida que quita: hb.dmg; nil = 1)
             if pa.hp < hp0 and e.onHurtPlayer then e:onHurtPlayer(pa) end
             if killed then Noise.src(nil); return end
         elseif result == 'stomp' then

@@ -383,7 +383,7 @@ function Mega:getHazardBoxes()
     box.x, box.w = self.x - SPIKE_HW / 2, SPIKE_HW
     box.y = self.y + self.sprH * 0.1                 -- media cabeza + base del pincho
     box.h = self.sprH * 0.4 + SPIKE_HH
-    box.effect = 'kill'
+    box.effect, box.part = 'kill', 'spike'
     return b
 end
 

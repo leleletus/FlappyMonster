@@ -2098,6 +2098,69 @@ function cases.flyer_anim()
             tostring(frames[1] and frames[2]), tostring(groundIdle)))
 end
 
+-- FUENTE AL TOCAR: el pincho del pez globo hinchado, una caja de peligro con su parte, una sin parte (la del tipo o
+-- 'hazard'), el cuerpo de un Gummy
+function cases.fuente_contacto()
+    local level, es = pond()
+    local f = es[1]
+    local pa = PlayerAdventure:new(f.x + 60, f.y)
+    level.players = { pa }
+    clear()
+    for _ = 1, 60 * 6 do
+        pa.x, pa.y, pa.vx, pa.vy = f.x + (f.state == 'inflated' and 30 or 60), f.y, 0, 0
+        pa:update(1 / 60, level); f:update(1 / 60, level)
+        Interactions.run(pa, { f }, {})
+        if pa.lastHit then break end
+    end
+    local puf = pa.lastHit and pa.lastHit.what == 'pufferfish' and pa.lastHit.part == 'spike'
+    local lv2 = room(10, 8, {})
+    local p2 = playerAt(lv2, 5, 7)
+    local g = Entities.create(require('src/world/entities/base/EntityTypes').normalize({ type = 'gummy', col = 8, row = 7 }))
+    g.getHazardBoxes = function() local b = p2:getOuterBounds(); return { { x = b.x, y = b.y, w = b.w, h = b.h, effect = 'hurt', part = 'projectile' } } end
+    p2.invT = 0; Interactions.run(p2, { g }, {})
+    local withPart = p2.lastHit and p2.lastHit.what == 'gummy' and p2.lastHit.part == 'projectile'
+    g.getHazardBoxes = function() local b = p2:getOuterBounds(); return { { x = b.x, y = b.y, w = b.w, h = b.h, effect = 'hurt' } } end
+    p2.invT, p2.hp = 0, p2.hpMax; Interactions.run(p2, { g }, {})
+    local noPart = p2.lastHit and p2.lastHit.part == ((g.def and g.def.hazardPart) or 'hazard')
+    g.getHazardBoxes = function() return nil end
+    p2.invT, p2.hp = 0, p2.hpMax
+    g.x, g.y = p2.x + 10, p2.y
+    for _ = 1, 30 do if p2.lastHit and p2.lastHit.part == 'body' then break end; p2.invT = 0; g.x, g.y = p2.x + 10, p2.y; Interactions.run(p2, { g }, {}) end
+    local body = p2.lastHit and p2.lastHit.what == 'gummy' and p2.lastHit.part == 'body'
+    local function show(h) return h and (tostring(h.what) .. '/' .. tostring(h.part)) or 'nil' end
+    check('fuente_contacto', puf and withPart and noPart and body,
+        ('pez globo hinchado=%s · caja con parte=%s · sin parte=%s · cuerpo del Gummy=%s'):format(show(pa.lastHit), tostring(withPart), tostring(noPart), show(p2.lastHit)))
+end
+
+-- TODO lo que hace daño NOMBRA su parte: cada archivo de entidad o comportamiento con cajas de peligro (getHazardBoxes /
+-- hazards) dice `part =` o `hazardPart`; cada golpe de jefe (Boss.strike) pasa su fuente
+function cases.fuente_partes()
+    local bad = {}
+    local function walk(dir)
+        for _, n in ipairs(love.filesystem.getDirectoryItems(dir)) do
+            local p = dir .. '/' .. n
+            local info = love.filesystem.getInfo(p)
+            if info and info.type == 'directory' then walk(p)
+            elseif n:match('%.lua$') then
+                local src = love.filesystem.read(p) or ''
+                local makes = src:find(':getHazardBoxes%(%)%s*\n') or src:find('function [%w_]+:getHazardBoxes%(') or src:find('hazards%s*=%s*function')
+                if makes and not src:find('return nil end', 1, true) == nil then end
+                if makes and not (src:find('part%s*=') or src:find('hazardPart')) then bad[#bad + 1] = p .. ' (cajas sin parte)' end
+                for line in src:gmatch('[^\n]+') do
+                    if line:find('Boss%.strike%(') and not line:find('function Boss%.strike') and not line:find('DamageSource') and not line:find('src%)') and not line:find(', *self:src') then
+                        bad[#bad + 1] = p .. ' (Boss.strike sin fuente)'
+                    end
+                end
+            end
+        end
+    end
+    walk('src/world/entities')
+    -- (la base sin cajas — Entity:getHazardBoxes devuelve nil — no cuenta)
+    local keep = {}
+    for _, b in ipairs(bad) do if not b:find('base/Entity.lua (cajas', 1, true) and not b:find('crabbytramp.lua (cajas', 1, true) then keep[#keep + 1] = b end end
+    check('fuente_partes', #keep == 0, #keep == 0 and 'todas las cajas de peligro y los golpes de jefe nombran su fuente' or table.concat(keep, ' · '))
+end
+
 function cases.puffer_cycle()
     local level, es = pond()
     local f = es[1]
@@ -4548,7 +4611,7 @@ local function junglaShot()
 end
 
 function love.load()
-    for _, n in ipairs({ 'fuente_base', 'inicio_fases', 'onoff_head', 'onoff_pound', 'hidden_up', 'hidden_drop', 'hidden_side', 'hidden_vis',
+    for _, n in ipairs({ 'fuente_base', 'fuente_contacto', 'fuente_partes', 'inicio_fases', 'onoff_head', 'onoff_pound', 'hidden_up', 'hidden_drop', 'hidden_side', 'hidden_vis',
                          'helmet_jump', 'helmet_ride', 'helmet_gp', 'helmet_side', 'stomp_fast',
                          'puffer_through', 'puffer_concave', 'puffer_cycle', 'puffer_dry', 'flyer_anim', 'vuelo_libre', 'boxed_in',
                          'bloque_roto', 'activador', 'tramp_avanza', 'tramp_pinchos', 'ping_icono',

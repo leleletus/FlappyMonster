@@ -40,7 +40,7 @@ function BossWaves.update(boss, level, dt, cfg)
         else
             local box = BossWaves.box(w, cfg)
             for _, pa in ipairs(level.players or {}) do
-                if not w.hit[pa] and Boss.overlap(pa:getOuterBounds(), box) and Boss.strike(pa, cfg.hit, w.dir) then
+                if not w.hit[pa] and Boss.overlap(pa:getOuterBounds(), box) and Boss.strike(pa, cfg.hit, w.dir, require('src/player/DamageSource').of(boss, 'wave')) then
                     w.hit[pa] = true
                 end
             end

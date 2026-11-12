@@ -1146,7 +1146,7 @@ end
 function MG:getHazardBoxes()
     local out = {}
     for _, w in ipairs(self.waves or {}) do
-        local b = self:waveBox(w); b.effect = 'hurt'; out[#out + 1] = b
+        local b = self:waveBox(w); b.effect, b.part = 'hurt', 'wave'; out[#out + 1] = b
     end
     return out
 end

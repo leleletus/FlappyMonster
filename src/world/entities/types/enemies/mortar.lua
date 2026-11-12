@@ -176,7 +176,7 @@ function Mortar:getHazardBoxes()
         local sc = f.scale or 1
         local s  = FIRE_HIT * sc
         local cy = f.y + (1 - sc) * FIRE_HALF          -- se consume hacia el suelo
-        if s >= 6 then out[#out+1] = { x = f.x - s / 2, y = cy - s / 2, w = s, h = s, effect = effect } end
+        if s >= 6 then out[#out+1] = { x = f.x - s / 2, y = cy - s / 2, w = s, h = s, effect = effect, part = 'fire' } end
     end
     return out
 end

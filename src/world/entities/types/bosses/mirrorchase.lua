@@ -120,7 +120,7 @@ function Chase:hitPlayers(level, hit, dir)
             local o = pa:getOuterBounds()
             if o.x < b.x + b.w and o.x + o.w > b.x and o.y < b.y + b.h and o.y + o.h > b.y then
                 local d = (dir ~= 0) and dir or ((pa.x >= self.x) and 1 or -1)
-                if Boss.strike(pa, hit, d) then any = true end
+                if Boss.strike(pa, hit, d, require('src/player/DamageSource').of(self, 'dash')) then any = true end
             end
         end
     end

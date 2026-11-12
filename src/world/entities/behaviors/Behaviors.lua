@@ -10,7 +10,8 @@
 --         params = { { key='range', kind='number', label='Alcance (casillas)', default=5, min=1, max=20, step=0.5 } },
 --         think  = function(e, cfg, dt, level) … return true end,   -- en 'walk' / 'idle': ¿toma el mando? (e:enter(estado))
 --         update = function(e, cfg, dt, level) … end,               -- cada paso mientras e.state es uno de sus estados
---         hazards = function(e, cfg) return { {x,y,w,h, effect='hurt', dmg=1} } end,    -- (opcional) cajas que dañan
+--         hazards = function(e, cfg) return { {x,y,w,h, effect='hurt', dmg=1, part='bite'} } end,    -- (opcional) cajas que dañan
+--                                                    (part = QUÉ parte hace daño: src/player/DamageSource.lua PARTS)
 --         disabled = function(e, cfg) return true end,       -- (opcional) ¿ahora no se le puede tocar ni pisar?
 --         anim = function(e, cfg, set, map) return 'hide', t end,   -- (opcional) secuencia y tiempo dentro de su estado
 --         crawlOk = true,                                     -- (opcional) vale también para un enemigo que trepa

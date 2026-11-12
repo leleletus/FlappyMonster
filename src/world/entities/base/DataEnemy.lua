@@ -286,7 +286,7 @@ function DataEnemy:getHazardBoxes()
     end
     for _, s in ipairs(self.shots or {}) do
         out = out or {}
-        out[#out + 1] = { x = s.x - s.size / 2, y = s.y - s.size / 2, w = s.size, h = s.size, effect = 'hurt', dmg = s.dmg }
+        out[#out + 1] = { x = s.x - s.size / 2, y = s.y - s.size / 2, w = s.size, h = s.size, effect = 'hurt', dmg = s.dmg, part = 'projectile' }
     end
     return out
 end

@@ -406,10 +406,10 @@ function NC:hurtPlayers(level)
         if not pa.dying and pa.alive ~= false and not pa:isInvulnerable() then
             local ob = pa:getOuterBounds()
             local f = self.facing or -1
-            if claw and overlap(ob, claw) then Boss.strike(pa, T.HIT_CLAW, f)
+            if claw and overlap(ob, claw) then Boss.strike(pa, T.HIT_CLAW, f, require('src/player/DamageSource').of(self, 'claw'))
             elseif touches(ob, cabin) then
-                if self.state == 'cross' then Boss.strike(pa, T.HIT_CROSS, pa.x < self.x and -1 or 1)
-                else Boss.strike(pa, T.HIT_BODY, f) end
+                if self.state == 'cross' then Boss.strike(pa, T.HIT_CROSS, pa.x < self.x and -1 or 1, require('src/player/DamageSource').of(self, 'dash'))
+                else Boss.strike(pa, T.HIT_BODY, f, require('src/player/DamageSource').of(self, 'body')) end
             end
         end
     end

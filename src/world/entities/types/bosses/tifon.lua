@@ -256,7 +256,7 @@ function TF:mouthCatch(level)
     for _, pa in ipairs(level.players or {}) do
         local dx, dy = pa.x - mx, pa.y - my
         if not pa.dying and pa.alive ~= false and dx * dx + dy * dy < SPIT_R * SPIT_R then
-            Boss.strike(pa, HIT_SPIT, (dx >= 0) and 1 or -1)
+            Boss.strike(pa, HIT_SPIT, (dx >= 0) and 1 or -1, require('src/player/DamageSource').of(self, 'projectile'))
             self:enter('cough')
             Sound.play('tifonCough')
             return true
@@ -314,7 +314,7 @@ function TF:strikeHits(level)
                     hit, dir = true, sgn(pa.x - (p.x + q.x) / 2)
                 end
             end
-            if hit then Boss.strike(pa, HIT_BOLT, dir) end
+            if hit then Boss.strike(pa, HIT_BOLT, dir, require('src/player/DamageSource').of(self, 'beam')) end
         end
     end
 end
@@ -355,7 +355,7 @@ function TF:updateHail(level, dt)
                 local b = pa:getOuterBounds()
                 if not stop and not pa.dying and pa.alive ~= false and h.x + HAIL_R > b.x and h.x - HAIL_R < b.x + b.w
                    and h.y + HAIL_R > b.y and h.y - HAIL_R < b.y + b.h then
-                    Boss.strike(pa, HIT_HAIL, sgn(pa.x - h.x))
+                    Boss.strike(pa, HIT_HAIL, sgn(pa.x - h.x), require('src/player/DamageSource').of(self, 'ice'))
                     stop = true
                 end
             end

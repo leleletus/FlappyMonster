@@ -222,7 +222,7 @@ function Cryo:getHazardBoxes()
     local tail, head = self:streamSpan()
     if not tail then return nil end
     local b = self:streamBox(tail, head)
-    b.effect, b.time = 'freeze', self.props.freezeTime or 3
+    b.effect, b.time, b.part = 'freeze', self.props.freezeTime or 3, 'ice'
     return { b }
 end
 

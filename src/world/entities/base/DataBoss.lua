@@ -108,7 +108,7 @@ local function strikeBoxes(self, level)
         for _, hb in ipairs(boxes) do
             if Boss.overlap(b, hb) then
                 local dir = (pa.x >= self.x) and 1 or -1
-                if Boss.strike(pa, { hb.effect == 'kill' and 3 or (hb.dmg or 1), 520, -360, 0.3, 0 }, dir) then self:onHurtPlayer(pa) end
+                if Boss.strike(pa, { hb.effect == 'kill' and 3 or (hb.dmg or 1), 520, -360, 0.3, 0 }, dir, require('src/player/DamageSource').of(self, hb.part or 'hazard')) then self:onHurtPlayer(pa) end
                 break
             end
         end
@@ -167,7 +167,7 @@ function M:updateBoss(dt, level)
         local box = { x = ob.x - 6, y = ob.y + ob.h * 0.3, w = ob.w + 12, h = ob.h * 0.7 }
         for _, pa in ipairs(level.players or {}) do
             if Boss.overlap(pa:getOuterBounds(), box) then
-                if Boss.strike(pa, { c, 460, -300, 0.25, 0 }, (pa.x >= self.x) and 1 or -1) then self.graceT = GRACE end
+                if Boss.strike(pa, { c, 460, -300, 0.25, 0 }, (pa.x >= self.x) and 1 or -1, require('src/player/DamageSource').of(self, 'body')) then self.graceT = GRACE end
             end
         end
     end

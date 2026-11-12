@@ -685,7 +685,7 @@ function CM:tickHazards(dt, level, players)
         local hit = false
         for _, pa in ipairs(players) do
             if math.abs(pa.x - n.x) < 28 and math.abs(pa.y - n.y) < 40 then    -- (0.5.149: era 34 × 46)
-                Boss.strike(pa, { 1, 260, -380, 0.25, 0 }, n.vx >= 0 and 1 or -1); hit = true
+                Boss.strike(pa, { 1, 260, -380, 0.25, 0 }, n.vx >= 0 and 1 or -1, require('src/player/DamageSource').of(self, 'projectile')); hit = true
             end
         end
         if hit or n.t > 4 or level:collisionAt(n.x, n.y) and level:collisionAt(n.x, n.y).collision == 'solid' then
@@ -701,7 +701,7 @@ function CM:tickHazards(dt, level, players)
         local hit = false
         for _, pa in ipairs(players) do
             if c.t >= CM.ICICLE_WARN and math.abs(pa.x - c.x) < 30 and c.y > pa.y - 48 and c.y < pa.y + 48 then
-                Boss.strike(pa, { 1, 200, -300, 0.2, 0 }, (pa.x >= c.x) and 1 or -1); hit = true
+                Boss.strike(pa, { 1, 200, -300, 0.2, 0 }, (pa.x >= c.x) and 1 or -1, require('src/player/DamageSource').of(self, 'ice')); hit = true
             end
         end
         if hit or c.y >= c.floor then

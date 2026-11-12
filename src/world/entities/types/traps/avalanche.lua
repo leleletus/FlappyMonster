@@ -154,7 +154,7 @@ function Aval:getHazardBoxes()
     if not list[1] then return nil end
     local out = {}
     for _, s in ipairs(list) do
-        out[#out + 1] = { x = s[1] + INSET, y = s[2], w = (s[3] - s[1]) - 2 * INSET, h = s[4] - s[2], effect = 'hurt' }
+        out[#out + 1] = { x = s[1] + INSET, y = s[2], w = (s[3] - s[1]) - 2 * INSET, h = s[4] - s[2], effect = 'hurt', part = 'wave' }
     end
     return out
 end

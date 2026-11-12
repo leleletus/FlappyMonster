@@ -93,7 +93,7 @@ function SpikeFall:getHazardBoxes()
     local hx, hy, hw, hh = LevelMod._spikeHitbox(self.x - H / 2, self.y - H / 2, H, 1)   -- 1 = DIR_DOWN
     -- Sin crear tablas cada vez (puede haber cientos de pinchos)
     local box = self._hb
-    if not box then box = {}; self._hb = { box } else box = box[1] end
+    if not box then box = { part = 'spike' }; self._hb = { box } else box = box[1] end   -- (part: src/player/DamageSource.lua)
     box.x, box.y, box.w, box.h = hx, hy, hw, hh
     return self._hb
 end

@@ -949,16 +949,16 @@ end
 function Snow:getHazardBoxes()
     local out = {}
     for _, b in ipairs(self.proj or {}) do
-        out[#out + 1] = { x = b.x - BALL_HIT / 2, y = b.y - BALL_HIT / 2, w = BALL_HIT, h = BALL_HIT, effect = 'hurt' }
+        out[#out + 1] = { x = b.x - BALL_HIT / 2, y = b.y - BALL_HIT / 2, w = BALL_HIT, h = BALL_HIT, effect = 'hurt', part = 'projectile' }
     end
     for _, c in ipairs(self.icicles or {}) do
-        if c.st == IC_FALL then local b = self:icicleBox(c); b.effect = 'hurt'; out[#out + 1] = b end
+        if c.st == IC_FALL then local b = self:icicleBox(c); b.effect, b.part = 'hurt', 'ice'; out[#out + 1] = b end
     end
     if (self.shockT or 99) < SHOCK_LIFE then
         local d = self.shockT * SHOCK_SPD
         for _, s in ipairs(SIDES) do
             local x = self.shockX + s * d
-            out[#out + 1] = { x = x - 22, y = self.shockY - 30, w = 44, h = 30, effect = 'hurt' }
+            out[#out + 1] = { x = x - 22, y = self.shockY - 30, w = 44, h = 30, effect = 'hurt', part = 'shock' }
         end
     end
     return out

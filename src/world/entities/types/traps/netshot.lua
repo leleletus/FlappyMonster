@@ -153,7 +153,7 @@ function Net:netHitPlayers(level, dir)
     local b = self:getOuterBounds()
     for _, pa in ipairs(level.players or {}) do
         if not pa.dying and pa.alive ~= false and overlap(b, pa:getOuterBounds()) then
-            if Boss.strike(pa, self.up and HIT_UP or HIT, dir) then
+            if Boss.strike(pa, self.up and HIT_UP or HIT, dir, require('src/player/DamageSource').of(self, 'projectile')) then
                 Sound.play('netSnare')
                 Entity.emitFx('collect', self.x, self.y)
                 self:wrap(pa)
