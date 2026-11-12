@@ -2271,6 +2271,24 @@ function cases.fuente_textos()
         ('%s · sin fuente: %s · %s'):format(table.concat(said, ' / '), tostring(old and old.kind), #bad == 0 and 'todo traducido' or table.concat(bad, ', ')))
 end
 
+-- LA FUENTE viaja en el estado propio (online): ida y vuelta; un estado sin ese campo (otra versión) → sin fuente
+function cases.fuente_red()
+    local P = require 'src/network/Protocol'
+    local DS = require 'src/player/DamageSource'
+    local level = room(8, 8, {})
+    local a, b = playerAt(level, 4, 7), playerAt(level, 4, 7)
+    a.lastHit = DS.make('giantpuffer', 'projectile')
+    local s = P.packOwnState(a)
+    P.applyOwnState(s, b)
+    local ok1 = b.lastHit and b.lastHit.what == 'giantpuffer' and b.lastHit.part == 'projectile'
+    local short = {}
+    for i = 1, 45 do short[i] = s[i] end
+    b.lastHit = DS.make('spikes')
+    P.applyOwnState(short, b)
+    local ok2 = b.lastHit == nil
+    check('fuente_red', ok1 and ok2, ('ida y vuelta=%s · estado sin el campo → sin fuente=%s'):format(tostring(ok1), tostring(ok2)))
+end
+
 function cases.puffer_cycle()
     local level, es = pond()
     local f = es[1]
@@ -4721,7 +4739,7 @@ local function junglaShot()
 end
 
 function love.load()
-    for _, n in ipairs({ 'fuente_base', 'fuente_contacto', 'fuente_partes', 'fuente_entorno', 'fuente_textos', 'inicio_fases', 'onoff_head', 'onoff_pound', 'hidden_up', 'hidden_drop', 'hidden_side', 'hidden_vis',
+    for _, n in ipairs({ 'fuente_base', 'fuente_contacto', 'fuente_partes', 'fuente_entorno', 'fuente_textos', 'fuente_red', 'inicio_fases', 'onoff_head', 'onoff_pound', 'hidden_up', 'hidden_drop', 'hidden_side', 'hidden_vis',
                          'helmet_jump', 'helmet_ride', 'helmet_gp', 'helmet_side', 'stomp_fast',
                          'puffer_through', 'puffer_concave', 'puffer_cycle', 'puffer_dry', 'flyer_anim', 'vuelo_libre', 'boxed_in',
                          'bloque_roto', 'activador', 'tramp_avanza', 'tramp_pinchos', 'ping_icono',

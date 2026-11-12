@@ -124,12 +124,13 @@ function love.update(dt)
         elseif T.phase == 'C' then
             s.right = true
             if pa.hp < T.hpC and not T.prickAt then T.prickAt = t end
+            if pa.hp < T.hpC and not T.src then T.src = pa.lastHit end      -- (la FUENTE que mandó el servidor: src/player/DamageSource.lua)
             if (T.prickAt and t - T.prickAt > 1.0) or t - T.t1 > 12 then
                 s.right = false
                 check('pez', T.prickAt ~= nil and (heard.pufferPrick or 0) >= 1 and (heard.pufferInflate or 0) >= 1
-                    and not pa.dying and pa.hp == T.hpC - 1,
-                    ('se hinchó=%d, pufferPrick oído=%d, vida %d→%d, %s'):format(heard.pufferInflate or 0,
-                        heard.pufferPrick or 0, T.hpC, pa.hp, pa.dying and 'MUERTO' or 'vivo'))
+                    and not pa.dying and pa.hp == T.hpC - 1 and T.src and T.src.what == 'pufferfish' and T.src.part == 'spike',
+                    ('se hinchó=%d, pufferPrick oído=%d, vida %d→%d, %s; fuente del servidor %s/%s'):format(heard.pufferInflate or 0,
+                        heard.pufferPrick or 0, T.hpC, pa.hp, pa.dying and 'MUERTO' or 'vivo', tostring(T.src and T.src.what), tostring(T.src and T.src.part)))
                 finish()
             end
         end
