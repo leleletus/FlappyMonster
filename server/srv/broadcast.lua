@@ -70,6 +70,7 @@ local function buildPublicRoomList(daily)
             maxPlayers=room.maxPlayers,
             state=room.state,
             daily=room.daily,                               -- (una sala del club del día: su fecha)
+            level=room.level, mode=room.mode,               -- (qué se juega: la lista lo enseña; campos de más, los clientes viejos los ignoran)
         }) end
     end
     return list

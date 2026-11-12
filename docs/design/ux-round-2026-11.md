@@ -38,3 +38,7 @@ yet). Later: loading spinners on slow devices beyond item 6.
    nearest enemy by its `enemy.<family>` name or a boss's name, otherwise "too many hits"; `PlayerAdventure.deathFlags`
    keeps die()'s flags); `src/ui/DeathBanner.lua` shows a skull and the text for 1.8 s after respawning. Single player
    and the online client (its own player). Harness `mechanics` `causa_muerte`.
+5. (0.5.201) The room list shows each room's mode and level under its name (`OnlineHubState:_roomWhat`; the server
+   adds `level` / `mode` to the list — extra fields, old clients ignore them) and the connection ping bottom-left
+   (`PingIcon`). Reasons for not joining were already plain words (`srv.room_full`, `srv.version`…). A minimap preview
+   of the level was not added: the name and mode carry what matters. Capture `online_menus` `online_daily_hub`.

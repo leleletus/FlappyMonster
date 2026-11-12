@@ -195,6 +195,8 @@ end
 -- ── Update ────────────────────────────────────────────────────────────────────
 
 function OnlineHubState:update(dt)
+    self.pingIcon = self.pingIcon or require('src/ui/PingIcon').new()
+    self.pingIcon:update(dt, NC:getPing() or 0, 0, NC.connected ~= false)
     MenuScene.update(dt)
     self.anim:update(dt); self.winAnim:update(dt)
     self.t = self.t + dt
@@ -483,6 +485,15 @@ function OnlineHubState:render()
     love.graphics.setColor(COLOR_WHITE)
 end
 
+-- «Modo · Nivel» de una sala de la lista (nil si el servidor no lo manda: uno viejo)
+function OnlineHubState:_roomWhat(room)
+    local parts = {}
+    if room.mode and L.has('mode.' .. room.mode .. '.label') then parts[#parts + 1] = L('mode.' .. room.mode .. '.label') end
+    local id = type(room.level) == 'string' and room.level:match('([^/]+)%.json$')
+    if id then parts[#parts + 1] = require('src/story/Worlds').levelName(id) end
+    return #parts > 0 and table.concat(parts, '  ·  ') or nil
+end
+
 function OnlineHubState:_renderList()
     local A = self.anim
     local Ly = self:_layout()
@@ -521,7 +532,14 @@ function OnlineHubState:_renderList()
         local cw = PixelFont.width(count, 3)
         PixelFont.shadow(count, sx - 28 - cw, y + math.floor((r.h - PixelFont.height(3)) / 2), 3, a)
         local name = fitText(FONT_MED, room.name or '?', sx - 56 - cw - nx)
-        MenuKit.text(FONT_MED, name, nx, cy, sx - nx, 'left', sel and { 1, 1, 1 } or { 0.88, 0.9, 1 }, a)
+        -- (debajo del nombre: el MODO y el NIVEL que se juegan — 0.5.201 —; los nombres salen de los datos del cliente)
+        local what = self:_roomWhat(room)
+        if what then
+            MenuKit.text(FONT_MED, name, nx, cy - 9, sx - nx, 'left', sel and { 1, 1, 1 } or { 0.88, 0.9, 1 }, a)
+            MenuKit.text(FONT_SMALL, fitText(FONT_SMALL, what, sx - 56 - cw - nx), nx, cy + 15, sx - nx, 'left', { 0.62, 0.7, 0.92 }, a)
+        else
+            MenuKit.text(FONT_MED, name, nx, cy, sx - nx, 'left', sel and { 1, 1, 1 } or { 0.88, 0.9, 1 }, a)
+        end
     end
     -- flechas de que hay más salas arriba / abajo
     if Ly.scroll > 0 then MenuKit.text(FONT_SMALL, '^', R.x + ox, R.y + 2 + oy, R.w, 'center', { 1, 0.86, 0.36 }, a) end
@@ -535,6 +553,8 @@ function OnlineHubState:_renderList()
         self:_button(L(lbl), Ly.btns[i], colors[i], sel, ba, bx, by)
     end
     if self.sub == SUB_LIST then MenuKit.hint(L('hub.list_hint'), A, 6) end
+    -- la CONEXIÓN con el servidor (ping), abajo a la izquierda, como en la partida (src/ui/PingIcon.lua)
+    if self.pingIcon then self.pingIcon:draw(16, WINDOW_H - 14) end
 end
 
 function OnlineHubState:_renderCreate()
