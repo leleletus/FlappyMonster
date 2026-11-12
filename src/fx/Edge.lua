@@ -5,15 +5,15 @@
 --   'shader'  los personajes se dibujan en su propio lienzo y UNA pasada de pantalla entera compara, píxel a píxel,
 --             cada borde con lo que tiene detrás (ya con la luz del nivel) y hace aparecer el filo solo ahí
 --   'simple'  (aparatos modestos) la silueta de siempre — 8 copias corridas de un color, src/fx/Silhouette.lua — en
---             todo personaje con el rasgo `edge`, clara donde está oscuro y oscura en los fondos claros (nieve), con
---             fundido; se decide por nivel y altura, no por píxel
+--             todo personaje con el rasgo `edge`, clara donde está oscuro, con fundido; se decide por nivel y altura,
+--             no por píxel
 --
 --   Edge.mode()                      'shader' | 'simple' (el ajuste, o el de su aparato; sin shaders, simple)
 --   Edge.level                       el nivel que se está dibujando (lo pone quien dibuja la escena; nil fuera)
 --   Edge.draw(owner, x, y, fn, ...)  dibuja a `owner` (en el mundo: x, y) con su borde; fn(dx, dy, ...) lo dibuja
 --                                    corrido esos píxeles de pantalla
 --   Edge.direct(fn, ...)             lo que dibuje fn(...) va SIN borde (sombras, marcas, brillos, nombres, barras)
---   Edge.simpleKind(level, x, y)     'light' | 'dark' | nil: el color del modo simple en ese sitio
+--   Edge.simpleKind(level, x, y)     'light' | nil: ¿lleva el filo claro del modo simple en ese sitio?
 local Silhouette = require 'src/fx/Silhouette'
 local Shaders    = require 'src/fx/Shaders'
 
@@ -45,7 +45,7 @@ function Edge.mode()
 end
 
 -- ── Modo simple ──────────────────────────────────────────────────────────────
-local Sky, Lights, Particles
+local Lights, Particles
 function Edge.simpleKind(level, x, y)
     if not level then return nil end
     if Silhouette.on(level, y) then
@@ -59,10 +59,9 @@ function Edge.simpleKind(level, x, y)
         end
         return nil
     end
-    Sky = Sky or require 'src/fx/Sky'
-    local b = Sky.byId[level.background or Sky.DEFAULT]
-    local L = level.light
-    if b and b.bright and (level.timeOfDay or 'day') == 'day' and (L == nil or L == 'day' or L == 'none') then return 'dark' end
+    -- (en fondos claros de día — nieve — NADA: probado y quitado, el usuario 2026-11-12: los sprites ya llevan su
+    -- contorno oscuro justo por eso y el filo oscuro de nivel entero no quedaba bien. En modo shader se decide por
+    -- píxel: ese contorno ya contrasta y no sale nada)
     return nil
 end
 

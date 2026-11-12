@@ -51,7 +51,8 @@ case('simple_tipo', function()
     local up, down = k(deep, 0, 150), k(deep, 0, 600)
     local far = k({ dark = true, players = { { x = 2000, y = 2000, facing = 1 } } }, 0, 0)
     local by = k({ dark = true, players = { { x = 10, y = 0, facing = 1 } } }, 0, 0)
-    check('simple_tipo', night == 'light' and snow == 'dark' and meadow == nil and snowNight == 'light'
+    -- (en fondos claros de día NADA: los sprites ya llevan su contorno oscuro — el usuario, 2026-11-12 —)
+    check('simple_tipo', night == 'light' and snow == nil and meadow == nil and snowNight == 'light'
         and up == nil and down == 'light' and far == nil and by == 'light',
         ('noche=%s nieve=%s pradera=%s nieve de noche=%s · profundidad arriba=%s abajo=%s · a oscuras lejos=%s junto a un jugador=%s')
         :format(tostring(night), tostring(snow), tostring(meadow), tostring(snowNight), tostring(up), tostring(down), tostring(far), tostring(by)))
@@ -177,6 +178,71 @@ case('rasgo', function()
         ('%d tipos; distintos de su categoría: %s · gummy=%s lava=%s fino=%s · JSON darkEdge=%s edge:false=%s'):format(n,
             #bad == 0 and 'ninguno' or table.concat(bad, ' '), tostring(g.edge), tostring(lava.edge), tostring(g.edgeThin),
             tostring(fromDark), tostring(off)))
+end)
+
+-- ── Escenas del juego de verdad (AdventureState) ──────────────────────────────
+-- Un nivel en marcha, sin tarjeta ni cuenta atrás, con el reloj y el azar fijos: la misma foto cada vez
+local realGetTime = love.timer.getTime
+local function scene(level, o)
+    o = o or {}
+    love.timer.getTime = function() return 100 end
+    math.randomseed(7); love.math.setRandomSeed(7)
+    gStateMachine:change('adventure', { level = 'assets/levels/' .. level .. '.json', returnTo = 'free_play' })
+    local st = gStateMachine:_top()
+    if st.introScene then st.introScene:finish(); st.introScene = nil end
+    st.card, st.startCd, st.startGoT = nil, nil, nil
+    st.player.invT = 0
+    if o.prep then o.prep(st) end
+    for _ = 1, (o.frames or 30) do st:update(1 / 60) end
+    return st
+end
+local function photo(st, name)
+    local cv = love.graphics.newCanvas(WINDOW_W, WINDOW_H)
+    love.graphics.setCanvas(cv); love.graphics.clear(0, 0, 0, 1)
+    math.randomseed(7); love.math.setRandomSeed(7)
+    st:render()
+    love.graphics.setCanvas()
+    local data = cv:newImageData()
+    data:encode('png', 'edge_' .. name .. '.png')
+    return data
+end
+local function samePixels(a, b)
+    if a:getWidth() ~= b:getWidth() or a:getHeight() ~= b:getHeight() then return false, -1 end
+    local diff = 0
+    for y = 0, a:getHeight() - 1, 2 do
+        for x = 0, a:getWidth() - 1, 2 do
+            local r1, g1, b1 = a:getPixel(x, y)
+            local r2, g2, b2 = b:getPixel(x, y)
+            if math.abs(r1 - r2) + math.abs(g1 - g2) + math.abs(b1 - b2) > 0.02 then diff = diff + 1 end
+        end
+    end
+    return diff == 0, diff
+end
+
+-- La luz se calcula ANTES de juntar las capas (Darkness.build / apply): la foto no cambia. BASE=1 guarda la de
+-- referencia (<save>/edge_luz_<nivel>_base.png) con el código de antes; sin BASE, compara con ella
+case('luz_igual', function()
+    local prev = Settings.edge
+    Settings.edge = 'shader'
+    local out, bad = {}, 0
+    for _, lv in ipairs({ 'gruta_del_farol', 'bajo_el_hielo', 'fortaleza_malvada' }) do
+        local st = scene(lv)
+        local img = photo(st, 'luz_' .. lv)
+        local baseName = 'edge_luz_' .. lv .. '_base.png'
+        if os.getenv('BASE') == '1' then
+            img:encode('png', baseName)
+            out[#out + 1] = lv .. ': guardada'
+        elseif love.filesystem.getInfo(baseName) then
+            local ok, d = samePixels(img, love.image.newImageData(baseName))
+            if not ok then bad = bad + 1 end
+            out[#out + 1] = ('%s: %s'):format(lv, ok and 'igual' or (d .. ' píxeles distintos'))
+        else
+            out[#out + 1] = lv .. ': sin referencia (BASE=1)'
+        end
+    end
+    love.timer.getTime = realGetTime
+    Settings.edge = prev
+    check('luz_igual', bad == 0, table.concat(out, ' · '))
 end)
 
 -- ── El ajuste ────────────────────────────────────────────────────────────────

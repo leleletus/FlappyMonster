@@ -44,7 +44,7 @@ Sky.BIOMES = {
     { id = 'meadow',   label = 'Pradera',   sky = true, layers = { { 'meadow_far', 0.1 }, { 'meadow_mid', 0.22 }, { 'meadow_near', 0.4 } } },
     { id = 'coast',    label = 'Costa',     sky = true, layers = { { 'coast_far', 0.08 }, { 'coast_mid', 0.22 }, { 'coast_near', 0.4 } } },
     { id = 'mountain', label = 'Montaña',   sky = true, layers = { { 'mountain_far', 0.08 }, { 'mountain_mid', 0.2 }, { 'mountain_near', 0.38 } } },
-    { id = 'snow',     label = 'Nieve',     sky = true, bright = true, layers = { { 'snow_far', 0.08 }, { 'snow_mid', 0.2 }, { 'snow_near', 0.38 } } },
+    { id = 'snow',     label = 'Nieve',     sky = true, layers = { { 'snow_far', 0.08 }, { 'snow_mid', 0.2 }, { 'snow_near', 0.38 } } },
     { id = 'forest',   label = 'Bosque', sky = true, layers = { { 'forest_far', 0.1 }, { 'forest_mid', 0.22 }, { 'forest_near', 0.4 } } },
     { id = 'fortress', label = 'Fortaleza', sky = true, layers = { { 'fortress_far', 0.08 }, { 'fortress_mid', 0.25 } } },
     -- (isla volcánica: cielo de ceniza al rojo, propio, que la hora tiñe)
@@ -57,7 +57,7 @@ Sky.BIOMES = {
     -- (estos también valen de PROFUNDIDAD: depth = true)
     -- (la COSTA HELADA, la isla del Mega Crabby de hielo: mar polar a nivel del mar — tools/art/world/make_frozen_coast_sky.py —;
     -- de noche, una aurora: capa aditiva con `time = 'night'`, se apoya en el fondo del nivel con poco paralaje)
-    { id = 'frozen_coast', label = 'Costa helada', sky = true, bright = true,
+    { id = 'frozen_coast', label = 'Costa helada', sky = true,
       grads = { day = 'frozen_coast_day', dusk = 'frozen_coast_dusk', night = 'frozen_coast_night' },
       layers = { { 'frozen_coast_aurora', 0.03, add = true, time = 'night' }, { 'frozen_coast_far', 0.08 },
                  { 'frozen_coast_mid', 0.2 }, { 'frozen_coast_near', 0.38 } } },

@@ -115,11 +115,10 @@ function OnlineAdventureState:_renderScene()
     self._actorsFn = self._actorsFn or function(cx, cy) self:_drawActors(cx, cy) end     -- (uno por estado: sin basura)
     -- (hit-stop: la escena del fotograma anterior — src/ui/HitStop.lua —)
     local reuse = self._hsFrozen and self._sceneDrawn
-    SceneLayers.draw(self.level, self.camX, self.camY, self.sceneCanvas, self.enemyRenderers, self._actorsFn, nil, reuse)
-    self._sceneDrawn = true
 
-    -- A oscuras: las linternas de todos los jugadores; encima, los puntos luminosos
-    -- (y la luz ambiente de cada nivel: atardecer, noche, cueva en penumbra — src/fx/Darkness.lua)
+    -- La LUZ (a oscuras: las linternas de todos los jugadores; y la luz ambiente de cada nivel: atardecer, noche, cueva
+    -- en penumbra — src/fx/Darkness.lua —) se calcula ANTES de la escena: el borde de contraste la usa (src/fx/Edge.lua)
+    local lit = false
     if Darkness.active(self.level) then
         -- (la lista de linternas y sus entradas son del estado y se rellenan en cada fotograma: sin basura)
         local src, n = self._lightSrc or {}, 0
@@ -138,7 +137,13 @@ function OnlineAdventureState:_renderScene()
             put(self.renderX, self.renderY, pa.facing, pa.lightOn and not pa.dying)
         end
         for i = #src, n + 1, -1 do src[i] = nil end
-        Darkness.render(self.level, self.camX, self.camY, src, self.enemyRenderers, self.sceneCanvas)
+        lit = Darkness.build(self.level, self.camX, self.camY, src, self.enemyRenderers)
+    end
+    SceneLayers.draw(self.level, self.camX, self.camY, self.sceneCanvas, self.enemyRenderers, self._actorsFn, nil, reuse)
+    self._sceneDrawn = true
+    -- (la luz, encima; y los puntos luminosos encima de ella)
+    if lit then
+        Darkness.apply(self.level, self.sceneCanvas)
         Darkness.renderGlow(self.level, self.enemyRenderers, self.camX, self.camY)
     end
 

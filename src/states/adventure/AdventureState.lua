@@ -1000,17 +1000,22 @@ end
 function AdventureState:_renderScene()
     -- ── La escena entera al lienzo, y al volver, el efecto del agua (src/world/level/SceneLayers.lua) ──
     self._actorsFn = self._actorsFn or function(cx, cy) self:_drawActors(cx, cy) end     -- (uno por estado: sin basura)
-    SceneLayers.draw(self.level, self.camX, self.camY, self.sceneCanvas, self.enemies, self._actorsFn,
-                     self.demo and self.demo.noSky)
-
-    -- A oscuras: solo se ve lo que alumbra la linterna; encima, los puntos luminosos
-    -- (y la luz ambiente de cada nivel: atardecer, noche, cueva en penumbra — src/fx/Darkness.lua)
+    -- La LUZ (a oscuras: solo lo que alumbra la linterna; y la luz ambiente de cada nivel: atardecer, noche, cueva en
+    -- penumbra — src/fx/Darkness.lua —) se calcula ANTES de la escena: el borde de contraste la usa (src/fx/Edge.lua)
+    local lit = false
     if Darkness.active(self.level) then
         local p, src = self.player, self._lightSrc        -- (la linterna del jugador: tabla del estado, rellenada aquí)
         if not src then src = { {} }; self._lightSrc = src end
         local L1 = src[1]
         L1.x, L1.y, L1.facing, L1.on = p.x, p.y, p.facing, p.lightOn and not p.dying
-        Darkness.render(self.level, self.camX, self.camY, src, self.enemies, self.sceneCanvas)
+        lit = Darkness.build(self.level, self.camX, self.camY, src, self.enemies)
+    end
+    SceneLayers.draw(self.level, self.camX, self.camY, self.sceneCanvas, self.enemies, self._actorsFn,
+                     self.demo and self.demo.noSky)
+
+    -- (la luz, encima; y los puntos luminosos encima de ella)
+    if lit then
+        Darkness.apply(self.level, self.sceneCanvas)
         Darkness.renderGlow(self.level, self.enemies, self.camX, self.camY)
     end
 

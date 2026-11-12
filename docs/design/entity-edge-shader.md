@@ -132,8 +132,10 @@ the point-zone progress bar. The user's words — "solo en las partes del sprite
 - **`shader`**: the layer pass described above.
 - **`simple`**: today's 8-copy silhouette, improved (my proposal of what "improved" means, to confirm):
   1. **Every edged entity**, through the same base `edge` trait — not only the player and two `darkEdge` types.
-  2. **Both colours**: a light edge where the level is dark (`Silhouette.on` / `dim` as today), a dark edge on light
-     levels' light-coloured places (snow / ice islands, clouds) — still decided per level and height, not per pixel.
+  2. ~~**Both colours**: a dark edge on light levels (snow / ice) by day~~ — **built and removed (the user,
+     2026-11-12):** "the Gummies and snowy Hoppers don't need an edge on snow by day: their sprites already have dark
+     outlines exactly for that; it doesn't help and doesn't look quite right". The simple mode only draws the LIGHT
+     edge where it is dark. (Shader mode decides per pixel: those outlines already contrast, so nothing appears.)
   3. **Fades** in and out (~0.3 s, per entity) instead of popping when the entity crosses the depth surface line.
   4. The same **light fade** in `dark` levels (no edge outside the flashlight).
   Same layers code path: in `simple` mode the actor canvas is not used; entities draw into the scene canvas as today
