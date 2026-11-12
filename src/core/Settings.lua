@@ -37,6 +37,8 @@ function Settings.load()
                 Settings.flashes = data.flashes ~= false
                 Settings.signText = (data.signText == 'large') and 'large' or 'normal'
                 Settings.cbSymbols = data.cbSymbols == true
+                -- (el borde de los personajes: 'shader' / 'simple'; nil = el de su aparato — src/fx/Edge.lua —)
+                Settings.edge = (data.edge == 'shader' or data.edge == 'simple') and data.edge or nil
                 -- (jugadores bloqueados, en minúsculas: src/network/Blocks.lua)
                 if type(data.blocked) == 'table' then
                     for _, n in ipairs(data.blocked) do
@@ -90,9 +92,9 @@ end
 function Settings.save()
     local bl = {}
     for _, n in ipairs(Settings.blocked or {}) do bl[#bl + 1] = string.format('%q', n) end
-    local s = string.format('return { language = %q, onlineName = %q, rhythmOffset = %d, showPerf = %s, musicVol = %d, sfxVol = %d, muted = %s, swapAB = %s, wheelToggle = %s, rumble = %s, hitStop = %s, deathCause = %s, shake = %s, flashes = %s, signText = %q, cbSymbols = %s, tutorialOffered = %s, touchLayout = %s, blocked = { %s } }\n',
+    local s = string.format('return { language = %q, onlineName = %q, rhythmOffset = %d, showPerf = %s, musicVol = %d, sfxVol = %d, muted = %s, swapAB = %s, wheelToggle = %s, rumble = %s, hitStop = %s, deathCause = %s, shake = %s, flashes = %s, signText = %q, cbSymbols = %s, edge = %s, tutorialOffered = %s, touchLayout = %s, blocked = { %s } }\n',
         Settings.language, Settings.onlineName, Settings.rhythmOffset or 0, tostring(Settings.showPerf == true),
-        Settings.musicVol, Settings.sfxVol, tostring(Settings.muted == true), tostring(Settings.swapAB == true), tostring(Settings.wheelToggle == true), tostring(Settings.rumble ~= false), tostring(Settings.hitStop ~= false), tostring(Settings.deathCause ~= false), tostring(Settings.shake ~= false), tostring(Settings.flashes ~= false), Settings.signText == 'large' and 'large' or 'normal', tostring(Settings.cbSymbols == true), tostring(Settings.tutorialOffered == true), touchString(Settings.touchLayout), table.concat(bl, ', '))
+        Settings.musicVol, Settings.sfxVol, tostring(Settings.muted == true), tostring(Settings.swapAB == true), tostring(Settings.wheelToggle == true), tostring(Settings.rumble ~= false), tostring(Settings.hitStop ~= false), tostring(Settings.deathCause ~= false), tostring(Settings.shake ~= false), tostring(Settings.flashes ~= false), Settings.signText == 'large' and 'large' or 'normal', tostring(Settings.cbSymbols == true), (Settings.edge == 'shader' or Settings.edge == 'simple') and string.format('%q', Settings.edge) or 'nil', tostring(Settings.tutorialOffered == true), touchString(Settings.touchLayout), table.concat(bl, ', '))
     pcall(love.filesystem.write, FILE, s)
 end
 

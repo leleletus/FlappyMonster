@@ -63,6 +63,12 @@ local signText = { id = 'signText', kind = 'choice', label = 'settings.row_signT
     step = function(d) Settings.set('signText', Settings.signText == 'large' and 'normal' or 'large'); beep(d) end }
 signText.go = function() signText.step(1) end
 
+-- El BORDE de los personajes (src/fx/Edge.lua): por píxel (shader) o la silueta de siempre (simple, aparatos modestos)
+local edge = { id = 'edge', kind = 'choice', label = 'settings.row_edge', desc = 'settings.desc_edge',
+    value = function() return L(require('src/fx/Edge').mode() == 'simple' and 'settings.val_edge_simple' or 'settings.val_edge_shader') end,
+    step = function(d) Settings.set('edge', require('src/fx/Edge').mode() == 'simple' and 'shader' or 'simple'); beep(d) end }
+edge.go = function() edge.step(1) end
+
 local credits = { id = 'credits', kind = 'action', label = 'settings.row_credits', desc = 'settings.desc_credits',
     value = function() return nil end, go = function(state) return state:_credits() end }
 
@@ -72,7 +78,7 @@ R.TABS = {
     { id = 'game',     label = 'settings.tab_game',     rows = { language, switch('hitStop'), switch('deathCause'),
                                                                switch('showPerf', function(v) Settings.setShowPerf(v) end) } },
     -- (ACCESIBILIDAD: sin temblor, destellos suaves — src/fx/Flash.lua —, carteles grandes, símbolos para daltónicos)
-    { id = 'access',   label = 'settings.tab_access',   rows = { switch('shake'), switch('flashes'), signText, switch('cbSymbols') } },
+    { id = 'access',   label = 'settings.tab_access',   rows = { switch('shake'), switch('flashes'), signText, switch('cbSymbols'), edge } },
     { id = 'other',    label = 'settings.tab_other',    rows = { credits } },
 }
 

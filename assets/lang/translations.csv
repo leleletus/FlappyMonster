@@ -403,6 +403,7 @@ settings.row_shake,TEMBLOR DE PANTALLA,SCREEN SHAKE,
 settings.row_flashes,DESTELLOS,FLASHES,
 settings.row_signText,LETRA DE LOS CARTELES,SIGN TEXT,
 settings.row_cbSymbols,SÍMBOLOS PARA DALTÓNICOS,COLOUR-BLIND SYMBOLS,
+settings.row_edge,BORDE,EDGE,Borde de los personajes (src/fx/Edge.lua)
 settings.row_showPerf,MEDIDOR DE RENDIMIENTO,PERFORMANCE METER,
 settings.row_credits,VER LOS CRÉDITOS,WATCH THE CREDITS,
 settings.desc_musicVol,El volumen de la música,How loud the music is,Filas: la línea de abajo
@@ -420,6 +421,9 @@ settings.desc_shake,Apágalo y la pantalla no tiembla con los golpes y explosion
 settings.desc_flashes,Apágalo y nada parpadea deprisa: los destellos son suaves,Turn it off and nothing blinks fast: flashes are soft
 settings.desc_signText,El tamaño del texto de los carteles de ayuda,The size of the text on the help signs
 settings.desc_cbSymbols,Un aro en lo que es ON y una X en lo que es OFF,A ring on ON blocks and an X on OFF blocks
+settings.desc_edge,Contorno que separa a los personajes del fondo. SIMPLE va mejor en aparatos modestos,Outline that separates characters from the background. SIMPLE runs better on modest devices,
+settings.val_edge_shader,SHADER,SHADER,
+settings.val_edge_simple,SIMPLE,SIMPLE,
 settings.val_normal,NORMAL,NORMAL,
 settings.val_large,GRANDE,LARGE,
 settings.desc_showPerf,Muestra los fotogramas por segundo,Shows the frames per second,

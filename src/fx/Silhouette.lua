@@ -1,4 +1,6 @@
 -- src/fx/Silhouette.lua
+-- (Desde el borde de contraste — src/fx/Edge.lua — esto es el MODO SIMPLE: Edge.draw lo usa en todo personaje con el
+-- rasgo `edge`; aquí quedan las copias, `on` / `dim` y el filo forzado de la pantalla de resultados.)
 -- EL BORDE BLANCO del monstruo: el monstruo es casi negro y sobre un fondo oscuro (niveles a oscuras, de noche,
 -- cuevas; las cinemáticas del cráter; la pantalla de resultados) solo se le veía la cara. Se dibuja DETRÁS su
 -- propio sprite entero de blanco, corrido un poco (`WIDTH`: un tercio de píxel de arte) hacia los ocho lados: queda
