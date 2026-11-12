@@ -12,7 +12,7 @@ and describe the real thing in the system's page.
 
 | What | Page |
 |---|---|
-| **Contrast edge for every entity (2026-11-12):** per-pixel shader compares each character with what is really behind it and fades in a light or dark edge only where it is lost; simple silhouette mode for modest devices, switchable in settings; cinematics and the intro card too (design, not built) | [entity-edge-shader](entity-edge-shader.md) |
+| **Contrast edge for every entity (2026-11-12):** per-pixel shader compares each character with what is really behind it and fades in a light or dark edge only where it is lost; simple silhouette mode for modest devices, switchable in settings; cinematics and the intro card too (approved by the user 2026-11-12; plan written, not built) | [entity-edge-shader](entity-edge-shader.md) · [plan](entity-edge-shader-plan.md) |
 | **Accessibility options (2026-11-13):** ASSIST tab — screen shake, flashes, sign text, colour-blind symbols on ON/OFF (**built 0.5.208**) | [accessibility](accessibility.md) |
 | **Touch-control editor (2026-11-13):** drag each on-screen button, size per button, one opacity; saved per device (**built 0.5.207**) | [touch-editor](touch-editor.md) |
 | **Damage sources (2026-11-13):** every hit carries what did it and which part ("Pufferfish spike" vs "Pufferfish projectile"), single player / server / client; the death message reads it instead of guessing (**built 0.5.205**) | [damage-sources](damage-sources.md) |
