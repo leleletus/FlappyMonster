@@ -4,9 +4,10 @@
 -- hielo, la lava, la nieve...) había que acordarse de ponerla en los dos (regla de oro 1: lo que se ve, igual en los
 -- dos sitios).
 --
---   SceneLayers.draw(level, camX, camY, canvas, ents, actors[, noSky])
+--   SceneLayers.draw(level, camX, camY, canvas, ents, actors[, noSky]) → el lienzo con la escena terminada
 --     canvas  el lienzo de la escena (src/fx/SceneCanvas.lua): todo se dibuja en él y luego va a donde se estaba
---             dibujando con el efecto del agua por encima
+--             dibujando con el efecto del agua por encima (en modo shader del borde — src/fx/Edge.lua — la escena
+--             acaba en su lienzo PAREJA: lo devuelve; la luz se calcula antes, Darkness.build)
 --     ents    las entidades (lista o tabla por índice: se recorre con pairs, el orden de una lista se respeta)
 --     actors  function(camX, camY): lo que va entre las entidades de atrás y las de delante — los jugadores, el
 --             fantasma, los bots, el progreso de las zonas de puntos — (el borde: src/fx/Edge.lua, Edge.level)
@@ -27,17 +28,23 @@ local SceneLayers = {}
 
 local PlayerAdventure, Entities           -- (perezosos: los dos requieren cosas que requieren el nivel)
 
-local function drawEntities(ents, front, camX, camY)
+-- `edge`: nil = todas; true = solo las que llevan el borde (modo shader: al lienzo de los personajes); false = las otras
+local function drawEntities(ents, front, camX, camY, edge)
     for _, g in pairs(ents) do
-        if g.alive and (not g:drawsInFront()) ~= front then (g.renderLive or g.render)(g, camX, camY) end   -- (reservas: no)
+        if g.alive and (not g:drawsInFront()) ~= front and (edge == nil or Edge.wants(g) == edge) then
+            (g.renderLive or g.render)(g, camX, camY)                 -- (reservas: no)
+        end
     end
 end
 
+local lastOut = setmetatable({}, { __mode = 'k' })   -- lienzo de la escena → el que tenía la escena YA juntada
+
 function SceneLayers.draw(level, camX, camY, canvas, ents, actors, noSky, reuse)
     if reuse then
+        local out = lastOut[canvas] or canvas
         love.graphics.setColor(1, 1, 1, 1)
-        level:renderWaterEffect(camX, camY, canvas)
-        return
+        level:renderWaterEffect(camX, camY, out)
+        return out
     end
     PlayerAdventure = PlayerAdventure or require 'src/player/PlayerAdventure'
     Entities = Entities or require 'src/world/entities/Entities'
@@ -71,12 +78,25 @@ function SceneLayers.draw(level, camX, camY, canvas, ents, actors, noSky, reuse)
     level:renderFoliageBack(camX, camY)
 
     Edge.level = level                                    -- (el borde de contraste: src/fx/Edge.lua)
-    drawEntities(ents, false, camX, camY)                 -- (entre los bloques y los jugadores)
-
-    if actors then actors(camX, camY) end
-    Particles.render(camX, camY)
-
-    drawEntities(ents, true, camX, camY)                  -- (por delante de los jugadores: pez globo, la red…)
+    local out = canvas
+    if Edge.mode() == 'shader' then
+        -- MODO SHADER: lo que no lleva borde, en la escena; los personajes (entidades con `edge`, jugadores, fantasma,
+        -- bots) en su lienzo; una pasada los junta con el filo donde se pierden (con la luz ya calculada: Darkness.build)
+        -- y se sigue dibujando en el lienzo juntado. Las partículas quedan encima de todos los personajes.
+        drawEntities(ents, false, camX, camY, false)
+        Edge.begin(canvas)
+        drawEntities(ents, false, camX, camY, true)
+        if actors then actors(camX, camY) end
+        drawEntities(ents, true, camX, camY, true)
+        out = Edge.finish(Darkness.lightCanvas(level))
+        Particles.render(camX, camY)
+        drawEntities(ents, true, camX, camY, false)
+    else
+        drawEntities(ents, false, camX, camY)             -- (entre los bloques y los jugadores)
+        if actors then actors(camX, camY) end
+        Particles.render(camX, camY)
+        drawEntities(ents, true, camX, camY)              -- (por delante de los jugadores: pez globo, la red…)
+    end
     level:renderFoliage(camX, camY)                       -- (decoraciones: por encima de entidades y jugadores)
     level:renderBubbles(camX, camY)                       -- (burbujas de agua y respiraderos: encima de todo menos el agua)
     Snowfall.render(level, camX, camY)                    -- (nieve cayendo: solo dibujo)
@@ -84,10 +104,12 @@ function SceneLayers.draw(level, camX, camY, canvas, ents, actors, noSky, reuse)
     love.graphics.setCanvas(outCanvas)
     if scX then love.graphics.setScissor(scX, scY, scW, scH) end
     love.graphics.pop()
+    lastOut[canvas] = out
 
     -- ── Volver a donde se dibujaba y aplicar el efecto del agua ──
     love.graphics.setColor(1, 1, 1, 1)
-    level:renderWaterEffect(camX, camY, canvas)
+    level:renderWaterEffect(camX, camY, out)
+    return out
 end
 
 return SceneLayers

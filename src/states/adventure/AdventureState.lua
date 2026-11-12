@@ -1010,12 +1010,12 @@ function AdventureState:_renderScene()
         L1.x, L1.y, L1.facing, L1.on = p.x, p.y, p.facing, p.lightOn and not p.dying
         lit = Darkness.build(self.level, self.camX, self.camY, src, self.enemies)
     end
-    SceneLayers.draw(self.level, self.camX, self.camY, self.sceneCanvas, self.enemies, self._actorsFn,
-                     self.demo and self.demo.noSky)
+    local scene = SceneLayers.draw(self.level, self.camX, self.camY, self.sceneCanvas, self.enemies, self._actorsFn,
+                                   self.demo and self.demo.noSky)      -- (la escena terminada: src/fx/Edge.lua)
 
     -- (la luz, encima; y los puntos luminosos encima de ella)
     if lit then
-        Darkness.apply(self.level, self.sceneCanvas)
+        Darkness.apply(self.level, scene)
         Darkness.renderGlow(self.level, self.enemies, self.camX, self.camY)
     end
 

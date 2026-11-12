@@ -139,11 +139,11 @@ function OnlineAdventureState:_renderScene()
         for i = #src, n + 1, -1 do src[i] = nil end
         lit = Darkness.build(self.level, self.camX, self.camY, src, self.enemyRenderers)
     end
-    SceneLayers.draw(self.level, self.camX, self.camY, self.sceneCanvas, self.enemyRenderers, self._actorsFn, nil, reuse)
+    local scene = SceneLayers.draw(self.level, self.camX, self.camY, self.sceneCanvas, self.enemyRenderers, self._actorsFn, nil, reuse)
     self._sceneDrawn = true
     -- (la luz, encima; y los puntos luminosos encima de ella)
     if lit then
-        Darkness.apply(self.level, self.sceneCanvas)
+        Darkness.apply(self.level, scene)
         Darkness.renderGlow(self.level, self.enemyRenderers, self.camX, self.camY)
     end
 

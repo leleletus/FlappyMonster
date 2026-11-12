@@ -40,7 +40,7 @@ function Edge.mode()
     if m ~= 'shader' and m ~= 'simple' then
         m = Edge.defaultMode(love.system and love.system.getOS() or 'Linux')
     end
-    if m == 'shader' and not Shaders.get('silhouette_flat') then m = 'simple' end
+    if m == 'shader' and not Shaders.get('edge_composite') then m = 'simple' end
     return m
 end
 
@@ -140,8 +140,113 @@ function Edge.draw(owner, x, y, fn, ...)
     fn(0, 0, ...)
 end
 
+-- ── Modo shader ──────────────────────────────────────────────────────────────
+-- Los personajes se dibujan en el LIENZO DE LOS PERSONAJES (transparente); `finish` junta la escena y ese lienzo en
+-- el lienzo PAREJA de la escena con una pasada: donde no hay personaje pero sí a ≤ W px, compara la luminancia del
+-- personaje con la del fondo (las dos con la luz del sitio) y, si se parecen, pone el filo (claro sobre fondo oscuro,
+-- oscuro sobre claro). La pasada lee la escena y escribe en su pareja: un shader no puede leer el lienzo en que dibuja.
+Shaders.define('edge_composite', [[
+    extern Image actors;
+    extern Image light;
+    extern vec2 lightK;        // uv de la pantalla → uv del lienzo de luz (es de 1/4 y redondea hacia arriba)
+    extern vec2 texel;         // 1 / tamaño
+    extern float W;
+    extern vec4 th;            // T_LO, T_HI, L_LO, L_HI
+    extern vec3 lightC;
+    extern vec3 darkC;
+    extern float maxA;
+    float lum(vec3 c) { return dot(c, vec3(0.299, 0.587, 0.114)); }
+    vec4 effect(vec4 col, Image scene, vec2 uv, vec2 sc) {
+        vec4 s = Texel(scene, uv);
+        vec4 a = Texel(actors, uv);
+        if (a.a > 0.0) return vec4(a.rgb + s.rgb * (1.0 - a.a), a.a + s.a * (1.0 - a.a));
+        float n = 0.0;
+        vec3 nc = vec3(0.0);
+        for (int dy = -1; dy <= 1; dy++) {
+            for (int dx = -1; dx <= 1; dx++) {
+                if (dx == 0 && dy == 0) continue;
+                for (int k = 1; k <= 4; k++) {
+                    if (float(k) > W) break;
+                    vec2 q = uv + vec2(float(dx), float(dy)) * texel * float(k);
+                    if (q.x < 0.0 || q.y < 0.0 || q.x > 1.0 || q.y > 1.0) continue;
+                    vec4 p = Texel(actors, q);
+                    if (p.a > n) { n = p.a; nc = p.rgb / p.a; }
+                }
+            }
+        }
+        if (n <= 0.0) return s;
+        float L = lum(Texel(light, uv * lightK).rgb);
+        float lb = lum(s.rgb) * L;
+        float c = abs(lum(nc) * L - lb);
+        float k = (1.0 - smoothstep(th.x, th.y, c)) * smoothstep(th.z, th.w, L) * maxA * n;
+        vec3 e = (lb < 0.5) ? lightC : darkC;
+        return vec4(s.rgb * (1.0 - k) + e * k, s.a * (1.0 - k) + k);
+    }
+]])
+
+local partner = setmetatable({}, { __mode = 'k' })  -- lienzo de la escena → su pareja (mismo tamaño)
+local actorCv, whiteImg
+local function sized(cv, w, h)
+    if cv and cv:getWidth() == w and cv:getHeight() == h then return cv end
+    return love.graphics.newCanvas(w, h)
+end
+local actorOn, sceneCv = false, nil
+
+-- Empieza a dibujar personajes: el lienzo de los personajes (vacío) pasa a ser el destino
+function Edge.begin(scene)
+    local w, h = scene:getDimensions()
+    actorCv = sized(actorCv, w, h)
+    sceneCv, actorOn = scene, true
+    love.graphics.setCanvas(actorCv)
+    love.graphics.clear(0, 0, 0, 0)
+end
+
+-- Junta la escena y los personajes con el filo en la pareja de la escena; la deja de destino y la devuelve
+function Edge.finish(light)
+    local scene = sceneCv
+    actorOn, sceneCv = false, nil
+    local w, h = scene:getDimensions()
+    local out = sized(partner[scene], w, h)
+    partner[scene] = out
+    local sh = Shaders.get('edge_composite')
+    if not whiteImg then
+        local d = love.image.newImageData(1, 1); d:setPixel(0, 0, 1, 1, 1, 1)
+        whiteImg = love.graphics.newImage(d)
+    end
+    local L = light or whiteImg
+    sh:send('actors', actorCv)
+    sh:send('light', L)
+    if light then sh:send('lightK', { w / (light:getWidth() * 4), h / (light:getHeight() * 4) }) else sh:send('lightK', { 1, 1 }) end
+    sh:send('texel', { 1 / w, 1 / h })
+    sh:send('W', Edge.W)
+    sh:send('th', { Edge.T_LO, Edge.T_HI, Edge.L_LO, Edge.L_HI })
+    sh:send('lightC', Edge.LIGHT)
+    sh:send('darkC', Edge.DARK)
+    sh:send('maxA', Edge.MAX_A)
+    love.graphics.push('all')
+    love.graphics.origin()
+    love.graphics.setScissor()
+    love.graphics.setCanvas(out)
+    love.graphics.setShader(sh)
+    love.graphics.setBlendMode('replace', 'premultiplied')
+    love.graphics.setColor(1, 1, 1, 1)
+    love.graphics.draw(scene, 0, 0)
+    love.graphics.pop()
+    love.graphics.setCanvas(out)
+    return out
+end
+
+-- ¿Va al lienzo de los personajes? (modo shader y el rasgo `edge`)
+function Edge.wants(e) return e.edge == true end
+
 function Edge.direct(fn, ...)
     if passDepth > 0 then return end                 -- (las copias del modo simple: solo el cuerpo)
+    if actorOn then                                  -- (modo shader: a la escena, no al lienzo de los personajes)
+        love.graphics.setCanvas(sceneCv)
+        local a, b, c = fn(...)
+        love.graphics.setCanvas(actorCv)
+        return a, b, c
+    end
     return fn(...)
 end
 

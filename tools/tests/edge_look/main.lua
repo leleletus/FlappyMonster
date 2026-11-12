@@ -219,30 +219,147 @@ local function samePixels(a, b)
     return diff == 0, diff
 end
 
--- La luz se calcula ANTES de juntar las capas (Darkness.build / apply): la foto no cambia. BASE=1 guarda la de
--- referencia (<save>/edge_luz_<nivel>_base.png) con el código de antes; sin BASE, compara con ella
-case('luz_igual', function()
+
+-- ── Modo shader: la pasada, píxel a píxel, en lienzos pequeños ─────────────────
+-- Fondo liso de 64x64; un "sprite" de 16x16 en (24, 24) por Edge.begin / finish; se lee el resultado
+local function composite(bg, sprite, o)
+    o = o or {}
+    local W, H = o.w or 64, o.h or 64
+    local scene = love.graphics.newCanvas(W, H)
+    love.graphics.setCanvas(scene)
+    if o.split then
+        love.graphics.clear(bg[1], bg[2], bg[3], 1)
+        love.graphics.setColor(o.split[1], o.split[2], o.split[3], 1)
+        love.graphics.rectangle('fill', W / 2, 0, W / 2, H)
+    else
+        love.graphics.clear(bg[1], bg[2], bg[3], 1)
+    end
+    love.graphics.setCanvas()
+    local light
+    if o.light then
+        light = love.graphics.newCanvas(math.ceil(W / 4), math.ceil(H / 4))
+        love.graphics.setCanvas(light); love.graphics.clear(o.light, o.light, o.light, 1); love.graphics.setCanvas()
+    end
+    Edge.begin(scene)
+    love.graphics.setColor(sprite[1], sprite[2], sprite[3], sprite[4] or 1)
+    love.graphics.rectangle('fill', o.sx or 24, o.sy or 24, o.sw or 16, 16)
+    if o.extra then o.extra() end
+    love.graphics.setColor(1, 1, 1, 1)
+    local out = Edge.finish(light)
+    love.graphics.setCanvas()
+    return out:newImageData(), out
+end
+local function px(img, x, y) local r, g, b, a = img:getPixel(x, y); return r, g, b, a end
+local DARKBG, DARKSP = { 0.05, 0.05, 0.08 }, { 0.08, 0.08, 0.1 }
+
+case('pixel_oscuro', function()
+    local img = composite(DARKBG, DARKSP)
+    local r1 = px(img, 23, 30)                     -- (1 px fuera del borde izquierdo)
+    local r3 = px(img, 21, 30)                     -- (3 px fuera)
+    local rin = px(img, 30, 30)                    -- (dentro: el sprite tal cual)
+    check('pixel_oscuro', r1 > 0.7 and near(r3, 0.05, 0.02) and near(rin, 0.08, 0.02),
+        ('a 1 px=%.2f (filo claro) · a 3 px=%.2f (fondo) · dentro=%.2f'):format(r1, r3, rin))
+end)
+case('pixel_claro', function()
+    local img = composite({ 0.92, 0.95, 1 }, { 0.85, 0.9, 0.95 })
+    local r1 = px(img, 23, 30)
+    check('pixel_claro', r1 < 0.2, ('a 1 px=%.2f (filo oscuro)'):format(r1))
+end)
+case('pixel_contraste', function()
+    local img = composite({ 0, 0, 0 }, { 1, 1, 1 })
+    local r1 = px(img, 23, 30)
+    check('pixel_contraste', r1 < 0.02, ('negro contra blanco, a 1 px=%.2f (sin filo)'):format(r1))
+end)
+case('pixel_mitad', function()
+    -- fondo oscuro a la izquierda y blanco a la derecha; un sprite oscuro ancho que cruza la mitad
+    local img = composite(DARKBG, DARKSP, { split = { 1, 1, 1 }, sx = 16, sw = 32 })
+    local left = px(img, 15, 30)                   -- (fuera, por la izquierda: fondo oscuro → filo)
+    local right = px(img, 48, 30)                  -- (fuera, por la derecha: fondo blanco → el sprite ya contrasta)
+    check('pixel_mitad', left > 0.7 and right > 0.95, ('izquierda=%.2f (filo) · derecha=%.2f (fondo blanco, sin filo)'):format(left, right))
+end)
+case('oscuridad', function()
+    local img = composite(DARKBG, DARKSP, { light = 0.055 })
+    local r1 = px(img, 23, 30)
+    check('oscuridad', near(r1, 0.05, 0.02), ('a oscuras fuera de la luz, a 1 px=%.2f (sin filo: no delata)'):format(r1))
+end)
+case('translucido', function()
+    local img = composite(DARKBG, { DARKSP[1], DARKSP[2], DARKSP[3], 0.5 })
+    local r1 = px(img, 23, 30)
+    check('translucido', r1 > 0.3 and r1 < 0.6, ('sprite a media transparencia, a 1 px=%.2f (filo a medias)'):format(r1))
+end)
+case('directo_sombra', function()
+    local img = composite(DARKBG, DARKSP, { extra = function()
+        Edge.direct(function()
+            love.graphics.setColor(0.06, 0.06, 0.09, 1)
+            love.graphics.rectangle('fill', 4, 50, 20, 6)
+        end)
+    end })
+    local r = px(img, 3, 52)
+    check('directo_sombra', near(r, 0.05, 0.02), ('junto a la sombra (Edge.direct)=%.2f (sin filo)'):format(r))
+end)
+case('aditivo', function()
+    local glow = function()
+        love.graphics.setBlendMode('add')
+        love.graphics.setColor(0.3, 0.2, 0.1, 1)
+        love.graphics.rectangle('fill', 2, 2, 10, 10)
+        love.graphics.setBlendMode('alpha')
+    end
+    local img = composite(DARKBG, DARKSP, { extra = function() Edge.direct(glow) end })
+    local r, g = px(img, 6, 6)
+    local r0 = px(img, 13, 6)
+    check('aditivo', near(r, 0.35, 0.02) and near(g, 0.25, 0.02) and near(r0, 0.05, 0.02),
+        ('brillo aditivo por Edge.direct=%.2f,%.2f (quiero 0.35,0.25) · al lado=%.2f (sin filo)'):format(r, g, r0))
+end)
+case('borde_pantalla', function()
+    local img = composite(DARKBG, DARKSP, { sx = 0 })
+    local r = px(img, 63, 30)
+    check('borde_pantalla', near(r, 0.05, 0.02), ('sprite pegado a la izquierda: la última columna=%.2f (fondo)'):format(r))
+end)
+case('tamano', function()
+    local a = select(2, composite(DARKBG, DARKSP))
+    local b = select(2, composite(DARKBG, DARKSP, { w = 96, h = 80 }))
+    check('tamano', a:getWidth() == 64 and b:getWidth() == 96 and b:getHeight() == 80,
+        ('lienzos: %dx%d y %dx%d'):format(a:getWidth(), a:getHeight(), b:getWidth(), b:getHeight()))
+end)
+case('reuse', function()
     local prev = Settings.edge
     Settings.edge = 'shader'
-    local out, bad = {}, 0
-    for _, lv in ipairs({ 'gruta_del_farol', 'bajo_el_hielo', 'fortaleza_malvada' }) do
-        local st = scene(lv)
-        local img = photo(st, 'luz_' .. lv)
-        local baseName = 'edge_luz_' .. lv .. '_base.png'
-        if os.getenv('BASE') == '1' then
-            img:encode('png', baseName)
-            out[#out + 1] = lv .. ': guardada'
-        elseif love.filesystem.getInfo(baseName) then
-            local ok, d = samePixels(img, love.image.newImageData(baseName))
-            if not ok then bad = bad + 1 end
-            out[#out + 1] = ('%s: %s'):format(lv, ok and 'igual' or (d .. ' píxeles distintos'))
-        else
-            out[#out + 1] = lv .. ': sin referencia (BASE=1)'
+    local st = scene('fortaleza_malvada')
+    local SceneLayers = require 'src/world/level/SceneLayers'
+    local target = love.graphics.newCanvas(WINDOW_W, WINDOW_H)
+    love.graphics.setCanvas(target)
+    local out = SceneLayers.draw(st.level, st.camX, st.camY, st.sceneCanvas, st.enemies, st._actorsFn)
+    love.graphics.setCanvas()
+    local want = out:newImageData()
+    love.graphics.setCanvas(st.sceneCanvas); love.graphics.clear(1, 0, 1, 1); love.graphics.setCanvas()   -- (lo de antes de juntar, ensuciado)
+    local frozen = love.graphics.newCanvas(WINDOW_W, WINDOW_H)
+    love.graphics.setCanvas(frozen)
+    SceneLayers.draw(st.level, st.camX, st.camY, st.sceneCanvas, st.enemies, st._actorsFn, nil, true)
+    love.graphics.setCanvas()
+    local got = love.graphics.newCanvas(WINDOW_W, WINDOW_H)
+    love.graphics.setCanvas(got); love.graphics.clear(0, 0, 0, 1)
+    st.level:renderWaterEffect(st.camX, st.camY, out)
+    love.graphics.setCanvas()
+    local ok, d = samePixels(frozen:newImageData(), got:newImageData())
+    love.timer.getTime = realGetTime
+    Settings.edge = prev
+    check('reuse', out ~= st.sceneCanvas and ok, ('el golpe congelado vuelve a poner la escena YA juntada: %s'):format(ok and 'sí' or (d .. ' píxeles distintos')))
+end)
+
+-- Capturas de escenas de verdad en modo shader (SHOT=1): para mirarlas
+case('capturas', function()
+    if os.getenv('SHOT') ~= '1' then return end
+    local prev = Settings.edge
+    for _, mode in ipairs({ 'shader', 'simple' }) do
+        Settings.edge = mode
+        for _, lv in ipairs({ 'gruta_del_farol', 'bajo_el_hielo', 'fortaleza_malvada', 'cumbres_escarcha', 'cripta_del_silencio' }) do
+            local st = scene(lv, { frames = 40 })
+            photo(st, lv .. '_' .. mode)
         end
     end
     love.timer.getTime = realGetTime
     Settings.edge = prev
-    check('luz_igual', bad == 0, table.concat(out, ' · '))
+    check('capturas', true, 'edge_<nivel>_<modo>.png en la carpeta de guardado')
 end)
 
 -- ── El ajuste ────────────────────────────────────────────────────────────────

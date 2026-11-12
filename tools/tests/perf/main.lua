@@ -369,6 +369,8 @@ end
 
 function love.load(a)
     gameLoad(a)
+    -- (EDGE=shader|simple: el borde de contraste en ese modo — src/fx/Edge.lua —; sin él, el de este aparato)
+    if os.getenv('EDGE') and os.getenv('EDGE') ~= '' then require('src/core/Settings').edge = os.getenv('EDGE') end
     for _, cb in ipairs({ 'mousemoved', 'mousepressed', 'mousereleased', 'wheelmoved', 'touchpressed', 'touchmoved', 'touchreleased', 'focus' }) do love[cb] = function() end end
     love.audio.setVolume(0)
     realInput = Input

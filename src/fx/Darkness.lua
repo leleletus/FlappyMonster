@@ -168,18 +168,21 @@ end
 -- En DOS PASOS (el borde de contraste — src/fx/Edge.lua — necesita la luz ANTES de juntar las capas de la escena):
 --   Darkness.build(level, camX, camY, sources, entities) → true si hay luz que poner: rellena el lienzo de luz
 --   Darkness.apply(level, scene)   la multiplica sobre lo dibujado (y lo incandescente del fondo sigue brillando)
---   Darkness.lightCanvas()         el lienzo del último build de este fotograma (nil si no hubo)
+--   Darkness.lightCanvas(level)    el lienzo del último build (de ESE nivel; nil si no hubo)
 --   Darkness.render(...)           los dos seguidos (donde no hay borde que calcular)
 -- `scene` = el lienzo de la escena (opcional): con él, lo incandescente del fondo sigue brillando de noche
-local built = false
-function Darkness.lightCanvas() return built and canvas or nil end
+local built, builtLevel = false, nil
+function Darkness.lightCanvas(level)
+    if not built or (level and level ~= builtLevel) then return nil end
+    return canvas
+end
 
 function Darkness.render(level, camX, camY, sources, entities, scene)
     if Darkness.build(level, camX, camY, sources, entities) then Darkness.apply(level, scene) end
 end
 
 function Darkness.build(level, camX, camY, sources, entities)
-    built = false
+    built, builtLevel = false, level
     if not Darkness.active(level) then return false end
     local mood = moodOf(level)
     local dark = mood == 'dark'
