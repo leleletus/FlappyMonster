@@ -973,6 +973,24 @@ local function run()
     resize(1600, 720); wait(0.2); shot('main_1600')
     resize(1280, 720)
 
+    -- LA PANTALLA DE CARGA (src/ui/LoadingScreen.lua): en un aparato rápido no sale; marcado como lento, sí, antes de cargar
+    do
+        local LS = require 'src/ui/LoadingScreen'
+        local real, n = LS.present, 0
+        LS.present = function() n = n + 1 end
+        LS.slow = false
+        gStateMachine:change('adventure', { level = 'assets/levels/valle_soleado.json' }); wait(0.1)
+        local fastNo = n == 0
+        LS.slow = true
+        gStateMachine:change('adventure', { level = 'assets/levels/valle_soleado.json' }); wait(0.1)
+        local slowYes = n == 1
+        LS.present, LS.slow = real, false
+        local cv = love.graphics.newCanvas(WINDOW_W, WINDOW_H)
+        love.graphics.setCanvas(cv); LS.draw(1.3); love.graphics.setCanvas()
+        cv:newImageData():encode('png', 'menu_loading.png')
+        gStateMachine:change('main_menu'); wait(0.5)
+        check('carga', fastNo and slowYes, ('rápido: no sale=%s · lento: sale antes de cargar=%s'):format(tostring(fastNo), tostring(slowYes)))
+    end
     do
         -- (el detector funciona: un texto con [Esc] dibujado a mano se apunta)
         local dev = Input.lastDevice

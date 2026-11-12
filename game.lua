@@ -126,6 +126,8 @@ function love.load()
         online_results     = function() return OnlineResultsState:new() end,
         online_records     = function() return require('src/states/online/OnlineRecordsState'):new() end,   -- récords y desafío del día
     })
+    -- (la PANTALLA DE CARGA en los aparatos lentos: src/ui/LoadingScreen.lua)
+    require('src/ui/LoadingScreen').wrap(gStateMachine)
     -- (los SHADERS, compilados ya — src/fx/Shaders.lua —: antes la primera vez que salían, en plena partida; los módulos
     -- que los definen se cargan aquí si aún no lo estaban)
     for _, m in ipairs({ 'src/fx/Silhouette', 'src/fx/Darkness', 'src/fx/IceEncase', 'src/fx/BossFx', 'src/world/level/Level',

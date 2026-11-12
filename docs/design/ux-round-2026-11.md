@@ -42,3 +42,7 @@ yet). Later: loading spinners on slow devices beyond item 6.
    adds `level` / `mode` to the list — extra fields, old clients ignore them) and the connection ping bottom-left
    (`PingIcon`). Reasons for not joining were already plain words (`srv.room_full`, `srv.version`…). A minimap preview
    of the level was not added: the name and mode carry what matters. Capture `online_menus` `online_daily_hub`.
+6. (0.5.201) `src/ui/LoadingScreen.lua` (art `tools/art/ui/make_loading.py`: the monster's flutter frames, all white):
+   `wrap(gStateMachine)` times every change to a level state; once one takes over 0.2 s the device counts as slow and
+   from then on a loading frame is drawn and presented before each level load. Fast devices never see it. Harness
+   `menu_flow` `carga`, capture `menu_loading`.
