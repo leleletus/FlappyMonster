@@ -305,6 +305,7 @@ function PlayerAdventure:hurt(n, src)
     end
     self:grantInvulnerability(HIT_INV * Difficulty.k('invuln'))
     self.hurtT, self.hitNow = HURT_FLASH, true
+    self.stompChain = 0                                             -- (un golpe corta la racha de pisotones)
     KB.hit(self, src)                                               -- (TODO golpe empuja lejos de lo que pegó: Knockback)
     return false
 end
@@ -400,6 +401,7 @@ end
 local FROZEN_INPUT = { pressed = function() return false end, down = function() return false end }
 function PlayerAdventure:update(dt, level)
     self.prevY = self.y              -- (dónde estaba al empezar el paso: el pisotón mira si los pies venían de arriba)
+    require('src/world/systems/StompChain').update(self)          -- (la racha de pisotones: en el suelo o el agua, se corta)
     self.peaceful = level ~= nil and level.peaceful == true          -- (nivel de enemigos inofensivos)
     self.flight = level ~= nil and level.flappy == true              -- (nivel Flappy: vuela — PlayerFlight.lua —)
     self.frozen = level ~= nil and level.frozenAt ~= nil and not self.dying and level:frozenAt(self.x, self.y)

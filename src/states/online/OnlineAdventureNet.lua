@@ -363,7 +363,8 @@ function OnlineAdventureState:_processEvent(ev)
         -- Zona de puntos: destello para todos; el "+N", solo para quien los gana
         if ev.kind == 'zone' then PointAreas.flashAt(self.level, tonumber(ev.x) or 0, (tonumber(ev.y) or 0) + 40) end
         if ev.playerId == NC.myId then
-            self:_spawnPopup('+' .. tostring(ev.delta) .. (ev.kind == 'zone' and '' or '!'), ev.x or 0, ev.y or 0)
+            local mult = tonumber(ev.mult)                 -- (la racha de pisotones: «×4 +120!»)
+            self:_spawnPopup(((mult and mult > 1) and ('x' .. mult .. ' ') or '') .. '+' .. tostring(ev.delta) .. (ev.kind == 'zone' and '' or '!'), ev.x or 0, ev.y or 0)
         end
     elseif ev.type == 'tile' then
         -- Bloque roto / ON-OFF cambiado (lo decide el servidor): aplicar,

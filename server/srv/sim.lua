@@ -181,12 +181,18 @@ local function checkPlayerEnemyCollisions(sim, pid, ps, seq)
     S.emitX, S.emitY = pa.x, pa.y
     S.Entities.interactions.run(pa, sim.enemies, {
         stomp = function(g, pts)
-            pts = pts or 0
-            ps.score = ps.score + pts
-            ps.scoreT = sim.levelTime          -- para desempatar: quién llegó antes
+            -- (la RACHA de pisotones, como en un jugador: src/world/systems/StompChain.lua)
+            local got, mult, up = S.StompChain.award(pa, g, pts or 0)
             ps.bounceSeq = seq
             sim.mode.onStomp(sim.match, ps, g)
-            pushEvent(sim, { type='score', playerId=pid, delta=pts, x=round(g.x), y=round(g.y) })
+            if up then
+                pa.lives = math.min(99, (pa.lives or 0) + 1)
+                pushEvent(sim, { type='pickup', playerId=pid, kind='life', x=round(g.x), y=round(g.y) })
+            else
+                ps.score = ps.score + got
+                ps.scoreT = sim.levelTime          -- para desempatar: quién llegó antes
+                pushEvent(sim, { type='score', playerId=pid, delta=got, mult=(mult or 1) > 1 and mult or nil, x=round(g.x), y=round(g.y) })
+            end
         end,
         pickup = function(e, pk)
             pk = S.Entities.interactions.pickupEffect(pa, pk)

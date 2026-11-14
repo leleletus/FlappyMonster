@@ -317,6 +317,7 @@ function love.load()
     S.BossZones       = require 'src/world/systems/BossZones'
     S.AutoScroll      = require 'src/world/systems/AutoScroll'
     S.StartCountdown  = require 'src/world/systems/StartCountdown'
+    S.StompChain      = require 'src/world/systems/StompChain'
     S.Floods          = require 'src/world/systems/Floods'
     S.PointAreas      = require 'src/world/systems/PointAreas'
     S.Push            = require 'src/world/systems/Push'

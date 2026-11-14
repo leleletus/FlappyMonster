@@ -176,6 +176,17 @@ body collides with `level.players`). The arena wall is looked up from the
 position BEFORE moving, so no push can carry anything out of a boss zone.
 Online camera freezes while the local player is dying (same as single player).
 
+## Stomp chain (0.5.220)
+
+`src/world/systems/StompChain.lua` (the user: "like the classic platformers"). Stomping enemies one after another
+without touching the ground multiplies each enemy's own points: ×1, ×2, ×4, ×8, ×16, ×32, ×64 (`MULTS`); from the 8th
+stomp on, each gives ONE LIFE instead (max 99). Bosses and things that give no points neither count nor break it;
+landing, entering water, dying or getting hurt (`hurt` sets `stompChain = 0`) break it (`StompChain.update`, at the
+start of every player step). The popup shows the multiplier ("x4 +120!") or `hud.plus_life`. Single player
+(`AdventureState` stomp callback) and the server (`server/srv/sim.lua`: points, `pa.lives`, a `pickup life` event, the
+`score` event carries `mult`); lives gained follow golden rule 7 (saved only when the level is finished). Tests:
+`mechanics` `racha`, `story_flow` `racha`.
+
 ## Pushes and special states
 
 - `pa:squash(dirX)`: flattened for `squashT` (1.8 s): crouch sprite squashed to

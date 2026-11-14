@@ -451,10 +451,18 @@ function AdventureState:checkEnemyCollisions()
     local player = self.player
     Entities.interactions.run(player, self.enemies, {
         stomp = function(g, pts)
-            self.score = self.score + (pts or 0)
+            -- (la RACHA de pisotones sin tocar el suelo: los puntos se multiplican y, al final, vidas — StompChain —)
+            local got, mult, up = require('src/world/systems/StompChain').award(player, g, pts)
             if not g.def.boss and g.state == 'dead' then self.stats.kills = self.stats.kills + 1 end
             local popY = g.flipped and (g.y + g.outerH / 2) or (g.y - g.outerH / 2)
-            self:spawnPopup('+' .. (pts or 0) .. '!', g.x, popY)
+            if up then
+                player.lives = math.min(99, player.lives + 1)        -- (se guarda al terminar el nivel, como las demás)
+                self:spawnPopup(L('hud.plus_life'), g.x, popY)
+                Sound.play('oneUp'); Particles.emit('oneup', g.x, popY)
+            else
+                self.score = self.score + (got or 0)
+                self:spawnPopup(((mult or 1) > 1 and ('x' .. mult .. ' ') or '') .. '+' .. (got or 0) .. '!', g.x, popY)
+            end
         end,
         pickup = function(e, pk)
             if pk.lives and not e.taken and e.placeIdx then self.takenNow[e.placeIdx] = true end

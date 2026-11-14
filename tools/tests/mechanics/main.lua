@@ -2428,6 +2428,37 @@ function cases.empuje()
          body.vx, body.vy, proj.vx, boom.vx, crush.vx, crush.vy, sh.vx, bossBody.vx, sp.vx, sp.vy, tostring(okBossMod)))
 end
 
+-- RACHA DE PISOTONES (0.5.220, src/world/systems/StompChain.lua): sin tocar el suelo, cada pisotón multiplica los puntos
+-- del enemigo ×1, ×2, ×4… ×64; del 8º en adelante, una vida; los jefes ni cuentan ni la cortan; tocar el suelo, el agua
+-- o un golpe la cortan
+function cases.racha()
+    local okM, SC = pcall(require, 'src/world/systems/StompChain')
+    if not okM then check('racha', false, 'falta src/world/systems/StompChain.lua'); return end
+    local level = room(10, 8, {})
+    local pa = playerAt(level, 5, 7)
+    pa.onGround = false
+    local g = { def = { name = 'gummy' } }
+    local boss = { def = { name = 'megagummy', boss = true } }
+    local got, ups = {}, 0
+    for k = 1, 9 do
+        if k == 4 then SC.award(pa, boss, 100) end              -- (un jefe en medio: ni suma ni corta)
+        local pts, mult, up = SC.award(pa, g, 30)
+        got[#got + 1] = up and 'UP' or tostring(pts)
+        if up then ups = ups + 1 end
+    end
+    local seq = table.concat(got, ',')
+    local okSeq = seq == '30,60,120,240,480,960,1920,UP,UP'
+    pa.onGround = true; SC.update(pa)
+    local p1 = SC.award(pa, g, 30)
+    local okGround = p1 == 30
+    pa.onGround = false; SC.award(pa, g, 30); pa.invT = 0
+    pa:hurt(1, { what = 'gummy', part = 'body' })
+    local p2 = SC.award(pa, g, 30)
+    local okHurt = p2 == 30
+    check('racha', okSeq and okGround and okHurt,
+        ('sin tocar el suelo: %s · al tocar el suelo vuelve a ×1=%s · un golpe la corta=%s'):format(seq, tostring(okGround), tostring(okHurt)))
+end
+
 function cases.puffer_cycle()
     local level, es = pond()
     local f = es[1]
@@ -4878,7 +4909,7 @@ local function junglaShot()
 end
 
 function love.load()
-    for _, n in ipairs({ 'fuente_base', 'fuente_contacto', 'fuente_partes', 'fuente_entorno', 'fuente_textos', 'fuente_red', 'aviso_opcion', 'empuje', 'inicio_fases', 'onoff_head', 'onoff_pound', 'hidden_up', 'hidden_drop', 'hidden_side', 'hidden_vis',
+    for _, n in ipairs({ 'fuente_base', 'fuente_contacto', 'fuente_partes', 'fuente_entorno', 'fuente_textos', 'fuente_red', 'aviso_opcion', 'empuje', 'racha', 'inicio_fases', 'onoff_head', 'onoff_pound', 'hidden_up', 'hidden_drop', 'hidden_side', 'hidden_vis',
                          'helmet_jump', 'helmet_ride', 'helmet_gp', 'helmet_side', 'stomp_fast',
                          'puffer_through', 'puffer_concave', 'puffer_cycle', 'puffer_dry', 'flyer_anim', 'vuelo_libre', 'boxed_in',
                          'bloque_roto', 'activador', 'tramp_avanza', 'tramp_pinchos', 'ping_icono',

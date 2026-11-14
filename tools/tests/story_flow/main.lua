@@ -342,6 +342,29 @@ function love.update(dt)
         -- (y de pie SOBRE el suelo: el primer paso de física no lo mueve — antes salía metido y lo sacaba al empezar)
         local y0 = p.y
         p:update(1 / 60, st.level)
+        -- RACHA DE PISOTONES en el juego de verdad (0.5.220): 9 pisotones sin tocar el suelo a un enemigo de 30 → puntos
+        -- 30+60+…+1920 y 2 vidas; el texto lleva el multiplicador
+        do
+            local fake = { alive = true, def = { name = 'gummy' }, x = p.x, y = p.y, outerH = 40, state = 'walk', props = {} }
+            function fake:interact() return 'stomp', -500, 30 end
+            function fake:stomp() end
+            local score0, lives0, enemies0 = st.score, p.lives, st.enemies
+            local keep = { p.x, p.y, p.vx, p.vy, p.onGround, p.jumpsLeft }
+            st.enemies = { fake }
+            p.stompChain, p.onGround = 0, false
+            local texts = {}
+            local spawn = st.spawnPopup
+            st.spawnPopup = function(self, t, ...) texts[#texts + 1] = t; return spawn(self, t, ...) end
+            for _ = 1, 9 do p.onGround = false; st:checkEnemyCollisions() end
+            st.spawnPopup, st.enemies = spawn, enemies0
+            local gained = st.score - score0
+            local okR = gained == 30 + 60 + 120 + 240 + 480 + 960 + 1920 and p.lives == math.min(99, lives0 + 2)
+                and texts[4] == 'x8 +240!'
+            p.lives, st.score, p.stompChain = lives0, score0, 0
+            p.x, p.y, p.vx, p.vy, p.onGround, p.jumpsLeft = keep[1], keep[2], keep[3], keep[4], keep[5], keep[6]
+            check('racha', okR, ('9 pisotones sin tocar el suelo: +%d puntos, vidas %d → %d · texto del 4º «%s»'):format(
+                gained, lives0, lives0 + 2, tostring(texts[4])))
+        end
         check('apoyado', p.onGround and math.abs(p.y - y0) < 1,
             ('al acabar la cuenta atrás el primer paso lo mueve %.1f px (en el suelo=%s)'):format(p.y - y0, tostring(p.onGround)))
         CD_DONE = true
