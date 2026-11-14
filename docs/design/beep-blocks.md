@@ -20,8 +20,8 @@ rhythm, not a switch to hit.
 - **Crystal blocks, one PINK and one CYAN.**
 - **The clock follows the music 1:1**: if the music restarts, the clock restarts with it. (In practice the music only
   restarts in a few cases, such as drowning; this level has no water.)
-- **Not in the story mode yet** (the user will decide later). Working name **StarTrail Highway**; a shorter similar
-  name in English and Spanish is welcome (proposals below).
+- **Not in the story mode yet** (the user will decide later). Name: **Starway / Vía Estelar** (chosen over the
+  working name StarTrail Highway).
 
 ## Design
 
@@ -95,9 +95,12 @@ changes tiles: the swap still arrives as tile events. → `Protocol.VERSION` + 1
 ### Visuals
 
 - Inactive block = dotted crystal outline.
-- During the warning (beats 6-8) the blocks about to appear blink their outline on each beep and the ones about to
-  vanish flicker, so the switch can be read with the sound off (honour the accessibility "flashes" option with a
-  softer cue).
+- **On EVERY beep (beats 6, 7, 8) every beep block BLINKS (the user, 2026-11-14): for a moment each block is DRAWN
+  in the other state (solid ones show the outline look, outline ones show the solid look) and then back. ONLY VISUAL:
+  collision does not change until the switch on beat 1.** Driven by the same clock as the beep SFX (render only, from
+  the clock `t`, in SP and on the client; the server does nothing). The accessibility "flashes" option gets a softer
+  version (e.g. a brightness pulse instead of the full swap), never none: it is the cue for players with the sound
+  off.
 - On the switch: the existing tile bump and a few crystal sparkles, no screen shake.
 
 ### Editor
@@ -107,9 +110,11 @@ Placed like any tile (Mecanismos). No links: the clock is global to the level. T
 
 ## The level
 
+- **Name (the user, 2026-11-14): Starway · ES Vía Estelar, level file `via_estelar`** (EN/ES rows in
+  `translations.csv`).
 - Not in the story mode for now: a Free Play level (the user decides its place later). Level file names are permanent
   (golden rule 3), so the name is chosen BEFORE the file exists.
-- Name proposals (the user's working name: StarTrail Highway / for Spanish, e.g. "Autopista Estelar"):
+- Proposals that were offered (the user's working name: StarTrail Highway / for Spanish, e.g. "Autopista Estelar"):
   - **Starway** · ES **Vía Estelar** — the shortest; file `via_estelar`.
   - **Star Trail** · ES **Estela Estelar** / **Sendero Estelar**.
   - **Comet Road** · ES **Ruta Cometa**.
