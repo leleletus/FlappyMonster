@@ -796,6 +796,8 @@ via.spring,"Cae en la estrella EN el pulso y saldrás disparado. Fuera del pulso
 via.clap,"Los pinchos dan palmas con la música: pasa cuando se esconden.","The spikes clap with the music: cross when they hide.",
 via.fork,"Arriba, por las piedras de colores; abajo, por las nubes. Los dos caminos llevan a la constelación.","Up, over the colored stones; down, through the clouds. Both paths lead to the constellation.",
 via.tower,"La escalera estelar: rebota a tiempo y sube con los ascensores.","The star staircase: bounce in time and ride the lifts up.",
+via.dance,"La pista de baile: el suelo y los muros de cristal cambian con la música. ¡Muévete con el ritmo!","The dance floor: the crystal floor and walls switch with the music. Move with the beat!",
+via.walls,"Muros de cristal: con cada cambio se abren los del otro color.","Crystal walls: each switch opens the ones of the other colour.",
 tut.missing,(texto del cartel sin poner),(sign text not set),Nivel tutorial: los carteles de ayuda (src/world/entities/types/items/hint.lua)
 tut.walk,"Muévete con {left} {right}. La meta está al final, a la derecha.","Move with {left} {right}. The goal is at the end, to the right.",
 tut.run,Mantén {run} para correr.,Hold {run} to run.,

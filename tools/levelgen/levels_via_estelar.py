@@ -25,15 +25,46 @@ from lib import *
 ID_HIGH = 2 ** 17
 def enc(i): return i % 16 + (i // 16) * ID_HIGH
 
-FR = enc(50)            # ladrillo helado (el «cristal» del camino; no resbala)
-IR = enc(51)            # roca helada (lo de abajo)
+# el PAQUETE ESTELAR (src/world/tiles/types/starway_pack.lua)
+FR = enc(61)            # cristal estelar (el camino)
+IR = enc(62)            # roca nebular (lo de debajo)
+CLOUD = enc(63)         # nube maciza
+BRICK = enc(64)         # ladrillo estelar (el laberinto, construcciones)
+PILLAR = enc(65)        # columna de cristal
+WINDOW = enc(66)        # ventana estelar (plano de fondo)
+CPF = enc(67)           # nube traspasable
+PF = enc(68)            # repisa de cristal traspasable
 ICE = enc(30)           # hielo (resbala: un tramo a propósito)
-PF = enc(57)            # plataforma helada traspasable
 PINK, CYAN = enc(45), enc(47)
 SW_ON = 13              # Activador ON/OFF
 
-W, H = 420, 48
+W, H = 520, 48
+DX = 100                # (las zonas 3-6 van 100 columnas más a la derecha: la Pista de baile va delante)
 VOID = H - 1            # la fila de pinchos del fondo
+
+
+class Shift:
+    """el mismo nivel con las columnas corridas `dx` (las zonas que van detrás de la Pista de baile)"""
+    def __init__(self, L, dx): self.L, self.dx, self.extra = L, dx, L.extra
+    def set(self, c, r, v): self.L.set(c + self.dx, r, v)
+    def get(self, c, r): return self.L.get(c + self.dx, r)
+    def set_bg(self, c, r, v): self.L.set_bg(c + self.dx, r, v)
+    def rect(self, c0, r0, c1, r1, v=SOLID): self.L.rect(c0 + self.dx, r0, c1 + self.dx, r1, v)
+    def clear(self, c0, r0, c1, r1): self.L.clear(c0 + self.dx, r0, c1 + self.dx, r1)
+    def plat(self, c0, c1, r, kind=DROP): self.L.plat(c0 + self.dx, c1 + self.dx, r, kind)
+    def spikes(self, c0, c1, r, direction=UP): self.L.spikes(c0 + self.dx, c1 + self.dx, r, direction)
+    def finish(self, c, r): self.L.finish(c + self.dx, r)
+    def deco(self, typ, c, r, sub=None): self.L.deco(typ, c + self.dx, r, sub)
+    def link(self, c, r, to): link(self.L, c + self.dx, r, to)
+    def ent(self, typ, c, r, sub=None, **p):
+        if 'patrol' in p: p['patrol'] = {'left': p['patrol']['left'] + self.dx, 'right': p['patrol']['right'] + self.dx}
+        return self.L.ent(typ, c + self.dx, r, sub, **p)
+    def walker(self, typ, c, r, l, rr, **p): return self.L.walker(typ, c + self.dx, r, l + self.dx, rr + self.dx, **p)
+
+
+def link(L, c, r, to):
+    if isinstance(L, Shift): return L.link(c, r, to)
+    L.extra.setdefault('links', []).append({'col': c, 'row': r, 'to': to})
 
 
 def isle(L, c0, c1, top, thick=3, v=FR):
@@ -102,7 +133,7 @@ def zone_claps(L):
     for c0, off in ((66, 0), (70, 1), (74, 0), (78, 1)):
         for c in (c0, c0 + 1):
             clap(L, c, 24, off)
-    L.walker('gummy', 72, 23, 72, 73)
+    L.walker('gummy_star', 72, 23, 72, 73)
     # la pared: 7 de alto; solo se sube botando EN el pulso
     L.rect(87, 17, 96, 23, FR)
     spring(L, 85, 23)
@@ -126,15 +157,15 @@ def zone_metronome(L):
     bridge(L, 139, 141, 15, CYAN)
     isle(L, 142, 165, 14, thick=2)
     L.ent('checkpoint', 145, 13)
-    L.walker('crabby', 155, 13, 150, 162)
+    L.walker('crabby_star', 155, 13, 150, 162)
     L.plat(160, 164, 11, PF)
     L.ent('extralife', 162, 10)
     # CAMINO BAJO: el que cae desde la isla (o entre las piedras) llega a la nube de abajo: placas y Gummies
     isle(L, 128, 165, 32, thick=3)
     for c, off in ((140, 0), (141, 0), (150, 1), (151, 1), (158, 0), (159, 0)):
         clap(L, c, 32, off)
-    L.walker('gummy', 145, 31, 143, 148)
-    L.walker('gummy', 154, 31, 153, 156)
+    L.walker('gummy_star', 145, 31, 143, 148)
+    L.walker('gummy_star', 154, 31, 153, 156)
     L.ent('checkpoint', 162, 31)
 
 
@@ -151,7 +182,7 @@ def cell_box(i, j):
 def zone_maze(L, seed=7):
     rng = random.Random(seed)
     x1, y1 = MX0 + NX * CW, MY0 + NY * CH
-    L.rect(MX0, MY0, x1, y1, FR)                        # todo macizo, luego se vacían las cámaras
+    L.rect(MX0, MY0, x1, y1, BRICK)                     # todo macizo (ladrillo estelar), luego se vacían las cámaras
     for i in range(NX):
         for j in range(NY):
             a, b, c, d = cell_box(i, j)
@@ -220,7 +251,7 @@ def zone_maze(L, seed=7):
     for k, (i, j) in enumerate(acts):
         a, b, c, d = cell_box(i, j)
         L.set(a + 3, d - 2, SW_ON)                 # se golpea de un cabezazo
-        L.extra.setdefault('links', []).append({'col': a + 3, 'row': d - 2, 'to': k + 1})
+        link(L, a + 3, d - 2, k + 1)
         L.ent('apple', a + 1, d)
     used = set(acts)
     rest = [c for c in deads if c not in used]
@@ -235,10 +266,10 @@ def zone_maze(L, seed=7):
             a, b, c, d = cell_box(i, j)
             roll = rng.random()
             if roll < 0.22:
-                L.walker('gummy', a + 3, d, a + 1, c - 1)
+                L.walker('gummy_star', a + 3, d, a + 1, c - 1)
             elif roll < 0.4:
                 for cc in (a + 3, a + 4):
-                    if L.get(cc, d + 1) == FR: clap(L, cc, d + 1, (i + j) % 2)
+                    if L.get(cc, d + 1) == BRICK: clap(L, cc, d + 1, (i + j) % 2)
             elif roll < 0.5:
                 L.walker('hopper', a + 4, d, a + 1, c - 1)
     for (i, j) in ((3, 1), (7, 4), (9, 2)):
@@ -308,6 +339,105 @@ def zone_finale(L):
     spring(L, 400, 32)
 
 
+# ══ 2b · La pista de baile (97-196): parkour TODO de Bloques Beep ══════════════════════════════════════════════════
+def zone_dance(L):
+    hint(L, 93, 16, 'via.dance')
+    # a) SUELO ALTERNO (97-128): el suelo son parejas rosa / cian (con un color, huecos de 2) y MUROS de cristal de 3 de
+    #    alto bajo un techo (no se saltan): con el rosa, los muros rosas cierran; con el cian, los cianes
+    for i, c in enumerate(range(97, 129, 2)):
+        bridge(L, c, c + 1, 17, PINK if i % 2 == 0 else CYAN)
+    L.rect(97, 10, 128, 12, BRICK)
+    for c, v in ((104, PINK), (112, CYAN), (120, PINK), (126, CYAN)):
+        L.rect(c, 14, c, 16, v)
+        L.rect(c, 13, c, 13, BRICK)                    # (el techo baja hasta el muro: no hay rendija encima)
+    # b) LA TORRE DE DOS COLORES (129-137): escalones en zigzag, rosa y cian alternos; caer = volver al suelo de abajo
+    isle(L, 129, 137, 18, thick=2, v=BRICK)
+    for k, (c0, r) in enumerate(((130, 15), (134, 13), (130, 11), (134, 9))):
+        bridge(L, c0, c0 + 2, r, CYAN if k % 2 == 0 else PINK)
+    L.plat(129, 129, 13, PF)                           # (repisas de descanso en las paredes)
+    L.plat(137, 137, 11, PF)
+    # c) EL PASILLO DE MUROS (138-186), arriba: muros de cristal de techo a suelo; colores seguidos iguales = se pasan
+    #    dos en la misma frase; placas de palmas entre medias
+    L.rect(138, 7, 186, 8, BRICK)                      # suelo (de pie en la 6)
+    L.rect(138, 2, 186, 3, BRICK)                      # techo
+    for k, (c, v) in enumerate(((142, PINK), (146, CYAN), (149, CYAN), (153, PINK), (156, PINK), (160, CYAN),
+                                (164, PINK), (167, PINK), (171, CYAN), (174, CYAN), (178, PINK), (182, CYAN))):
+        L.rect(c, 4, c, 6, v)
+    for c, off in ((144, 0), (151, 1), (158, 0), (169, 1), (176, 0)):
+        clap(L, c, 7, off)
+    hint(L, 139, 6, 'via.walls')
+    L.ent('star', 185, 6)                              # (la estrella del pasillo: al final, antes de bajar)
+    # d) la bajada a la isla del metrónomo
+    L.plat(187, 189, 10, PF)
+    L.plat(190, 192, 13, PF)
+    isle(L, 186, 196, 17)
+    L.ent('checkpoint', 191, 16)
+    L.ent('apple', 194, 16)
+
+
+# ══ Decoración: lo de encima de cada isla, el cielo y el PLANO DE FONDO (bloques de verdad) ═══════════════════════
+DECO_TOP = (('crystal_cluster', 3, None), ('moon_flower', 3, 2), ('crystal_shard', 2, 1), ('crystal_shard', 1, 2),
+            ('star_lantern', 0.6, None), ('telescope', 0.25, None), ('const_sign', 0.25, None), ('star_banner', 0.4, None))
+
+
+def decorate(L, seed=11):
+    rng = random.Random(seed)
+    busy = {(e['col'], e['row']) for e in L.entities}
+    busy |= {(e['col'], e['row'] + 1) for e in L.entities}
+    tot = sum(w for _, w, _ in DECO_TOP)
+    for c in range(3, W - 2):
+        for r in range(3, H - 2):
+            if L.get(c, r) != EMPTY or L.get(c, r + 1) not in (FR, CLOUD) or (c, r) in busy: continue
+            if rng.random() > 0.2: continue
+            if L.get(c, r + 1) == CLOUD:
+                if rng.random() < 0.3: L.deco('cloud_puff', c, r)
+                continue
+            x = rng.random() * tot
+            for name, w, sub in DECO_TOP:
+                x -= w
+                if x <= 0:
+                    L.deco(name, c, r, sub); break
+    # estrellas que flotan en el cielo abierto (fuera del laberinto y de la torre)
+    for c in range(8, W - 8, 9):
+        r = rng.randrange(4, 26)
+        if all(L.get(cc, rr) == EMPTY for cc in range(c - 1, c + 2) for rr in range(r - 1, r + 2)) \
+           and not (MX0 + DX - 2 <= c <= MX0 + DX + NX * CW + 2) and not (263 + DX <= c <= 300 + DX):
+            L.deco('floating_star', c, r)
+
+
+def backplane(L, seed=5):
+    """el PLANO DE FONDO: ruinas de ladrillo estelar con ventanas y columnas de cristal detrás de las islas grandes, y
+    la pared del templo detrás de todo el laberinto"""
+    rng = random.Random(seed)
+    # detrás del laberinto: ladrillo con ventanas cada 4 x 3 (dentro de las cámaras se ve la pared del templo)
+    x0, y0 = MX0 + DX, MY0
+    for c in range(x0, x0 + NX * CW + 1):
+        for r in range(y0, y0 + NY * CH + 1):
+            L.set_bg(c, r, WINDOW if (c % 4 == 2 and r % 3 == 1) else BRICK)
+    # ruinas: detrás de cada tramo de suelo de 8 o más casillas, una torre o un pórtico
+    c = 3
+    while c < W - 10:
+        top = next((r for r in range(4, H - 2) if L.get(c, r) == FR and L.get(c, r - 1) == EMPTY), None)
+        if top is None or (x0 - 4 <= c <= x0 + NX * CW + 4):
+            c += 1; continue
+        run = 0
+        while c + run < W - 1 and L.get(c + run, top) == FR and L.get(c + run, top - 1) == EMPTY: run += 1
+        if run >= 8:
+            kind = rng.random()
+            a = c + 1 + rng.randrange(max(1, run - 6))
+            if kind < 0.5:                             # torre con ventanas
+                h = rng.randrange(4, 8)
+                for cc in range(a, a + 3):
+                    for rr in range(top - h, top):
+                        L.set_bg(cc, rr, WINDOW if (cc == a + 1 and (top - rr) % 3 == 2) else BRICK)
+            else:                                      # pórtico: dos columnas y un dintel
+                h = rng.randrange(3, 6)
+                for rr in range(top - h, top):
+                    L.set_bg(a, rr, PILLAR); L.set_bg(a + 4, rr, PILLAR)
+                for cc in range(a, a + 5): L.set_bg(cc, top - h - 1, BRICK)
+        c += max(run, 1)
+
+
 def via_estelar():
     L = Level('Vía Estelar', W, H, (4, 29), music='via_estelar', modes=['race'])
     L.extra.update(name_en='Starway', background='starway', time='night', light='none', timeLimit=900,
@@ -315,10 +445,14 @@ def via_estelar():
     L.spikes(2, W - 1, VOID)
     zone_bridge(L)
     zone_claps(L)
-    zone_metronome(L)
-    zone_maze(L)
-    zone_tower(L)
-    zone_finale(L)
+    zone_dance(L)
+    S = Shift(L, DX)
+    zone_metronome(S)
+    zone_maze(S)
+    zone_tower(S)
+    zone_finale(S)
+    backplane(L)
+    decorate(L)
     return L
 
 
