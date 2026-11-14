@@ -252,6 +252,17 @@ local function composite(bg, sprite, o)
         Edge.draw(owner, owner.x, owner.y, function()
             love.graphics.setColor(sprite[1], sprite[2], sprite[3], sprite[4] or 1)
             love.graphics.rectangle('fill', sx, sy, sw, 16)
+            -- (o.body = { r, g, b[, inset] }: un CUERPO de otro color dentro de un borde de `sprite` — como casi todos los
+            --  enemigos: borde oscuro y cuerpo de color —; o.patch: un trozo pequeño de otro color — la cara del monstruo —)
+            if o.body then
+                local k = o.body[4] or 2
+                love.graphics.setColor(o.body[1], o.body[2], o.body[3], 1)
+                love.graphics.rectangle('fill', sx + k, sy + k, sw - 2 * k, 16 - 2 * k)
+            end
+            if o.patch then
+                love.graphics.setColor(o.patch[1], o.patch[2], o.patch[3], 1)
+                love.graphics.rectangle('fill', sx + 5, sy + 4, 5, 4)
+            end
         end)
         if o.extra then o.extra() end
         love.graphics.setColor(1, 1, 1, 1)
@@ -326,6 +337,34 @@ case('translucido', function()
     local img = composite(DARKBG, { DARKSP[1], DARKSP[2], DARKSP[3], 0.5 })
     local r1 = px(img, 23, 30)
     check('translucido', r1 > 0.3 and r1 < 0.6, ('sprite a media transparencia, a 1 px=%.2f (filo a medias)'):format(r1))
+end)
+-- CONTRASTE DE COLOR Y CUERPO / BORDE (0.5.214, el usuario: «no solo luminosidad, también el contraste del color; separar
+-- el cuerpo del borde oscuro»): el filo sale solo si se pierde el contorno Y el cuerpo tampoco destaca
+local NAVY = { 0.08, 0.09, 0.16 }
+case('cuerpo_color', function()
+    -- borde negro (se pierde en el fondo oscuro) y cuerpo rojo oscuro: casi la misma luminancia que el fondo, otro color
+    local img = composite(NAVY, { 0.02, 0.02, 0.03 }, { body = { 0.45, 0.02, 0.02 } })
+    local r1, g1, b1 = px(img, 23, 30)
+    check('cuerpo_color', near(r1, NAVY[1], 0.03) and near(b1, NAVY[3], 0.03),
+        ('borde negro + cuerpo rojo oscuro sobre azul oscuro, a 1 px=%.2f,%.2f,%.2f (sin filo: el cuerpo se ve)'):format(r1, g1, b1))
+end)
+case('cuerpo_igual', function()
+    -- borde negro y cuerpo del color del fondo: se pierde todo
+    local img = composite(NAVY, { 0.02, 0.02, 0.03 }, { body = { 0.1, 0.1, 0.17 } })
+    local r1 = px(img, 23, 30)
+    check('cuerpo_igual', r1 > 0.6, ('borde negro + cuerpo como el fondo, a 1 px=%.2f (filo)'):format(r1))
+end)
+case('color_puro', function()
+    -- sin borde: el cuerpo rojo oscuro contra el azul oscuro (luminancia parecida) ya contrasta
+    local img = composite(NAVY, { 0.45, 0.02, 0.02 })
+    local r1, _, b1 = px(img, 23, 30)
+    check('color_puro', near(r1, NAVY[1], 0.03) and near(b1, NAVY[3], 0.03), ('rojo oscuro sobre azul oscuro, a 1 px=%.2f (sin filo)'):format(r1))
+end)
+case('cara_clara', function()
+    -- como el monstruo: casi todo negro y una cara blanca pequeña → el filo sigue haciendo falta
+    local img = composite(DARKBG, { 0.03, 0.03, 0.04 }, { patch = { 1, 1, 1 } })
+    local r1 = px(img, 23, 30)
+    check('cara_clara', r1 > 0.6, ('negro con una cara blanca pequeña, a 1 px=%.2f (filo)'):format(r1))
 end)
 case('directo_sombra', function()
     local img = composite(DARKBG, DARKSP, { extra = function()

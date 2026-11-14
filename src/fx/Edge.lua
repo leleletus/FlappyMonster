@@ -216,6 +216,15 @@ Shaders.define('edge_id', [[
     }
 ]])
 
+-- CONTRASTE DE COLOR Y CUERPO / BORDE (0.5.214; el usuario: «no solo luminosidad: el contraste del color; y separar
+-- el cuerpo del borde oscuro de los enemigos»): el contraste mira la luminancia Y el color (YCbCr: un rojo oscuro sobre
+-- un azul oscuro de la misma luminancia SÍ contrasta). Además del CONTORNO (como antes), se mira el CUERPO: los píxeles
+-- del sprite salvo su BORDE (los oscuros — luminancia < BORDER — pegados al exterior: el contorno negro de casi todos
+-- los enemigos). Si al menos VIS del cuerpo destaca del fondo, el personaje se ve: sin filo, aunque su borde se pierda.
+-- El monstruo (casi todo negro, una cara blanca pequeña) sigue llevándolo.
+Edge.BORDER = 0.12                               -- luminancia por debajo de la que un píxel del contorno es «borde»
+Edge.VIS    = 0.5                                -- parte del cuerpo que destaca para que no haga falta el filo
+Edge.CK     = 1.0                                -- peso del color frente a la luminancia en el contraste
 Shaders.define('edge_decide', [[
     extern Image actors;
     extern Image scene;
@@ -226,11 +235,21 @@ Shaders.define('edge_decide', [[
     extern vec4 box;           // zona del personaje en uv: x0, y0, x1, y1
     extern vec4 th;            // T_LO, T_HI, L_LO, L_HI
     extern vec4 step;          // dt / FADE, reiniciar (1/0), NEED, W
+    extern vec4 body;          // BORDER, VIS, CK, -
     extern float statsW;       // ancho de la textura de estado (este píxel = sc.x)
     float lum(vec3 c) { return dot(c, vec3(0.299, 0.587, 0.114)); }
+    // contraste entre dos colores: la diferencia de luminancia o la de color (Cb, Cr), la mayor
+    float contrast(vec3 a, vec3 b) {
+        vec3 d = a - b;
+        float dy = dot(d, vec3(0.299, 0.587, 0.114));
+        float cb = dot(d, vec3(-0.169, -0.331, 0.5));
+        float cr = dot(d, vec3(0.5, -0.419, -0.081));
+        return max(abs(dy), length(vec2(cb, cr)) * body.z);
+    }
     vec4 effect(vec4 col, Image t, vec2 uv, vec2 sc) {
         float total = 0.0, lost = 0.0, darkBg = 0.0;
         vec2 o1 = texel * step.w;
+        // 1. EL CONTORNO: lo de fuera pegado al sprite, contra el borde del sprite
         for (int j = 0; j < ]]..GRID..[[; j++) {
             for (int i = 0; i < ]]..GRID..[[; i++) {
                 vec2 p = mix(box.xy, box.zw, (vec2(float(i), float(j)) + 0.5) / ]]..GRID..[[.0);
@@ -241,16 +260,36 @@ Shaders.define('edge_decide', [[
                 r = Texel(actors, p - vec2(0.0, o1.y)); if (r.a > q.a) q = r;
                 if (q.a <= 0.0) continue;
                 float L = lum(Texel(light, p * lightK).rgb);
-                float lb = lum(Texel(scene, p).rgb) * L;
-                float c = abs(lum(q.rgb / q.a) * L - lb);
+                vec3 bg = Texel(scene, p).rgb * L;
+                float c = contrast(q.rgb / q.a * L, bg);
                 total += 1.0;
                 lost += (1.0 - smoothstep(th.x, th.y, c)) * smoothstep(th.z, th.w, L);
-                darkBg += (lb < 0.5) ? 1.0 : 0.0;
+                darkBg += (lum(bg) < 0.5) ? 1.0 : 0.0;
+            }
+        }
+        // 2. EL CUERPO: lo de dentro del sprite salvo su borde oscuro, contra lo que tiene detrás
+        float bodyN = 0.0, vis = 0.0;
+        if (total > 0.0) {
+            for (int j = 0; j < ]]..GRID..[[; j++) {
+                for (int i = 0; i < ]]..GRID..[[; i++) {
+                    vec2 p = mix(box.xy, box.zw, (vec2(float(i), float(j)) + 0.5) / ]]..GRID..[[.0);
+                    vec4 a = Texel(actors, p);
+                    if (a.a <= 0.0) continue;
+                    vec3 c0 = a.rgb / a.a;
+                    bool edge = Texel(actors, p + vec2(o1.x, 0.0)).a <= 0.0 || Texel(actors, p - vec2(o1.x, 0.0)).a <= 0.0
+                             || Texel(actors, p + vec2(0.0, o1.y)).a <= 0.0 || Texel(actors, p - vec2(0.0, o1.y)).a <= 0.0;
+                    if (edge && lum(c0) < body.x) continue;             // (su borde oscuro: no es el cuerpo)
+                    float L = lum(Texel(light, p * lightK).rgb);
+                    bodyN += 1.0;
+                    // (contra lo que tiene DETRÁS — la escena sin personajes —: un fondo variado no engaña)
+                    vis += smoothstep(th.x, th.y, contrast(c0 * L, Texel(scene, p).rgb * L));
+                }
             }
         }
         vec4 was = Texel(prev, vec2(sc.x / statsW, 0.5));
         float a = (step.y > 0.5) ? 0.0 : was.r;
-        float want = (total > 0.0 && lost / total >= step.z) ? 1.0 : 0.0;
+        bool seen = bodyN > 0.0 && vis / bodyN >= body.y;            // (el cuerpo destaca: se ve)
+        float want = (total > 0.0 && lost / total >= step.z && !seen) ? 1.0 : 0.0;
         a = (want > a) ? min(want, a + step.x) : max(want, a - step.x);
         float lightEdge = (total > 0.0) ? ((darkBg / total >= 0.5) ? 1.0 : 0.0) : was.g;
         return vec4(a, lightEdge, 0.0, 1.0);
@@ -400,6 +439,7 @@ end
 -- La textura de ESTADO (alfa del filo y color por número), en dos para ir y volver
 local statsA, statsB
 local buf2a, buf2b, buf4a, buf4b, buf4c = { 0, 0 }, { 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }
+local bodyBuf = { 0, 0, 0, 0 }
 local function statsCanvas()
     if not statsA then
         statsA = sized(nil, Edge.SLOTS + 1, 1)
@@ -444,6 +484,8 @@ local function decide(f, scene, light, w, h)
     sh:send('texel', buf2b)
     buf4a[1], buf4a[2], buf4a[3], buf4a[4] = Edge.T_LO, Edge.T_HI, Edge.L_LO, Edge.L_HI
     sh:send('th', buf4a)
+    bodyBuf[1], bodyBuf[2], bodyBuf[3], bodyBuf[4] = Edge.BORDER, Edge.VIS, Edge.CK, 0
+    sh:send('body', bodyBuf)                         -- (el cuerpo y su borde: contraste de color)
     sh:send('statsW', Edge.SLOTS + 1)
     for i = 1, f.nSlots do
         local b = f.boxes[i]

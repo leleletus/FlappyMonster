@@ -10,7 +10,7 @@ Two modes, chosen in Settings → ASSIST → **EDGE / BORDE** (`Settings.edge`):
 
 | Mode | Default on | How |
 |---|---|---|
-| `shader` | PC (Windows, macOS, Linux) | **Per character, whole sprite** (0.5.213). Characters draw into their own transparent canvas and, once more without side effects, their NUMBER into an ID canvas. A small pass per character measures what share of its OUTLINE is lost (character and background luminance close, both × the light map; places too dark to see don't count). At least `NEED` (30 %) → its edge rises to 1, otherwise falls to 0, in `FADE` s; that state lives in a tiny GPU texture (nothing is read back). The composite draws a 2 px edge around the WHOLE sprite with that alpha: light on a dark background, dark on a light one (by the character's background). |
+| `shader` | PC (Windows, macOS, Linux) | **Per character, whole sprite** (0.5.213). Characters draw into their own transparent canvas and, once more without side effects, their NUMBER into an ID canvas. A small pass per character measures what share of its OUTLINE is lost (character and background CONTRAST low — luminance AND colour, both × the light map; places too dark to see don't count) and, since 0.5.214, whether its BODY stands out: the sprite's pixels except its dark border (dark pixels touching the outside, `BORDER`), each against what is right behind it. Edge only if at least `NEED` (30 %) of the outline is lost AND less than `VIS` (50 %) of the body stands out; then it rises to 1, otherwise falls to 0, in `FADE` s; that state lives in a tiny GPU texture (nothing is read back). The composite draws a 2 px edge around the WHOLE sprite with that alpha: light on a dark background, dark on a light one (by the character's background). |
 | `simple` | Android, Switch; any device without shaders | The old silhouette: 8 offset copies of the body in one flat colour (`src/fx/Silhouette.lua`). LIGHT edge only, where the level is dark (`Silhouette.on`: dark, night, cave, under the depth surface; in `dark` levels only where a flashlight or a player's halo reaches). 0.3 s fade per character. |
 
 Nothing is gameplay: no server change, no protocol change.
@@ -34,7 +34,7 @@ Nothing is gameplay: no server change, no protocol change.
   `Objetos`); off for `Trampas`, `Mecanismos`, `Directores`, `Flappy`. A type overrides it with `edge = true / false`
   (definition or class). Data enemies: `"edge"` in the JSON (enemy editor: «Borde de contraste»); an old `"darkEdge"`
   reads as `edge = true`.
-- Values (in `Edge.lua`, to tune by eye): `NEED` 0.3 (share of the outline that must be lost), `SLOTS` 255 character
+- Values (in `Edge.lua`, to tune by eye): `NEED` 0.3 (share of the outline that must be lost), `BORDER` 0.12 (a perimeter pixel darker than this is the sprite's border, not its body), `VIS` 0.5 (share of the body that must stand out to skip the edge), `CK` 1.0 (weight of the colour difference — Cb / Cr — against luminance in the contrast), `SLOTS` 255 character
   numbers (when they run out, the one longest undrawn is reused), `W` 2 px, `T_LO` 0.03 / `T_HI` 0.10 (luminance difference: full / no edge; 0.08 / 0.22 until 0.5.212),
   `L_LO` 0.12 / `L_HI` 0.3 (light here: no edge / full — a `dark` level's ambient is 0.055, so nothing is revealed
   outside the flashlight), `LIGHT` white, `DARK` navy, `MAX_A` 0.9, `FADE` 0.3 s.
@@ -97,3 +97,10 @@ scenes, nested sets, the credits background; `SHOT=1` captures five levels in bo
   whole outline with a fade kept on the GPU per character number. The simple mode already worked like that.
 - Not judged by a person yet: the look, the thresholds (partial edges at medium contrast, e.g. the intro card at dusk),
   and the frame rate on real devices.
+- 0.5.214, the user: "the shader must not only compare luminance but also the colour contrast — both dark but a
+  different enough colour: no edge — and separate the enemies' dark border (almost all have one) from their coloured
+  body". The contrast is now max(luminance difference, Cb/Cr colour difference × `CK`); the outline is judged as before
+  but with that contrast, and the BODY (the sprite minus its dark perimeter pixels) is compared pixel by pixel with what
+  is behind it: if half of it stands out, no edge. A red Gummy with a black border in a dark cave: no edge; the
+  monster (black with a small white face): still edged. `edge_look` `cuerpo_color`, `cuerpo_igual`, `color_puro`,
+  `cara_clara`. Not judged by a person yet.
