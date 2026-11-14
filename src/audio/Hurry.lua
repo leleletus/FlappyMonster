@@ -11,8 +11,9 @@ local Hurry = {}
 Hurry.AT   = 60           -- s que faltan cuando avisa (cuando el reloj del HUD se pone rojo)
 Hurry.RATE = 2 ^ (3 / 12) -- la música, así de rápida tras el aviso: 3 semitonos más (×1,189) — el escalón que sigue a
                           --  los del jingle (0, +1, +2): su cierre lleva a la música acelerada —
-Hurry.DUCK = 2.9          -- s con la música baja mientras suena el jingle (suena 2,83 s)
-Hurry.DUCK_K = 0.3        -- … a este tanto de su volumen
+Hurry.DUCK = 2.85         -- s con la música callada mientras suena el jingle (suena 2,835 s)
+Hurry.DUCK_K = 0          -- … a este volumen: CALLADA (el usuario: «que deje de sonar por completo y vuelva al acabar»);
+                          --  sigue avanzando en silencio, sin pausarse ni reiniciarse
 
 function Hurry.update(owner, timeLeft, dt)
     local h = owner._hurry

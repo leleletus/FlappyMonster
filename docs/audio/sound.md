@@ -30,7 +30,7 @@ to by anyone yet.
 ## Hurry up! (0.5.215)
 
 `src/audio/Hurry.lua`: when `Hurry.AT` (60) seconds of the level's time limit remain (`Sim.limitOf`; online, the
-round's clock in timed modes), `hurryUp` plays once, the music ducks to `DUCK_K` (0.3) for `DUCK` (2.9 s, the jingle's length) and comes back
+round's clock in timed modes), `hurryUp` plays once, the music goes SILENT (`DUCK_K` 0: it keeps running, not paused nor restarted — the user, 2026-11-14) for `DUCK` (2.9 s, the jingle's length) and comes back
 `RATE` (2^(3/12) = ×1.189, three semitones: the next step of the jingle's 0 / +1 / +2 staircase) faster once the jingle ends — `Sound.setMusicRate`, which LÖVE also raises in pitch (about two semitones), kept for tracks
 that start later; `Hurry.reset` (entering / leaving the level state) sets it back to 1. Single player and the online
 client; not the menu demo, not King of the Hill (its mode has `hurry = false`: its clock is already the round's countdown)
@@ -57,7 +57,20 @@ peak −5.9 dBFS, RMS −16.2 dBFS, no clipping). `VARIANTES=1` also writes `Fla
 stairs reach D6–F♯6 and the close rises a half step to G6 (F♯ as leading tone); **F** D's motif with a 4-3-5 sixteenth
 arpeggio (E5 G5 E5 C5) instead of the repeated note and a C3–G2 bass. Verified by numbers only (windowed FFT): motif
 pitches 782.5/1045.0, 829.1/1107.2, 878.5/1173.1 Hz, step ratios 1.0595-1.0596, onsets 0.029 / 0.673 / 1.312 / close
-1.956 s. `Hurry.DUCK` should cover ~2.9 s. Its helpers (`pulse` — duty may now be a function of time —, `saw`, `triangle`, `env`, `finish`…) are reused by `tools/sounds/jingles.py`. Not listened to by anyone yet.
+1.956 s. `Hurry.DUCK` should cover the 2.835 s of sound (same for D2). Its helpers (`pulse` — duty may now be a function of time —, `saw`, `triangle`, `env`, `finish`…) are reused by `tools/sounds/jingles.py`. Not listened to by anyone yet.
+
+**v3.1 — D2, the installed default.** The user chose D and approved the ×1.19 music speed-up, then: "it's good, but
+too CALM for what it should be — too few notes; fill the empty spaces with more notes for more tension and hurry". D2
+keeps D's identity (same motif, same three +1 steps, same G6 close, same 2.83 s) and fills it with RHYTHM, not a new
+tune: E5 on every sixteenth (accented offbeats), the motif's C6 repeated on the last two sixteenths of each step, an
+8th-note octave triangle bass C3–C4–C3, 16th noise hi-hats, a snare (noise + 1-bit DPCM body) mid-step, a three-stroke
+snare roll into the close, and under the long G6 a decaying D6–B5 sixteenth tremolo with hi-hats so the close never
+goes still. 82 notes against D's 27; all 18 sixteenths before the close have an attack (D: 15). **D3** (alternative, more
+"alarm"): the whole motif as repeated sixteenths G5 G5 C6 C6 C6 C6, offbeat E5, a C3 sixteenth bass, 8th hi-hats and a
+snare roll swelling through the whole third step; G5 tremolo under the close. Both in `FlappyMonster_pruebas/hurry/`
+(`hurry_D2/D3.wav` + `.mid`; `VARIANTES=1` writes them, `VARIANTES=todas` every variant). D2 measured: steps
+782.4/1045.0 → 829.1/1107.2 → 878.5/1173.1 Hz (ratios 1.0595-1.0596), close 1571.1 Hz over 98.0 Hz, sound 0.030 →
+2.865 s (2.835 s), loudest 100 ms −12.0 dBFS, peak −5.9 dBFS, RMS −15.4 dBFS, no clipping. Not listened to by anyone yet.
 
 History (keep these verdicts):
 - v1 (0.5.215): two-tone siren B5–F6 ×2 then la llamada G5–C6–E6–G6 into a C major chord with crash (1.62 s, a copy in
@@ -66,6 +79,8 @@ History (keep these verdicts):
 - v2 (0.5.216): three non-melodic alerts, `hurry_{A,B,C}.wav` in the same folder — **A** (installed) the countdown beep
   at 1760 Hz doubled at 880 Hz, three groups of three; **B** flat 50 % square D6–A5 hi-lo ×3; **C** three rising
   "whoops" 520→1250 Hz. The user: "it doesn't quite convince" — it lacked RISING TENSION, hence v3's chromatic stairs.
+- v3 D (above, kept as `hurry_D.wav`): chosen over E and F, but "too calm, too few notes" → D2. Density must come from
+  rhythm and repetition, never from a new melody (v1's lesson).
 
 ## Jingles remaster (fanfare, finish, sad trombone)
 
