@@ -1,6 +1,6 @@
 # Starway: rhythm objects (proposal, 2026-11-14)
 
-Status: **proposal, waiting for the user's pick**. For the level Starway / Vía Estelar (`via_estelar`), next to the
+Status: **the user picked 1, 2 and 4 (2026-11-14); mockups made, waiting for the user's verdict**. For the level Starway / Vía Estelar (`via_estelar`), next to the
 [beep blocks](beep-blocks.md). The user asked for objects, obstacles or enemies that do something (or let you do
 something) to the rhythm of the music, like the beep blocks but **with other patterns**, so the level has variety.
 
@@ -50,3 +50,22 @@ Together with the beep blocks (once per phrase) the level layers pulse → backb
 2. Should the rhythm objects also blink/glint on their warning, like the beep blocks, or stay subtle?
 3. Online: all of them work as above; the on-beat spring judges the beat from the player's predicted clock (the
    client) and the server allows ±0.1 s more. OK?
+
+## The user's pick (2026-11-14) and the mockups
+
+Chosen: **1 Metronome platform, 2 Clap spikes, 4 On-beat star spring**. Mockups from
+`tools/art/world/make_starway_objects.py` (preview only, nothing in `assets/` yet), in
+`FlappyMonster_pruebas/via_estelar/objetos/`: `sprites.png` (every state at ×4 and ×8), `funcionamiento.png` (one
+phrase of 8 beats, beep blocks on top for reference), `escena.gif` (2 phrases over the Starway sky, 4 frames per beat).
+- **Metronome platform**: lavender crystal slab, 2 tiles × half a tile (not pink or cyan, so it never reads as a beep
+  block), a gold lamp in the middle that lights on each beat. Moves ONE tile per beat in a snap (~0.08 s), 4 right and
+  4 back = one phrase.
+- **Clap spikes**: a crystal plate (dark rose rim) with pale crystal spikes, OUT on beats 2 and 4 of every bar (the
+  snare), hidden on 1 and 3; half a beat before they come out the plate turns light pink and sparkles.
+- **On-beat star spring**: a gold star on a lavender spring; a ring closes toward each beat. Landing ON the beat
+  (±0.1 s) = a very high bounce (~7 tiles) with sparkles; between beats = a small hop (~2 tiles).
+
+The sky was also toned down at the user's request ("que no sea excesivamente llamativo para no distraer"): dimmer Milky
+Way, fewer and darker fine stars, fainter constellation lines, darker clouds, desaturated spires
+(`make_starway_sky.py --apply --force`; before / after in `FlappyMonster_pruebas/via_estelar/fondo/antes.png` /
+`vista_previa.png`).

@@ -113,8 +113,9 @@ after the earlier generators' `--apply`, run it again). Own gradients (`grads`, 
   antennae (no wings), a Crabby, a Gummy, a crystal block, an arrow pointing along the road.
 - `starway_far` (0.08): a far sea of clouds with small pink / cyan crystal spires; `starway_near` (0.3): moonlit cloud
   crests and bigger crystal spires in the beep blocks' pink and cyan.
-- Island for the art that changes by island: not in `Isles.BY_BACKGROUND`, so `pradera`. Applied provisionally: the
-  user judges it in play.
+- Island for the art that changes by island: not in `Isles.BY_BACKGROUND`, so `pradera`. The user: "bastante bien",
+  but it must not distract → toned down the same day (dimmer Milky Way and stars, fainter constellations, darker
+  clouds, desaturated spires; `--apply --force` rewrites the starway files and frames 21-23).
 
 ## Volcano and meadow biome art
 

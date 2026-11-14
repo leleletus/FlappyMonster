@@ -28,6 +28,7 @@ import make_frozen_coast_sky as FC
 sys.argv = _argv
 
 APPLY = '--apply' in sys.argv
+FORCE = '--force' in sys.argv                     # con --apply, REHACE los starway_* y sus 3 degradados (21..23)
 PREV = '/home/mtvemo/FlappyMonster_pruebas/via_estelar/fondo'
 SKY = os.path.join(REPO, 'assets/images/world/sky')
 W, S = J.W, J.S
@@ -54,8 +55,8 @@ def milky():
     # banda diagonal (sube hacia la derecha) que se repite a lo ancho: el centro va de y=150 (x=0) a y=30 (x=320) …
     # y vuelve a empezar: para que empalme, la banda es periódica (dos tramos que se cruzan en el borde)
     def center(x): return 160 - (x % W) * 0.42
-    cols = [rgb('3a2c6a'), rgb('5a4a9a'), rgb('8a70c0'), rgb('c0a8e8')]
-    pink = rgb('a0507a')
+    cols = [rgb('2a2250'), rgb('3c3270'), rgb('544690'), rgb('6e5ea8')]   # (apagada: no debe distraer, el usuario)
+    pink = rgb('5a3456')
     for x in range(W):
         for y in range(H):
             best = 0
@@ -74,13 +75,13 @@ def milky():
                 if i >= 1 and math.sin(x * 0.031 + y * 0.05) > 0.82: c = pink        # nebulosas rosas sueltas
                 lay.put(x, y, c)
     # estrellas finas dentro de la banda (más densas que en el resto del cielo)
-    for _ in range(420):
+    for _ in range(200):
         x = r.randrange(W)
         y = int(center(x) + r.gauss(0, 16))
-        if 0 <= y < H: lay.put(x, y, rgb('e8e0ff') if r.random() < 0.7 else rgb('ffd8f0'))
+        if 0 <= y < H: lay.put(x, y, rgb('a8a4d0') if r.random() < 0.7 else rgb('b89cc0'))
     for _ in range(90):
         x, y = r.randrange(W), r.randrange(H)
-        lay.put(x, y, rgb('a0a8e0'))
+        lay.put(x, y, rgb('6a70a0'))
     return lay.im
 
 
@@ -109,7 +110,7 @@ CONST = [
 
 def constellations():
     lay = L(150)
-    line = rgb('c4bcff')
+    line = rgb('7a74b4')
     for (ox, oy), stars, links in CONST:
         pts = [(ox + x, oy + y) for x, y, _ in stars]
         for a, b in links:
@@ -118,9 +119,9 @@ def constellations():
             for i in range(1, n):
                 if i % 2: lay.put(round(x0 + (x1 - x0) * i / n), round(y0 + (y1 - y0) * i / n), line)   # punteada
         for (x, y), (_, _, big) in zip(pts, stars):
-            lay.put(x, y, rgb('ffffff'))
+            lay.put(x, y, rgb('d8d8f0'))
             for dx, dy in (((1, 0), (-1, 0), (0, 1), (0, -1)) if big else ((1, 0), (0, 1))):
-                lay.put(x + dx, y + dy, rgb('e0e4ff') if big else rgb('a8b0f0'))
+                lay.put(x + dx, y + dy, rgb('9a9ed0') if big else rgb('6e74a8'))
     return lay.im
 
 
@@ -151,7 +152,7 @@ def island(lay, cx, top, w, col, dark):
 
 def far():
     """el mar de nubes lejano, más arriba que las crestas cercanas, con agujas de cristal pequeñas (lejanas, apagadas)"""
-    pal = (rgb('8e8ac8'), rgb('6e6cae'), rgb('545494'), rgb('42447e'))
+    pal = (rgb('6e6ca4'), rgb('585890'), rgb('46467a'), rgb('383a6a'))
     lay = L(100)
     for cx, h, c in ((50, 22, (rgb('c890c0'), rgb('a86aa6'), rgb('7a4c84'), rgb('5a3a6e'))),
                      (172, 28, (rgb('8cc4d8'), rgb('6aa0c0'), rgb('4a78a0'), rgb('3a5884'))),
@@ -174,10 +175,10 @@ def spire(lay, cx, base, h, pal):
 
 
 def near():
-    pal = (rgb('d8d4f4'), rgb('b2aee0'), rgb('8682c0'), rgb('6462a4'))
+    pal = (rgb('a4a0cc'), rgb('8682b4'), rgb('68669a'), rgb('504e82'))
     lay = L(60)
-    PINK = (rgb('ffb8de'), rgb('f080be'), rgb('c0407e'), rgb('7a1d55'))
-    CYAN = (rgb('b8f6ff'), rgb('5cd8ec'), rgb('1a9bb5'), rgb('0f5a6e'))
+    PINK = (rgb('d49cc0'), rgb('b0709c'), rgb('844c78'), rgb('5a3254'))
+    CYAN = (rgb('9cd0dc'), rgb('6aa8bc'), rgb('467e98'), rgb('2e5670'))
     for cx, h, p in ((30, 26, PINK), (38, 16, CYAN), (130, 30, CYAN), (139, 18, PINK), (226, 24, PINK), (300, 20, CYAN)):
         spire(lay, cx, 40, h, p)
     band = cloud_band(60, 34, 6, [(3, 3, 0.7), (2, 7, 2.1)], pal, 9, puff=13)
@@ -231,7 +232,7 @@ def main():
 
 def apply(grads, layers):
     def put(path, im):
-        if os.path.exists(path): print('  %s ya existe: no se toca' % path); return
+        if os.path.exists(path) and not FORCE: print('  %s ya existe: no se toca' % path); return
         im.save(path); print('  %-52s %dx%d' % (os.path.relpath(path, REPO), im.width, im.height))
     for n, im in layers.items(): put(os.path.join(SKY, '%s_%s.png' % (ID, n)), im)
     gp = os.path.join(SKY, 'gradients.png')
@@ -240,6 +241,9 @@ def apply(grads, layers):
         ng = Image.new('RGBA', (g.width + 24, 180)); ng.paste(g, (0, 0))
         for i, t in enumerate(('day', 'dusk', 'night')): ng.paste(grads[t], (g.width + i * 8, 0))
         ng.save(gp); print('  %s: +3 cuadros (21..23)' % os.path.relpath(gp, REPO))
+    elif g.width == 23 * 8 and FORCE:         # (rehacer: los 3 últimos cuadros son los suyos)
+        for i, t in enumerate(('day', 'dusk', 'night')): g.paste(grads[t], (20 * 8 + i * 8, 0))
+        g.save(gp); print('  %s: cuadros 21..23 rehechos' % os.path.relpath(gp, REPO))
     else:
         print('  %s tiene %d cuadros (se esperaban 20): no se toca' % (gp, g.width // 8))
 
