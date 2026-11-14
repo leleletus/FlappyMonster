@@ -45,7 +45,7 @@ sound from 0.03 s, 44.1 kHz mono): played once when 60 s of the level's time lim
 follows a measured formula for RISING TENSION: a 2-note motif → the same motif +1 semitone → +2 → a long
 closing note that dies away. Parameters at the top of the script (`TONALIDAD`, `BPM` 140, `REPETICIONES` 3,
 `SEMITONOS_PASO` 1, `PASO` 6 sixteenths = 3 eighths = 0.643 s between motif onsets, `CIERRE` 8 sixteenths = 0.857 s).
-Default variant **D**: an original motif in C major built from "la llamada"'s 4th — G5 on the beat, C6 on the eighth
+Variant **D** (CHOSEN by the user, 2026-11-14, over E and F): an original motif in C major built from "la llamada"'s 4th — G5 on the beat, C6 on the eighth
 offbeat — with a lower E5 alternating on the "e" / "a" sixteenths and a triangle C3; the steps go G–C, G♯–C♯, A–D, and
 the close leaps another 4th to G6 (the 5th, la llamada's last note, left open) over a held G2 with a 1-bit DPCM kick
 and a noise crash. Onsets every 3 eighths = the "3" of the house 3+3+2 tresillo run as a hemiola. Timbres: lead = 2A03
