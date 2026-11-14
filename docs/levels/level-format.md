@@ -22,7 +22,7 @@ that exists: [reference/levels](../reference/levels.md).
 | `autoScroll` | `{startCol, endCol, speed, width, margin, countdown}` |
 | `xtraBosses` | optional explicit placements of the second boss when `bossExtra` is on (no difficulty sets it since 0.5.24; default: mirrored) |
 | `background`, `time`, `clouds`, `depth`, `surfaceRow` | sky: surface biome, day / dusk / night, depth biome and the surface line |
-| `timeLimit` | seconds before everyone dies of time (0.5.215; default `Sim.TIME_LIMIT` 600 — `Sim.limitOf(level)`, single player, server and client). Meant for short test levels (`prueba_prisa`: 75 s) |
+| `timeLimit` | seconds before everyone dies of time (0.5.215; default `Sim.TIME_LIMIT` 600 — `Sim.limitOf(level)`, single player, server and client). Meant for short test levels |
 | `light`, `dark`, `echo`, `snow`, `spikeSkin` | light mood, dark level, echo, snowfall, spike look |
 | `scenes` | parts of the level with their own sky and light: `{col, w, background, time, clouds, light, dark, snow, echo, spikeSkin, depth, surfaceRow}`; `Level:applyScene(i)` (`src/world/level/Scenes.lua`) — the Crab Mega Mashup stitches five arenas |
 | `followScenes` | the active scene follows the player's column, fading in and out of darkness (dark caves in a bright level); single player only: such a level is never listed online |

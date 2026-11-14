@@ -35,7 +35,7 @@ round's clock in timed modes), `hurryUp` plays once, the music goes SILENT (`DUC
 that start later; `Hurry.reset` (entering / leaving the level state) sets it back to 1. Single player and the online
 client; not the menu demo, not King of the Hill (its mode has `hurry = false`: its clock is already the round's countdown)
 nor the story bonus matches. Since 0.5.216 every level's HUD clock COUNTS DOWN (what is left of the limit; the user: "it
-wasn't clear when time runs out"), so the warning matches the clock turning red at 1:00. Test level `assets/levels/prueba_prisa.json` (75 s limit: the warning at 15 s). `story_flow`
+wasn't clear when time runs out"), so the warning matches the clock turning red at 1:00. `story_flow`
 `prisa`. Not listened to yet.
 
 ## Hurry-up jingle

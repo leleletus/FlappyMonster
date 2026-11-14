@@ -89,8 +89,9 @@ function love.load(a)
         local heard = 0
         local play = Sound.play
         Sound.play = function(n, ...) if n == 'hurryUp' then heard = heard + 1 end return play(n, ...) end
-        gStateMachine:change('adventure', { level = 'assets/levels/prueba_prisa.json', returnTo = 'free_play' })
+        gStateMachine:change('adventure', { level = 'assets/levels/valle_soleado.json', returnTo = 'free_play' })
         local st = gStateMachine:_top()
+        st.level.timeLimit = 75                                     -- (un límite corto, como el `timeLimit` de un nivel)
         if st.introScene then st.introScene:finish(); st.introScene = nil end
         st.card, st.startCd, st.startGoT = nil, nil, nil
         local limit = Sim.limitOf(st.level)
