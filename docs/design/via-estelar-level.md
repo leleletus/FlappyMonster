@@ -39,7 +39,8 @@ the background plane, and more varied use of beep blocks (longer parkour, walls 
   Crabby estelar placed directly; Hoppers, Gusts and Doors pick the island's art by themselves (sky `starway`).
 - Decorations: `starway_set` ([decorations](../art/decorations.md#starway-set-2026-11-14)), placed by `decorate()` on the
   crystal tops (~20 % of the cells: crystals, moon flowers, shards, lanterns, telescopes, signs, banners; cloud puffs on
-  clouds) and floating stars in the open sky.
+  clouds) and floating stars in the open sky. Subcell decorations go in the BOTTOM subcells (3, 4): v2 put them in
+  1 / 2 and the moon flower and the crystal shard floated half a tile above the ground (the user, 2026-11-14; fixed 0.5.227).
 - Background plane (`backplane()`): the whole maze has a brick wall with starry windows behind it (inside a temple);
   behind every long stretch of road, a brick tower with windows or a portico of crystal columns.
 

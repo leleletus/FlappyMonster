@@ -376,7 +376,8 @@ def zone_dance(L):
 
 
 # ══ Decoración: lo de encima de cada isla, el cielo y el PLANO DE FONDO (bloques de verdad) ═══════════════════════
-DECO_TOP = (('crystal_cluster', 3, None), ('moon_flower', 3, 2), ('crystal_shard', 2, 1), ('crystal_shard', 1, 2),
+# (subcelda: 3 = abajo a la izquierda, 4 = abajo a la derecha — las de arriba, 1 y 2, flotaban media casilla: el usuario)
+DECO_TOP = (('crystal_cluster', 3, None), ('moon_flower', 3, 4), ('crystal_shard', 2, 3), ('crystal_shard', 1, 4),
             ('star_lantern', 0.6, None), ('telescope', 0.25, None), ('const_sign', 0.25, None), ('star_banner', 0.4, None))
 
 
