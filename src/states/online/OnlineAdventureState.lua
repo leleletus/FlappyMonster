@@ -597,7 +597,7 @@ function OnlineAdventureState:update(dt)
     -- ── Tiempo: avanza localmente entre snapshots, el servidor lo corrige ─────
     if not frozen then self.levelTime = math.min(self.levelTime + dt, Sim.limitOf(self.level)) end
     -- (¡date prisa!: el reloj de la ronda en los modos con tiempo, si no el límite del nivel — src/audio/Hurry.lua —)
-    if not frozen and self.localPaInit and not self.showGameOver then
+    if not frozen and self.localPaInit and not self.showGameOver and not (self.mode and self.mode.hurry == false) then
         local left = self.roundEndAt and (self.roundEndAt - self.levelTime) or (Sim.limitOf(self.level) - self.levelTime)
         require('src/audio/Hurry').update(self, left, dt)
     end

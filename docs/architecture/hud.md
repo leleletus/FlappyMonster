@@ -14,7 +14,7 @@ Now every element **reports its rectangle** to `src/ui/HudRects.lua` as it draws
 
 | Where | What |
 |---|---|
-| Top left | score and time (fixed) |
+| Top left | score and time (fixed). Since 0.5.216 the time COUNTS DOWN: what is left of the level's limit (`AdventureState:clockShown`; a bonus match: its own clock; online: the round's clock in timed modes, otherwise the level's limit) |
 | Top right | lives (fixed), the pause button (pointer devices, fixed), the light (dark levels: under the lives, or under the pause button if it is there — `place`) |
 | Top centre | the **boss bar(s)** (the user: "it stays where it belongs"), as wide as the free span between the left and right blocks allows (`centerSpan`; it narrows its segments). If that span is under `BossHud.MIN_TOP_W` (960-wide screens), the bar goes just under the top band, still centred |
 | Top centre, after the boss bar | the **stars / cages** counter (`CollectHud`, `place`): at the top when free, under the boss bar during a fight (the user: "the star counter is the one that moves") |

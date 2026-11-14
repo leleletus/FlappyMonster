@@ -35,6 +35,7 @@
 --   reasonText(reason)         CLAVE de idioma del motivo de fin (pantalla final)
 --   (los textos que dependen del jugador, hudLine y el `why` de requires, usan L())
 --   hud(m) -> tabla            datos extra que el servidor manda cada snapshot
+--   hurry = false              sin ¡date prisa! (src/audio/Hurry.lua) — el Rey de la Colina: su reloj ya es la cuenta atrás —
 --
 -- `m` (match) lo crea el servidor: m.players (playerSims), m.enemies, m.time,
 -- m.level, m.event(ev) para emitir eventos, m.data (estado libre del modo).

@@ -94,7 +94,11 @@ function love.load(a)
         if st.introScene then st.introScene:finish(); st.introScene = nil end
         st.card, st.startCd, st.startGoT = nil, nil, nil
         local limit = Sim.limitOf(st.level)
+        -- (el reloj CUENTA HACIA ATRÁS: al empezar marca el límite; luego lo que queda)
+        st.levelTime = 0
+        local clock0 = st:clockShown()
         st.levelTime = limit - Hurry.AT - 0.5
+        local clock1 = st:clockShown()
         for _ = 1, 10 do st:update(1 / 60) end
         local before = Sound.musicRate() == 1 and heard == 0
         for _ = 1, 40 do st:update(1 / 60) end
@@ -104,9 +108,10 @@ function love.load(a)
         gStateMachine:change('story_slots')
         local reset = Sound.musicRate() == 1
         Sound.play = play
-        check('prisa', limit == 75 and before and after and once and reset,
-            ('límite del nivel %d s · antes: velocidad 1 y sin jingle=%s · a 60 s del final: ×%.2f y jingle=%s · solo una vez=%s · al salir ×1=%s'):format(
-             limit, tostring(before), Sound.musicRate(), tostring(after), tostring(once), tostring(reset)))
+        local kothNo = require('src/world/modes/koth').hurry == false
+        check('prisa', limit == 75 and before and after and once and reset and clock0 == 75 and math.abs(clock1 - 60.5) < 0.01 and kothNo,
+            ('límite del nivel %d s · reloj al empezar %.1f, a 60 s del final %.1f · antes: velocidad 1 y sin jingle=%s · a 60 s del final: jingle y más rápida=%s · solo una vez=%s · al salir ×1=%s · Rey de la Colina sin aviso=%s'):format(
+             limit, clock0, clock1, tostring(before), tostring(after), tostring(once), tostring(reset), tostring(kothNo)))
     end
     gStateMachine:change('story_slots')
 end

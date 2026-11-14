@@ -86,7 +86,7 @@ diff of whatever it writes.
 
 One script per family, each writes WAVs into `assets/sounds/<group>/`: `ambience.py`, `bomb.py`, `cryo.py`,
 `gloomy.py`, `groove.py` (the Groove Crab's crowd: cheer, boo), `hopper.py`, `ice.py`, `items.py`, `jungle_enemies.py` (mole, piranha and carnivorous plant: dig, pop, bite, piranha bite, plant rustle / snap / crunch), `penguin.py` (the Penguin's squawk and belly slide), `jungle.py` (the jungle ambience + the brazier fire; without `--apply` it writes previews and a 40 s level mix to `FlappyMonster_pruebas/selva/sonidos/`), `water.py` (drowning music, alarm, gasp, glug, extra life), `startup.py` (the logo melody), `mechanics.py`, `megacrabby.py`, `megagummy.py`, `mirror.py`,
-`snowboss.py`, `story.py`, `map_cannon.py` (the world map's cannon: load, fuse, boom, whoosh, land), `ui.py` (entering a level, the start countdown). After generating: register the sound and its gain in `src/audio/Sound.lua`, then
+`snowboss.py`, `story.py`, `map_cannon.py` (the world map's cannon: load, fuse, boom, whoosh, land), `ui.py` (entering a level, the start countdown), `hurry.py` (the hurry-up alarm; `VARIANTES=1` = the three candidates), `jingles.py` (the remastered fanfare, finish and sad trombone). After generating: register the sound and its gain in `src/audio/Sound.lua`, then
 `tools/tests/run.sh sounds NAMES=…`.
 
 ## music/

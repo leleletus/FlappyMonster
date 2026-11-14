@@ -91,8 +91,9 @@ function OnlineAdventureState:_renderHUD()
     local row2Y  = row1Y + fh + 10
 
     local od         = self.ownData
-    -- Reloj: sube desde 0 o, en los modos con tiempo, baja hasta 0
-    local shown      = self.roundEndAt and math.max(0, self.roundEndAt - self.levelTime) or self.levelTime
+    -- Reloj: CUENTA HACIA ATRÁS (0.5.216): lo que queda de la ronda en los modos con tiempo o del límite del nivel
+    local shown      = self.roundEndAt and math.max(0, self.roundEndAt - self.levelTime)
+                       or math.max(0, require('src/world/systems/Sim').limitOf(self.level) - self.levelTime)
     local totalSecs  = math.floor(shown)
     local mins       = math.floor(totalSecs/60)
     local secs       = totalSecs % 60

@@ -10,7 +10,7 @@ local Hurry = {}
 
 Hurry.AT   = 60           -- s que faltan cuando avisa (cuando el reloj del HUD se pone rojo)
 Hurry.RATE = 1.15         -- la música, así de rápida desde el aviso
-Hurry.DUCK = 1.6          -- s con la música baja mientras suena el jingle
+Hurry.DUCK = 1.2          -- s con la música baja mientras suena la alarma (dura 1,19 s)
 Hurry.DUCK_K = 0.3        -- … a este tanto de su volumen
 
 function Hurry.update(owner, timeLeft, dt)

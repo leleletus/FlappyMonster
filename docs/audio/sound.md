@@ -33,16 +33,45 @@ to by anyone yet.
 round's clock in timed modes), `hurryUp` plays once, the music ducks to `DUCK_K` (0.3) for `DUCK` (1.6 s) and comes back
 `RATE` (×1.15) faster — `Sound.setMusicRate`, which LÖVE also raises in pitch (about two semitones), kept for tracks
 that start later; `Hurry.reset` (entering / leaving the level state) sets it back to 1. Single player and the online
-client; not the menu demo. Test level `assets/levels/prueba_prisa.json` (75 s limit: the warning at 15 s). `story_flow`
+client; not the menu demo, not King of the Hill (its mode has `hurry = false`: its clock is already the round's countdown)
+nor the story bonus matches. Since 0.5.216 every level's HUD clock COUNTS DOWN (what is left of the limit; the user: "it
+wasn't clear when time runs out"), so the warning matches the clock turning red at 1:00. Test level `assets/levels/prueba_prisa.json` (75 s limit: the warning at 15 s). `story_flow`
 `prisa`. Not listened to yet.
 
 ## Hurry-up jingle
 
-`tools/sounds/hurry.py` (standard library only) → `assets/sounds/jingles/hurry.wav` (`hurryUp`, 1.62 s): played once
-when 60 s of the level's time limit remain, over the ducked music. C major, 16th = 0.06 s: a two-tone siren B5–F6
-(the tritone of G7) ×3, again louder and doubled an octave up, then "la llamada" G5–C6–E6–G6 rising into a C7 + C
-major accent with a noise crash; 25 % pulses with duty sweep, triangle bass, noise snare, 1-bit kick. Loudest 100 ms
-at −12 dBFS, soft-limited to a −7.8 dBFS peak. Not listened to by anyone yet.
+`tools/sounds/hurry.py` (standard library only) → `assets/sounds/jingles/hurry.wav` (`hurryUp`, 1.19 s, 44.1 kHz
+mono): played once when 60 s of the level's time limit remain, over the ducked music. An ALARM, not a tune: variant
+**A**, "bip-bip-bip ×3" — the start countdown's beep (`countTick` / `countGo` in `tools/sounds/ui.py`: 25 % chip pulse,
+6 kHz one-pole low-pass, 2 ms attack + exponential decay) at one pitch, 1760 Hz (countGo's) doubled at 880 Hz, 0.10 s
+beeps in three groups of three at 0 / 0.42 / 0.84 s. Pulses are band-limited (PolyBLEP); levelled like `story.save` /
+`ui.py` (normalise, tanh ×1.8, loudest 100 ms at −12 dBFS; peak −3.4 dBFS, no clipping). `VARIANTES=1` also writes
+the three candidates to `FlappyMonster_pruebas/hurry/hurry_{A,B,C}.wav`: **B** two-tone D6–A5 flat 50 % square
+hi-lo ×3 (0.80 s, very dry), **C** three rising "whoops" 520→1250 Hz, 25 % pulse (0.86 s). A is the default because
+it reuses the countdown's timbre (the player already hears it as "time"), has a single pitch (nothing melodic) and
+cuts through the music at 1.76 kHz. Its pulse helpers (`pulse`, `saw`, `triangle`, `env`, `finish`…) are reused by
+`tools/sounds/jingles.py`. Not listened to by anyone yet.
+
+History: the first version (0.5.215) was a two-tone siren B5–F6 ×2 then "la llamada" G5–C6–E6–G6 into a C major
+chord with crash (1.62 s, a copy in `FlappyMonster_pruebas/hurry/hurry_v1_rechazado.wav`). The user rejected it:
+"it feels out of place and MORE MELODIC than it should be; it doesn't blend with the rest of the game". Keep this cue
+a non-melodic alert.
+
+## Jingles remaster (fanfare, finish, sad trombone)
+
+`tools/sounds/jingles.py` (standard library only, reuses `hurry.py`'s helpers) → `assets/sounds/jingles/`
+`fanfare.wav` (`fanfare`, level won, 1.12 s), `finish.wav` (`finish`, reaching the goal, 0.43 s), `sad_trombone.wav`
+(`sadtrombone`, fail, 1.54 s). Same notes and timings as the originals (measured from them): fanfare G4 C5 E5 G5
+(85 ms each) · E5 G5 · C6 held with vibrato over a soft C major chord and a triangle bass C–G–C; finish C5 E5 G5 C6
+with a triangle doubling two octaves down; sad trombone G4 F♯4 F4 E4 "wah" notes, each a band-limited sawtooth bending
+down through a two-pole low-pass that opens (400→2400 Hz in 70 ms) and closes, the last one with a widening vibrato.
+44.1 kHz, PolyBLEP pulses, attack/decay envelopes, loudest 100 ms at −12 dBFS (peaks −6.0 / −6.7 / −9.2 dBFS, no
+clipping). `VARIANTES=1` also writes `<name>_nuevo.wav` next to the untouched originals in
+`FlappyMonster_pruebas/jingles_originales/`. `tick.wav` was not remade. Not listened to by anyone yet.
+
+History: the originals had no generator — raw 50 % square waves at 22050 Hz with flat volume and aliasing. The user:
+they sound "low quality, like recorded with a phone" and clash with the rest of the effects; do not use them as a
+style reference.
 
 ## The world map's cannon
 

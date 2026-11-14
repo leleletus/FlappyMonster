@@ -711,7 +711,8 @@ function AdventureState:update(dt)
 
     -- Límite de 10 minutos: muerte instantánea con todas las vidas
     -- (¡date prisa!: el jingle y la música más rápida al quedar poco — src/audio/Hurry.lua —)
-    if not self.demo then require('src/audio/Hurry').update(self, Sim.limitOf(self.level) - self.levelTime, dt) end
+    -- (no en el bonus — Rey de la Colina contra el bot —: su reloj ya es la cuenta atrás de la partida)
+    if not self.demo and not self.bonus then require('src/audio/Hurry').update(self, Sim.limitOf(self.level) - self.levelTime, dt) end
     if self.levelTime >= Sim.limitOf(self.level) and not self.player.dying then
         self.player.lives = 1   -- die() restará 1, quedando en 0 → game over
         self.player:die(nil, true, require('src/player/DamageSource').make('time'))
@@ -1101,11 +1102,13 @@ function AdventureState:_drawHud()
     local row1Y   = 16
     local row2Y   = row1Y + fh + 10
 
-    -- Calcular strings
-    local totalSecs = math.floor(self.levelTime)
+    -- Calcular strings: el reloj CUENTA HACIA ATRÁS (0.5.216; el usuario: «que se sepa cuándo se acaba»): lo que queda
+    -- del límite del nivel; en el bonus, lo que queda de su partida (como el Rey de la Colina online)
+    local shownT    = self:clockShown()
+    local totalSecs = math.floor(shownT)
     local mins      = math.floor(totalSecs / 60)
     local secs      = totalSecs % 60
-    local centis    = math.floor((self.levelTime - math.floor(self.levelTime)) * 100)
+    local centis    = math.floor((shownT - math.floor(shownT)) * 100)
     local timeStr   = mins .. string.format("'%02d''%02d", secs, centis)
     local scoreStr  = string.format('%06d', self.score)
 
@@ -1149,6 +1152,11 @@ function AdventureState:_drawHud()
     self.player:renderAirBar()
     self.player:renderDrownCountdown(self.player.x - self.camX, self.player.y - self.camY)
     self:renderPopups()
+end
+
+-- Lo que marca el reloj del HUD: lo que QUEDA (del límite del nivel o, en el bonus, de su partida)
+function AdventureState:clockShown()
+    return self.bonus and self.bonus:left() or math.max(0, Sim.limitOf(self.level) - self.levelTime)
 end
 
 -- Estrellas cogidas y flappies liberados del nivel (lo de antes cuenta: las jaulas vacías ya liberadas)
