@@ -100,6 +100,22 @@ frames to `gradients.png`: 18-20 `valley_day/dusk/night` — after `make_sky.py`
 - Capture: a copy of a Valley stage with `"background": "valley"` through `run.sh level_shots` (Flappy stages adopt
   it in Plan 5b task 3). Applied provisionally: the user judges it in play.
 
+## Starway sky (2026-11-14)
+
+The sky of the special level Starway / Vía Estelar (the [beep blocks](../design/beep-blocks.md) level): surface biome
+**`starway`** ("Cielo estelar" in the editor), meant for `"time": "night"`. Art from `tools/art/world/make_starway_sky.py`
+(preview by default in `FlappyMonster_pruebas/via_estelar/fondo/vista_previa.png`, with a stretch of beep blocks and the
+monster in front; `--apply` never overwrites and APPENDS 3 frames to `gradients.png`: 21-23 `starway_day/dusk/night` —
+after the earlier generators' `--apply`, run it again). Own gradients (`grads`, all three are night skies).
+- `starway_milky` (additive, 0.02): the MILKY WAY, a dithered diagonal band of violet / blue dust with a dark dust lane,
+  pink nebula patches and dense fine stars.
+- `starway_const` (additive, 0.04): CONSTELLATIONS with dotted lines, figures of the game: the monster's head with its
+  antennae (no wings), a Crabby, a Gummy, a crystal block, an arrow pointing along the road.
+- `starway_far` (0.08): a far sea of clouds with small pink / cyan crystal spires; `starway_near` (0.3): moonlit cloud
+  crests and bigger crystal spires in the beep blocks' pink and cyan.
+- Island for the art that changes by island: not in `Isles.BY_BACKGROUND`, so `pradera`. Applied provisionally: the
+  user judges it in play.
+
 ## Volcano and meadow biome art
 
 Made for the "retheme" stage (every story level must look like ITS island). Style = the game's: parts with a 4-tone
