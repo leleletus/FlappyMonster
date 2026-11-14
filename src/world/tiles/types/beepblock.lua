@@ -11,6 +11,10 @@ local function def(id, name, label, active, other, color, cb)
         switchBlock = { kind = (cb == 'pink') and 'beep_pink' or 'beep_cyan', active = active, other = other, beat = true },
         editorColor = color,
         texture = { image = 'assets/images/world/tiles/' .. name:gsub('block', '') .. '.png' },
+        -- el AVISO de cada beep (solo dibujo): una mezcla de los dos estados — el sólido sigue pareciendo sólido y el
+        -- hueco, hueco — (el usuario, 2026-11-14; antes se dibujaba el otro estado)
+        warnLook = { name = name .. '_warn', cbSymbol = cb,
+                     texture = { image = 'assets/images/world/tiles/' .. name:gsub('block', '') .. '_warn.png' } },
         debris = active and { color, { color[1] * 0.6, color[2] * 0.6, color[3] * 0.6 }, { 1, 1, 1 } } or nil,
     }
 end

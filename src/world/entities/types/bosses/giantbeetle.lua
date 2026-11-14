@@ -243,7 +243,7 @@ end
 -- (0.5.92, el usuario: salía con la textura de la plataforma traspasable) — devuelve también su isla (índice en
 -- Isles.IDS: se dibuja con el arte de ese platillo) y el material de su isla —; sin nada, piedra
 local PAN_MAT = { pradera = 'platform_drop', costa = 'platform_drop', fortaleza = 'solid', nieve = 'ice', cueva = 'solid',
-                  volcan = 'basalt', jungla = 'temple_brick' }
+                  volcan = 'basalt', jungla = 'temple_brick', estelar = 'star_brick' }
 -- (el dibujo del platillo de la isla `idx` — Isles.IDS —, con el tramo del medio: el trozo que arranca de él)
 local panImgs = {}
 local function panImage(idx)

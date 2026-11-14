@@ -1,8 +1,9 @@
 -- TRAMPOLÍN DE COMPÁS (Vía Estelar, docs/design/starway-rhythm-objects.md): una estrella dorada sobre un muelle. Es
 -- un TRAMPOLÍN (la clase de mechanisms/trampoline.lua: cara que lanza, ventana, extendido, red, predicción) mirando
--- arriba, con UNA diferencia: la fuerza depende de CUÁNDO se cae en él. En el pulso de la música (a `window` s de
--- música o menos: BeatClock.offBeat) lanza muy alto (`high`, unas 7 casillas); fuera, un saltito (`low`, unas 2). Un
--- aro que se cierra hacia cada pulso marca el momento. `interact` sigue sin efectos (el cliente lo predice con su
+-- arriba, con UNA diferencia: la fuerza depende de CUÁNDO se cae en él. Justo en el CAMBIO de los Bloques Beep (el pulso
+-- 1 de cada frase, a `window` s de música o menos: BeatClock.offSwitch; el usuario, 2026-11-14: antes valía cualquier
+-- pulso) lanza muy alto (`high`, unas 7 casillas); el resto del tiempo, un saltito (`low`, unas 2). Un aro que se
+-- cierra con los tres beeps (uno por beep) marca la cuenta atrás. `interact` sigue sin efectos (el cliente lo predice con su
 -- reloj de compás, que el servidor corrige: src/world/systems/BeatClock.lua).
 -- Arte: tools/art/world/make_starway_objects.py (assets/anim/mechanisms/beatspring.json).
 local Entity    = require 'src/world/entities/base/Entity'
@@ -14,9 +15,9 @@ B.animId = 'mechanisms/beatspring'
 B.wantsLevel = true
 function B.loadAssets() B.anims(B) end
 
--- ¿Cae EN el pulso?
+-- ¿Cae JUSTO en el cambio de bloques?
 function B:onBeat()
-    return BeatClock.offBeat(self.levelRef) <= (self.props.window or 0.1)
+    return BeatClock.offSwitch(self.levelRef) <= (self.props.window or 0.15)
 end
 
 function B:launchVelocity()
@@ -43,11 +44,13 @@ function B:render(camX, camY)
     local A = B.anims(B)
     love.graphics.setColor(1, 1, 1, 1)
     A:draw(ext and 'bounce' or 'idle', 0, x, y, 0, 4, 4, 0.5, 0.5)
-    -- el aro: grande justo después de un pulso, pequeño justo antes del siguiente
+    -- el aro: aparece con el 1.er beep y se cierra con cada uno (grande, medio, pequeño); el más pequeño, en el cambio
     if self.levelRef and self.levelRef.beat then
-        local beats = BeatClock.beats(self.levelRef)
-        local i = 1 + math.min(3, math.floor((beats - math.floor(beats)) * 4))
-        A:draw('ring' .. i, 0, x, y, 0, 4, 4, 0.5, 0.5)
+        local b8 = BeatClock.beats(self.levelRef) % BeatClock.BEATS
+        local i
+        if b8 >= 5 then i = math.floor(b8) - 4                      -- (pulsos 6, 7, 8: aros 1, 2, 3)
+        elseif self:onBeat() then i = 4 end                         -- (en la ventana del cambio)
+        if i then A:draw('ring' .. i, 0, x, y, 0, 4, 4, 0.5, 0.5) end
     end
 end
 
@@ -59,15 +62,15 @@ end
 
 return {
     name = 'beatspring', label = 'Trampolín de compás', category = 'Mecanismos', class = B, dir = 'up', beat = true,
-    description = 'Estrella con muelle: caer en ella EN el pulso de la música lanza muy alto; fuera del pulso, un saltito (Vía Estelar).',
+    description = 'Estrella con muelle: caer en ella justo cuando cambian los Bloques Beep lanza muy alto; si no, un saltito (Vía Estelar).',
     defaults = { movement = 'static' },
     props = {
-        { key = 'high', kind = 'number', label = 'Fuerza en el pulso', group = 'Trampolín de compás', default = 2.1,
-          min = 0.5, max = 4, step = 0.05, help = 'Multiplicador del salto normal al caer en el pulso (2.1 = unas 7 casillas)' },
-        { key = 'low', kind = 'number', label = 'Fuerza fuera del pulso', group = 'Trampolín de compás', default = 1.1,
-          min = 0.5, max = 4, step = 0.05, help = 'Fuera del pulso (1.1 = unas 2 casillas)' },
-        { key = 'window', kind = 'number', label = 'Margen (s)', group = 'Trampolín de compás', default = 0.1,
-          min = 0.02, max = 0.25, step = 0.01, help = 'Cuánto antes o después del pulso cuenta como «en el pulso»' },
+        { key = 'high', kind = 'number', label = 'Fuerza en el cambio', group = 'Trampolín de compás', default = 2.1,
+          min = 0.5, max = 4, step = 0.05, help = 'Multiplicador del salto normal al caer en el cambio (2.1 = unas 7 casillas)' },
+        { key = 'low', kind = 'number', label = 'Fuerza el resto del tiempo', group = 'Trampolín de compás', default = 1.1,
+          min = 0.5, max = 4, step = 0.05, help = 'Fuera del cambio (1.1 = unas 2 casillas)' },
+        { key = 'window', kind = 'number', label = 'Margen (s)', group = 'Trampolín de compás', default = 0.15,
+          min = 0.02, max = 0.4, step = 0.01, help = 'Cuánto antes o después del cambio de bloques cuenta como «a tiempo»' },
         { key = 'cooldown', kind = 'number', label = 'Extendido tras lanzar (s)', group = 'Trampolín de compás', default = 0.3,
           min = 0, max = 10, step = 0.05 },
     },

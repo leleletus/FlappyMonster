@@ -1,0 +1,32 @@
+{
+  "id": "world/decorations/starway",
+  "scale": 4,
+  "origin": [0.5, 1],
+  "fallback": "crystal_cluster",
+  "frames": [
+    {"image": "assets/images/world/decorations/starway/crystal_cluster.png", "x": 0, "y": 0, "w": 22, "h": 20},
+    {"image": "assets/images/world/decorations/starway/crystal_shard.png", "x": 0, "y": 0, "w": 9, "h": 9},
+    {"image": "assets/images/world/decorations/starway/star_lantern-Sheet.png", "x": 0, "y": 0, "w": 12, "h": 30},
+    {"image": "assets/images/world/decorations/starway/star_lantern-Sheet.png", "x": 12, "y": 0, "w": 12, "h": 30},
+    {"image": "assets/images/world/decorations/starway/telescope.png", "x": 0, "y": 0, "w": 22, "h": 22},
+    {"image": "assets/images/world/decorations/starway/floating_star-Sheet.png", "x": 0, "y": 0, "w": 11, "h": 11},
+    {"image": "assets/images/world/decorations/starway/floating_star-Sheet.png", "x": 11, "y": 0, "w": 11, "h": 11},
+    {"image": "assets/images/world/decorations/starway/const_sign.png", "x": 0, "y": 0, "w": 20, "h": 24},
+    {"image": "assets/images/world/decorations/starway/moon_flower.png", "x": 0, "y": 0, "w": 9, "h": 10},
+    {"image": "assets/images/world/decorations/starway/cloud_puff.png", "x": 0, "y": 0, "w": 24, "h": 10},
+    {"image": "assets/images/world/decorations/starway/star_banner-Sheet.png", "x": 0, "y": 0, "w": 16, "h": 26},
+    {"image": "assets/images/world/decorations/starway/star_banner-Sheet.png", "x": 16, "y": 0, "w": 16, "h": 26},
+    {"image": "assets/images/world/decorations/starway/star_banner-Sheet.png", "x": 32, "y": 0, "w": 16, "h": 26}
+  ],
+  "anims": {
+    "cloud_puff": {"fps": 8, "frames": [10], "loop": true},
+    "const_sign": {"fps": 8, "frames": [8], "loop": true},
+    "crystal_cluster": {"fps": 8, "frames": [1], "loop": true},
+    "crystal_shard": {"fps": 8, "frames": [2], "loop": true},
+    "floating_star": {"fps": 8, "frames": [6, 7], "loop": true, "durations": [0.5, 0.5]},
+    "moon_flower": {"fps": 8, "frames": [9], "loop": true},
+    "star_banner": {"fps": 6, "frames": [11, 12, 13], "loop": true},
+    "star_lantern": {"fps": 8, "frames": [3, 4], "loop": true, "durations": [0.9, 0.25]},
+    "telescope": {"fps": 8, "frames": [5], "loop": true}
+  }
+}

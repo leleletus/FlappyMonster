@@ -30,6 +30,7 @@
   "variants": {
     "costa": {"from": "assets/images/enemies/hopper/pradera-Sheet.png", "to": "assets/images/enemies/hopper/costa-Sheet.png"},
     "cueva": {"from": "assets/images/enemies/hopper/pradera-Sheet.png", "to": "assets/images/enemies/hopper/cueva-Sheet.png"},
+    "estelar": {"from": "assets/images/enemies/hopper/pradera-Sheet.png", "to": "assets/images/enemies/hopper/estelar-Sheet.png"},
     "fortaleza": {"from": "assets/images/enemies/hopper/pradera-Sheet.png", "to": "assets/images/enemies/hopper/fortaleza-Sheet.png"},
     "jungla": {"from": "assets/images/enemies/hopper/pradera-Sheet.png", "to": "assets/images/enemies/hopper/jungla-Sheet.png"},
     "nieve": {"from": "assets/images/enemies/hopper/pradera-Sheet.png", "to": "assets/images/enemies/hopper/nieve-Sheet.png"},

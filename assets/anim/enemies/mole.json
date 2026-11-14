@@ -31,6 +31,7 @@
   "variants": {
     "costa": {"from": "assets/images/enemies/mole/pradera-Sheet.png", "to": "assets/images/enemies/mole/costa-Sheet.png"},
     "cueva": {"from": "assets/images/enemies/mole/pradera-Sheet.png", "to": "assets/images/enemies/mole/cueva-Sheet.png"},
+    "estelar": {"from": "assets/images/enemies/mole/pradera-Sheet.png", "to": "assets/images/enemies/mole/estelar-Sheet.png"},
     "fortaleza": {"from": "assets/images/enemies/mole/pradera-Sheet.png", "to": "assets/images/enemies/mole/fortaleza-Sheet.png"},
     "jungla": {"from": "assets/images/enemies/mole/pradera-Sheet.png", "to": "assets/images/enemies/mole/jungla-Sheet.png"},
     "nieve": {"from": "assets/images/enemies/mole/pradera-Sheet.png", "to": "assets/images/enemies/mole/nieve-Sheet.png"},

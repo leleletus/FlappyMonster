@@ -15,6 +15,7 @@ local FILES = {
     fortaleza = 'assets/images/items/food_fortaleza.png', nieve = 'assets/images/items/food_nieve.png',
     cueva = 'assets/images/items/food_cueva.png', volcan = 'assets/images/items/food_volcan.png',
     jungla = 'assets/images/items/food_jungla.png',
+    estelar = 'assets/images/items/food_estelar.png',     -- (la Vía Estelar: una carambola, la fruta estrella)
     valle = 'assets/images/items/food_valle.png',          -- (la campaña Flappy: el Valle de los Pilares, un melocotón)
 }
 local GLOW = { cueva = { 0.4, 1, 0.9 } }             -- (las que brillan: color de su luz)
@@ -79,7 +80,7 @@ end
 
 local skinOpts = { { value = 'auto', label = 'Auto' }, { value = 'pradera', label = 'Manzana' }, { value = 'costa', label = 'Piña' },
                    { value = 'fortaleza', label = 'Muslo' }, { value = 'nieve', label = 'Polo' }, { value = 'cueva', label = 'Bayas' },
-                   { value = 'volcan', label = 'Guindilla' }, { value = 'jungla', label = 'Plátanos' }, { value = 'valle', label = 'Melocotón (Flappy)' } }
+                   { value = 'volcan', label = 'Guindilla' }, { value = 'jungla', label = 'Plátanos' }, { value = 'estelar', label = 'Carambola' }, { value = 'valle', label = 'Melocotón (Flappy)' } }
 return {
     name = 'apple', label = 'Comida', category = 'Objetos',
     description = 'Coleccionable: devuelve 1 de vida (PS); con la vida llena, +20 puntos. Su aspecto sale de la isla del nivel '

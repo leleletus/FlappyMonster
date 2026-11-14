@@ -22,6 +22,7 @@ and the network use; **Label** is the (Spanish) name in the editor. Own props = 
 | `crabby_jungle` | Crabby de la jungla (pincho) | `types/enemies/crabby_jungle.lua` | variant of `crabby_jungle` | `canHide`: bool = true · `hideChance`: number = 0.75 · `wallWalk`: bool = false |
 | `crabby_lava` | Crabby de lava (pincho) | `types/enemies/crabby_lava.lua` | variant of `crabby_lava` | `canHide`: bool = true · `hideChance`: number = 0.75 · `wallWalk`: bool = false |
 | `crabby_river` | Crabby de río (pincho) | `types/enemies/crabby_river.lua` | variant of `crabby_river` | `canHide`: bool = true · `hideChance`: number = 0.75 · `wallWalk`: bool = false |
+| `crabby_star` | Crabby estelar (pincho) | `types/enemies/crabby_star.lua` | variant of `crabby_star` | `canHide`: bool = true · `hideChance`: number = 0.75 · `wallWalk`: bool = false |
 | `crabbytramp` | Crabby trampolín | `types/enemies/crabbytramp.lua` |  | `canHide`: bool = true · `hideChance`: number = 0.85 · `power`: number = 1.6 · `crushDamage`: int = 1 · `wallWalk`: bool = false |
 | `crabbytramp_cave` | Crabby de cueva (trampolín) | `types/enemies/crabby_cave.lua` | variant of `crabby_cave` | `canHide`: bool = true · `hideChance`: number = 0.85 · `power`: number = 1.6 · `crushDamage`: int = 1 · `wallWalk`: bool = false |
 | `crabbytramp_fortress` | Crabby de la fortaleza (trampolín) | `types/enemies/crabby_fortress.lua` | variant of `crabby_fortress` | `canHide`: bool = true · `hideChance`: number = 0.85 · `power`: number = 1.6 · `crushDamage`: int = 1 · `wallWalk`: bool = false |
@@ -29,6 +30,7 @@ and the network use; **Label** is the (Spanish) name in the editor. Own props = 
 | `crabbytramp_jungle` | Crabby de la jungla (trampolín) | `types/enemies/crabby_jungle.lua` | variant of `crabby_jungle` | `canHide`: bool = true · `hideChance`: number = 0.85 · `power`: number = 1.6 · `crushDamage`: int = 1 · `wallWalk`: bool = false |
 | `crabbytramp_lava` | Crabby de lava (trampolín) | `types/enemies/crabby_lava.lua` | variant of `crabby_lava` | `canHide`: bool = true · `hideChance`: number = 0.85 · `power`: number = 1.6 · `crushDamage`: int = 1 · `wallWalk`: bool = false |
 | `crabbytramp_river` | Crabby de río (trampolín) | `types/enemies/crabby_river.lua` | variant of `crabby_river` | `canHide`: bool = true · `hideChance`: number = 0.85 · `power`: number = 1.6 · `crushDamage`: int = 1 · `wallWalk`: bool = false |
+| `crabbytramp_star` | Crabby estelar (trampolín) | `types/enemies/crabby_star.lua` | variant of `crabby_star` | `canHide`: bool = true · `hideChance`: number = 0.85 · `power`: number = 1.6 · `crushDamage`: int = 1 · `wallWalk`: bool = false |
 | `gloomy` | Crabby lúgubre | `types/enemies/gloomy.lua` |  | `hearing`: number = 1 · `senseRange`: number = 2.6 · `leapWind`: number = 0.45 · `leapEvery`: number = 2.5 · `searchTime`: number = 4 · `calmTime`: number = 1.2 |
 | `gummy` | Gummy | `types/enemies/gummy.lua` |  | `helmet`: bool = false |
 | `gummy_cave` | Gummy de cueva | `types/enemies/gummy_cave.lua` |  | `helmet`: bool = false |
@@ -36,6 +38,7 @@ and the network use; **Label** is the (Spanish) name in the editor. Own props = 
 | `gummy_ice` | Gummy helado | `types/enemies/gummy_ice.lua` |  | `helmet`: bool = false |
 | `gummy_jungle` | Gummy de la jungla | `types/enemies/gummy_jungle.lua` |  | `helmet`: bool = false |
 | `gummy_magma` | Gummy de magma | `types/enemies/gummy_magma.lua` |  | `helmet`: bool = false |
+| `gummy_star` | Gummy estelar | `types/enemies/gummy_star.lua` |  | `helmet`: bool = false |
 | `gust` | Soplón | `types/enemies/gust.lua` |  | `reach`: number = 5.5 · `width`: number = 2.8 · `power`: number = 1 |
 | `hopper` | Saltarín | `types/enemies/hopper.lua` | wantsLevel | `skin`: enum = auto · `jumpEvery`: number = 1.4 · `range`: int = 7 · `jumpH`: number = 3 · `jumpDist`: number = 4.5 · `careful`: bool = true |
 | `mole` | Topo | `types/enemies/mole.lua` | wantsLevel | `range`: int = 6 · `lookTime`: number = 0.9 |
@@ -80,7 +83,7 @@ and the network use; **Label** is the (Spanish) name in the editor. Own props = 
 
 | Id | Label | File | Flags | Own props |
 |---|---|---|---|---|
-| `beatspring` | Trampolín de compás | `types/mechanisms/beatspring.lua` |  | `high`: number = 2.1 · `low`: number = 1.1 · `window`: number = 0.1 · `cooldown`: number = 0.3 |
+| `beatspring` | Trampolín de compás | `types/mechanisms/beatspring.lua` |  | `high`: number = 2.1 · `low`: number = 1.1 · `window`: number = 0.15 · `cooldown`: number = 0.3 |
 | `blizzard` | Ventisca | `types/mechanisms/blizzard.lua` |  | `corner`: point = … · `dir_right`: bool = true · `dir_left`: bool = true · `dir_up`: bool = true · `dir_down`: bool = true · `warn`: number = 1 · `blowMin`: number = 2 · `blowMax`: number = 3 · `gapMin`: number = 3 · `gapMax`: number = 7 · `firstDelay`: number = 2 · `power`: number = 1 |
 | `bossglass` | Cristal roto de jefe | `types/mechanisms/bossglass.lua` |  | `corner`: point = … · `zone`: int = 0 · `first`: number = 15 · `every`: number = 25 · `phase1`: number = 0.66 · `phase2`: number = 0.33 · `warnTime`: number = 2.2 · `activeTime`: number = 7 · `damage`: int = 1 · `launchSpeed`: number = 900 |
 | `bosswall` | Bloque de jefe | `types/mechanisms/bosswall.lua` |  | `corner`: point = … · `zone`: int = 0 · `appearTime`: number = 0.5 · `vanishTime`: number = 0.6 · `material`: enum = solid |

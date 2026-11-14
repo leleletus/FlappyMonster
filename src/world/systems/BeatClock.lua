@@ -76,6 +76,14 @@ function BeatClock.offBeat(level)
     return math.min(f, beat - f)
 end
 
+-- s de MÚSICA hasta el CAMBIO de bloques más cercano (el pulso 1 de una frase): el trampolín de compás
+function BeatClock.offSwitch(level)
+    local bc = level and level.beat
+    if not bc then return math.huge end
+    local f = bc.t % bc.period
+    return math.min(f, bc.period - f)
+end
+
 -- Frase en la que va el reloj (0, 1, 2...) y el color sólido en ella
 local function phraseOf(bc, t) return math.floor((t or bc.t) / bc.period) end
 function BeatClock.solid(level)

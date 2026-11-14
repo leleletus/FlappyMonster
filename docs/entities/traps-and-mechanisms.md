@@ -283,7 +283,8 @@ sets `mechanisms/metronome`, `traps/clapspikes`, `mechanisms/beatspring`). Harne
   stripe lights pink (the warning, `glint`). Out, they hurt exactly like tile spikes (`Level._spikeHitbox`, part
   `spike`); hidden, the tips still show (8 px). The user asked for spikes "like the rest of the game" (2026-11-14).
 - **On-beat star spring** (`mechanisms/beatspring`, "Trampolín de compás", Mecanismos): a CLASS OF THE TRAMPOLINE
-  (`trampoline.lua` exports `defs.Base`), facing up: landing on it within `window` (0.1 s of music) of a beat launches
-  `high` (×2.1 the jump, ~7 tiles) with the crystal clink (`beepSwitch`) and a burst; otherwise `low` (×1.1, ~2 tiles).
-  A ring closes toward each beat (4 ring frames). `interact` stays side-effect free: the client predicts it with its
+  (`trampoline.lua` exports `defs.Base`), facing up: landing on it within `window` (0.15 s of music) of a BEEP BLOCK
+  SWITCH (beat 1 of a phrase, `BeatClock.offSwitch`; the user, 2026-11-14 — first it was any beat) launches `high`
+  (×2.1 the jump, ~7 tiles) with the crystal clink (`beepSwitch`) and a burst; otherwise `low` (×1.1, ~2 tiles). A
+  ring appears with the first warning beep and closes with each (beats 6, 7, 8: rings 1-3; ring 4 inside the window). `interact` stays side-effect free: the client predicts it with its
   own clock.

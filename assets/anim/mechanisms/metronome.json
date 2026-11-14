@@ -1,35 +1,14 @@
 {
   "id": "mechanisms/metronome",
   "scale": 4,
-  "origin": [
-    0.5,
-    0.5
-  ],
+  "origin": [0.5, 0.5],
   "fallback": "idle",
   "frames": [
-    {
-      "image": "assets/images/mechanisms/metronome/platform.png",
-      "key": "platform.png"
-    },
-    {
-      "image": "assets/images/mechanisms/metronome/platform_lit.png",
-      "key": "platform_lit.png"
-    }
+    {"image": "assets/images/mechanisms/metronome/platform.png", "key": "platform.png"},
+    {"image": "assets/images/mechanisms/metronome/platform_lit.png", "key": "platform_lit.png"}
   ],
   "anims": {
-    "idle": {
-      "fps": 4,
-      "frames": [
-        1
-      ],
-      "loop": true
-    },
-    "lit": {
-      "fps": 4,
-      "frames": [
-        2
-      ],
-      "loop": true
-    }
+    "idle": {"fps": 4, "frames": [1], "loop": true},
+    "lit": {"fps": 4, "frames": [2], "loop": true}
   }
 }

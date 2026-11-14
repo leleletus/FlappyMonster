@@ -73,6 +73,13 @@ ice of the `frozen_coast` sky), ice_chunks, anchor, buoy (lamp blinks: 2 frames,
 crab_pot, kelp_rock, rowboat (icicles drip), net_hang (hangs, sways), starfish_ice, floe (bobs 1 art px; goes in the cell
 just ABOVE the water, anchored 2 art px under the surface). Showcase arena `tools/levelgen/arenas/costa_helada.json`.
 
+## Starway set (2026-11-14)
+
+`starway_set` (category Estelar; `tools/art/world/make_starway_decor.py --apply` → `assets/images/world/decorations/starway/`
++ `assets/anim/world/decorations/starway.json`): crystal cluster, crystal shard (sub), star lantern (blinks, gold
+light), telescope, floating star (bobs, glows), constellation sign, moon flower (sub, faint light), cloud puff (front),
+star banner (waves). Cold, muted colours: only the lights shine (the user: the level must not distract).
+
 ## History
 
 - 2026-10-28: the user approved both packs from their previews (`FlappyMonster_pruebas/selva/decoraciones/`,

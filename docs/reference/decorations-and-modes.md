@@ -127,6 +127,15 @@ Registered in `src/world/decorations/Decorations.lua` (level JSON key `foliage`)
 | `net_hang` | Red colgante | Costa helada | cell |  |
 | `rowboat` | Bote volcado | Costa helada | cell |  |
 | `starfish_ice` | Estrella de mar en hielo | Costa helada | sub |  |
+| `cloud_puff` | Nubecilla | Estelar | cell |  |
+| `const_sign` | Letrero de constelación | Estelar | cell |  |
+| `crystal_cluster` | Racimo de cristales | Estelar | cell |  |
+| `crystal_shard` | Esquirla de cristal | Estelar | sub |  |
+| `floating_star` | Estrella flotante | Estelar | cell | yes |
+| `moon_flower` | Flor de luna | Estelar | sub | yes |
+| `star_banner` | Banderín estelar | Estelar | cell |  |
+| `star_lantern` | Farolillo estelar | Estelar | cell | yes |
+| `telescope` | Telescopio | Estelar | cell |  |
 
 ## Online game modes
 

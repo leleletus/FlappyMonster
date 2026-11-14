@@ -138,10 +138,24 @@ if it should exist as a mini block, add it to `SubTiles.KINDS`. Then
   `beepSwitch` on beat 1 (pitch × the hurry rate), and ties the level music to the clock (`Sound.syncMusic`, 0.05 s
   tolerance every 0.5 s; online this replaces the generic tick-based sync). Sounds: `tools/sounds/beep_blocks.py`
   (2290 Hz sine, 70 ms; a crystal clink).
-- **The blink** (the user, 2026-11-14): on each warning beep, for `BLINK` (0.18 s of music) every Beep Block is DRAWN in
-  its other state (`BeatClock.blink`, `Level:render`); collision does not change until the switch.
+- **The warning** (the user, 2026-11-14): on each warning beep, for `BLINK` (0.18 s of music) every Beep Block is drawn
+  with its WARNING look (`warnLook` in the tile def: `beep_<colour>_warn.png` / `beep_<colour>_x_warn.png`, from
+  `make_beep_blocks.py`): a MIX of the two states — the solid one keeps its full dark frame with a light checker on
+  the face (still reads solid), the passable one keeps its dashed outline with a faint dotted fill (still reads
+  passable). First version (same day) drew the other state; the user: a solid must never look passable nor the
+  reverse. Collision does not change until the switch.
 - Harness `mechanics` case `beep`. Design and the user's decisions: [beep-blocks](../design/beep-blocks.md). The level
   that uses them: Starway / Vía Estelar (`via_estelar`, Free Play), not built yet.
+
+## The Starway pack (0.5.226)
+
+Themed blocks of the Starway level (`starway_pack.lua`, tiles 61-68; textures `tools/art/world/make_starway_tiles.py`,
+preview `FlappyMonster_pruebas/via_estelar/bloques/`), layered skins like the frozen pack, all allowed on the
+background plane: `star_crystal` 61 (the road: lavender facets with tiny stars, a starlight rim on top), `nebula_rock`
+62 (the dark rock under it), `cloud_block` 63 (solid cloud, cotton top; material snow; own join group), `star_brick` 64
+(walls: bricks with a gold star now and then), `crystal_pillar` 65 (shaft + capital + base), `star_window` 66 (the
+brick with a starry porthole: for the background plane), `cloud_platform` 67 and `crystal_ledge` 68 (drop-through).
+Cold light colours, never pink / cyan (the Beep Blocks) nor bright gold (the rhythm objects).
 
 ## Secret exit
 

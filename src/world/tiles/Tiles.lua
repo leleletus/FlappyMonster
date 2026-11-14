@@ -34,6 +34,7 @@ local TYPES = {
     'grass',          -- 17
     'switchblock_on', -- 18, 19, 27, 28 (Bloques ON / OFF, activo e inactivo)
     'beepblock',      -- 45-48 (Bloques Beep de cristal rosa / cian, activo e inactivo: el reloj de compás)
+    'starway_pack',   -- 61-68 (el paquete estelar de la Vía Estelar: cristal, roca nebular, nube, ladrillo, columna, ventana, nube y repisa traspasables)
     'snow',           -- 29
     'ice',            -- 30
     'thin_ice',       -- 31-34 (hielo fino: normal, dañado, muy dañado, a punto de romperse)

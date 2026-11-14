@@ -61,7 +61,8 @@ function Level:render(camX, camY, noPlane)
     ctx.size, ctx.level, ctx.time = TILE_PX, self, t
 
     local subCells = self.subCells
-    -- (Bloques Beep: en cada beep de aviso se DIBUJAN un momento en el otro estado; la colisión no cambia —
+    -- (Bloques Beep: en cada beep de aviso se dibujan un momento con su AVISO — una mezcla de los dos estados —; la
+    --  colisión no cambia —
     --  src/world/systems/BeatClock.lua —)
     local beepBlink = self.beat and require('src/world/systems/BeatClock').blink(self)
     for row = sr2, er2 do
@@ -84,7 +85,7 @@ function Level:render(camX, camY, noPlane)
             ctx.x, ctx.y, ctx.col, ctx.row, ctx.raw = px, py, col, row, raw
             local def = defOfRaw(raw)                  -- (cacheado por valor: Level.lua)
             if def.fake and self.fakeLook then def = self.fakeLook[row * 65536 + col] or def end   -- (pared falsa: su aspecto, FakeLooks)
-            if beepBlink and def.switchBlock and def.switchBlock.beat then def = TileTypes.byName[def.switchBlock.other] or def end
+            if beepBlink and def.warnLook then def = def.warnLook end           -- (Bloque Beep: el aviso del beep)
             local anim = self.tileAnim and self.tileAnim[row * 65536 + col]
             if anim then
                 -- Golpeado: el mismo saltito, hacia arriba con un cabezazo y

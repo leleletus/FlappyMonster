@@ -121,12 +121,34 @@ def render(art, pal):
 DESIGNS = {'A': gem_solid, 'B': star_solid}
 
 
+# AVISO del cambio (el usuario, 2026-11-14: en cada beep NO se cambia de aspecto — un sólido no debe parecer hueco ni al
+# revés —: se dibuja una MEZCLA que avisa). Sólido que se va: el marco oscuro entero (sigue siendo sólido) con la cara
+# tramada en claro. Hueco que llega: el mismo contorno punteado con la cara tramada a medias (aún no es sólido).
+def solid_warn(solid):
+    g = [list(r) for r in solid]
+    for y in range(2, 14):
+        for x in range(2, 14):
+            if (x + y) % 2 == 0: g[y][x] = 'w'
+    return [''.join(r) for r in g]
+
+
+def inactive_warn(solid):
+    g = [list(r) for r in inactive(solid)]
+    for y in range(3, 13):
+        for x in range(3, 13):
+            if g[y][x] == '.' and x % 2 == 0 and y % 2 == 0: g[y][x] = 'm'
+            elif g[y][x] == '.' and (x + y) % 4 == 1: g[y][x] = 'b'
+    return [''.join(r) for r in g]
+
+
 def images(design):
     solid = DESIGNS[design]()
     out = {}
     for col, pal in PALS.items():
         out['beep_' + col] = render(solid, pal)
         out['beep_' + col + '_x'] = render(inactive(solid), pal)
+        out['beep_' + col + '_warn'] = render(solid_warn(solid), pal)
+        out['beep_' + col + '_x_warn'] = render(inactive_warn(solid), pal)
     return out
 
 
@@ -134,7 +156,7 @@ def preview():
     os.makedirs(PREV, exist_ok=True)
     T = 64
     sky_top, sky_bot = (24, 30, 74), (88, 110, 190)
-    W, H = T * 22, T * 8
+    W, H = T * 30, T * 8
     im = Image.new('RGBA', (W, H))
     for y in range(H):
         k = y / H
@@ -145,10 +167,10 @@ def preview():
         y0 = T * (1 + d_i * 4)
         x = T // 2
         # los cuatro sueltos
-        for n in ('beep_pink', 'beep_pink_x', 'beep_cyan', 'beep_cyan_x'):
-            im.alpha_composite(ims[n], (x, y0)); x += T + T // 2
+        for n in ('beep_pink', 'beep_pink_warn', 'beep_pink_x', 'beep_pink_x_warn', 'beep_cyan', 'beep_cyan_warn', 'beep_cyan_x', 'beep_cyan_x_warn'):
+            im.alpha_composite(ims[n], (x, y0)); x += T + T // 4
         # un tramo de camino: rosa sólido / cian inactivo, y abajo el cambio
-        x += T // 2
+        x = T // 2 + T * 11
         for row, (a, b) in enumerate((('beep_pink', 'beep_cyan_x'), ('beep_pink_x', 'beep_cyan'))):
             for i in range(10):
                 n = a if (i // 3) % 2 == 0 else b

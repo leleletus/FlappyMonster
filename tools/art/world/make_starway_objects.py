@@ -11,6 +11,9 @@
 #   /home/mtvemo/FlappyMonster_pruebas/via_estelar/objetos/  sprites.png · funcionamiento.png · escena.gif
 #   Desde la raíz del repo:  /usr/bin/python3 tools/art/world/make_starway_objects.py
 import os, sys
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'lib'))
+import animjson  # noqa: E402
+import os, sys
 from PIL import Image, ImageDraw
 
 REPO = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', '..'))
@@ -351,7 +354,7 @@ def apply():
               'anims': {a: {'fps': 4, 'frames': [names.index(f) + 1], 'loop': True} for a, f in anims.items()}}
         p = os.path.join(REPO, 'assets/anim', aid + '.json')
         os.makedirs(os.path.dirname(p), exist_ok=True)
-        with open(p, 'w') as f: json.dump(js, f, indent=2, ensure_ascii=False); f.write('\n')
+        animjson.write(p, js)
         print('  escrito', os.path.relpath(p, REPO))
 
 

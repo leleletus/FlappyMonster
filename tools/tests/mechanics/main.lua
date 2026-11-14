@@ -368,10 +368,10 @@ function cases.ritmo()
     want(h2 and h2[1].y + h2[1].h <= (9 - 1) * T + 0.01, 'los pinchos, encima de la placa')
     at(0.2); local alt = es[4]:clap()
     want(alt == 'up', 'con adelanto 1, al revés (' .. tostring(alt) .. ')')
-    at(4.03); local _, vyOn = b:launchVelocity()
-    at(4.3); local _, vyOff = b:launchVelocity()
+    at(8.1); local _, vyOn = b:launchVelocity()          -- (el cambio: pulso 1 de la frase 2)
+    at(4.05); local _, vyOff = b:launchVelocity()        -- (un pulso cualquiera, el 5: ya no vale)
     want(vyOn < vyOff and vyOn < -math.abs(ADV_JUMP_VEL) * 2 and vyOff > -math.abs(ADV_JUMP_VEL) * 1.2,
-         ('trampolín: en el pulso %d, fuera %d'):format(vyOn, vyOff))
+         ('trampolín: en el cambio %d, en otro pulso %d'):format(vyOn, vyOff))
     check('ritmo', ok, table.concat(parts, ' · '))
 end
 

@@ -16,21 +16,23 @@
     {"image": "assets/images/items/spikefall.png", "key": "spikefall.png"},
     {"image": "assets/images/items/star.png", "key": "star.png"},
     {"image": "assets/images/items/flapcharge.png", "key": "flapcharge.png"},
-    {"image": "assets/images/items/food_valle.png", "key": "food_valle.png"}
+    {"image": "assets/images/items/food_valle.png", "key": "food_valle.png"},
+    {"image": "assets/images/items/food_estelar.png", "key": "food_estelar.png"}
   ],
   "anims": {
     "apple": {"fps": 4, "frames": [1], "loop": true},
     "checkpoint_off": {"fps": 8, "frames": [2], "loop": true},
     "checkpoint_on": {"fps": 8, "frames": [3], "loop": true},
+    "flapcharge": {"fps": 4, "frames": [12], "loop": true},
     "food_costa": {"fps": 4, "frames": [4], "loop": true},
     "food_cueva": {"fps": 4, "frames": [5], "loop": true},
+    "food_estelar": {"fps": 4, "frames": [14], "loop": true},
     "food_fortaleza": {"fps": 4, "frames": [6], "loop": true},
     "food_jungla": {"fps": 4, "frames": [7], "loop": true},
     "food_nieve": {"fps": 4, "frames": [8], "loop": true},
+    "food_valle": {"fps": 4, "frames": [13], "loop": true},
     "food_volcan": {"fps": 4, "frames": [9], "loop": true},
     "spikefall": {"fps": 4, "frames": [10], "loop": true},
-    "star": {"fps": 4, "frames": [11], "loop": true},
-    "flapcharge": {"fps": 4, "frames": [12], "loop": true},
-    "food_valle": {"fps": 4, "frames": [13], "loop": true}
+    "star": {"fps": 4, "frames": [11], "loop": true}
   }
 }

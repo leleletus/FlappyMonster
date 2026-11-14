@@ -62,6 +62,14 @@ Every tile registered in `src/world/tiles/Tiles.lua`. **Id** is stored in the le
 | 58 | `ice_ledge` | Repisa de hielo (traspasable) | Plataformas | oneway (drop-through) | ice | partial hitbox |
 | 59 | `pillar` | Pilar (Flappy) | Flappy | none | hurtful | partial hitbox |
 | 60 | `mount` | Soporte (Flappy) | Flappy | solid | default |  |
+| 61 | `star_crystal` | Cristal estelar | Terreno | solid | frost_stone | joins `ground` |
+| 62 | `nebula_rock` | Roca nebular | Terreno | solid | stone | joins `ground` |
+| 63 | `cloud_block` | Nube maciza | Terreno | solid | snow | joins `cloud` |
+| 64 | `star_brick` | Ladrillo estelar | Terreno | solid | stone | joins `ground` |
+| 65 | `crystal_pillar` | Columna de cristal | Terreno | solid | frost_stone | joins `crystal_pillar` |
+| 66 | `star_window` | Ventana estelar | Terreno | solid | stone | joins `ground` |
+| 67 | `cloud_platform` | Nube traspasable | Plataformas | oneway (drop-through) | snow | partial hitbox |
+| 68 | `crystal_ledge` | Repisa de cristal (traspasable) | Plataformas | oneway (drop-through) | frost_stone | partial hitbox |
 
 ## Materials
 
