@@ -102,7 +102,9 @@ function love.load(a)
         for _ = 1, 10 do st:update(1 / 60) end
         local before = Sound.musicRate() == 1 and heard == 0
         for _ = 1, 40 do st:update(1 / 60) end
-        local after = math.abs(Sound.musicRate() - Hurry.RATE) < 0.001 and heard == 1
+        local during = Sound.musicRate() == 1 and heard == 1          -- (mientras suena el jingle, aún no)
+        for _ = 1, math.ceil(Hurry.DUCK * 60) do st:update(1 / 60) end
+        local after = during and math.abs(Sound.musicRate() - Hurry.RATE) < 0.001 and heard == 1
         for _ = 1, 30 do st:update(1 / 60) end
         local once = heard == 1
         gStateMachine:change('story_slots')

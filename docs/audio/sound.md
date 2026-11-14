@@ -30,8 +30,8 @@ to by anyone yet.
 ## Hurry up! (0.5.215)
 
 `src/audio/Hurry.lua`: when `Hurry.AT` (60) seconds of the level's time limit remain (`Sim.limitOf`; online, the
-round's clock in timed modes), `hurryUp` plays once, the music ducks to `DUCK_K` (0.3) for `DUCK` (1.6 s) and comes back
-`RATE` (×1.15) faster — `Sound.setMusicRate`, which LÖVE also raises in pitch (about two semitones), kept for tracks
+round's clock in timed modes), `hurryUp` plays once, the music ducks to `DUCK_K` (0.3) for `DUCK` (2.9 s, the jingle's length) and comes back
+`RATE` (2^(3/12) = ×1.189, three semitones: the next step of the jingle's 0 / +1 / +2 staircase) faster once the jingle ends — `Sound.setMusicRate`, which LÖVE also raises in pitch (about two semitones), kept for tracks
 that start later; `Hurry.reset` (entering / leaving the level state) sets it back to 1. Single player and the online
 client; not the menu demo, not King of the Hill (its mode has `hurry = false`: its clock is already the round's countdown)
 nor the story bonus matches. Since 0.5.216 every level's HUD clock COUNTS DOWN (what is left of the limit; the user: "it
@@ -40,22 +40,32 @@ wasn't clear when time runs out"), so the warning matches the clock turning red 
 
 ## Hurry-up jingle
 
-`tools/sounds/hurry.py` (standard library only) → `assets/sounds/jingles/hurry.wav` (`hurryUp`, 1.19 s, 44.1 kHz
-mono): played once when 60 s of the level's time limit remain, over the ducked music. An ALARM, not a tune: variant
-**A**, "bip-bip-bip ×3" — the start countdown's beep (`countTick` / `countGo` in `tools/sounds/ui.py`: 25 % chip pulse,
-6 kHz one-pole low-pass, 2 ms attack + exponential decay) at one pitch, 1760 Hz (countGo's) doubled at 880 Hz, 0.10 s
-beeps in three groups of three at 0 / 0.42 / 0.84 s. Pulses are band-limited (PolyBLEP); levelled like `story.save` /
-`ui.py` (normalise, tanh ×1.8, loudest 100 ms at −12 dBFS; peak −3.4 dBFS, no clipping). `VARIANTES=1` also writes
-the three candidates to `FlappyMonster_pruebas/hurry/hurry_{A,B,C}.wav`: **B** two-tone D6–A5 flat 50 % square
-hi-lo ×3 (0.80 s, very dry), **C** three rising "whoops" 520→1250 Hz, 25 % pulse (0.86 s). A is the default because
-it reuses the countdown's timbre (the player already hears it as "time"), has a single pitch (nothing melodic) and
-cuts through the music at 1.76 kHz. Its pulse helpers (`pulse`, `saw`, `triangle`, `env`, `finish`…) are reused by
-`tools/sounds/jingles.py`. Not listened to by anyone yet.
+`tools/sounds/hurry.py` (standard library only) → `assets/sounds/jingles/hurry.wav` (`hurryUp`, 2.99 s file, 2.83 s of
+sound from 0.03 s, 44.1 kHz mono): played once when 60 s of the level's time limit remain, over the ducked music. v3
+follows a measured formula for RISING TENSION: a 2-note motif → the same motif +1 semitone → +2 → a long
+closing note that dies away. Parameters at the top of the script (`TONALIDAD`, `BPM` 140, `REPETICIONES` 3,
+`SEMITONOS_PASO` 1, `PASO` 6 sixteenths = 3 eighths = 0.643 s between motif onsets, `CIERRE` 8 sixteenths = 0.857 s).
+Default variant **D**: an original motif in C major built from "la llamada"'s 4th — G5 on the beat, C6 on the eighth
+offbeat — with a lower E5 alternating on the "e" / "a" sixteenths and a triangle C3; the steps go G–C, G♯–C♯, A–D, and
+the close leaps another 4th to G6 (the 5th, la llamada's last note, left open) over a held G2 with a 1-bit DPCM kick
+and a noise crash. Onsets every 3 eighths = the "3" of the house 3+3+2 tresillo run as a hemiola. Timbres: lead = 2A03
+pulse with a 12.5 → 50 % duty sweep (vibrato on the closing note), doubled an octave up by the countdown beep (25 %
+pulse, 2 ms attack, exponential decay, 6 kHz low-pass — the sound the player already hears as "time"); accompaniment =
+short 12.5 % pulse; bass = triangle; crash = 15-bit LFSR noise. Levelled like the rest (loudest 100 ms at −12 dBFS,
+peak −5.9 dBFS, RMS −16.2 dBFS, no clipping). `VARIANTES=1` also writes `FlappyMonster_pruebas/hurry/hurry_{D,E,F}.wav`
++ `.mid` (the default run always writes the score to `hurry.mid` there): **E** la llamada's 3rd C6–E6 (G5 below), the
+stairs reach D6–F♯6 and the close rises a half step to G6 (F♯ as leading tone); **F** D's motif with a 4-3-5 sixteenth
+arpeggio (E5 G5 E5 C5) instead of the repeated note and a C3–G2 bass. Verified by numbers only (windowed FFT): motif
+pitches 782.5/1045.0, 829.1/1107.2, 878.5/1173.1 Hz, step ratios 1.0595-1.0596, onsets 0.029 / 0.673 / 1.312 / close
+1.956 s. `Hurry.DUCK` should cover ~2.9 s. Its helpers (`pulse` — duty may now be a function of time —, `saw`, `triangle`, `env`, `finish`…) are reused by `tools/sounds/jingles.py`. Not listened to by anyone yet.
 
-History: the first version (0.5.215) was a two-tone siren B5–F6 ×2 then "la llamada" G5–C6–E6–G6 into a C major
-chord with crash (1.62 s, a copy in `FlappyMonster_pruebas/hurry/hurry_v1_rechazado.wav`). The user rejected it:
-"it feels out of place and MORE MELODIC than it should be; it doesn't blend with the rest of the game". Keep this cue
-a non-melodic alert.
+History (keep these verdicts):
+- v1 (0.5.215): two-tone siren B5–F6 ×2 then la llamada G5–C6–E6–G6 into a C major chord with crash (1.62 s, a copy in
+  `FlappyMonster_pruebas/hurry/hurry_v1_rechazado.wav`). The user: "it feels out of place and MORE MELODIC than it
+  should be; it doesn't blend with the rest of the game".
+- v2 (0.5.216): three non-melodic alerts, `hurry_{A,B,C}.wav` in the same folder — **A** (installed) the countdown beep
+  at 1760 Hz doubled at 880 Hz, three groups of three; **B** flat 50 % square D6–A5 hi-lo ×3; **C** three rising
+  "whoops" 520→1250 Hz. The user: "it doesn't quite convince" — it lacked RISING TENSION, hence v3's chromatic stairs.
 
 ## Jingles remaster (fanfare, finish, sad trombone)
 

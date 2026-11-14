@@ -1,34 +1,64 @@
 #!/usr/bin/env python3
 # tools/sounds/hurry.py — el aviso «¡DATE PRISA!» (assets/sounds/jingles/hurry.wav, id 'hurryUp'): suena una vez
-# cuando queda 1 minuto del tiempo límite del nivel, ENCIMA de la música (que se agacha mientras dura); justo después
-# la música del nivel vuelve más rápida (×1.15).
+# cuando quedan 60 s del tiempo límite del nivel (el reloj del HUD se pone rojo a 1:00), ENCIMA de la música (que se
+# agacha mientras dura); después la música vuelve más rápida (src/audio/Hurry.lua, Hurry.RATE).
 #
-# Es una ALARMA, no una melodía (el usuario rechazó la primera versión, una sirena con carrerilla y acorde final:
-# «no pega, es MÁS MELÓDICO de lo que debería»). Hecho como los sonidos cortos del juego:
-#   - 44100 Hz mono 16 bits, como los efectos nuevos (items, mecánicas, jefes); el usuario oye «de teléfono» los
-#     jingles viejos a 22050 Hz, con ondas cuadradas crudas llenas de aliasing: aquí los pulsos van con PolyBLEP;
-#   - pulso de chip de 25 % con paso bajo a 6 kHz y envolvente ataque 2 ms + caída exponencial = el «bip» de la cuenta
-#     atrás (tools/sounds/ui.py: count_tick 880 Hz, caída 60 ms; count_go 1760 Hz);
-#   - el mismo guardado que story.save / ui.py: normalizar, tanh(×1,8), tramo más fuerte de 100 ms a -12 dBFS,
-#     pico ≤ 0,97, fundido de 6 ms.
-# Tres variantes:
-#   A  «bip-bip-bip» ×3: el bip de la cuenta atrás a 1760 Hz (el tono de count_go) doblado a 880 Hz, en tres grupos
-#      de tres: alarma de reloj digital. Una sola altura: nada de melodía. (POR DEFECTO)
-#   B  alarma de dos tonos ×3, muy seca: cuadrada 50 % plana re6–la5 (una cuarta, «ni-no») con silencio entre pares.
-#   C  tres «uuuip» que suben (520 → 1250 Hz), pulso 25 % plano: claxon de alarma.
+# v3 (esta): TENSIÓN CRECIENTE con una escalera cromática. La fórmula, medida sobre un clip de referencia:
+#   motivo corto de 2 notas agudas sobre una nota más grave que alterna con ellas (~0,54 s)
+#   → el mismo motivo +1 semitono → +2 semitonos (inicios cada 3 corcheas = 0,643 s a 140 BPM)
+#   → cierre: una nota larga aguda sobre un bajo grave sostenido, con bombo y plato, que se apaga (~0,86 s).
+# Melodía ORIGINAL, hecha con el vocabulario de la casa (docs/audio/music-guide.md):
+#   - Do mayor (la tonalidad del mapa y los menús); el motivo es la 4ª sol→do de «la llamada» (sol–do–mi–sol);
+#   - la segunda nota cae a contratiempo (en la corchea «y») y la nota grave alterna en semicorcheas «e» / «a»;
+#   - los inicios cada 3 corcheas son el «3» del tresillo 3+3+2 seguido en hemiolia contra el 4/4;
+#   - el cierre salta otra 4ª (re6 → sol6 en D; en E fa#6 → sol6, sensible que sube) y se queda en SOL, la 5ª:
+#     la última nota de «la llamada», abierta, que empuja hacia la música más rápida.
+# Timbres (los roles de siempre): melodía = pulso 2A03 con barrido de ciclo 12,5 → 50 % y vibrato en la nota larga,
+# doblado a la octava por el «bip» de la cuenta atrás (pulso 25 %, ataque 2 ms, caída exponencial, paso bajo a
+# 6 kHz: tools/sounds/ui.py); acompañamiento = pulso 12,5 % corto; bajo = triángulo; bombo DPCM de 1 bit; plato de
+# ruido (LFSR de 15 bits).
+# Lo rechazado (docs/audio/sound.md § Hurry-up jingle): v1 sirena + carrerilla + acorde de fanfarria («más melódico
+# de lo que debería»); v2 A / B / C (bips ×3, alarma de dos tonos, «uuuip»: «no termina de convencer»; están en el
+# historial de git y en ~/FlappyMonster_pruebas/hurry/).
+# 44100 Hz mono 16 bits, pulsos sin aliasing (PolyBLEP). Guardado como story.save / ui.py: normalizar, tanh(×1,8),
+# tramo más fuerte de 100 ms a -12 dBFS, pico ≤ 0,97, fundido de 6 ms.
 # Solo biblioteca estándar (sin numpy). tools/sounds/jingles.py reutiliza estas piezas.
 #   python3 tools/sounds/hurry.py               escribe la variante por defecto en assets/sounds/jingles/hurry.wav
-#   VARIANTES=1 python3 tools/sounds/hurry.py   además escribe las tres en ~/FlappyMonster_pruebas/hurry/hurry_X.wav
+#                                               (y su partitura en ~/FlappyMonster_pruebas/hurry/hurry.mid)
+#   VARIANTES=1 python3 tools/sounds/hurry.py   además escribe hurry_D/E/F.wav + .mid en ~/FlappyMonster_pruebas/hurry/
 import array
 import math
 import os
+import struct
 import wave
+
+# --- parámetros ---
+TONALIDAD = 'C'          # Do mayor (todas las alturas de abajo son de Do mayor; se transportan con TRANSPORTE)
+TRANSPORTE = 0           # semitonos para mover el jingle entero
+BPM = 140
+REPETICIONES = 3         # veces que suena el motivo
+SEMITONOS_PASO = 1       # cuánto sube cada repetición
+PASO = 6                 # semicorcheas entre inicios del motivo (3 corcheas = 0,643 s a 140 BPM)
+CIERRE = 8               # semicorcheas de la nota larga del cierre (0,857 s), que se apaga
+ANTES = 0.03             # s de silencio antes del primer golpe
+DESPUES = 0.12           # s de silencio al final
 
 SR = 44100
 TARGET_DB = -12.0
 OUT = 'assets/sounds/jingles/hurry.wav'
 PRUEBAS = os.path.expanduser('~/FlappyMonster_pruebas/hurry')
-DEFAULT = 'A'
+DEFAULT = 'D'
+S16 = 60.0 / BPM / 4     # una semicorchea en segundos
+NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
+
+
+def midi_of(name):
+    # 'F#4' -> número MIDI (do4 = 60)
+    return NAMES.index(name[:-1]) + 12 * (int(name[-1]) + 1)
+
+
+def hz_of(m):
+    return 440.0 * 2 ** ((m - 69) / 12)
 
 
 # --- piezas (las mismas que megacrabby.py / ui.py, sin numpy) ---
@@ -53,14 +83,15 @@ def _blep(t, dt):
 
 
 def pulse(f, d, duty=0.25, cutoff=6000):
-    # onda de pulso de chip SIN aliasing (PolyBLEP) y sin continua; f puede ser un número o una función del tiempo
+    # onda de pulso de chip SIN aliasing (PolyBLEP) y sin continua; f y duty pueden ser números o funciones del tiempo
     out, ph = [], 0.0
-    dc = 2 * duty - 1
     for k in range(int(SR * d)):
-        ff = f(k / SR) if callable(f) else f
+        t = k / SR
+        ff = f(t) if callable(f) else f
+        du = duty(t) if callable(duty) else duty
         dt = ff / SR
-        v = (1.0 if ph < duty else -1.0) + _blep(ph, dt) - _blep((ph - duty) % 1.0, dt)
-        out.append(v - dc)
+        v = (1.0 if ph < du else -1.0) + _blep(ph, dt) - _blep((ph - du) % 1.0, dt)
+        out.append(v - (2 * du - 1))
         ph = (ph + dt) % 1.0
     return lowpass(out, cutoff)
 
@@ -91,7 +122,7 @@ def env(n, attack=0.002, decay=0.1):
 
 
 def flat(n, attack=0.001, release=0.004):
-    # envolvente plana con bordes secos (como los jingles viejos de onda cuadrada)
+    # envolvente plana con bordes secos
     return [min(1.0, (k / SR) / attack, ((n - k) / SR) / release) for k in range(n)]
 
 
@@ -107,47 +138,197 @@ def place(y, x, at):
         y[i0 + k] += v
 
 
-# --- las variantes ---
-def var_a():
-    # bip de cuenta atrás: 25 %, 2 ms de ataque, caída 70 ms; a 1760 Hz con 880 Hz debajo (más cuerpo; en contrafase
-    # para que los picos de los dos pulsos no caigan juntos)
-    d = 0.10
-    bip = [h + l for h, l in zip(mul(pulse(1760, d), env(int(SR * d), 0.002, 0.07)),
-                                 mul(pulse(880, d), env(int(SR * d), 0.002, 0.07), -0.5))]
+# --- instrumentos del jingle ---
+def lead(f, d, decay=0.35, release=0.02, vib=0.0, gain=1.0):
+    # melodía: pulso 2A03 con barrido de ciclo 12,5 → 50 % en los primeros 0,12 s; vibrato (semitonos, 5,5 Hz) que
+    # entra a los 0,15 s en las notas largas
+    fn = (lambda t: f * 2 ** (vib * min(1.0, max(0.0, t - 0.15) / 0.2) * math.sin(2 * math.pi * 5.5 * t) / 12)) \
+        if vib else f
+    duty = lambda t: 0.125 + 0.375 * min(1.0, t / 0.12)
+    n = int(SR * d)
+    e = [a * b for a, b in zip(env(n, 0.003, decay), flat(n, 0.003, release))]
+    return mul(pulse(fn, d, duty, 7000), e, gain)
+
+
+def beep(f, d, decay=0.08, gain=0.5, vib=0.0):
+    # el «bip» de la cuenta atrás (count_tick / count_go): 25 %, ataque 2 ms, caída exponencial, paso bajo 6 kHz
+    fn = (lambda t: f * 2 ** (vib * min(1.0, max(0.0, t - 0.15) / 0.2) * math.sin(2 * math.pi * 5.5 * t) / 12)) \
+        if vib else f
+    n = int(SR * d)
+    e = [a * b for a, b in zip(env(n, 0.002, decay), flat(n, 0.002, 0.01))]
+    return mul(pulse(fn, d, 0.25), e, gain)
+
+
+def stab(f, d=0.07, gain=0.32):
+    # acompañamiento: pulso 12,5 % muy corto (la nota grave que alterna)
+    n = int(SR * d)
+    e = [a * b for a, b in zip(env(n, 0.002, 0.05), flat(n, 0.002, 0.008))]
+    return mul(pulse(f, d, 0.125, 5000), e, gain)
+
+
+def bass(f, d, decay=0.3, gain=0.55):
+    n = int(SR * d)
+    e = [a * b for a, b in zip(env(n, 0.004, decay), flat(n, 0.004, 0.02))]
+    return mul(triangle(f, d), e, gain)
+
+
+def kick(gain=0.8):
+    # bombo DPCM de 1 bit: un seno que cae 160 → 45 Hz codificado en deltas de ±1/32 a 33,1 kHz (como el canal DMC)
+    d = 0.16
+    target, ph, out = [], 0.0, []
+    for k in range(int(SR * d)):
+        t = k / SR
+        ph += 2 * math.pi * (45 + 115 * math.exp(-t / 0.03)) / SR
+        target.append(math.sin(ph) * math.exp(-t / 0.06))
+    lvl, step, acc = 0.0, 1 / 32, 0.0
+    for v in target:
+        acc += 33144 / SR
+        while acc >= 1:
+            acc -= 1
+            lvl += step if v > lvl else -step
+        out.append(lvl)
+    return [v * gain for v in lowpass(out, 9000)]
+
+
+def cymbal(d=0.9, gain=0.32):
+    # plato de ruido: LFSR de 15 bits (modo largo) a ~25 kHz, sin graves, con caída larga
+    reg, out, acc, v = 1, [], 0.0, 1.0
+    for k in range(int(SR * d)):
+        acc += 25000 / SR
+        while acc >= 1:
+            acc -= 1
+            b = (reg ^ (reg >> 1)) & 1
+            reg = (reg >> 1) | (b << 14)
+            v = 1.0 if reg & 1 else -1.0
+        out.append(v)
+    lo = lowpass(out, 2500)
+    hp = [a - b for a, b in zip(out, lo)]
+    n = len(hp)
+    e = [a * b for a, b in zip(env(n, 0.001, 0.28), flat(n, 0.001, 0.05))]
+    return mul(lowpass(hp, 9000), e, gain)
+
+
+def hat(gain=0.12):
+    # ruido corto (charles) que marca cada repetición
+    c = cymbal(0.05, 1.0)
+    return mul(c, env(len(c), 0.001, 0.015), gain)
+
+
+# --- la partitura: (voz, semicorchea de inicio, semicorcheas de duración, nota) por repetición, en Do mayor ---
+# Cada variante: el motivo (voz aguda + grave alterna + bajo) y el cierre. 'oct' = doblado del bip a la octava.
+VARIANTES = {
+    # D (POR DEFECTO): la 4ª de «la llamada» sol5 → do6 (do6 a contratiempo, en la corchea «y»); la nota grave mi5
+    # en las semicorcheas «e» y «a» (alterna con la aguda); bajo do3. Cierre: sol6 sobre sol2 (la 5ª, abierta).
+    'D': {
+        'motivo': [('lead', 0, 2, 'G5'), ('lead', 2, 3, 'C6'), ('acc', 1, 1, 'E5'), ('acc', 3, 1, 'E5'),
+                   ('acc', 5, 1, 'E5'), ('bass', 0, 4, 'C3')],
+        'cierre': [('lead', 0, CIERRE, 'G6'), ('bass', 0, CIERRE, 'G2'), ('acc', 0, 1, 'D6'), ('acc', 0, 1, 'B5')],
+    },
+    # E: la 3ª de «la llamada» do6 → mi6, grave sol5 alternando; la escalera llega a re6 → fa#6 y el cierre sube
+    # medio tono a sol6 (fa# = sensible de Sol) sobre sol2.
+    'E': {
+        'motivo': [('lead', 0, 2, 'C6'), ('lead', 2, 3, 'E6'), ('acc', 1, 1, 'G5'), ('acc', 3, 1, 'G5'),
+                   ('acc', 5, 1, 'G5'), ('bass', 0, 4, 'C3')],
+        'cierre': [('lead', 0, CIERRE, 'G6'), ('bass', 0, CIERRE, 'G2'), ('acc', 0, 1, 'D6'), ('acc', 0, 1, 'B5')],
+    },
+    # F: el motivo de D con la nota grave como arpegio 4-3-5 en semicorcheas (do5 mi5 sol5 do6 … la célula de la
+    # casa) en vez de una nota repetida; bajo do3–sol2 en corcheas. Cierre igual que D.
+    'F': {
+        'motivo': [('lead', 0, 2, 'G5'), ('lead', 2, 3, 'C6'), ('acc', 1, 1, 'E5'), ('acc', 3, 1, 'G5'),
+                   ('acc', 4, 1, 'E5'), ('acc', 5, 1, 'C5'), ('bass', 0, 2, 'C3'), ('bass', 3, 2, 'G2')],
+        'cierre': [('lead', 0, CIERRE, 'G6'), ('bass', 0, CIERRE, 'G2'), ('acc', 0, 1, 'D6'), ('acc', 0, 1, 'B5')],
+    },
+}
+
+
+def score(name):
+    # lista de eventos (voz, inicio en semicorcheas, duración en semicorcheas, nota MIDI) ya transportados
+    v = VARIANTES[name]
+    ev = []
+    for r in range(REPETICIONES):
+        up = TRANSPORTE + r * SEMITONOS_PASO
+        for voz, at, dur, n in v['motivo']:
+            ev.append((voz, r * PASO + at, dur, midi_of(n) + up))
+        ev.append(('hat', r * PASO, 1, 42))
+    c0 = REPETICIONES * PASO
+    for voz, at, dur, n in v['cierre']:
+        ev.append((voz, c0 + at, dur, midi_of(n) + TRANSPORTE))
+    ev.append(('kick', c0, 2, 36))
+    ev.append(('crash', c0, CIERRE, 49))
+    return ev
+
+
+def render(name):
     y = []
-    for g in range(3):                    # tres grupos…
-        for b in range(3):                # …de tres bips, a 0,10 s
-            place(y, bip, g * 0.42 + b * 0.10)
-    place(y, [0.0] * int(SR * 0.05), len(y) / SR)
+    last = max(at for voz, at, dur, m in score(name) if voz == 'lead')
+    for voz, at, dur, m in score(name):
+        t, d, f = ANTES + at * S16, dur * S16, hz_of(m)
+        if voz == 'lead':
+            if at == last:                          # la nota larga del cierre: vibrato, se apaga
+                place(y, lead(f, d + 0.05, 0.45, 0.25, vib=0.25), t)
+                place(y, beep(f / 2, d + 0.05, 0.5, 0.22, vib=0.25), t)    # refuerzo una octava abajo
+            else:
+                place(y, lead(f, d * 0.92, 0.25), t)
+                place(y, beep(f * 2, d * 0.92, 0.07, 0.35), t)             # el bip de la cuenta atrás, octava arriba
+        elif voz == 'acc':
+            place(y, stab(f), t)
+        elif voz == 'bass':
+            place(y, bass(f, d + (0.05 if dur >= CIERRE else 0), 0.5 if dur >= CIERRE else 0.25), t)
+        elif voz == 'hat':
+            place(y, hat(), t)
+        elif voz == 'kick':
+            place(y, kick(), t)
+        elif voz == 'crash':
+            place(y, cymbal(d + 0.05), t)
+    place(y, [0.0] * int(SR * DESPUES), len(y) / SR)
     return y
 
 
-def var_b():
-    # dos tonos planos, 50 %, sin caída: re6 (1175 Hz) – la5 (880 Hz), 0,10 s cada uno, pares a 0,28 s
-    d = 0.10
-    hi = mul(pulse(1175, d, 0.5), flat(int(SR * d)))
-    lo = mul(pulse(880, d, 0.5), flat(int(SR * d)))
-    y = []
-    for p in range(3):
-        place(y, hi, p * 0.28)
-        place(y, lo, p * 0.28 + d)
-    place(y, [0.0] * int(SR * 0.04), len(y) / SR)
-    return y
+# --- .mid (escrito a mano: tipo 1, 480 por negra) ---
+def write_mid(path, name):
+    tpq = 480
+    t16 = tpq // 4
 
+    def vlq(n):
+        b = [n & 0x7F]
+        n >>= 7
+        while n:
+            b.insert(0, (n & 0x7F) | 0x80)
+            n >>= 7
+        return bytes(b)
 
-def var_c():
-    # «uuuip»: barrido exponencial 520 → 1250 Hz en 0,22 s, pulso 25 % plano, cada 0,30 s
-    d = 0.22
-    sweep = lambda t: 520 * (1250 / 520) ** (t / d)
-    w = mul(pulse(sweep, d, 0.25), flat(int(SR * d), 0.002, 0.02))
-    y = []
-    for i in range(3):
-        place(y, w, i * 0.30)
-    place(y, [0.0] * int(SR * 0.04), len(y) / SR)
-    return y
+    def track(events, meta=b''):
+        # events: (tick, bytes); ordenados, con los «note off» antes que los «note on» del mismo tick
+        events.sort(key=lambda e: (e[0], e[1][0] & 0xF0 == 0x90))
+        data, now = bytearray(meta), 0
+        for tick, msg in events:
+            data += vlq(tick - now) + msg
+            now = tick
+        data += b'\x00\xff\x2f\x00'
+        return b'MTrk' + struct.pack('>I', len(data)) + bytes(data)
 
-
-VARIANTS = {'A': var_a, 'B': var_b, 'C': var_c}
+    # voz -> (canal, programa GM, velocidad)
+    chans = {'lead': (0, 80, 100), 'acc': (1, 81, 70), 'bass': (2, 38, 90),
+             'hat': (9, None, 50), 'kick': (9, None, 110), 'crash': (9, None, 100)}
+    names = {'lead': b'melodia (pulso)', 'acc': b'acompanamiento', 'bass': b'bajo (triangulo)', 'hat': b'percusion'}
+    groups = {}
+    for voz, at, dur, m in score(name):
+        g = 'hat' if chans[voz][0] == 9 else voz
+        ch, _, vel = chans[voz]
+        groups.setdefault(g, []).append((at * t16, bytes([0x90 | ch, m, vel])))
+        groups[g].append(((at + dur) * t16, bytes([0x80 | ch, m, 0])))
+    tempo = 60000000 // BPM
+    head = track([], b'\x00\xff\x51\x03' + tempo.to_bytes(3, 'big') + b'\x00\xff\x58\x04\x04\x02\x18\x08'
+                 + b'\x00\xff\x59\x02\x00\x00')                     # 4/4, Do mayor
+    tracks = [head]
+    for g in ('lead', 'acc', 'bass', 'hat'):
+        ch, prog, _ = chans[g]
+        meta = b'\x00\xff\x03' + vlq(len(names[g])) + names[g]
+        if prog is not None:
+            meta += b'\x00' + bytes([0xC0 | ch, prog])
+        tracks.append(track(groups[g], meta))
+    with open(path, 'wb') as fh:
+        fh.write(b'MThd' + struct.pack('>IHHH', 6, 1, len(tracks), tpq) + b''.join(tracks))
 
 
 # --- guardado: igual que story.save ---
@@ -201,10 +382,12 @@ def report(path, x):
 
 if __name__ == '__main__':
     todas = os.environ.get('VARIANTES') == '1'
-    for name in (VARIANTS if todas else [DEFAULT]):
-        x = finish(VARIANTS[name]())
+    for name in (VARIANTES if todas else [DEFAULT]):
+        x = finish(render(name))
         if name == DEFAULT:
             write(OUT, x); report(OUT, x)
+            write_mid(os.path.join(PRUEBAS, 'hurry.mid'), name)       # la partitura (no es un recurso del juego)
         if todas:
             p = os.path.join(PRUEBAS, 'hurry_%s.wav' % name)
             write(p, x); report(p, x)
+            write_mid(os.path.join(PRUEBAS, 'hurry_%s.mid' % name), name)

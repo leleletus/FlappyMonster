@@ -9,8 +9,9 @@
 local Hurry = {}
 
 Hurry.AT   = 60           -- s que faltan cuando avisa (cuando el reloj del HUD se pone rojo)
-Hurry.RATE = 1.15         -- la música, así de rápida desde el aviso
-Hurry.DUCK = 1.2          -- s con la música baja mientras suena la alarma (dura 1,19 s)
+Hurry.RATE = 2 ^ (3 / 12) -- la música, así de rápida tras el aviso: 3 semitonos más (×1,189) — el escalón que sigue a
+                          --  los del jingle (0, +1, +2): su cierre lleva a la música acelerada —
+Hurry.DUCK = 2.9          -- s con la música baja mientras suena el jingle (suena 2,83 s)
 Hurry.DUCK_K = 0.3        -- … a este tanto de su volumen
 
 function Hurry.update(owner, timeLeft, dt)
@@ -20,13 +21,12 @@ function Hurry.update(owner, timeLeft, dt)
         h = { t = 0, vol = Sound.musicVolume() }
         owner._hurry = h
         Sound.play('hurryUp')
-        Sound.setMusicVolume(h.vol * Hurry.DUCK_K)
-        Sound.setMusicRate(Hurry.RATE)
+        Sound.setMusicVolume(h.vol * Hurry.DUCK_K)      -- (la música baja; se acelera cuando acaba el jingle)
         return
     end
     if h.t < Hurry.DUCK then
         h.t = h.t + (dt or 0)
-        if h.t >= Hurry.DUCK then Sound.setMusicVolume(h.vol) end      -- (vuelve, ya rápida)
+        if h.t >= Hurry.DUCK then Sound.setMusicVolume(h.vol); Sound.setMusicRate(Hurry.RATE) end   -- (vuelve, ya rápida)
     end
 end
 
