@@ -121,7 +121,7 @@ function OnlineAdventureState:_renderHUD()
 
     -- TIME: parpadea rojo cuando se acaba (60 s del límite general; 10 s de un
     -- modo con tiempo, que ya avisa con su cuenta atrás grande)
-    local timeLeft = self.roundEndAt and (shown + 50) or (600 - self.levelTime)
+    local timeLeft = self.roundEndAt and (shown + 50) or (require('src/world/systems/Sim').limitOf(self.level) - self.levelTime)
     local tr, tg, tb = 1, 0.95, 0.15
     local vr, vg, vb = 1, 1,    1
     if timeLeft < 60 then

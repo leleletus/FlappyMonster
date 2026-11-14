@@ -268,6 +268,8 @@ function Level.fromData(lvl, difficulty)
     self.openTop   = lvl.openTop == true      -- (nada sólido encima del nivel: los escenarios de los créditos)
     -- (ECO en los sonidos, Sound.setEcho: por defecto, el de las cuevas — a oscuras o en penumbra —; "echo": true/false lo fuerza)
     self.echo      = lvl.echo == true or (lvl.echo == nil and (lvl.dark == true or self.light == 'cave'))
+    -- (el límite de tiempo de este nivel en s; nil = el de siempre, Sim.TIME_LIMIT)
+    self.timeLimit = (tonumber(lvl.timeLimit) or 0) > 0 and tonumber(lvl.timeLimit) or nil
     self.outline   = lvl.outline == true               -- (ya no hace nada: el borde de contraste — src/fx/Edge.lua — sale solo donde hace falta; se lee porque los campos no se renombran)
     self.spikeSkin = lvl.spikeSkin                     -- (aspecto de los pinchos: src/world/level/SpikeSkins.lua, solo visual)
     self.background, self.timeOfDay, self.clouds = lvl.background, lvl.time, lvl.clouds   -- (fondo y hora: src/fx/Sky.lua)

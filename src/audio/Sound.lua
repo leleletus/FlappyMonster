@@ -41,6 +41,8 @@ end
 
 -- Volumen de las OPCIONES (0..1; src/core/Settings.lua): × todo lo que suena. Las muestras y las pistas se mezclan a 1.
 local musicK, sfxK = 1, 1
+-- (la VELOCIDAD de la música: 1 normal; al quedar poco tiempo, más rápida — src/audio/Hurry.lua —; LÖVE sube el tono a la vez)
+local musicRate = 1
 function Sound.setVolumes(mus, sfx)
     if music and musicK > 0 then music:setVolume(music:getVolume() / musicK * mus)
     elseif music then music:setVolume(mus * 0.7) end        -- (estaba a 0: su volumen se perdió; el de casi todas)
@@ -283,12 +285,12 @@ function Sound.playMusic(name, volume)
     -- Pista con intro que ya está en su bucle: sigue sonando
     local lp = loops[name]
     if lp and music == lp and lp:isPlaying() then
-        lp:setPitch(1.0); lp:setVolume((volume or 0.7) * musicK)
+        lp:setPitch(musicRate); lp:setVolume((volume or 0.7) * musicK)
         return
     end
     -- Siempre resetear pitch, aunque sea la misma pista
     if music == src and src:isPlaying() then
-        src:setPitch(1.0)
+        src:setPitch(musicRate)
         src:setVolume((volume or 0.7) * musicK)
         return
     end
@@ -296,7 +298,7 @@ function Sound.playMusic(name, volume)
         music:setPitch(1.0)
         music:stop()
     end
-    src:setPitch(1.0)
+    src:setPitch(musicRate)
     src:setVolume((volume or 0.7) * musicK)
     -- Empieza SIEMPRE desde el principio: stop() rebobina (una pista que se
     -- quedó en pausa al salir de la partida seguía desde donde estaba)
@@ -473,7 +475,7 @@ function Sound.followAdaptive(path, pid, pos, nxt)
         local src = adaptSource(map, path, id)
         if not src then return end
         if music and music ~= src then music:stop() end
-        src:setPitch(1.0); src:setVolume(vol * musicK)
+        src:setPitch(musicRate); src:setVolume(vol * musicK)
         src:seek(math.max(0, at)); src:play()
         music, musicName, adaptCur = src, Sound.ADAPTIVE, id
     end
@@ -509,9 +511,17 @@ end
 -- Lerp del pitch de la música (usado para el slowdown al morir)
 function Sound.setMusicPitch(pitch)
     if music and music:isPlaying() then
-        music:setPitch(math.max(0.1, pitch))
+        music:setPitch(math.max(0.1, pitch * musicRate))
     end
 end
+
+-- La velocidad de la música (1 = normal): ¡date prisa! (src/audio/Hurry.lua). Se queda para las pistas que empiecen
+-- después hasta que se vuelva a poner a 1
+function Sound.setMusicRate(k)
+    musicRate = k or 1
+    if music then music:setPitch(musicRate) end
+end
+function Sound.musicRate() return musicRate end
 
 -- Pausa: congela la música y los sonidos largos (ahogamiento) donde van,
 -- para continuar EXACTAMENTE desde ahí al despausar.

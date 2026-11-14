@@ -82,6 +82,32 @@ function love.load(a)
         check('placas', ok and #bad == 0, ('números bien=%s; islas sin aspecto o con imagen que no carga: %s'):format(tostring(ok),
             #bad == 0 and 'ninguna' or table.concat(bad, ', ')))
     end
+    -- ¡DATE PRISA! (0.5.215, src/audio/Hurry.lua): en el nivel de prueba (límite 75 s), a los 60 s del final suena el
+    -- jingle y la música va ×1,15; antes no; al salir, a su velocidad. El límite de ese nivel es el suyo (timeLimit)
+    do
+        local Hurry, Sim = require 'src/audio/Hurry', require 'src/world/systems/Sim'
+        local heard = 0
+        local play = Sound.play
+        Sound.play = function(n, ...) if n == 'hurryUp' then heard = heard + 1 end return play(n, ...) end
+        gStateMachine:change('adventure', { level = 'assets/levels/prueba_prisa.json', returnTo = 'free_play' })
+        local st = gStateMachine:_top()
+        if st.introScene then st.introScene:finish(); st.introScene = nil end
+        st.card, st.startCd, st.startGoT = nil, nil, nil
+        local limit = Sim.limitOf(st.level)
+        st.levelTime = limit - Hurry.AT - 0.5
+        for _ = 1, 10 do st:update(1 / 60) end
+        local before = Sound.musicRate() == 1 and heard == 0
+        for _ = 1, 40 do st:update(1 / 60) end
+        local after = math.abs(Sound.musicRate() - Hurry.RATE) < 0.001 and heard == 1
+        for _ = 1, 30 do st:update(1 / 60) end
+        local once = heard == 1
+        gStateMachine:change('story_slots')
+        local reset = Sound.musicRate() == 1
+        Sound.play = play
+        check('prisa', limit == 75 and before and after and once and reset,
+            ('límite del nivel %d s · antes: velocidad 1 y sin jingle=%s · a 60 s del final: ×%.2f y jingle=%s · solo una vez=%s · al salir ×1=%s'):format(
+             limit, tostring(before), Sound.musicRate(), tostring(after), tostring(once), tostring(reset)))
+    end
     gStateMachine:change('story_slots')
 end
 

@@ -506,14 +506,14 @@ local function stepRoom(room)
     end
 
     -- ── Reloj de nivel (autoritativo) ────────────────────────────────────────
-    sim.levelTime = math.min(sim.levelTime + TICK_DT, S.Sim.TIME_LIMIT)
+    sim.levelTime = math.min(sim.levelTime + TICK_DT, S.Sim.limitOf(sim.level))
     -- Inundaciones: el nivel del agua es función del tick (el cliente lo estima
     -- igual; empieza al acabar la cuenta atrás); las controladas (jefe / ON-OFF)
     -- cambian aquí y van en el snapshot
     local floodT = (sim.tick - sim.startTicks) * TICK_DT       -- (se aplica en el paso: gancho floods)
 
     -- Límite de 10 minutos: matar a todos los jugadores activos (igual que modo solo)
-    if sim.levelTime >= S.Sim.TIME_LIMIT and not sim.timeLimitKilled then
+    if sim.levelTime >= S.Sim.limitOf(sim.level) and not sim.timeLimitKilled then
         sim.timeLimitKilled = true
         for pid, ps in pairs(sim.playerSims) do
             if not ps.isSpectator and not ps.pa.dying then

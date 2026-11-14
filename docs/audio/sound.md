@@ -27,6 +27,23 @@ what (`SHARED_SOUNDS`, `PRIVATE_SOUNDS`). Sounds can also be NOISE that enemies 
 bells as the iris closes), `countTick` / `countGo` (the start countdown). At ≈ −12 dBFS, no GAIN entry. Not listened
 to by anyone yet.
 
+## Hurry up! (0.5.215)
+
+`src/audio/Hurry.lua`: when `Hurry.AT` (60) seconds of the level's time limit remain (`Sim.limitOf`; online, the
+round's clock in timed modes), `hurryUp` plays once, the music ducks to `DUCK_K` (0.3) for `DUCK` (1.6 s) and comes back
+`RATE` (×1.15) faster — `Sound.setMusicRate`, which LÖVE also raises in pitch (about two semitones), kept for tracks
+that start later; `Hurry.reset` (entering / leaving the level state) sets it back to 1. Single player and the online
+client; not the menu demo. Test level `assets/levels/prueba_prisa.json` (75 s limit: the warning at 15 s). `story_flow`
+`prisa`. Not listened to yet.
+
+## Hurry-up jingle
+
+`tools/sounds/hurry.py` (standard library only) → `assets/sounds/jingles/hurry.wav` (`hurryUp`, 1.62 s): played once
+when 60 s of the level's time limit remain, over the ducked music. C major, 16th = 0.06 s: a two-tone siren B5–F6
+(the tritone of G7) ×3, again louder and doubled an octave up, then "la llamada" G5–C6–E6–G6 rising into a C7 + C
+major accent with a noise crash; 25 % pulses with duty sweep, triangle bass, noise snare, 1-bit kick. Loudest 100 ms
+at −12 dBFS, soft-limited to a −7.8 dBFS peak. Not listened to by anyone yet.
+
 ## The world map's cannon
 
 `tools/sounds/map_cannon.py` (reuses `megacrabby.py`'s helpers and `story.py`'s `save`) → `assets/sounds/story/`:

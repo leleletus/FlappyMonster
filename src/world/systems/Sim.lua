@@ -15,6 +15,8 @@ local PointAreas = require 'src/world/systems/PointAreas'
 local Sim = {}
 
 Sim.TIME_LIMIT = 600        -- s: el límite de un nivel; al llegar, mueren todos con todas sus vidas
+-- El límite de ESTE nivel: el suyo (`timeLimit` en el JSON: niveles de prueba cortos, 0.5.215) o el de siempre
+function Sim.limitOf(level) return (level and level.timeLimit) or Sim.TIME_LIMIT end
 
 -- Antes de mover a los jugadores: los cuerpos sólidos (jefes, cajas, platillos) y lo que sopla
 function Sim.bodies(level, entities)

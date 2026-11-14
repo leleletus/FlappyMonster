@@ -39,6 +39,7 @@ local RhythmDuel           = require 'src/ui/RhythmDuel'
 local AutoScroll           = require 'src/world/systems/AutoScroll'
 local Floods               = require 'src/world/systems/Floods'
 local PointAreas           = require 'src/world/systems/PointAreas'
+local Sim                  = require 'src/world/systems/Sim'
 local StartCountdown       = require 'src/world/systems/StartCountdown'
 local json                 = require 'libs/json'
 local PingIcon             = require 'src/ui/PingIcon'
@@ -242,6 +243,7 @@ function OnlineAdventureState:_buildWorld(data, difficulty)
 end
 
 function OnlineAdventureState:exit()
+    require('src/audio/Hurry').reset(self)                               -- (la música a su velocidad)
     require('src/fx/Edge').level = nil
     require('src/ui/View').unlock()
     NC:off("s"); NC:off("ev"); NC:off("game_init"); NC:off("round_start")
@@ -593,7 +595,12 @@ function OnlineAdventureState:update(dt)
     end
 
     -- ── Tiempo: avanza localmente entre snapshots, el servidor lo corrige ─────
-    if not frozen then self.levelTime = math.min(self.levelTime + dt, 600) end
+    if not frozen then self.levelTime = math.min(self.levelTime + dt, Sim.limitOf(self.level)) end
+    -- (¡date prisa!: el reloj de la ronda en los modos con tiempo, si no el límite del nivel — src/audio/Hurry.lua —)
+    if not frozen and self.localPaInit and not self.showGameOver then
+        local left = self.roundEndAt and (self.roundEndAt - self.levelTime) or (Sim.limitOf(self.level) - self.levelTime)
+        require('src/audio/Hurry').update(self, left, dt)
+    end
 
     -- ── Animaciones visuales del nivel (foliaje, burbujas) ────────────────────
     if not frozen then

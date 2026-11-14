@@ -53,6 +53,7 @@
     {"id": "finish", "file": "assets/sounds/jingles/finish.wav"},
     {"id": "sadtrombone", "file": "assets/sounds/jingles/sad_trombone.wav"},
     {"id": "tick", "file": "assets/sounds/jingles/tick.wav"},
+    {"id": "hurryUp", "file": "assets/sounds/jingles/hurry.wav", "note": "¡date prisa! a 60 s del límite del nivel (src/audio/Hurry.lua; tools/sounds/hurry.py)"},
     {"id": "startup", "file": "assets/sounds/jingles/startup.wav", "note": "melodía del logo (StartupState)"},
     {"id": "dies", "file": "assets/sounds/player/hurt.ogg", "echo": 0.8},
     {"id": "point", "file": "assets/sounds/flappy/point.ogg"},

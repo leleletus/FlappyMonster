@@ -49,6 +49,7 @@ local ICON_SCALE = 4
 -- ── Enter ─────────────────────────────────────────────────────────────────────
 -- Al salir del nivel: cerrar la grabación (si la hay)
 function AdventureState:exit()
+    if not self.demo then require('src/audio/Hurry').reset(self) end      -- (la música a su velocidad)
     if Entity.onKill and Entity.onKill == self.onKill then Entity.onKill = nil end
     require('src/fx/Edge').level = nil
     require('src/ui/View').unlock()
@@ -79,6 +80,7 @@ end
 function AdventureState:enter(args)
     HitStop.reset()                                -- (sin un hit-stop a medias de otra partida)
     args = args or {}
+    if not args.demo then require('src/audio/Hurry').reset(self) end      -- (reintentar: la música a su velocidad)
     self.enterArgs = args                         -- (REINTENTAR desde la pausa: el mismo nivel con lo mismo — retryNow —)
     -- DEMO (el fondo de los menús, src/ui/menu/MenuScene.lua): el nivel de verdad, jugado por un bot
     -- (args.demo.step(dt, level) mueve al jugador en vez del mando; demo.camera(st) → camX, camY: cámara propia;
@@ -703,12 +705,14 @@ function AdventureState:update(dt)
     -- ── Lógica normal ─────────────────────────────────────────────────────────
     -- Cap del tiempo: congelar en 600 al morir por tiempo
     if not self.player.dying and not self.won then
-        self.levelTime = math.min(self.levelTime + dt, Sim.TIME_LIMIT)
+        self.levelTime = math.min(self.levelTime + dt, Sim.limitOf(self.level))
         if self.ghost then require('src/story/Ghost').record(self.ghost.rec, dt, self.player) end
     end
 
     -- Límite de 10 minutos: muerte instantánea con todas las vidas
-    if self.levelTime >= Sim.TIME_LIMIT and not self.player.dying then
+    -- (¡date prisa!: el jingle y la música más rápida al quedar poco — src/audio/Hurry.lua —)
+    if not self.demo then require('src/audio/Hurry').update(self, Sim.limitOf(self.level) - self.levelTime, dt) end
+    if self.levelTime >= Sim.limitOf(self.level) and not self.player.dying then
         self.player.lives = 1   -- die() restará 1, quedando en 0 → game over
         self.player:die(nil, true, require('src/player/DamageSource').make('time'))
     end
@@ -1122,7 +1126,7 @@ function AdventureState:_drawHud()
     printOutlined(scoreStr, valueEndX - sw,  row1Y, 1, 1,    1   )
 
     -- TIME (parpadea rojo cuando quedan menos de 60 s)
-    local timeLeft = 600 - self.levelTime
+    local timeLeft = Sim.limitOf(self.level) - self.levelTime
     local tr, tg, tb, ta = 1, 0.95, 0.15, 1
     local vr, vg, vb, va = 1, 1,    1,    1
     if timeLeft < 60 then
