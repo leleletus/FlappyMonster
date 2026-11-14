@@ -17,12 +17,14 @@
 # doblado a la octava por el «bip» de la cuenta atrás (pulso 25 %, ataque 2 ms, caída exponencial, paso bajo a
 # 6 kHz: tools/sounds/ui.py); acompañamiento = pulso 12,5 % corto; bajo = triángulo; bombo DPCM de 1 bit; plato de
 # ruido (LFSR de 15 bits).
-# v3.1 (D2, POR DEFECTO): el usuario eligió D pero «demasiado TRANQUILO, pocas notas»: misma escalera y mismo
+# v3.1 (D2): el usuario eligió D pero «demasiado TRANQUILO, pocas notas»: misma escalera y mismo
 # cierre, con los huecos llenos de RITMO, no de melodía nueva: semicorcheas continuas (la nota grave repetida en las
 # 16 + charles en semicorcheas), la 2ª nota del motivo repetida en semicorcheas al final de cada paso, bajo en
 # corcheas con octava, caja a mitad de cada paso, redoble de caja hacia el cierre y, bajo el sol6 largo, un trémolo
 # de semicorcheas re6–si5 que se apaga (para que el cierre no se quede quieto). D3 = alternativa más «alarma»: el
 # motivo entero en semicorcheas repetidas, bajo en semicorcheas y un redoble que crece durante todo el tercer paso.
+# v3.2 (F2, POR DEFECTO): D fue un clic equivocado; el usuario quería F (el arpegio 4-3-5 en semicorcheas) y le gustó
+# la densidad de D2: F2 = F con el mismo relleno rítmico que D2.
 # Lo rechazado (docs/audio/sound.md § Hurry-up jingle): v1 sirena + carrerilla + acorde de fanfarria («más melódico
 # de lo que debería»); v2 A / B / C (bips ×3, alarma de dos tonos, «uuuip»: «no termina de convencer»; están en el
 # historial de git y en ~/FlappyMonster_pruebas/hurry/).
@@ -31,8 +33,8 @@
 # Solo biblioteca estándar (sin numpy). tools/sounds/jingles.py reutiliza estas piezas.
 #   python3 tools/sounds/hurry.py               escribe la variante por defecto en assets/sounds/jingles/hurry.wav
 #                                               (y su partitura en ~/FlappyMonster_pruebas/hurry/hurry.mid)
-#   VARIANTES=1 python3 tools/sounds/hurry.py   además escribe hurry_D2/D3.wav + .mid en ~/FlappyMonster_pruebas/hurry/
-#   VARIANTES=todas …                           todas (D, E, F, D2, D3)
+#   VARIANTES=1 python3 tools/sounds/hurry.py   además escribe hurry_D2/D3/F2.wav + .mid en ~/FlappyMonster_pruebas/hurry/
+#   VARIANTES=todas …                           todas (D, E, F, D2, D3, F2)
 import array
 import math
 import os
@@ -54,8 +56,8 @@ SR = 44100
 TARGET_DB = -12.0
 OUT = 'assets/sounds/jingles/hurry.wav'
 PRUEBAS = os.path.expanduser('~/FlappyMonster_pruebas/hurry')
-DEFAULT = 'D2'
-PRUEBA = ['D2', 'D3']   # las que escribe VARIANTES=1
+DEFAULT = 'F2'
+PRUEBA = ['D2', 'D3', 'F2']   # las que escribe VARIANTES=1
 S16 = 60.0 / BPM / 4     # una semicorchea en segundos
 NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
 
@@ -305,6 +307,19 @@ VARIANTES.update({
         'cierre': [('long', 0, CIERRE, 'G6'), ('bass', 0, CIERRE, 'G2')]
         + _16('acc', 'G5', 0, TREMOLO) + _16('hat', 'F#2', 0, TREMOLO),
         'relleno': _16('snare', 'D2', 12, [0.3, 0.4, 0.5, 0.65, 0.8, 1.0]),
+    },
+    # F2 (POR DEFECTO): F con el tratamiento de D2. El arpegio 4-3-5 de F (mi5 sol5 mi5 do5 en «e», «a», 3ª, 4ª)
+    # completado a semicorcheas continuas do5 mi5 sol5 sol5 mi5 do5, acentuadas a contratiempo; do6 repetido al final
+    # del paso; bajo en corcheas con octava do3 do4 sol2 (el do–sol de F); charles en semicorcheas, caja en la 4ª,
+    # redoble de 3 golpes hacia el cierre; cierre de D2 (sol6 sobre sol2, trémolo re6–si5 que se apaga).
+    'F2': {
+        'motivo': [('lead', 0, 2, 'G5'), ('lead', 2, 2, 'C6'), ('lead', 4, 1, 'C6', 0.8), ('lead', 5, 1, 'C6', 0.9)]
+        + _16('acc', ['C5', 'E5', 'G5', 'G5', 'E5', 'C5'], 0, [0.55, 1.0, 0.55, 1.0, 0.7, 1.0])
+        + [('bass', 0, 2, 'C3'), ('bass', 2, 2, 'C4', 0.7), ('bass', 4, 2, 'G2')]
+        + _16('hat', 'F#2', 0, [1.0, 0.55, 0.7, 0.55, 0.7, 0.55]) + [('snare', 3, 1, 'D2')],
+        'cierre': [('long', 0, CIERRE, 'G6'), ('bass', 0, CIERRE, 'G2')]
+        + _16('acc', ['D6', 'B5'] * 4, 0, TREMOLO) + _16('hat', 'F#2', 0, TREMOLO),
+        'relleno': [('snare', 16, 1, 'D2', 0.7), ('snare', 17, 1, 'D2', 0.9)],
     },
 })
 

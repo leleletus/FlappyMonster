@@ -45,7 +45,7 @@ sound from 0.03 s, 44.1 kHz mono): played once when 60 s of the level's time lim
 follows a measured formula for RISING TENSION: a 2-note motif → the same motif +1 semitone → +2 → a long
 closing note that dies away. Parameters at the top of the script (`TONALIDAD`, `BPM` 140, `REPETICIONES` 3,
 `SEMITONOS_PASO` 1, `PASO` 6 sixteenths = 3 eighths = 0.643 s between motif onsets, `CIERRE` 8 sixteenths = 0.857 s).
-Variant **D** (CHOSEN by the user, 2026-11-14, over E and F): an original motif in C major built from "la llamada"'s 4th — G5 on the beat, C6 on the eighth
+Variant **D** (picked by misclick on 2026-11-14; the real pick was F): an original motif in C major built from "la llamada"'s 4th — G5 on the beat, C6 on the eighth
 offbeat — with a lower E5 alternating on the "e" / "a" sixteenths and a triangle C3; the steps go G–C, G♯–C♯, A–D, and
 the close leaps another 4th to G6 (the 5th, la llamada's last note, left open) over a held G2 with a 1-bit DPCM kick
 and a noise crash. Onsets every 3 eighths = the "3" of the house 3+3+2 tresillo run as a hemiola. Timbres: lead = 2A03
@@ -57,9 +57,19 @@ peak −5.9 dBFS, RMS −16.2 dBFS, no clipping). `VARIANTES=1` also writes `Fla
 stairs reach D6–F♯6 and the close rises a half step to G6 (F♯ as leading tone); **F** D's motif with a 4-3-5 sixteenth
 arpeggio (E5 G5 E5 C5) instead of the repeated note and a C3–G2 bass. Verified by numbers only (windowed FFT): motif
 pitches 782.5/1045.0, 829.1/1107.2, 878.5/1173.1 Hz, step ratios 1.0595-1.0596, onsets 0.029 / 0.673 / 1.312 / close
-1.956 s. `Hurry.DUCK` should cover the 2.835 s of sound (same for D2). Its helpers (`pulse` — duty may now be a function of time —, `saw`, `triangle`, `env`, `finish`…) are reused by `tools/sounds/jingles.py`. Not listened to by anyone yet.
+1.956 s. `Hurry.DUCK` should cover the 2.835 s of sound (same for D2 and F2). Its helpers (`pulse` — duty may now be a function of time —, `saw`, `triangle`, `env`, `finish`…) are reused by `tools/sounds/jingles.py`. Not listened to by anyone yet.
 
-**v3.1 — D2, the installed default.** The user chose D and approved the ×1.19 music speed-up, then: "it's good, but
+**v3.2 — F2, the installed default.** Correction from the user: picking D was a misclick, the real pick was **F** (D's
+motif with the 4-3-5 sixteenth arpeggio), and they liked D2's density more than D. F2 = F + D2's treatment: the
+arpeggio completed to continuous sixteenths C5 E5 G5 G5 E5 C5 (accented offbeats), the C6 repeated on the last two
+sixteenths of each step, an 8th octave triangle bass C3–C4–G2 (F's C–G), 16th hi-hats, a snare mid-step, the
+three-stroke snare roll into the close and D2's close (G6 over G2, fading D6–B5 sixteenth tremolo). 82 notes (F: 33),
+all 18 sixteenths before the close attacked. Measured: steps 782.5/1045.0 → 829.1/1107.2 → 878.5/1173.1 Hz (ratios
+1.0595-1.0596), onsets 0.029 / 0.673 / 1.312 / close 1.956 s, close 1571.1 Hz over 98.0 Hz, sound 0.030 → 2.865 s
+(**2.835 s**; file 2.99 s), loudest 100 ms −12.0 dBFS, peak −5.8 dBFS, RMS −15.3 dBFS, no clipping. Copy in
+`FlappyMonster_pruebas/hurry/hurry_F2.wav` + `.mid` (`VARIANTES=1` writes D2, D3, F2). Not listened to by anyone yet.
+
+**v3.1 — D2 (kept as a file).** The user chose D and approved the ×1.19 music speed-up, then: "it's good, but
 too CALM for what it should be — too few notes; fill the empty spaces with more notes for more tension and hurry". D2
 keeps D's identity (same motif, same three +1 steps, same G6 close, same 2.83 s) and fills it with RHYTHM, not a new
 tune: E5 on every sixteenth (accented offbeats), the motif's C6 repeated on the last two sixteenths of each step, an
@@ -81,6 +91,7 @@ History (keep these verdicts):
   "whoops" 520→1250 Hz. The user: "it doesn't quite convince" — it lacked RISING TENSION, hence v3's chromatic stairs.
 - v3 D (above, kept as `hurry_D.wav`): chosen over E and F, but "too calm, too few notes" → D2. Density must come from
   rhythm and repetition, never from a new melody (v1's lesson).
+- The pick of D was a MISCLICK: the user meant F, and liked D2's density → F2 (installed). D2 and D3 stay as files.
 
 ## Jingles remaster (fanfare, finish, sad trombone)
 
