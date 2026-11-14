@@ -1,6 +1,8 @@
 # Beep blocks (proposal, 2026-11-14)
 
-Status: **proposal, not built**. The music is being composed (generator `bloques_beep.py` in the music tools, previews in
+Status: **blocks, clock, blink and sounds built (0.5.221)**; the system page is
+[tiles-and-blocks](../gameplay/tiles-and-blocks.md#beep-blocks-05221). Still to do: the music install (two variants
+waiting for the user's choice) and the level Starway / Vía Estelar. The music (generator `bloques_beep.py` in the music tools, previews in
 `FlappyMonster_pruebas/musica/bloques_beep/`); this page is the block mechanic that goes with it.
 
 ## What
@@ -27,8 +29,7 @@ rhythm, not a switch to hit.
 
 ### Tiles (data)
 
-A new tile file `beepblock` (tile types folder), 4 tiles in the `Mecanismos` category, on FREE ids (today 5-8 and
-20-26 are free; choose when building and check `TileTypes`):
+A new tile file `beepblock` (tile types folder), 4 tiles in the `Mecanismos` category, on ids 45-48 (20-26 are the fake walls):
 
 | name | label | collision |
 |---|---|---|
@@ -62,7 +63,7 @@ A new system `BeatClock` (world systems), created by `Level.fromData` when the l
 the music — it runs the same model):
 
 - `t` advances with `dt × rate`, where `rate` = the slow-motion `timeScale` (the death slow-motion, which already
-  slows the music through `Sound.setMusicPitch`) × the hurry rate (`Hurry.RATE` = ×1.189 from the moment the hurry
+  slows the music through `Sound.setMusicPitch`; NOT built: the level does not step during game over) × the hurry rate (`Hurry.RATE` = ×1.189 from the moment the hurry
   jingle ends: 60 s left + `Hurry.DUCK` 2.85 s; during the jingle the music is silent but keeps advancing, and so does
   the clock). Frozen during pause, the intro card and the start countdown, exactly when the music is.
 - `t` goes back to 0 whenever the music restarts (level restart; drowning, if a level with water ever uses beep

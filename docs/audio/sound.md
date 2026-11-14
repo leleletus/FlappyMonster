@@ -38,6 +38,14 @@ nor the story bonus matches. Since 0.5.216 every level's HUD clock COUNTS DOWN (
 wasn't clear when time runs out"), so the warning matches the clock turning red at 1:00. `story_flow`
 `prisa`. Not listened to yet.
 
+## Beep Blocks (0.5.221)
+
+`tools/sounds/beep_blocks.py` → `assets/sounds/mechanics/beep_warn.wav` (`beepWarn`: the 3 warning beeps, a 2290 Hz
+near-pure sine of 70 ms, the same beep as the Vía Estelar music, which is installed WITHOUT it) and `beep_switch.wav`
+(`beepSwitch`: a short crystal clink on the block switch). Played by the beat clock, not by the music file, so they work
+with the music muted and during the hurry jingle; pitch × `Hurry.RATE` with the sped-up music
+([tiles-and-blocks](../gameplay/tiles-and-blocks.md#beep-blocks-05221)). Not listened to yet.
+
 ## Hurry-up jingle
 
 `tools/sounds/hurry.py` (standard library only) → `assets/sounds/jingles/hurry.wav` (`hurryUp`, 2.99 s file, 2.83 s of

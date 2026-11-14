@@ -14,6 +14,7 @@ local BossZones            = require 'src/world/systems/BossZones'
 local AutoScroll           = require 'src/world/systems/AutoScroll'
 local Floods               = require 'src/world/systems/Floods'
 local PointAreas           = require 'src/world/systems/PointAreas'
+local BeatClock            = require 'src/world/systems/BeatClock'
 local json                 = require 'libs/json'
 local Blocks               = require 'src/network/Blocks'
 local Protocol             = require 'src/network/Protocol'
@@ -170,6 +171,7 @@ function OnlineAdventureState:_onSnapshot(snap)
     AutoScroll.netApply(self.level, snap.sc)     -- cámara automática (paredes de la predicción)
     Floods.netApply(self.level, snap.fc, TICK_DT) -- inundaciones controladas (el agua: en su tiempo predicho)
     PointAreas.netApply(self.level, snap.zc)      -- la zona de puntos que se mueve: su reloj
+    BeatClock.netApply(self.level, snap.bt, NC:getPing() / 2000)   -- el reloj de compás (Bloques Beep)
     self.modeHud = type(snap.md) == 'table' and snap.md or nil
     -- Modo con tiempo (hud `tl` = centésimas que quedan, p. ej. Rey de la
     -- Colina): el reloj del HUD cuenta hacia atrás hasta este instante

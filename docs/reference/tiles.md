@@ -47,6 +47,10 @@ Every tile registered in `src/world/tiles/Tiles.lua`. **Id** is stored in the le
 | 42 | `temple_brick` | Sillar del templo | Terreno | solid | temple_stone | joins `ground` |
 | 43 | `jungle_platform` | Plataforma traspasable (jungla) | Plataformas | oneway (drop-through) | wood | partial hitbox |
 | 44 | `secret_exit` | Salida secreta | Objetivos | none | default | trigger `secret_exit` |
+| 45 | `beepblock_pink` | Bloque de cristal rosa | Mecanismos | solid | stone | ON/OFF block |
+| 46 | `beepblock_pink_x` | Bloque de cristal rosa (inactivo) | Mecanismos | none | default | ON/OFF block, hidden in editor |
+| 47 | `beepblock_cyan` | Bloque de cristal cian | Mecanismos | solid | stone | ON/OFF block |
+| 48 | `beepblock_cyan_x` | Bloque de cristal cian (inactivo) | Mecanismos | none | default | ON/OFF block, hidden in editor |
 | 50 | `frost_brick` | Ladrillo helado | Terreno | solid | frost_stone | joins `ground` |
 | 51 | `ice_rock` | Roca helada | Terreno | solid | frost_stone | joins `ground` |
 | 52 | `ice_brick` | Sillar de hielo | Terreno | solid | ice | joins `ice` |

@@ -198,6 +198,7 @@ local function broadcastSnapshot(room)
     local sc = S.AutoScroll.netPack(sim.level)
     local fc = S.Floods.netPack(sim.level, TICK_DT)     -- inundaciones controladas (jefe / ON-OFF)
     local zc = S.PointAreas.netPack(sim.level)          -- reloj de la zona de puntos que se mueve (nil con una sola)
+    local bt = require('src/world/systems/BeatClock').netPack(sim.level)   -- reloj de compás (Bloques Beep; nil sin ellos)
     for _, pid in ipairs(room.playerIds) do
         local c  = S.findClientById(pid)
         local ps = sim.playerSims[pid]
@@ -223,7 +224,7 @@ local function broadcastSnapshot(room)
                        or (not nb and math.abs(entry[1] - px) < NEAR_X and math.abs(entry[2] - py) < NEAR_Y) then el[i] = entry end
                 end
             end
-            local snap = { t=sim.tick, lt=lt, p=plist, e=el, vb=vb, md=md, bz=bz, sc=sc, fc=fc, zc=zc }
+            local snap = { t=sim.tick, lt=lt, p=plist, e=el, vb=vb, md=md, bz=bz, sc=sc, fc=fc, zc=zc, bt=bt }
             if ps and not ps.isSpectator then
                 snap.a  = ps.lastProcSeq
                 snap.o  = Protocol.packOwnState(ps.pa)

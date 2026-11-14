@@ -38,6 +38,12 @@ function Hurry.reset(owner)
     Sound.setMusicRate(1)
 end
 
+-- La velocidad de la música según lo que queda (sin estado: el reloj de compás de los Bloques Beep la necesita igual en
+-- un jugador, el servidor y el cliente — src/world/systems/BeatClock.lua —): ×RATE desde que acaba el jingle
+function Hurry.rateAt(timeLeft)
+    return (timeLeft and timeLeft > 0 and timeLeft <= Hurry.AT - Hurry.DUCK) and Hurry.RATE or 1
+end
+
 -- ¿Ya avisó? (las pruebas)
 function Hurry.active(owner) return owner._hurry ~= nil end
 

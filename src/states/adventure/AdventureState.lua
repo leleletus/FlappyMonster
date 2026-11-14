@@ -23,6 +23,7 @@ local AutoScroll      = require 'src/world/systems/AutoScroll'
 local Floods          = require 'src/world/systems/Floods'
 local PointAreas      = require 'src/world/systems/PointAreas'
 local StartCountdown  = require 'src/world/systems/StartCountdown'
+local BeatClock       = require 'src/world/systems/BeatClock'
 local Sim             = require 'src/world/systems/Sim'
 local SceneLayers     = require 'src/world/level/SceneLayers'
 local CameraLook      = require 'src/ui/CameraLook'
@@ -585,6 +586,9 @@ end
 
 -- ── Update ────────────────────────────────────────────────────────────────────
 function AdventureState:update(dt)
+    -- RELOJ DE COMPÁS de los Bloques Beep (src/world/systems/BeatClock.lua): va con la música, así que corre siempre que
+    -- ella suena — también en la tarjeta, la cuenta atrás y el hit-stop — y vuelve a 0 si ella vuelve a empezar
+    if self.level.beat then self:_beatStep(dt) end
     -- HIT-STOP: unos fotogramas congelado tras un golpe fuerte (src/ui/HitStop.lua); la música sigue
     if HitStop.step(dt) and not self.demo then return end
     -- El duelo de ritmo del Cangrejo Groove (lo juega el jugador; el jefe decide el resto)
@@ -789,6 +793,15 @@ function AdventureState:update(dt)
     elseif self.player.dying then
         self.camFrozen = true
     end
+end
+
+function AdventureState:_beatStep(dt)
+    local starts = Sound.musicStartCount()
+    if self._beatStarts and starts ~= self._beatStarts then BeatClock.reset(self.level) end
+    self._beatStarts = starts
+    local left = (not self.demo and not self.bonus) and (Sim.limitOf(self.level) - self.levelTime) or nil
+    BeatClock.update(self.level, dt, left)
+    if not self.demo then BeatClock.audio(self.level, self, dt) end
 end
 
 -- Los GANCHOS del paso compartido (Sim.step: el orden está allí, igual que en el servidor). Uno por estado: sin cierres

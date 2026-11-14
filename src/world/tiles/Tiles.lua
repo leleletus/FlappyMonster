@@ -33,6 +33,7 @@ local TYPES = {
     'dirt',           -- 16
     'grass',          -- 17
     'switchblock_on', -- 18, 19, 27, 28 (Bloques ON / OFF, activo e inactivo)
+    'beepblock',      -- 45-48 (Bloques Beep de cristal rosa / cian, activo e inactivo: el reloj de compás)
     'snow',           -- 29
     'ice',            -- 30
     'thin_ice',       -- 31-34 (hielo fino: normal, dañado, muy dañado, a punto de romperse)

@@ -116,6 +116,33 @@ if it should exist as a mini block, add it to `SubTiles.KINDS`. Then
   An activator can drive **several** objects (one `links` row each; the inspector's buttons toggle them, 2026-11-10).
   Harness `flood_control` case `switchblocks`. Protocol v27.
 
+## Beep blocks (0.5.221)
+
+- **Crystal Beep Blocks** (`beepblock.lua`: `beepblock_pink` 45 / `_pink_x` 46, `beepblock_cyan` 47 / `_cyan_x` 48,
+  "Bloque de cristal rosa / cian", Mecanismos; art `tools/art/world/make_beep_blocks.py` design A "gema" → 
+  `assets/images/world/tiles/beep_*.png`; colour-blind symbols `cb_pink` triangle / `cb_cyan` diamond, from
+  `tools/art/ui/make_cb_symbols.py`). They SWAP ON THEIR OWN every `period` s of music (4 s = a 2-bar phrase at 120 BPM):
+  pink solid ↔ cyan solid. Same base as the ON/OFF Blocks (`switchBlock` with `beat = true`, `kind = 'beep_pink' |
+  'beep_cyan'`): `Level:updateSwitchBlocks` asks `BeatClock.wants` instead of an activator; the tile swap, the `set`
+  events and "never solid with someone inside" (`pending`) are the shared code. No links in the editor (the Conectar
+  tool ignores them).
+- **The beat clock** `src/world/systems/BeatClock.lua` (`level.beat`, built by `Level.fromData` only when the level has
+  Beep Blocks; JSON optional `"beat": {"period": 4, "start": "pink"|"cyan"}`). Its `t` IS the level music's position:
+  it starts with the music (single player: entering the level; online: tick 0, as the clients' synced music), keeps
+  running in the intro card, countdown and hit-stop, goes ×`Hurry.RATE` once the hurry jingle ends (`Hurry.rateAt`:
+  a pure function of the time left, so the server computes the same), and goes back to 0 when the music restarts from
+  the beginning (single player: `Sound.musicStartCount` changes — after drowning). Single player: `AdventureState:_beatStep`
+  at the top of `update`; server: every tick in `stepRoom` before the start freeze; client: its own dt + `bt` from the
+  snapshot (protocol v121).
+- **Sound** (single player and client only): `BeatClock.audio` plays `beepWarn` on beats 6, 7, 8 of each phrase and
+  `beepSwitch` on beat 1 (pitch × the hurry rate), and ties the level music to the clock (`Sound.syncMusic`, 0.05 s
+  tolerance every 0.5 s; online this replaces the generic tick-based sync). Sounds: `tools/sounds/beep_blocks.py`
+  (2290 Hz sine, 70 ms; a crystal clink).
+- **The blink** (the user, 2026-11-14): on each warning beep, for `BLINK` (0.18 s of music) every Beep Block is DRAWN in
+  its other state (`BeatClock.blink`, `Level:render`); collision does not change until the switch.
+- Harness `mechanics` case `beep`. Design and the user's decisions: [beep-blocks](../design/beep-blocks.md). The level
+  that uses them: Starway / Vía Estelar (`via_estelar`, Free Play), not built yet.
+
 ## Secret exit
 
 - **Secret exit** (`secret_exit` 44, "Salida secreta", Objetivos; 2026-10-29): no collision; touching it ends the level

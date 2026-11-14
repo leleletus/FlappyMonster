@@ -98,13 +98,16 @@ function Level:initSwitchBlocks()
     if #blocks == 0 then return end
     self.switchBlocks = {}
     for _, b in ipairs(blocks) do
-        local src = self.blockLinks and self.blockLinks[b[2] * 65536 + b[1]]
-        if src and not isActivator(self:getDef(src[1], src[2])) then src = nil end
-        if not src then
-            local bd
-            for _, a in ipairs(acts) do
-                local d = (a[1] - b[1]) ^ 2 + (a[2] - b[2]) ^ 2
-                if not bd or d < bd then src, bd = a, d end
+        local src
+        if not self:getDef(b[1], b[2]).switchBlock.beat then      -- (un Bloque Beep no tiene activador: su reloj)
+            src = self.blockLinks and self.blockLinks[b[2] * 65536 + b[1]]
+            if src and not isActivator(self:getDef(src[1], src[2])) then src = nil end
+            if not src then
+                local bd
+                for _, a in ipairs(acts) do
+                    local d = (a[1] - b[1]) ^ 2 + (a[2] - b[2]) ^ 2
+                    if not bd or d < bd then src, bd = a, d end
+                end
             end
         end
         self.switchBlocks[#self.switchBlocks + 1] = { c = b[1], r = b[2], src = src }
@@ -126,15 +129,20 @@ function Level:cellOccupied(c, r)
     return false
 end
 
--- Pone cada Bloque ON/OFF en su estado según su activador. `silent` = al cargar
+-- Pone cada Bloque ON/OFF en su estado según su activador (y cada Bloque Beep según el reloj de compás). `silent` = al cargar
 -- (sin cola: todos parten igual)
 function Level:updateSwitchBlocks(silent)
     for _, b in ipairs(self.switchBlocks or {}) do
         local def = self:getDef(b.c, b.r)
         local sb = def.switchBlock
         if sb then
-            local on = b.src and self:getDef(b.src[1], b.src[2]).name == 'switch_on' or false
-            local want = (sb.kind == 'on') == on
+            local want
+            if sb.beat then
+                want = require('src/world/systems/BeatClock').wants(self, sb.kind)    -- (Bloque Beep: el reloj de compás)
+            else
+                local on = b.src and self:getDef(b.src[1], b.src[2]).name == 'switch_on' or false
+                want = (sb.kind == 'on') == on
+            end
             -- (no se vuelve sólido con alguien dentro: espera a que se aparte)
             b.pending = want and not sb.active and not silent and self:cellOccupied(b.c, b.r)
             if want ~= sb.active and not b.pending then

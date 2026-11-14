@@ -109,7 +109,7 @@ local function canvasPress(button)
         local d = m:inBounds(c, r) and TT.get(Codec.id(m:get(c, r)))
         if d and (d.name == 'switch_on' or d.name == 'switch_off') then
             E.selSwitch = { c = c, r = r }
-        elseif d and d.switchBlock and E.selSwitch then
+        elseif d and d.switchBlock and not d.switchBlock.beat and E.selSwitch then
             -- Con un activador elegido: clic (y arrastrar) en Bloques ON/OFF los
             -- conecta a él; clic en uno ya conectado a él lo desconecta
             local l = m:blockLinkAt(c, r)
@@ -117,7 +117,7 @@ local function canvasPress(button)
             s.blockPaint = mine and 'remove' or 'add'
             s.changed = m:setBlockLink(c, r, (not mine) and { E.selSwitch.c, E.selSwitch.r } or nil)
             s.last = { c, r }
-        elseif d and d.switchBlock then
+        elseif d and d.switchBlock and not d.switchBlock.beat then
             msg('Conectar: elige primero un activador ON/OFF y luego haz clic en sus bloques', 'warn')
         else
             E.selSwitch = nil

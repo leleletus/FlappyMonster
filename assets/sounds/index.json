@@ -13,6 +13,8 @@
     {"id": "blockBreak", "file": "assets/sounds/traps/block_break.wav", "echo": 1},
     {"id": "switchOn", "file": "assets/sounds/mechanics/switch_on.wav", "gain": 0.77, "note": "bloque ON/OFF → ON"},
     {"id": "switchOff", "file": "assets/sounds/mechanics/switch_off.wav", "gain": 0.76, "note": "bloque ON/OFF → OFF"},
+    {"id": "beepWarn", "file": "assets/sounds/mechanics/beep_warn.wav", "gain": 0.6, "note": "Bloques Beep: los 3 beeps de aviso (src/world/systems/BeatClock.lua; tools/sounds/beep_blocks.py)"},
+    {"id": "beepSwitch", "file": "assets/sounds/mechanics/beep_switch.wav", "gain": 0.5, "note": "Bloques Beep: el cambio de bloque"},
     {"id": "helmetBreak", "file": "assets/sounds/enemies/gummy/helmet_break.wav", "gain": 0.72, "note": "ground pound: se rompe el casco de un Gummy"},
     {"id": "helmetBounce", "file": "assets/sounds/enemies/gummy/helmet_bounce.wav", "gain": 1.15, "note": "rebote en el casco de un Gummy"},
     {"id": "pufferWarn", "file": "assets/sounds/enemies/pufferfish/warn.wav", "gain": 1, "note": "pez globo: medio hinchado (aviso)"},

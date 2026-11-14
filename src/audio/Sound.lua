@@ -277,6 +277,7 @@ end
 Sound.resolveMusic = resolve
 
 local musicName = nil
+local musicStarts = 0        -- (Sound.musicStartCount)
 function Sound.playMusic(name, volume)
     name = resolve(name)
     volume = volume or trackVol[name]
@@ -306,7 +307,11 @@ function Sound.playMusic(name, volume)
     if lp and lp ~= src then lp:stop() end
     src:play()
     music, musicName, adaptCur = src, name, nil
+    musicStarts = musicStarts + 1
 end
+-- Cuántas veces ha EMPEZADO una pista desde el principio (el reloj de compás de los Bloques Beep vuelve a 0 con ella:
+-- src/world/systems/BeatClock.lua)
+function Sound.musicStartCount() return musicStarts end
 
 -- Cambio intro → bucle de las pistas con intro (llamar cada frame).
 local paused = nil

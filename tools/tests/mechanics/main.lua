@@ -3,6 +3,7 @@
 -- Interactions. Salas pequeñas hechas a mano. Casos:
 --   onoff_head   un cabezazo cambia ON→OFF, otro OFF→ON (y va a brokenQueue)
 --   onoff_pound  un ground pound encima lo cambia UNA vez y el jugador se queda encima
+--   beep         Bloques Beep: cambian a los 4 s de música, parpadeo solo visual, esperan al jugador, ¡date prisa!
 --   hidden_up    se atraviesa subiendo y se queda de pie encima
 --   hidden_drop  agachado encima no se baja (no traspasable)
 --   hidden_side  se atraviesa andando de lado
@@ -290,6 +291,43 @@ function cases.onoff_pound()
     local q = level.brokenQueue or {}
     check('onoff_pound', name(level, 4, 7) == 'switch_off' and #q == 1 and pa.onGround and pa.y < 6 * T,
         ('→ %s, cambios=%d, de pie encima=%s'):format(name(level, 4, 7), #q, tostring(pa.onGround and pa.y < 6 * T)))
+end
+
+-- BLOQUES BEEP (docs/design/beep-blocks.md, src/world/systems/BeatClock.lua): al cargar, rosa sólido y cian
+-- atravesable; a los 4 s de música cambian (cola 'set'); los beeps de los pulsos 6-8 hacen PARPADEAR el dibujo sin
+-- tocar la colisión; un bloque que debe volverse sólido con el jugador dentro espera a que se aparte; el ¡date prisa!
+-- acelera el reloj (×Hurry.RATE tras el jingle); volver a empezar la música lo pone a 0
+function cases.beep()
+    local BC = require 'src/world/systems/BeatClock'
+    local level = room(10, 8, { { 3, 5, 'beepblock_pink' }, { 6, 5, 'beepblock_cyan' }, { 4, 7, 'beepblock_cyan' } })
+    local pa = playerAt(level, 4, 7)                     -- (de pie DENTRO del hueco del cian de abajo)
+    local parts, ok = {}, true
+    local function want(cond, msg) parts[#parts + 1] = msg .. (cond and '' or ' ✗'); ok = ok and cond end
+    want(level.beat ~= nil and name(level, 3, 5) == 'beepblock_pink' and name(level, 6, 5) == 'beepblock_cyan_x'
+         and name(level, 4, 7) == 'beepblock_cyan_x', 'carga: rosa sólido, cian no')
+    BC.update(level, 2.6, nil)                           -- (2,6 s: tras el 1er beep, en su parpadeo)
+    want(BC.blink(level) and level:getDef(3, 5).collision == 'solid', 'parpadea sin cambiar la colisión')
+    BC.update(level, 0.2, nil)
+    want(not BC.blink(level), 'entre beeps no parpadea')
+    BC.update(level, 1.25, nil)                          -- (4,05 s: cambio)
+    local q = level.brokenQueue or {}
+    want(name(level, 3, 5) == 'beepblock_pink_x' and name(level, 6, 5) == 'beepblock_cyan' and #q == 2 and q[1][4] == 'set',
+         'a los 4 s cambian (cola ' .. #q .. ')')
+    want(name(level, 4, 7) == 'beepblock_cyan_x', 'con el jugador dentro espera')
+    pa.x = 7.5 * T; level:update(1 / 60)
+    want(name(level, 4, 7) == 'beepblock_cyan', 'apartado, se vuelve sólido')
+    local H = require 'src/audio/Hurry'
+    local t0 = level.beat.t
+    BC.update(level, 1, H.AT - H.DUCK - 1)
+    want(math.abs(level.beat.t - t0 - H.RATE) < 1e-6 and H.rateAt(H.AT - 1) == 1 and H.rateAt(nil) == 1, '¡date prisa! ×' .. H.RATE)
+    BC.reset(level)
+    want(level.beat.t == 0 and name(level, 3, 5) == 'beepblock_pink', 'la música vuelve a empezar: el reloj a 0')
+    local plain = room(6, 6, { { 3, 3, 'switch_on' } })
+    want(plain.beat == nil, 'sin Bloques Beep no hay reloj')
+    local okImg = pcall(love.graphics.newImage, 'assets/images/world/tiles/beep_pink.png')
+        and pcall(love.graphics.newImage, 'assets/images/world/tiles/cb_cyan.png')
+    want(okImg, 'arte y símbolos')
+    check('beep', ok, table.concat(parts, ' · '))
 end
 
 function cases.hidden_up()
@@ -4909,7 +4947,7 @@ local function junglaShot()
 end
 
 function love.load()
-    for _, n in ipairs({ 'fuente_base', 'fuente_contacto', 'fuente_partes', 'fuente_entorno', 'fuente_textos', 'fuente_red', 'aviso_opcion', 'empuje', 'racha', 'inicio_fases', 'onoff_head', 'onoff_pound', 'hidden_up', 'hidden_drop', 'hidden_side', 'hidden_vis',
+    for _, n in ipairs({ 'fuente_base', 'fuente_contacto', 'fuente_partes', 'fuente_entorno', 'fuente_textos', 'fuente_red', 'aviso_opcion', 'empuje', 'racha', 'inicio_fases', 'onoff_head', 'onoff_pound', 'beep', 'hidden_up', 'hidden_drop', 'hidden_side', 'hidden_vis',
                          'helmet_jump', 'helmet_ride', 'helmet_gp', 'helmet_side', 'stomp_fast',
                          'puffer_through', 'puffer_concave', 'puffer_cycle', 'puffer_dry', 'flyer_anim', 'vuelo_libre', 'boxed_in',
                          'bloque_roto', 'activador', 'tramp_avanza', 'tramp_pinchos', 'ping_icono',

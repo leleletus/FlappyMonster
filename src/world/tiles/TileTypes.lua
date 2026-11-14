@@ -24,7 +24,9 @@
 --               abajo o un ground pound (bloques ON/OFF: Level:hitTile)
 --   hidden      no se ve hasta que un jugador lo toca (Level:updateHiddenBlocks)
 --   switchBlock { kind='on'|'off', active=bool, other='<tile>' }: Bloque ON/OFF
---               que depende de un activador (Level:updateSwitchBlocks)
+--               que depende de un activador (Level:updateSwitchBlocks); con `beat = true`
+--               (Bloques Beep, kind 'beep_pink'|'beep_cyan') lo decide el reloj de compás
+--               del nivel (src/world/systems/BeatClock.lua), no un activador
 --   editorHide  no sale en la paleta (p. ej. la variante inactiva de un Bloque ON)
 --   flappyOnly  solo en niveles Flappy (`"flappy": true`; docs/design/flappy-prequel.md): el editor no lo ofrece en los
 --               demás y level_check falla si un nivel normal lo usa

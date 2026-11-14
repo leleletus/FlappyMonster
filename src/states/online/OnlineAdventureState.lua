@@ -40,6 +40,7 @@ local AutoScroll           = require 'src/world/systems/AutoScroll'
 local Floods               = require 'src/world/systems/Floods'
 local PointAreas           = require 'src/world/systems/PointAreas'
 local Sim                  = require 'src/world/systems/Sim'
+local BeatClock            = require 'src/world/systems/BeatClock'
 local StartCountdown       = require 'src/world/systems/StartCountdown'
 local json                 = require 'libs/json'
 local PingIcon             = require 'src/ui/PingIcon'
@@ -708,8 +709,14 @@ function OnlineAdventureState:update(dt)
     -- ── Música del nivel sincronizada con el reloj del servidor: todos oyen
     -- el mismo punto de la canción (tick 0 = empieza la ronda). Solo la del
     -- nivel (la del jefe arranca con su evento).
+    -- (con Bloques Beep la música va atada a su reloj de compás, que corrige el servidor: src/world/systems/BeatClock.lua)
+    if self.level.beat then
+        local left = not (self.mode and self.mode.hurry == false) and (Sim.limitOf(self.level) - self.levelTime) or nil
+        BeatClock.update(self.level, dt, left)
+        BeatClock.audio(self.level, self, dt)
+    end
     self.musicSyncT = (self.musicSyncT or 0) - dt
-    if self.musicSyncT <= 0 and self.snapBuf and self.snapBuf.clock and not Sound.getLevelMusic() then
+    if self.musicSyncT <= 0 and self.snapBuf and self.snapBuf.clock and not Sound.getLevelMusic() and not self.level.beat then
         self.musicSyncT = 1
         local serverNow = (self.snapBuf.clock + NC:getPing() / 2000 / TICK_DT) * TICK_DT
         Sound.syncMusic('level', serverNow)

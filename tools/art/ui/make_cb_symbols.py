@@ -40,3 +40,12 @@ c = (N - 1) / 2
 write('cb_on.png', lambda x, y: 4.2 <= ((x - c) ** 2 + (y - c) ** 2) ** 0.5 <= 6.2)
 # OFF: una X de 2 px de grueso
 write('cb_off.png', lambda x, y: 2 <= x <= 13 and 2 <= y <= 13 and (abs(x - y) <= 1 or abs(x + y - (N - 1)) <= 1))
+
+
+# BLOQUES BEEP de cristal (docs/design/beep-blocks.md): rosa = un TRIÁNGULO hueco, cian = un ROMBO hueco
+def tri(x, y, top, bot, k):
+    return top <= y <= bot and abs(x - c) <= (y - top) * k + 0.5
+
+
+write('cb_pink.png', lambda x, y: tri(x, y, 2, 12, 0.62) and not tri(x, y, 5.5, 10, 0.62))
+write('cb_cyan.png', lambda x, y: 4.0 <= abs(x - c) + abs(y - c) <= 6.5)

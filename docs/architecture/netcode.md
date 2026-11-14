@@ -215,6 +215,10 @@ piece took damage, immortal online), and a rewound "stomp" may hit a boss that i
 
 ## Protocol version history
 
+v121: the crystal BEEP BLOCKS (tiles 45-48) and their beat clock: the snapshot carries `bt` (the clock in centiseconds,
+`BeatClock.netPack`); the client applies it with half the ping as lead and moves only when it is > 0.06 s off. Block
+swaps travel as `tile k='set'` events like the ON/OFF Blocks ([tiles-and-blocks](../gameplay/tiles-and-blocks.md#beep-blocks-05221)).
+
 v119: own state index 46 = the last hit's source (`DamageSource.encode`): the client's death message names what hit it.
 
 v118: the start's lengths change (intro card 5 s, countdown 0): server and client must agree on `StartCountdown`.

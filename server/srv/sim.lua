@@ -491,6 +491,12 @@ local function stepRoom(room)
     S.Difficulty.bind(sim.level)                        -- (… y su dificultad)
 
     sim.tick = sim.tick + 1
+    -- Reloj de compás de los Bloques Beep (src/world/systems/BeatClock.lua): la posición de la música de los
+    -- clientes, que suena desde el tick 0 (también en la espera y la cuenta atrás); decide los cambios de bloque
+    if sim.level.beat then
+        local left = (sim.mode and sim.mode.hurry == false) and nil or (S.Sim.limitOf(sim.level) - sim.levelTime)
+        require('src/world/systems/BeatClock').update(sim.level, TICK_DT, left)
+    end
     S.soundEvents = {}
     S.emitX, S.emitY = nil, nil
 

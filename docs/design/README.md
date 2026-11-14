@@ -12,7 +12,7 @@ and describe the real thing in the system's page.
 
 | What | Page |
 |---|---|
-| **Beep blocks (2026-11-14):** a new block pair that swaps every 4 s on a level beat clock (3 beeps + impact in the music); reuses the ON/OFF Block base, not its code; music being composed | [beep-blocks](beep-blocks.md) |
+| **Beep blocks (2026-11-14):** a new block pair that swaps every 4 s on a level beat clock (3 beeps + impact in the music); reuses the ON/OFF Block base, not its code (**blocks, clock, blink and sounds built 0.5.221**; music to choose, level Vía Estelar to build) | [beep-blocks](beep-blocks.md) |
 | **Accessibility options (2026-11-13):** ASSIST tab — screen shake, flashes, sign text, colour-blind symbols on ON/OFF (**built 0.5.208**) | [accessibility](accessibility.md) |
 | **Touch-control editor (2026-11-13):** drag each on-screen button, size per button, one opacity; saved per device (**built 0.5.207**) | [touch-editor](touch-editor.md) |
 | **Damage sources (2026-11-13):** every hit carries what did it and which part ("Pufferfish spike" vs "Pufferfish projectile"), single player / server / client; the death message reads it instead of guessing (**built 0.5.205**) | [damage-sources](damage-sources.md) |

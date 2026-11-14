@@ -247,6 +247,8 @@ function Level.fromData(lvl, difficulty)
     -- Bloques de fase (src/world/systems/PhaseBlocks.lua): esconde las casillas que salen
     -- con una fase del jefe (antes de buscar los Activadores)
     self.phaseBlocks = PhaseBlocks.build(self, self.entities, lvl._editor)
+    -- Reloj de compás de los Bloques Beep (src/world/systems/BeatClock.lua; nil sin ellos): antes de los ON/OFF
+    self.beat = require('src/world/systems/BeatClock').build(self, lvl)
     self:initSwitchBlocks()
     -- El aspecto de las paredes falsas (solo dibujo: src/world/level/FakeLooks.lua)
     require('src/world/level/FakeLooks').build(self, lvl.fakeLooks)

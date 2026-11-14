@@ -553,7 +553,8 @@ end
 -- ── Bloques ON/OFF → su activador ────────────────────────────────────────────
 function Model:isSwitchBlock(c, r)
     local raw = self:get(c, r)
-    return raw ~= nil and Tiles.get(Codec.id(raw)).switchBlock ~= nil
+    local sb = raw ~= nil and Tiles.get(Codec.id(raw)).switchBlock
+    return sb ~= nil and sb ~= false and not sb.beat          -- (los Bloques Beep no tienen activador: su reloj)
 end
 function Model:blockLinkAt(c, r)
     for i, l in ipairs(self.blockLinks or {}) do if l.col == c and l.row == r then return l, i end end
