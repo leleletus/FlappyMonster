@@ -11,7 +11,7 @@ destroys the user's hand edits (`--show` does too). Always `python3 tools/levelg
 ([retheme](retheme.md)), `add_apples.py` (places food; re-run after a rebuild), `make_sets.py` (film sets),
 `arenas/` (test arenas + their generators; boss levels graft them).
 
-**Checks:** `tools/tests/run.sh level_solve -- <level>` (can it be completed? a search with the REAL player
+**Checks:** `tools/tests/run.sh level_solve -- <level>` (with a BEAT CLOCK the time is part of the state — beep blocks, metronome platforms, clap spikes, on-beat springs; long levels go in stretches: `START=col,row GOALCOL=c [GOALROW=r] [T0=s]`, 0.5.225; `levels_via_estelar.py` = `via_estelar`, [via-estelar-level](../design/via-estelar-level.md)) (can it be completed? a search with the REAL player
 physics; closed Doors are solid, `DOORS=1,3` / `DOORS=all` opens them), `level_check` (validator + which modes list it + 20 s of entity simulation), `level_shots` (a picture of
 the whole level), `bot_nav` for arenas.
 

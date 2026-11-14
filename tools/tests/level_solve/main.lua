@@ -6,6 +6,13 @@
 -- (el resolvedor no pulsa Activadores: así se prueba qué puertas hacen falta).
 -- CORRER (0.5.190): el resolvedor corre siempre y, si no llega, repite andando; WALK=1 solo anda (andar es ×0,9: así se
 -- ve qué niveles necesitan correr).
+-- AL COMPÁS (0.5.225, niveles con reloj de compás: Bloques Beep, plataforma metrónomo, pinchos de palmas, trampolín de
+-- compás — src/world/systems/BeatClock.lua —): el TIEMPO es parte del estado. Cada acción dura 0,1 s, así que el
+-- tiempo de un nodo es su número de acciones (+ T0); la clave lleva el momento dentro del ciclo (8 s: dos frases) en
+-- cuartos de pulso. Los bloques cambian como en el juego (esperan si estás dentro), la plataforma es un cuerpo que se
+-- mueve, los pinchos fuera matan (más estricto que el juego: dañan) y el trampolín de compás lanza según el pulso.
+-- TRAMOS: START=col,fila (empezar ahí, de pie) · GOALCOL=c (la meta = llegar a la columna c, a cualquier altura;
+-- GOALROW=f la exige además a esa fila ±1) · T0=s (el momento de la música al empezar).
 -- GOAL=secret_exit: la meta es la SALIDA SECRETA (tile `secret_exit`); tocar la meta normal termina el nivel, así que
 -- esos estados se descartan (¿se llega a la secreta sin pasar por la meta?).
 --
@@ -22,6 +29,10 @@ local json = require 'libs/json'
 local Level = require 'src/world/level/Level'
 local PlayerAdventure = require 'src/player/PlayerAdventure'
 local Entities = require 'src/world/entities/Entities'
+local BeatClock = require 'src/world/systems/BeatClock'
+local GOALCOL, GOALROW = tonumber(os.getenv('GOALCOL')), tonumber(os.getenv('GOALROW'))
+local T0 = tonumber(os.getenv('T0')) or 0
+local ACT_T = 6 / 60                                 -- s por acción
 
 local DT, K = 1 / 60, 6
 local NODROWN = os.getenv('NODROWN')    -- (sin ahogarse: ¿el terreno se puede recorrer?)
@@ -37,6 +48,12 @@ end
 
 local function targets(level, data)
     local T, list = TILE_PX, {}
+    if GOALCOL then                                   -- (un tramo: llegar a esa columna)
+        for r = 1, level.tileH do
+            if not GOALROW or math.abs(r - GOALROW) <= 1 then list[#list + 1] = { (GOALCOL - 0.5) * T, (r - 0.5) * T } end
+        end
+        return list, 'columna ' .. GOALCOL
+    end
     for r = 1, level.tileH do
         for c = 1, level.tileW do
             if level:getDef(c, r).trigger == GOAL then list[#list + 1] = { (c - 0.5) * T, (r - 0.5) * T } end
@@ -80,11 +97,43 @@ local function solve(path)
             doors[#doors + 1] = d
         end
     end
+    -- lo que va al compás (instancias de verdad; su estado sale del reloj)
+    local beatEnts, claps, springs = {}, {}, {}
+    if level.beat then
+        for _, pl in ipairs(level.entities) do
+            local d = require('src/world/entities/base/EntityTypes').get(pl.type)
+            if d and d.beat then
+                local e = Entities.create(pl)
+                e.levelRef = level
+                beatEnts[#beatEnts + 1] = e; doors[#doors + 1] = e
+                if pl.type == 'clapspikes' then claps[#claps + 1] = e end
+                if pl.type == 'beatspring' then springs[#springs + 1] = e end
+            end
+        end
+        print(('al compás: %d cosas (%d placas de pinchos, %d trampolines)'):format(#beatEnts, #claps, #springs))
+    end
+    local CYCLE = level.beat and level.beat.period * 2 or 1
+    local QK = level.beat and level.beat.period / 8 / 4 or 1          -- (cuartos de pulso)
+    local function setTime(t)
+        if not level.beat then return end
+        level.beat.t = t
+        level:updateSwitchBlocks()                   -- (como esté en ese momento; con el jugador dentro, espera)
+        level.brokenQueue = nil
+        level.solidBodies = Entities.solidBodies(doors)
+        level.solidBodies = Entities.solidBodies(doors)                -- (2 veces: sin arrastre del salto de sitio)
+    end
+    local function tick()
+        if not level.beat then return end
+        BeatClock.update(level, DT, nil)
+        for _, b in ipairs(level.switchBlocks or {}) do if b.pending then level:updateSwitchBlocks(); break end end
+        level.brokenQueue = nil
+        level.solidBodies = Entities.solidBodies(doors)
+    end
     level.solidBodies = Entities.solidBodies(doors)
     if #doors > 0 then
         local o = {}
-        for _, d in ipairs(doors) do o[#o + 1] = ('#%s %s'):format(d.props.id or 1, d.k >= 1 and 'abierta' or 'cerrada') end
-        print('puertas: ' .. table.concat(o, ', '))
+        for _, d in ipairs(doors) do if d.k then o[#o + 1] = ('#%s %s'):format(d.props.id or 1, d.k >= 1 and 'abierta' or 'cerrada') end end
+        if #o > 0 then print('puertas: ' .. table.concat(o, ', ')) end
     end
     local tramps = {}
     for _, e in ipairs(data.entities or {}) do
@@ -102,7 +151,9 @@ local function solve(path)
             VENTS[#VENTS + 1] = { x = (v.col - 0.5) * TILE_PX, y0 = ((data.surfaceRow or 1) - 1) * TILE_PX, y1 = v.row * TILE_PX }
         end
     end
-    local pa = PlayerAdventure:new((data.playerStart[1] - 0.5) * TILE_PX, (data.playerStart[2] - 0.5) * TILE_PX)
+    local sc, sr = data.playerStart[1], data.playerStart[2]
+    if os.getenv('START') then sc, sr = os.getenv('START'):match('(%d+),(%d+)'); sc, sr = tonumber(sc), tonumber(sr) end
+    local pa = PlayerAdventure:new((sc - 0.5) * TILE_PX, (sr - 0.5) * TILE_PX)
     level.players = { pa }
     local goals, kind = targets(level, data)
     local explore = os.getenv('EXPLORE')
@@ -117,8 +168,8 @@ local function solve(path)
             if math.abs(pa.x - g[1]) < TILE_PX * 0.9 and math.abs(pa.y - g[2]) < TILE_PX * 1.6 then return true end
         end
     end
-    local function key(pa)
-        return table.concat({ math.floor(pa.x / (explore and 24 or 14)), math.floor(pa.y / (explore and 24 or 14)), pa.onGround and 1 or 0,
+    local function key(pa, n)
+        return table.concat({ level.beat and math.floor(((T0 + n * ACT_T) % CYCLE) / QK + 0.5) or 0, math.floor(pa.x / (explore and 24 or 14)), math.floor(pa.y / (explore and 24 or 14)), pa.onGround and 1 or 0,
             pa.jumpsLeft, math.floor(pa.vy / 260), math.floor(pa.vx / 120), pa.crouching and 1 or 0,
             math.floor((pa.drownTimer or 0) / 3),          -- (con más aire no es el mismo estado)
             -- (agua helada: con menos frío, o dentro del bloque de hielo, tampoco; si no, al congelarse se
@@ -186,7 +237,9 @@ local function solve(path)
         end
         return top
     end
-    local seen = { [key(pa)] = true }
+    setTime(T0)
+    for _ = 1, 20 do tick(); pa:update(DT, level) end              -- (que se asiente; START sin suelo: cae)
+    local seen = { [key(pa, 0)] = true }
     push({ s0, 0, h(pa.x, pa.y) })
     local bestInfo
     local visited, bestH, bestC, bestR = {}, nil, nil, nil
@@ -195,6 +248,7 @@ local function solve(path)
         local node = pop(); pops = pops + 1
         for _, a in ipairs(ACTIONS) do
             P.applyOwnState(node[1], pa)
+            setTime(T0 + node[2] * ACT_T)
             pa.alive = true; pa.dying = false
             local st = Input.state
             local ok = true
@@ -206,7 +260,29 @@ local function solve(path)
                 st.crouch_pressed = a.c and f == 1
                 local before = pa.y + pa:getOuterBounds().h / 2
                 if NODROWN then pa.drownTimer, pa.drownPhase, pa.drownAudT = 0, 'none', 0 end
+                tick()
                 pa:update(DT, level)
+                -- pinchos de palmas fuera: muerto (en el juego, daño: el resolvedor no se deja dañar)
+                if #claps > 0 then
+                    local ob = pa:getOuterBounds()
+                    for _, e in ipairs(claps) do
+                        for _, hb in ipairs(e:getHazardBoxes() or {}) do
+                            if ob.x < hb.x + hb.w and ob.x + ob.w > hb.x and ob.y < hb.y + hb.h and ob.y + ob.h > hb.y then ok = false end
+                        end
+                    end
+                    if not ok then break end
+                end
+                -- trampolines de compás: como el de arriba, con la fuerza del momento
+                for _, e in ipairs(springs) do
+                    local ob = pa:getOuterBounds()
+                    local bottom, px = ob.y + ob.h, ob.x + ob.w / 2
+                    local T = TILE_PX
+                    if pa.vy > 120 and math.abs(px - e.x) < T * 0.5 + ob.w / 2 - 6
+                       and bottom >= e.y - T / 2 - 6 and before <= e.y - T / 2 + 10 and bottom <= e.y + T / 2 then
+                        local _, vy = e:launchVelocity()
+                        pa.y = pa.y - (bottom - (e.y - T / 2)); pa:launch(0, vy)
+                    end
+                end
                 -- VENTS=1: las BURBUJAS de aire de los respiraderos, aproximadas — la columna de cada vent, de él hasta
                 -- la superficie (`surfaceRow`), devuelve el aire al tocarla (en el juego suben a ratos)
                 if VENTS then
@@ -250,7 +326,7 @@ local function solve(path)
                 local hh = h(pa.x, pa.y); if hh < (bestH or 1e9) then bestH = hh; bestC, bestR = math.floor(pa.x / TILE_PX) + 1, math.floor(pa.y / TILE_PX) + 1; bestInfo = ('x=%.0f y=%.0f vx=%.0f vy=%.0f gnd=%s water=%s jl=%s'):format(pa.x, pa.y, pa.vx, pa.vy, tostring(pa.onGround), tostring(pa.inWater), tostring(pa.jumpsLeft)) end
                 if near(pa) then return true, kind, node[2] + 1 end
                 visited[(math.floor(pa.y / TILE_PX) + 1) * 1000 + math.floor(pa.x / TILE_PX) + 1] = true
-                local k = key(pa)
+                local k = key(pa, node[2] + 1)
                 if not seen[k] then seen[k] = true; push({ P.packOwnState(pa), node[2] + 1, h(pa.x, pa.y) + (node[2] + 1) * 4 }) end
             end
         end

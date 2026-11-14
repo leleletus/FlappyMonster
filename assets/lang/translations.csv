@@ -790,6 +790,12 @@ shop.poor,No tienes puntos suficientes,Not enough points,
 shop.full,Tu inventario está lleno ({m} power-ups),Your inventory is full ({m} power-ups),
 shop.type_full,Ya llevas {m} de {name},You already carry {m} of {name},
 shop.sign,TIENDA,SHOP,"Cartel sobre el nido del mercader en el mapa Flappy (FlappyMapState)"
+via.beep,"Los bloques de cristal van con la música: tras tres pitidos, ¡cambian!","The crystal blocks follow the music: after three beeps, they switch!",Vía Estelar: carteles (tools/levelgen/levels_via_estelar.py)
+via.switch,"Rosa o cian: solo uno es sólido a la vez. Salta justo en el cambio.","Pink or cyan: only one is solid at a time. Jump right on the switch.",
+via.spring,"Cae en la estrella EN el pulso y saldrás disparado. Fuera del pulso, solo un saltito.","Land on the star ON the beat and you'll shoot up. Off the beat, just a hop.",
+via.clap,"Los pinchos dan palmas con la música: pasa cuando se esconden.","The spikes clap with the music: cross when they hide.",
+via.fork,"Arriba, por las piedras de colores; abajo, por las nubes. Los dos caminos llevan a la constelación.","Up, over the colored stones; down, through the clouds. Both paths lead to the constellation.",
+via.tower,"La escalera estelar: rebota a tiempo y sube con los ascensores.","The star staircase: bounce in time and ride the lifts up.",
 tut.missing,(texto del cartel sin poner),(sign text not set),Nivel tutorial: los carteles de ayuda (src/world/entities/types/items/hint.lua)
 tut.walk,"Muévete con {left} {right}. La meta está al final, a la derecha.","Move with {left} {right}. The goal is at the end, to the right.",
 tut.run,Mantén {run} para correr.,Hold {run} to run.,
