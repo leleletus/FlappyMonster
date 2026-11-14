@@ -180,4 +180,5 @@ for _, d in ipairs({ { 'up', 'trampoline', 'Arriba' }, { 'down', 'trampoline_dow
         editor = { sprite = 'assets/images/mechanisms/trampoline/normal.png', draw = editorIcon(d[1]) },
     }
 end
+defs.Base = Tramp          -- (la clase base: el Trampolín de compás la extiende — mechanisms/beatspring.lua —)
 return defs

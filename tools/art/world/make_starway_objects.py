@@ -60,43 +60,53 @@ def platform(lit):
     return art(rows, PLAT_PAL)
 
 
-# ── 2 · Pinchos de palmas (16x16: la placa abajo, los pinchos salen hacia arriba) ───────────────────────────────
-SPK_PAL = {'o': rgb('4a1e3a'), 'p': rgb('7a3a62'), 'P': rgb('a85a88'), 'r': rgb('e85a7a'), 'R': rgb('ffb0c4'),
-           'w': rgb('fff6fa'), 's': rgb('d8d0f0'), 'S': rgb('a8a0d0'), 'k': rgb('6a6098'), 'y': rgb('fff4b0')}
-SPK_DOWN = ['................'] * 11 + [
-    '..s...s...s...s.',
-    '.oSo.oSo.oSo.oSo'[:16],
+# ── 2 · Pinchos de palmas: LOS PINCHOS DEL JUEGO (assets/images/traps/spikes/spike.png, media casilla cada uno) que
+# salen de una PLACA de una casilla (el usuario: «más parecidas a los pinchos del resto del juego»). La placa es un
+# bloque sólido con dos ranuras; escondidos, asoma la punta; el aviso enciende su franja y echa chispas.
+PLATE_PAL = {'o': (30, 30, 42, 255), 'k': (14, 14, 22, 255), 'd': (64, 66, 88, 255), 'm': (98, 100, 128, 255),
+             'l': (146, 148, 176, 255), 'w': (196, 200, 214, 255), 'p': (96, 58, 92, 255), 'P': (255, 150, 196, 255),
+             'Q': (255, 220, 236, 255)}
+PLATE = [
     'oooooooooooooooo',
-    'oPPPPPPPPPPPPPPo',
-    'oppppppppppppppo',
-]
-SPK_GLINT = ['................'] * 9 + [
-    '..y.......y.....',
-    '.yRy.....yRy....',
-    '..w...w...w...w.',
-    '.oRo.oRo.oRo.oRo'[:16],
+    'owkkkkkwwkkkkkwo',
+    'olkkkkklwkkkkkdo',
+    'owwwwwwwwwwwwwlo',
+    'owllllllllllllmo',
+    'olmmmmmmmmmmmmdo',
+    'olmm{{{{{{{{mmdo',
+    'olmm[[[[[[[[mmdo',
+    'olmmmmmmmmmmmmdo',
+    'olmmmmmmmmmmmmdo',
+    'olmdmmmmmmmmdmdo',
+    'olmmmmmmmmmmmmdo',
+    'olmmmmmmmmmmmmdo',
+    'olddddddddddddo.'[:15] + 'o',
+    'oddddddddddddddo',
     'oooooooooooooooo',
-    'oRRRRRRRRRRRRRRo',
-    'orrrrrrrrrrrrrro',
 ]
-SPK_UP = [
-    '..w...w...w...w.',
-    '..w...w...w...w.',
-    '.sws.sws.sws.sws',
-    '.sws.sws.sws.sws',
-    '.sSs.sSs.sSs.sSs',
-    '.sSs.sSs.sSs.sSs',
-    'sSSksSSksSSksSSk',
-    'sSSksSSksSSksSSk',
-    'sSkksSkksSkksSkk',
-    'sSkksSkksSkksSkk',
-    'SkkkSkkkSkkkSkkk',
-    'SkkkSkkkSkkkSkkk',
-    '.oko.oko.oko.oko',
-    'oooooooooooooooo',
-    'oRRRRRRRRRRRRRRo',
-    'orrrrrrrrrrrrrro',
-]
+
+
+def plate(glint):
+    rows = [r.replace('{', 'Q' if glint else 'p').replace('[', 'P' if glint else 'p') for r in PLATE]
+    return art(rows, PLATE_PAL)
+
+
+SPIKE = Image.open(os.path.join(REPO, 'assets/images/traps/spikes/spike.png')).convert('RGBA')   # 32x32 = 8x8 de arte x4
+
+
+def clap_frame(state):
+    """la casilla de la placa (64x64, abajo) + lo que sale por encima (64 px): 64x128 a x4. state: down | glint | up"""
+    out = Image.new('RGBA', (64, 128), (0, 0, 0, 0))
+    rise = {'down': 8, 'glint': 10, 'up': 32}[state]          # px de pincho por encima de la placa
+    for i in range(2):
+        out.alpha_composite(SPIKE, (i * 32, 64 - rise))
+    out.alpha_composite(up(plate(state == 'glint')), (0, 64))
+    if state == 'glint':
+        d = ImageDraw.Draw(out)
+        for (x, y) in ((6, 44), (44, 40), (26, 50)):
+            d.rectangle((x, y, x + 3, y + 3), fill=(255, 244, 176, 255))
+            d.rectangle((x - 4, y, x - 1, y + 3), fill=(255, 200, 220, 200)); d.rectangle((x + 4, y, x + 7, y + 3), fill=(255, 200, 220, 200))
+    return out
 
 
 # ── 4 · Trampolín de compás (16x16: estrella dorada sobre un muelle) ────────────────────────────────────────────
@@ -144,6 +154,17 @@ def ring(size, r, col, w=2):
     return im
 
 
+def ring_art(r):
+    """el aro que se cierra hacia el pulso (24x24 de arte, se dibuja x4 centrado en la estrella): 1 px, dorado claro"""
+    im = Image.new('RGBA', (24, 24), (0, 0, 0, 0))
+    c = 11.5
+    for y in range(24):
+        for x in range(24):
+            d = ((x - c) ** 2 + (y - c) ** 2) ** 0.5
+            if abs(d - r) < 0.5: im.putpixel((x, y), rgb('fff0a0') if r <= 4 else rgb('e8c870'))
+    return im
+
+
 # ── Hojas ───────────────────────────────────────────────────────────────────────────────────────────────────────
 BG = rgb('1c1a34')
 
@@ -155,7 +176,7 @@ def label(im, text, xy, size=12, col=(255, 255, 255, 255)): J.label(im, text, xy
 
 
 def sprites_sheet():
-    out = Image.new('RGBA', (1100, 560), BG)
+    out = Image.new('RGBA', (1100, 600), BG)
     label(out, 'Objetos ritmicos de la Via Estelar - sprites a x4 (como en el juego) y x8', (20, 14), 12)
     y = 50
     label(out, '1  Plataforma metronomo (2 casillas)   apagada / lampara en el pulso', (20, y), 10)
@@ -163,11 +184,11 @@ def sprites_sheet():
     out.alpha_composite(up(platform(True), 8), (360, y + 20))
     y = 170
     label(out, '2  Pinchos de palmas   escondidos / aviso (medio pulso antes) / fuera (pulsos 2 y 4)', (20, y), 10)
-    for i, rows in enumerate((SPK_DOWN, SPK_GLINT, SPK_UP)):
-        im = art(rows, SPK_PAL)
-        out.alpha_composite(up(im), (20 + i * 90, y + 24))
-        out.alpha_composite(up(im, 8), (320 + i * 150, y + 24))
-    y = 340
+    for i, st_ in enumerate(('down', 'glint', 'up')):
+        im = clap_frame(st_)
+        out.alpha_composite(im, (20 + i * 90, y + 10))
+        out.alpha_composite(im.resize((128, 256), Image.NEAREST).crop((0, 64, 128, 256)), (320 + i * 150, y + 6))
+    y = 380
     label(out, '4  Trampolin de compas   quieto / aplastado / el aro que se cierra hacia el pulso / lanzado EN el pulso', (20, y), 10)
     st, sq = art(STAR_IDLE, STAR_PAL), art(STAR_SQUASH, STAR_PAL)
     out.alpha_composite(up(st), (20, y + 30)); out.alpha_composite(up(sq), (110, y + 30))
@@ -216,10 +237,9 @@ def timeline_sheet():
     for b in range(8):
         x = x0 + b * cw
         up_ = b % 2 == 1
-        im = art(SPK_UP if up_ else SPK_DOWN, SPK_PAL)
-        out.alpha_composite(up(im, 3), (x + 4, 300))
-        gl = art(SPK_GLINT, SPK_PAL)
-        if not up_: out.alpha_composite(up(gl, 3), (x + 56, 300))
+        im = clap_frame('up' if up_ else 'down').resize((32, 64), Image.NEAREST)
+        out.alpha_composite(im, (x + 8, 286))
+        if not up_: out.alpha_composite(clap_frame('glint').resize((32, 64), Image.NEAREST), (x + 60, 286))
         label(out, 'FUERA' if up_ else 'abajo  aviso', (x + 4, 352), 8, rgb('ffb0c4') if up_ else rgb('c8c4f0'))
     label(out, 'salen con la caja (pulsos 2 y 4 de cada compas), se esconden en 1 y 3; medio pulso antes, destello',
           (x0, 372), 8, rgb('a8a4d0'))
@@ -271,8 +291,8 @@ def scene_gif():
         cv.alpha_composite(up(platform(lit)), (int(460 + pos * T), floor - 2 * T + 32))
         # 2 · pinchos de palmas: fuera en los pulsos 2, 4, 6, 8 (índices impares)
         for i in range(3):
-            rows = SPK_UP if b8 % 2 == 1 else (SPK_GLINT if sub >= 0.5 else SPK_DOWN)
-            cv.alpha_composite(up(art(rows, SPK_PAL)), (820 + i * T, floor))
+            st_ = 'up' if b8 % 2 == 1 else ('glint' if sub >= 0.5 else 'down')
+            cv.alpha_composite(clap_frame(st_), (820 + i * T, floor - T + T))
         # 4 · trampolín: el monstruo bota EN el pulso cada 2 pulsos (alto) — a la derecha
         sx = 1080
         ph = (beat % 2) / 2                       # un bote cada 2 pulsos
@@ -306,3 +326,34 @@ def main():
 
 if __name__ == '__main__':
     main()
+
+
+# ── --apply: los sprites de verdad (los pinchos NO: son los del juego, assets/images/traps/spikes/) ──────────────
+def apply():
+    import json
+    sets = {
+        'mechanisms/metronome': ('assets/images/mechanisms/metronome', {'platform': platform(False), 'platform_lit': platform(True)},
+                                 {'idle': 'platform', 'lit': 'platform_lit'}),
+        'traps/clapspikes': ('assets/images/traps/clapspikes', {'plate': plate(False), 'plate_glint': plate(True)},
+                             {'idle': 'plate', 'glint': 'plate_glint'}),
+        'mechanisms/beatspring': ('assets/images/mechanisms/beatspring',
+                                  dict({'idle': art(STAR_IDLE, STAR_PAL), 'squash': art(STAR_SQUASH, STAR_PAL)},
+                                       **{'ring%d' % i: ring_art(r) for i, r in ((1, 11), (2, 8), (3, 6), (4, 4))}),
+                                  dict({'idle': 'idle', 'bounce': 'squash'}, **{'ring%d' % i: 'ring%d' % i for i in range(1, 5)})),
+    }
+    for aid, (d, ims, anims) in sets.items():
+        os.makedirs(os.path.join(REPO, d), exist_ok=True)
+        names = sorted(ims)
+        for n in names:
+            ims[n].save(os.path.join(REPO, d, n + '.png')); print('  escrito', d + '/' + n + '.png')
+        js = {'id': aid, 'scale': 4, 'origin': [0.5, 0.5], 'fallback': 'idle',
+              'frames': [{'image': d + '/' + n + '.png', 'key': n + '.png'} for n in names],
+              'anims': {a: {'fps': 4, 'frames': [names.index(f) + 1], 'loop': True} for a, f in anims.items()}}
+        p = os.path.join(REPO, 'assets/anim', aid + '.json')
+        os.makedirs(os.path.dirname(p), exist_ok=True)
+        with open(p, 'w') as f: json.dump(js, f, indent=2, ensure_ascii=False); f.write('\n')
+        print('  escrito', os.path.relpath(p, REPO))
+
+
+if '--apply' in sys.argv:
+    apply()

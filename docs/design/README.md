@@ -12,7 +12,7 @@ and describe the real thing in the system's page.
 
 | What | Page |
 |---|---|
-| **Starway rhythm objects (2026-11-14):** 10 objects, hazards and enemies that act on other parts of the beat (every beat, backbeat, kick, offbeats, 3-over-4, song sections) for the level Vía Estelar; waiting for the user's pick | [starway-rhythm-objects](starway-rhythm-objects.md) |
+| **Starway rhythm objects (2026-11-14):** 10 objects, hazards and enemies that act on other parts of the beat (every beat, backbeat, kick, offbeats, 3-over-4, song sections) for the level Vía Estelar; the user picked metronome platform, clap spikes and on-beat star spring (**built 0.5.224**) | [starway-rhythm-objects](starway-rhythm-objects.md) |
 | **Beep blocks (2026-11-14):** a new block pair that swaps every 4 s on a level beat clock (3 beeps + impact in the music); reuses the ON/OFF Block base, not its code (**blocks, clock, blink and sounds built 0.5.221**; music to choose, level Vía Estelar to build) | [beep-blocks](beep-blocks.md) |
 | **Accessibility options (2026-11-13):** ASSIST tab — screen shake, flashes, sign text, colour-blind symbols on ON/OFF (**built 0.5.208**) | [accessibility](accessibility.md) |
 | **Touch-control editor (2026-11-13):** drag each on-screen button, size per button, one opacity; saved per device (**built 0.5.207**) | [touch-editor](touch-editor.md) |

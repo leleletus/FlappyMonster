@@ -1,6 +1,7 @@
 # Starway: rhythm objects (proposal, 2026-11-14)
 
-Status: **the user picked 1, 2 and 4 (2026-11-14); mockups made, waiting for the user's verdict**. For the level Starway / Vía Estelar (`via_estelar`), next to the
+Status: **the user picked 1, 2 and 4 (2026-11-14); BUILT in 0.5.224** — the system page is
+[traps-and-mechanisms](../entities/traps-and-mechanisms.md#rhythm-objects-of-starway-05224). For the level Starway / Vía Estelar (`via_estelar`), next to the
 [beep blocks](beep-blocks.md). The user asked for objects, obstacles or enemies that do something (or let you do
 something) to the rhythm of the music, like the beep blocks but **with other patterns**, so the level has variety.
 
@@ -69,3 +70,7 @@ The sky was also toned down at the user's request ("que no sea excesivamente lla
 Way, fewer and darker fine stars, fainter constellation lines, darker clouds, desaturated spires
 (`make_starway_sky.py --apply --force`; before / after in `FlappyMonster_pruebas/via_estelar/fondo/antes.png` /
 `vista_previa.png`).
+
+The user approved the mockups except the clap spikes' look: "más parecidas a las spikes del resto del juego sin alterar
+su funcionamiento" → they now use the game's own spike sprite (and the level's spike skin) rising from a steel-grey
+plate whose stripe lights pink as the warning. Then built (0.5.224).

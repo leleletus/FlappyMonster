@@ -262,3 +262,28 @@ Ground turret of the Evil Monster: glows 0.6 s, then fires a straight net upward
 
 - 2026-10-29: first version (agent). The cable has no sag (straight segments) and towers sit under every point, so a
   cabin passes IN FRONT of a tower (side view). No user verdict yet on looks, sounds or feel.
+
+## Rhythm objects of Starway (0.5.224)
+
+Three types that act on the MUSIC's beat, for the level Starway / Vía Estelar (design and the user's pick:
+[starway-rhythm-objects](../design/starway-rhythm-objects.md)). Their state is a pure FUNCTION of the level's beat clock
+(`src/world/systems/BeatClock.lua`, `BeatClock.beats(level)` = beats since the music started, `BeatClock.offBeat(level)`
+= music seconds to the nearest beat), so single player, the server and the online client compute the same thing and
+nothing travels but the clock's `bt` (`netAtRest` always). Their type definitions carry `beat = true`: a level with
+any of them gets a beat clock even without Beep Blocks. Art: `tools/art/world/make_starway_objects.py --apply` (anim
+sets `mechanisms/metronome`, `traps/clapspikes`, `mechanisms/beatspring`). Harness `mechanics` case `ritmo`.
+- **Metronome platform** (`mechanisms/metronome`, "Plataforma metrónomo", Mecanismos): a lavender crystal slab 2 tiles
+  wide and half a tile tall, at the TOP of its cell. It steps ONE tile per beat, in a snap (`SNAP` = 0.16 of the beat,
+  smoothstep), `steps` tiles (default 4) toward `dir` (right / left / up / down) and back: 4 + 4 = one phrase. Its gold
+  lamp is lit for the first 0.3 of each beat. A moving body (`bodyParts`, `moves`): players ride it with `standBody`;
+  `oneway` (default) = solid only from above. Entities on it are NOT carried (yet).
+- **Clap spikes** (`traps/clapspikes`, "Pinchos de palmas", Trampas): a one-tile PLATE, solid like a block, with two of
+  the game's own spikes (`SpikeSkins`, the level's spike look) that come OUT on beats 2 and 4 of every bar (with the
+  snare) and hide on 1 and 3; `offset` = 1 swaps that (1 and 3). From half a beat before they come out the plate's
+  stripe lights pink (the warning, `glint`). Out, they hurt exactly like tile spikes (`Level._spikeHitbox`, part
+  `spike`); hidden, the tips still show (8 px). The user asked for spikes "like the rest of the game" (2026-11-14).
+- **On-beat star spring** (`mechanisms/beatspring`, "Trampolín de compás", Mecanismos): a CLASS OF THE TRAMPOLINE
+  (`trampoline.lua` exports `defs.Base`), facing up: landing on it within `window` (0.1 s of music) of a beat launches
+  `high` (×2.1 the jump, ~7 tiles) with the crystal clink (`beepSwitch`) and a burst; otherwise `low` (×1.1, ~2 tiles).
+  A ring closes toward each beat (4 ring frames). `interact` stays side-effect free: the client predicts it with its
+  own clock.

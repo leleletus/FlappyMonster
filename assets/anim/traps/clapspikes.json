@@ -1,0 +1,35 @@
+{
+  "id": "traps/clapspikes",
+  "scale": 4,
+  "origin": [
+    0.5,
+    0.5
+  ],
+  "fallback": "idle",
+  "frames": [
+    {
+      "image": "assets/images/traps/clapspikes/plate.png",
+      "key": "plate.png"
+    },
+    {
+      "image": "assets/images/traps/clapspikes/plate_glint.png",
+      "key": "plate_glint.png"
+    }
+  ],
+  "anims": {
+    "idle": {
+      "fps": 4,
+      "frames": [
+        1
+      ],
+      "loop": true
+    },
+    "glint": {
+      "fps": 4,
+      "frames": [
+        2
+      ],
+      "loop": true
+    }
+  }
+}

@@ -38,13 +38,42 @@ local function hasBeepTiles(level)
     return false
 end
 
+-- ¿Hay entidades que van al compás? (tipos con `beat = true`: la plataforma metrónomo, los pinchos de palmas, el
+-- trampolín de compás — docs/design/starway-rhythm-objects.md —)
+local function hasBeatEntities(level)
+    local ET = package.loaded['src/world/entities/base/EntityTypes']
+    if not ET then return false end
+    for _, p in ipairs(level.entities or {}) do
+        local d = p.type and ET.get(p.type)
+        if d and d.beat then return true end
+    end
+    return false
+end
+
 -- Desde Level.fromData (antes de initSwitchBlocks). JSON opcional: "beat": { "period": 4, "start": "pink" }.
+-- Hay reloj si el nivel tiene Bloques Beep o entidades que van al compás.
 function BeatClock.build(level, lvl)
-    if not hasBeepTiles(level) then return nil end
+    if not hasBeepTiles(level) and not hasBeatEntities(level) then return nil end
     local b = type(lvl.beat) == 'table' and lvl.beat or {}
     local period = tonumber(b.period) or BeatClock.PERIOD
     if period <= 0 then period = BeatClock.PERIOD end
     return { t = 0, period = period, start = (b.start == 'cyan') and 'cyan' or 'pink' }
+end
+
+-- PULSOS desde que empezó la música (con decimales: 3.25 = un cuarto del pulso 4); 0 sin reloj. Lo que va al compás
+-- lo calcula todo de aquí, igual en un jugador, el servidor y el cliente (sin mandar nada más que `bt`).
+function BeatClock.beats(level)
+    local bc = level and level.beat
+    if not bc then return 0 end
+    return bc.t / (bc.period / BeatClock.BEATS)
+end
+-- s de MÚSICA hasta el pulso más cercano (para juzgar «en el pulso»)
+function BeatClock.offBeat(level)
+    local bc = level and level.beat
+    if not bc then return math.huge end
+    local beat = bc.period / BeatClock.BEATS
+    local f = (bc.t % beat)
+    return math.min(f, beat - f)
 end
 
 -- Frase en la que va el reloj (0, 1, 2...) y el color sólido en ella

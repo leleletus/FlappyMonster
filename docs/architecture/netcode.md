@@ -215,6 +215,9 @@ piece took damage, immortal online), and a rewound "stomp" may hit a boss that i
 
 ## Protocol version history
 
+v122: the Starway rhythm objects (new types `metronome`, `clapspikes`, `beatspring`): no netPack of their own, their
+state comes from the beat clock (`bt`).
+
 v121: the crystal BEEP BLOCKS (tiles 45-48) and their beat clock: the snapshot carries `bt` (the clock in centiseconds,
 `BeatClock.netPack`); the client applies it with half the ping as lead and moves only when it is > 0.06 s off. Block
 swaps travel as `tile k='set'` events like the ON/OFF Blocks ([tiles-and-blocks](../gameplay/tiles-and-blocks.md#beep-blocks-05221)).

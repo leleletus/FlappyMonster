@@ -4,6 +4,7 @@
 --   onoff_head   un cabezazo cambia ON→OFF, otro OFF→ON (y va a brokenQueue)
 --   onoff_pound  un ground pound encima lo cambia UNA vez y el jugador se queda encima
 --   beep         Bloques Beep: cambian a los 4 s de música, parpadeo solo visual, esperan al jugador, ¡date prisa!
+--   ritmo        plataforma metrónomo, pinchos de palmas y trampolín de compás (Vía Estelar)
 --   hidden_up    se atraviesa subiendo y se queda de pie encima
 --   hidden_drop  agachado encima no se baja (no traspasable)
 --   hidden_side  se atraviesa andando de lado
@@ -328,6 +329,50 @@ function cases.beep()
         and pcall(love.graphics.newImage, 'assets/images/world/tiles/cb_cyan.png')
     want(okImg, 'arte y símbolos')
     check('beep', ok, table.concat(parts, ' · '))
+end
+
+-- OBJETOS RÍTMICOS de la Vía Estelar (docs/design/starway-rhythm-objects.md): con ellos el nivel tiene reloj aunque
+-- no haya Bloques Beep; la plataforma metrónomo avanza una casilla por pulso (4 y vuelve) y es un cuerpo que se mueve;
+-- los pinchos de palmas salen en los pulsos 2 y 4 (aviso medio pulso antes) y dañan solo fuera; el trampolín de
+-- compás lanza alto EN el pulso y bajo fuera
+function cases.ritmo()
+    local BC = require 'src/world/systems/BeatClock'
+    local level, es = room(16, 10, {}, {
+        { type = 'metronome', col = 3, row = 5, props = {} },
+        { type = 'clapspikes', col = 8, row = 9, props = {} },
+        { type = 'beatspring', col = 12, row = 9, props = {} },
+        { type = 'clapspikes', col = 9, row = 9, props = { offset = 1 } } })
+    for _, e in ipairs(es) do e.levelRef = level end
+    local m, c, b = es[1], es[2], es[3]
+    local parts, ok = {}, true
+    local function want(cond, msg) parts[#parts + 1] = msg .. (cond and '' or ' ✗'); ok = ok and cond end
+    want(level.beat ~= nil, 'reloj sin Bloques Beep')
+    local function at(beats) level.beat.t = beats * 0.5 end
+    local x0 = m:slab({}).x
+    at(0.5); local a = m:slab({}).x
+    at(1.5); local b1 = m:slab({}).x
+    at(4.5); local b4 = m:slab({}).x
+    at(7.5); local b7 = m:slab({}).x
+    at(1.04); local mid = m:slab({}).x
+    want(a == x0 + T and b1 == x0 + 2 * T and b4 == x0 + 3 * T and b7 == x0, ('metrónomo 1, 2, 3 casillas y vuelta (%d %d %d %d)'):format(a - x0, b1 - x0, b4 - x0, b7 - x0))
+    want(mid > x0 + T and mid < x0 + 2 * T, 'da el paso de golpe al empezar el pulso')
+    local solid = false
+    for _, s in ipairs(require('src/world/entities/Entities').solidBodies(es)) do if s == m.parts[1] then solid = true end end
+    want(solid and m.parts[1].moves, 'cuerpo que se mueve')
+    at(0.2); local s0 = c:clap(); local h0 = c:getHazardBoxes()
+    at(0.7); local s1 = c:clap()
+    at(1.2); local s2 = c:clap(); local h2 = c:getHazardBoxes()
+    at(3.3); local s3 = c:clap()
+    want(s0 == 'down' and h0 == nil and s1 == 'warn' and s2 == 'up' and h2 and #h2 == 2 and h2[1].part == 'spike' and s3 == 'up',
+         ('pinchos: %s %s %s %s'):format(s0, s1, s2, s3))
+    want(h2 and h2[1].y + h2[1].h <= (9 - 1) * T + 0.01, 'los pinchos, encima de la placa')
+    at(0.2); local alt = es[4]:clap()
+    want(alt == 'up', 'con adelanto 1, al revés (' .. tostring(alt) .. ')')
+    at(4.03); local _, vyOn = b:launchVelocity()
+    at(4.3); local _, vyOff = b:launchVelocity()
+    want(vyOn < vyOff and vyOn < -math.abs(ADV_JUMP_VEL) * 2 and vyOff > -math.abs(ADV_JUMP_VEL) * 1.2,
+         ('trampolín: en el pulso %d, fuera %d'):format(vyOn, vyOff))
+    check('ritmo', ok, table.concat(parts, ' · '))
 end
 
 function cases.hidden_up()
@@ -4947,7 +4992,7 @@ local function junglaShot()
 end
 
 function love.load()
-    for _, n in ipairs({ 'fuente_base', 'fuente_contacto', 'fuente_partes', 'fuente_entorno', 'fuente_textos', 'fuente_red', 'aviso_opcion', 'empuje', 'racha', 'inicio_fases', 'onoff_head', 'onoff_pound', 'beep', 'hidden_up', 'hidden_drop', 'hidden_side', 'hidden_vis',
+    for _, n in ipairs({ 'fuente_base', 'fuente_contacto', 'fuente_partes', 'fuente_entorno', 'fuente_textos', 'fuente_red', 'aviso_opcion', 'empuje', 'racha', 'inicio_fases', 'onoff_head', 'onoff_pound', 'beep', 'ritmo', 'hidden_up', 'hidden_drop', 'hidden_side', 'hidden_vis',
                          'helmet_jump', 'helmet_ride', 'helmet_gp', 'helmet_side', 'stomp_fast',
                          'puffer_through', 'puffer_concave', 'puffer_cycle', 'puffer_dry', 'flyer_anim', 'vuelo_libre', 'boxed_in',
                          'bloque_roto', 'activador', 'tramp_avanza', 'tramp_pinchos', 'ping_icono',

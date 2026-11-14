@@ -71,6 +71,7 @@ and the network use; **Label** is the (Spanish) name in the editor. Own props = 
 | Id | Label | File | Flags | Own props |
 |---|---|---|---|---|
 | `avalanche` | Alud | `types/traps/avalanche.lua` |  | `width`: int = 2 · `length`: int = 10 · `period`: number = 6 · `warn`: number = 1.2 · `pour`: number = 2.5 · `delay`: number = 1 · `damage`: bool = true · `power`: number = 1 |
+| `clapspikes` | Pinchos de palmas | `types/traps/clapspikes.lua` |  | `offset`: int = 0 |
 | `cryo` | Congelador | `types/traps/cryo.lua` | activatable | `dir`: enum = right · `mode`: enum = interval · `interval`: number = 4 · `firstDelay`: number = 2 · `trigger`: enum = any · `windup`: number = 0.8 · `burst`: number = 0.8 · `range`: int = 8 · `freezeTime`: number = 3 · `affectPlayers`: bool = true · `affectEnemies`: bool = true · `phase`: int = 0 · `zone`: int = 0 |
 | `rainspike` | Pincho de lluvia | `types/traps/rainspike.lua` | ceiling only, sub-cell | `group`: int = 1 · `fallDelay`: number = 0.5 · `stuckTime`: number = 1.2 · `fallSpeed`: number = 1 |
 | `spikefall` | Pincho que cae | `types/traps/spikefall.lua` | ceiling only, sub-cell | `detectRange`: int = 6 · `fallDelay`: number = 0.45 · `stuckTime`: number = 2.5 |
@@ -79,6 +80,7 @@ and the network use; **Label** is the (Spanish) name in the editor. Own props = 
 
 | Id | Label | File | Flags | Own props |
 |---|---|---|---|---|
+| `beatspring` | Trampolín de compás | `types/mechanisms/beatspring.lua` |  | `high`: number = 2.1 · `low`: number = 1.1 · `window`: number = 0.1 · `cooldown`: number = 0.3 |
 | `blizzard` | Ventisca | `types/mechanisms/blizzard.lua` |  | `corner`: point = … · `dir_right`: bool = true · `dir_left`: bool = true · `dir_up`: bool = true · `dir_down`: bool = true · `warn`: number = 1 · `blowMin`: number = 2 · `blowMax`: number = 3 · `gapMin`: number = 3 · `gapMax`: number = 7 · `firstDelay`: number = 2 · `power`: number = 1 |
 | `bossglass` | Cristal roto de jefe | `types/mechanisms/bossglass.lua` |  | `corner`: point = … · `zone`: int = 0 · `first`: number = 15 · `every`: number = 25 · `phase1`: number = 0.66 · `phase2`: number = 0.33 · `warnTime`: number = 2.2 · `activeTime`: number = 7 · `damage`: int = 1 · `launchSpeed`: number = 900 |
 | `bosswall` | Bloque de jefe | `types/mechanisms/bosswall.lua` |  | `corner`: point = … · `zone`: int = 0 · `appearTime`: number = 0.5 · `vanishTime`: number = 0.6 · `material`: enum = solid |
@@ -87,6 +89,7 @@ and the network use; **Label** is the (Spanish) name in the editor. Own props = 
 | `flood` | Inundación | `types/mechanisms/flood.lua` | activatable | `id`: int = 1 · `control`: enum = cycle · `tidePeriod`: number = 20 · `tidePhase`: number = 0 · `cold`: number = 0 · `zone`: int = 0 · `undertow`: number = 0 · `corner`: point = … · `startLevel`: number = 1 · `maxLevel`: number = 4 · `startDelay`: number = 3 · `holdTime`: number = 4 · `lowTime`: number = 4 · `riseSpeed`: number = 0.5 · `riseStep`: number = 0 · `risePause`: number = 1 · `fallSpeed`: number = 0.5 · `fallStep`: number = 0 · `fallPause`: number = 1 |
 | `geyser` | Géiser | `types/mechanisms/geyser.lua` |  | `height`: int = 5 · `interval`: number = 3 · `warn`: number = 1 · `erupt`: number = 2 · `freeze`: number = 3 · `firstDelay`: number = 1.5 · `power`: number = 1 |
 | `iceberg` | Iceberg | `types/mechanisms/iceberg.lua` |  | `width`: int = 3 · `height`: int = 1 · `capacity`: number = 1.5 · `float`: number = 0.3 · `sinkDepth`: number = 1 |
+| `metronome` | Plataforma metrónomo | `types/mechanisms/metronome.lua` |  | `steps`: int = 4 · `dir`: enum = right · `oneway`: bool = true |
 | `phaseblock` | Bloques de fase | `types/mechanisms/phaseblock.lua` |  | `corner`: point = … · `phase`: int = 3 · `zone`: int = 0 · `hiddenAs`: enum = empty |
 | `pointarea` | Zona de puntos | `types/mechanisms/pointarea.lua` |  | `corner`: point = … · `points`: int = 1 · `interval`: number = 1 · `contested`: bool = false · `ride`: bool = false |
 | `scale` | Balanza | `types/mechanisms/scale.lua` |  | `span`: number = 5 · `drop`: number = 4 · `travel`: number = 2.5 · `power`: number = 1 |
