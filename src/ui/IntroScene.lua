@@ -61,7 +61,7 @@ end
 function IntroScene.new(level, id, o)
     o = o or {}
     local Worlds = require 'src/story/Worlds'
-    local look = Worlds.introOf(id)
+    local look = Worlds.introOf(id, level)
     local W, H = WINDOW_W, WINDOW_H
     local cols = math.ceil(W / TILE_PX) + 2 * MARGIN
     local rows = math.ceil(H / TILE_PX) + 1

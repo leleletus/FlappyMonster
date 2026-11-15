@@ -82,6 +82,19 @@ function love.load(a)
         check('placas', ok and #bad == 0, ('números bien=%s; islas sin aspecto o con imagen que no carga: %s'):format(tostring(ok),
             #bad == 0 and 'ninguna' or table.concat(bad, ', ')))
     end
+    -- Fuera de la historia (Juego Libre), la tarjeta usa la ISLA del fondo del nivel (la Vía Estelar: lavanda y cian,
+    -- con el Gummy estelar; antes salía gris); sin fondo, la neutra
+    do
+        local st = Worlds.introOf('via_estelar', { background = 'starway' })
+        local co = Worlds.introOf('no_existe', { background = 'coast' })
+        local ok = st == Worlds.INTRO.estelar and st.enemy == 'gummy_star' and co == Worlds.INTRO.costa
+            and Worlds.introOf('no_existe', {}) == Worlds.INTRO_DEFAULT and Worlds.introOf('no_existe') == Worlds.INTRO_DEFAULT
+        for _, path in ipairs({ Worlds.INTRO.estelar.top, Worlds.INTRO.estelar.under, Worlds.INTRO.estelar.deco }) do
+            if not pcall(love.graphics.newImage, 'assets/images/' .. path) then ok = false end
+        end
+        check('tarjeta_isla', ok, ('vía estelar → %s (%s); costa → %s; sin fondo → neutra'):format(
+            st == Worlds.INTRO.estelar and 'estelar' or '?', tostring(st and st.enemy), co == Worlds.INTRO.costa and 'costa' or '?'))
+    end
     -- ¡DATE PRISA! (0.5.215, src/audio/Hurry.lua): en el nivel de prueba (límite 75 s), a los 60 s del final suena el
     -- jingle y la música va ×1,15; antes no; al salir, a su velocidad. El límite de ese nivel es el suyo (timeLimit)
     do

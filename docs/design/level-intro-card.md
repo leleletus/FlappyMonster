@@ -40,7 +40,11 @@ Every island has its own **band palette** (the user: the colours must match the 
 tiles, one decoration, one enemy. These live as data next to the island in `src/story/Worlds.lua` (e.g. an
 `intro = { bands = {…}, ground = …, deco = …, enemy = … }` per world) so a new island is one more entry. Free Play
 levels and story levels use the entry of the island the level belongs to; a level of no island (custom, online-only
-maps) uses a neutral default entry (builder picks).
+maps) uses a neutral default entry (builder picks). Built (0.5.229): `Worlds.introOf(id, level)` — a story level takes
+its world's entry; any other level the entry of the ISLAND of its background (`Isles.of(level)`; `cueva` → `cuevas`,
+`volcan` → `final`), so Free Play levels are no longer grey; only a level with no background stays neutral. The star
+island has its own entry (`estelar`: lavender + the Beep Blocks' cyan, star crystal ground, a crystal cluster, the
+Gummy estelar) — the user, 2026-11-14, after seeing Vía Estelar's card in greys with the normal Gummy.
 
 Colours, which decoration and which enemy per island: builder's call within `docs/art/style-rules.md`, matching each
 island's look (Pradera green / gold, Nieve icy blues, final island reds…).

@@ -54,7 +54,7 @@ local SLIDE, DROP_AT, DROP = 0.4, 0.45, 0.2  -- s: entrada de las bandas, cuánd
 function IntroCard.new(level, id)
     if not level or level.flappy then return nil end
     local Worlds = require 'src/story/Worlds'
-    local card = { name = L.localName(level) or '', look = Worlds.introOf(id), plate = Worlds.plate(id) }
+    local card = { name = L.localName(level) or '', look = Worlds.introOf(id, level), plate = Worlds.plate(id) }
     local w = id and Worlds.worldOf(id)
     if w and L.has('story.world.' .. w) then card.island = L('story.world.' .. w) end
     return card

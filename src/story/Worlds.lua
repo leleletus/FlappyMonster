@@ -98,16 +98,28 @@ Worlds.INTRO = {
     final        = { bands = { { 0.62, 0.10, 0.08 }, { 1.00, 0.56, 0.12 } }, shade = { { 0.36, 0.05, 0.04 }, { 0.70, 0.32, 0.04 } },
                      top = 'world/tiles/ash.png', under = 'world/tiles/basalt.png', deco = 'world/decorations/volcano/charred_tree.png', decoScale = 4,
                      enemy = 'crabby_lava' },
+    -- (la ESTELAR — la Vía Estelar, Juego Libre —: lavanda y el cian de los Bloques Beep; su Gummy estelar)
+    estelar      = { bands = { { 0.36, 0.30, 0.62 }, { 0.40, 0.84, 0.92 } }, shade = { { 0.20, 0.16, 0.40 }, { 0.16, 0.52, 0.62 } },
+                     top = 'world/tiles/star_crystal.png', under = 'world/tiles/nebula_rock.png', deco = 'world/decorations/starway/crystal_cluster.png', decoScale = 4,
+                     enemy = 'gummy_star' },
 }
 -- (un nivel de ninguna isla: grises neutros y la pradera)
 Worlds.INTRO_DEFAULT = { bands = { { 0.40, 0.42, 0.48 }, { 0.82, 0.82, 0.86 } }, shade = { { 0.24, 0.25, 0.30 }, { 0.54, 0.54, 0.58 } },
                          top = 'world/tiles/grass.png', under = 'world/tiles/dirt.png', deco = 'world/decorations/meadow/boulder.png', decoScale = 4,
                          enemy = 'gummy' }
 
--- El aspecto de la tarjeta para el nivel `id` (el de su isla, o el neutro)
-function Worlds.introOf(id)
+-- El aspecto de la tarjeta para el nivel `id` (el de su mundo de la historia; si no es de la historia, el de la ISLA
+-- de su fondo — `level`, src/world/level/Isles.lua —; si no, el neutro)
+local ISLE_INTRO = { cueva = 'cuevas', volcan = 'final' }      -- (las islas cuyo nombre de mundo es otro)
+function Worlds.introOf(id, level)
     local w = id and Worlds.worldOf(id)
-    return (w and Worlds.INTRO[w]) or Worlds.INTRO_DEFAULT
+    if w and Worlds.INTRO[w] then return Worlds.INTRO[w] end
+    if level then
+        local isle = require('src/world/level/Isles').of(level)
+        local look = Worlds.INTRO[ISLE_INTRO[isle] or isle]
+        if look and (isle ~= 'pradera' or level.background) then return look end
+    end
+    return Worlds.INTRO_DEFAULT
 end
 
 -- El NÚMERO del nivel `id` en la historia, para la placa de la tarjeta: { w, n } (normal: «w-n»), { w, kind = 'boss' }
