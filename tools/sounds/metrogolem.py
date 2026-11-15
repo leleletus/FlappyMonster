@@ -7,6 +7,8 @@
 #   wave    la onda de cristal que sale por el suelo: siseo brillante que se aleja
 #   hurt    golpe en la lámpara: «clonc» de piedra hueca + cristal que se raja
 #   rise    se levanta y vuelve a flotar: aire que sube y un tic-tac
+#   chime   campanada: suelta una nota de cristal (las campanadas, desde lo alto)
+#   shatter la nota se rompe contra el suelo
 # Desde la raíz del repo:  python3 tools/sounds/metrogolem.py [nombres...]
 import os, sys
 import numpy as np
@@ -83,7 +85,19 @@ def rise():
     return mix(air, tick)
 
 
-ALL = (('wake', wake), ('wind', wind), ('slam', slam), ('wave', wave), ('hurt', hurt), ('rise', rise))
+def chime():
+    """campanada: suelta una nota de cristal (campana aguda + su eco)"""
+    return mix(clink(1760, 0.9) * 0.6, at(clink(2637, 0.7) * 0.3, 0.02), at(clink(1760, 0.6) * 0.15, 0.25))
+
+
+def shatter():
+    """la nota se rompe contra el suelo"""
+    d = 0.4
+    tt = t_(d)
+    return mix(highpass(noise(d), 3000) * env(len(tt), 0.001, 0.06), at(clink(3136, 0.3) * 0.3, 0.005))
+
+
+ALL = (('chime', chime), ('shatter', shatter), ('wake', wake), ('wind', wind), ('slam', slam), ('wave', wave), ('hurt', hurt), ('rise', rise))
 
 if __name__ == '__main__':
     only = set(sys.argv[1:])

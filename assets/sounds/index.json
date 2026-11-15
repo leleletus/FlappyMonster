@@ -166,6 +166,8 @@
     {"id": "golemWave", "file": "assets/sounds/bosses/metrogolem/wave.wav", "gain": 0.52, "range": 2.5},
     {"id": "golemHurt", "file": "assets/sounds/bosses/metrogolem/hurt.wav", "gain": 0.5, "range": 2.5},
     {"id": "golemRise", "file": "assets/sounds/bosses/metrogolem/rise.wav", "gain": 0.72, "range": 2.5},
+    {"id": "golemChime", "file": "assets/sounds/bosses/metrogolem/chime.wav", "gain": 0.52, "range": 3},
+    {"id": "golemShatter", "file": "assets/sounds/bosses/metrogolem/shatter.wav", "gain": 0.71, "range": 2.5},
     {"id": "hopWind", "file": "assets/sounds/enemies/hopper/wind.wav"},
     {"id": "hopJump", "file": "assets/sounds/enemies/hopper/jump.wav"},
     {"id": "hopLand", "file": "assets/sounds/enemies/hopper/land.wav"},

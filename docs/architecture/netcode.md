@@ -219,6 +219,7 @@ v124: an ON/OFF or Beep block that turns solid with someone inside switches anyw
 v125: new type `orbitstars` (Orbiting stars) and the clap spikes' `dir` prop (ceilings and walls); both run on the beat clock, nothing new travels.
 v126: new boss type `metrogolem` (Metronome Golem) with its netPack `{phase, landX, theta0, wavesOn}`; its pendulum runs on the beat clock.
 v127: the Metronome Golem's netPack adds `landSurf, waveL, waveR`; the beat clock follows the tempo of a boss zone's own track (`bpm` in the music index).
+v128: the Metronome Golem's chimes: state `chime` and its falling notes in the netPack.
 
 v123: the star island (`estelar`): new types `gummy_star`, `crabby_star`, `crabbytramp_star`; the Starway tile pack (61-68).
 

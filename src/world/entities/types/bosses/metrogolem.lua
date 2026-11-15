@@ -14,10 +14,17 @@
 --      borde de abajo de la zona: con la zona más alta acababa en los pinchos y subido a una repisa no te alcanzaba —
 --      el usuario —). Aplasta (2) a quien esté debajo. Desde la fase 2, dos ONDAS de cristal por esa superficie (se
 --      saltan; 1 + empujón) que se acaban en sus bordes.
---   3. ATURDIDO ('dazed', 6 pulsos; fase 3, 5): lámpara rajada y estrellitas: lo ÚNICO vulnerable → pisotón 1 /
---      ground pound 2, un golpe por ocasión; luego se levanta ('rise') y vuelve a perseguir.
---   Fases por vida (2/3, 1/3): 2 = el péndulo más abierto, las ondas y un golpe por frase; 3 = el péndulo DOS lados por
---      pulso (corcheas) y más rápido.
+--   3. ATURDIDO ('dazed', 6 pulsos; fase 3, 5): lámpara rajada y estrellitas: vulnerable → pisotón 1 / ground pound
+--      2, un golpe por ocasión; luego se levanta ('rise') y vuela a LO ALTO.
+--   4. LAS CAMPANADAS ('chime', 2 frases; 0.5.233, el usuario: «que no siempre use su péndulo, otro ataque, más
+--      variedad y menos opresivo, y aprovechar más las partes altas del nivel»): se posa en la plataforma más alta y
+--      ancha de la arena (`perch`, buscada en el nivel), guarda el péndulo y cada `NOTE_EVERY` pulsos deja caer una
+--      NOTA de cristal hacia la superficie que tiene el jugador bajo los pies (una diana la marca mientras cae; 1 de
+--      daño). Posado también es VULNERABLE: subiendo hasta él (la plataforma alta) un pisotón le da y lo echa abajo.
+--   Ciclo: péndulo (2 frases; fase 3, 1) → golpe → aturdido → campanadas → péndulo… Fases por vida (2/3, 1/3): 2 = el
+--      péndulo más abierto y las ondas; 3 = el péndulo algo más rápido, golpe cada frase y dos notas a la vez.
+--   0.5.233 también: el péndulo va UN LADO CADA 2 PULSOS (antes uno por pulso, y dos al final: «casi imposible de
+--      esquivar o de cogerle el tiempo», el usuario) y el Gólem persigue más despacio.
 -- Entrada (genérica): baja del techo despacio, se le enciende la lámpara y despierta. Muerte: la genérica de Boss.
 -- Encima flotando o cayendo: solo se rebota (la base). Su cuerpo es sólido de lado.
 -- Arte: tools/art/bosses/make_metrogolem.py (assets/images/bosses/metrogolem/); sonidos: tools/sounds/metrogolem.py.
@@ -33,7 +40,7 @@ local OX, OY = 12, 16                         -- (el punto del arte que va en x,
 
 local G = Entity.extend(Boss, {
     ATTACKS  = { windup = true, slam = true },
-    OPENINGS = { dazed = true },
+    OPENINGS = { dazed = true, chime = true },
     debugColor = { 0.75, 0.7, 1 },
     hitbox = { outerW = 18 / BW, outerH = 23 / BH, innerW = 16 / BW, innerH = 22 / BH },
 })
@@ -42,12 +49,18 @@ G.introLength = 3.4
 G.wantsLevel  = true
 
 -- Ritmo por fase
-local AMP        = { 0.75, 0.92, 0.92 }       -- radianes del péndulo a cada lado
-local RATE       = { 1, 1, 2 }                -- lados por pulso
-local SLAM_EVERY = { 2, 1, 1 }                -- frases flotando entre golpes
+local AMP        = { 0.65, 0.8, 0.8 }         -- radianes del péndulo a cada lado
+local RATE       = { 0.5, 0.5, 0.75 }         -- lados por pulso (0,5 = un lado cada 2 pulsos)
+local SLAM_EVERY = { 2, 2, 1 }                -- frases con el péndulo antes del golpe
 local DAZE_BEATS = { 6, 6, 5 }
-local CHASE      = { 175, 215, 250 }          -- px/s que persigue flotando (el jugador corre a ~266)
-local CHASE_Y    = 170                        -- px/s en altura
+local CHASE      = { 115, 140, 165 }          -- px/s que persigue flotando (el jugador corre a ~266)
+local CHASE_Y    = 115                        -- px/s en altura
+local CHIME_PHRASES = 2                       -- frases posado con las campanadas
+local NOTE_EVERY = 2                          -- pulsos entre notas
+local NOTE_N     = { 1, 1, 2 }                -- notas a la vez
+local NOTE_FLY   = 1.5                        -- pulsos que tarda en caer una nota
+local NOTE_BOX   = 40
+local FLY_SPD    = 650                        -- px/s volando a lo alto
 local AIM_SPD    = 380                        -- px/s que sigue la diana mientras carga
 local ROD        = 6.5 * T                    -- largo del péndulo (centro de la pesa)
 local BOB        = 60                         -- caja de la pesa
@@ -57,6 +70,7 @@ local WIND_UP    = T                          -- lo que sube al cargar
 local WAVE_SPD, WAVE_LIFE, WAVE_W, WAVE_H = 430, 1.7, 40, 34
 G.AMP, G.RATE, G.ROD = AMP, RATE, ROD
 
+G.NOTE_FLY = NOTE_FLY
 local imgs = {}
 local function img(n)
     local i = imgs[n]
@@ -67,7 +81,7 @@ local function img(n)
     end
     return i
 end
-function G.loadAssets() for _, n in ipairs({ 'body_idle', 'body_lit', 'body_wind', 'body_dazed', 'rod', 'bob', 'wave' }) do img(n) end end
+function G.loadAssets() for _, n in ipairs({ 'body_idle', 'body_lit', 'body_wind', 'body_dazed', 'rod', 'bob', 'wave', 'note' }) do img(n) end end
 function G.sizePx() return BW * S, BH * S end
 
 -- ── Datos de la arena ─────────────────────────────────────────────────────────
@@ -104,6 +118,40 @@ local function runOf(level, x, r)
 end
 function G:landY() return (self.landSurf or self:zoneFloor()) - self.outerH / 2 end
 function G:pivot() return self.x, self.y + self.outerH / 2 end
+-- La PERCHA de las campanadas: la superficie más alta (en la mitad de arriba de la zona) de al menos 4 casillas de ancho
+-- con hueco encima; entre las igual de altas, la más cercana al centro. nil = no hay (entonces no hace campanadas)
+function G:findPerch(level)
+    local x0, x1, y0, y1 = self:zoneBounds()
+    local c0, c1 = math.floor(x0 / T) + 2, math.floor(x1 / T) - 1
+    local r0, r1 = math.floor(y0 / T) + 4, math.floor((y0 + y1) / 2 / T)
+    local zc, best = (x0 + x1) / 2, nil
+    for r = r0, r1 do
+        local c = c0
+        while c <= c1 do
+            if landable(level, c, r) and not landable(level, c, r - 1) and level:getDef(c, r - 2).collision ~= 'solid' then
+                local a = c
+                while c + 1 <= c1 and landable(level, c + 1, r) and not landable(level, c + 1, r - 1) do c = c + 1 end
+                if c - a + 1 >= 4 then
+                    local cx = ((a - 1) * T + c * T) / 2
+                    if not best or (r == best.r and math.abs(cx - zc) < math.abs(best.x - zc)) then
+                        best = { x = cx, surf = (r - 1) * T, r = r }
+                    end
+                end
+            end
+            c = c + 1
+        end
+        if best then return best end
+    end
+    return nil
+end
+
+-- Las NOTAS: { id, x0, y0, tx, ty, t0 (pulsos) } — dónde va cada una sale del reloj de compás (igual en el cliente)
+function G:notePos(n, beats)
+    local u = ((beats or self:beats()) - n.t0) / NOTE_FLY
+    if u < 0 or u > 1 then return nil end
+    return n.x0 + (n.tx - n.x0) * u, n.y0 + (n.ty - 18 - n.y0) * u * u, u
+end
+
 -- Adónde quiere ir flotando: encima del jugador más cercano, a la altura justa para que la pesa le pase por el cuerpo
 function G:chaseTarget(level)
     local x0, x1, y0, y1 = self:zoneBounds()
@@ -124,14 +172,10 @@ end
 function G:pendulum()
     local st, t = self.state, self.deadTimer or 0
     local bs = beatSec(self.levelRef)
-    if st == 'hover' then return self:swingAngle(), 1 end
+    if st == 'hover' then return self:swingAngle(), math.min(1, t / bs) end      -- (lo saca en un pulso)
     if st == 'windup' then
         local u = math.min(1, t / bs)                                      -- (en un pulso lo guarda)
         return (self.theta0 or 0) * (1 - u), 1 - u
-    end
-    if st == 'rise' then
-        local u = math.min(1, t / (RISE_BEATS * bs))
-        return self:swingAngle() * u, u
     end
     return 0, 0
 end
@@ -147,6 +191,7 @@ function G:initBoss()
     self.phase = 1
     self.vx, self.vy = 0, 0
     self.landX, self.theta0, self.phr = self.x, 0, 0
+    self.notes, self.noteId = {}, 0
 end
 function G:bossPhase() return self.phase or 1 end
 function G:phaseFor(hp)
@@ -164,11 +209,13 @@ function G:hoverY()
     local _, _, y0, y1 = self:zoneBounds()
     return (y0 + y1) / 2 - 2 * T
 end
-function G:isVulnerable() return self:isActive() and self.state == 'dazed' end
+function G:isVulnerable() return self:isActive() and (self.state == 'dazed' or self.state == 'chime') end
 function G:canBeKnocked() return false end
 function G:onDamaged(n, kind)
     self.phase = self:phaseFor(self.hp)
-    if self.state == 'dazed' and not self:isDying() then self:enter('rise'); Sound.play('golemRise') end
+    if self:isDying() then return end
+    if self.state == 'dazed' then self:enter('rise'); Sound.play('golemRise')
+    elseif self.state == 'chime' then self:enter('hover'); self.phr = 0; Sound.play('golemRise') end   -- (lo echan abajo)
 end
 
 -- ── Golpes a los jugadores ────────────────────────────────────────────────────
@@ -208,6 +255,10 @@ function G:getHazardBoxes()
     local out = {}
     local bx, by = self:bobPos()
     if bx then out[#out + 1] = { x = bx - BOB / 2, y = by - BOB / 2, w = BOB, h = BOB, effect = 'hurt', dmg = 1, part = 'pendulum' } end
+    for _, n in ipairs(self.notes or {}) do
+        local x, y = self:notePos(n)
+        if x then out[#out + 1] = { x = x - NOTE_BOX / 2, y = y - NOTE_BOX / 2, w = NOTE_BOX, h = NOTE_BOX, effect = 'hurt', dmg = 1, part = 'note' } end
+    end
     local a, b = self:waveXs()
     local fy = self.landSurf or self:zoneFloor()
     for _, x in ipairs({ a or false, b or false }) do
@@ -259,6 +310,16 @@ function G:updateBoss(dt, level)
         if pa then local ob = pa:getOuterBounds(); ref = math.max(ref, ob.y + ob.h - 16) end
         self.landSurf = self:surfaceBelow(level, self.landX, ref)
     end
+    -- las notas que caen (en cualquier estado: las que quedan en el aire acaban de caer)
+    local keep = {}
+    for _, n in ipairs(self.notes) do
+        if beats - n.t0 < NOTE_FLY then keep[#keep + 1] = n
+        else
+            Sound.play('golemShatter')
+            Entity.emitFx('ice_shatter', n.tx, n.ty - 10)
+        end
+    end
+    self.notes = keep
     if st == 'hover' then
         local tx, ty = self:chaseTarget(level)
         self.x = toward(self.x, tx, CHASE[p] * dt)
@@ -307,11 +368,48 @@ function G:updateBoss(dt, level)
         self.y = self:landY()
         if t >= self:downTime(DAZE_BEATS[p] * bs) then self:enter('rise'); Sound.play('golemRise') end
     elseif st == 'rise' then
-        local tx, ty = self:chaseTarget(level)
-        self.x = toward(self.x, tx, CHASE[p] * dt)
-        self.y = toward(self.y, math.min(ty, self:landY() - 2 * T), CHASE_Y * 3 * dt)
-        if t >= RISE_BEATS * bs then self:enter('hover'); self.phr = 0 end
+        -- se levanta y VUELA A LO ALTO (a su percha); sin percha, vuelve a perseguir
+        self.perch = self.perch or self:findPerch(level) or false
+        if self.perch then
+            local px, py = self.perch.x, self.perch.surf - self.outerH / 2
+            self.x = toward(self.x, px, FLY_SPD * dt)
+            self.y = toward(self.y, py, FLY_SPD * 0.8 * dt)
+            if math.abs(self.x - px) < 2 and math.abs(self.y - py) < 2 then
+                self.x, self.y = px, py
+                self.chime0 = math.floor(beats) + 1
+                self:enter('chime')
+            end
+        else
+            local tx, ty = self:chaseTarget(level)
+            self.x = toward(self.x, tx, CHASE[p] * dt)
+            self.y = toward(self.y, math.min(ty, self:landY() - 2 * T), CHASE_Y * 3 * dt)
+            if t >= RISE_BEATS * bs then self:enter('hover'); self.phr = 0 end
+        end
+    elseif st == 'chime' then
+        -- posado: una nota cada NOTE_EVERY pulsos hacia donde pisa el jugador
+        self.y = self.perch.surf - self.outerH / 2
+        local a, b = math.floor(prevBeats), math.floor(beats)
+        for n = a + 1, b do
+            if n >= self.chime0 and (n - self.chime0) % NOTE_EVERY == 0 then self:dropNotes(level, n) end
+        end
+        if beats - self.chime0 >= CHIME_PHRASES * BeatClock.BEATS then self:enter('hover'); self.phr = 0 end
     end
+end
+
+-- Deja caer NOTE_N[fase] notas en el pulso n: hacia el jugador más cercano (y, la segunda, a 2,5 casillas de él)
+function G:dropNotes(level, n)
+    local pa = self:nearestPlayer(level)
+    if not pa then return end
+    local x0, x1 = self:zoneBounds()
+    local ob = pa:getOuterBounds()
+    local offs = { 0, (pa.x > (x0 + x1) / 2) and -2.5 * T or 2.5 * T }
+    for i = 1, NOTE_N[self:ph()] do
+        local tx = clamp(pa.x + offs[i], x0 + T, x1 - T)
+        local ty = self:surfaceBelow(level, tx, ob.y + ob.h - 16)
+        self.noteId = (self.noteId or 0) + 1
+        self.notes[#self.notes + 1] = { id = self.noteId, x0 = self.x, y0 = self.y + self.outerH / 2, tx = tx, ty = ty, t0 = n }
+    end
+    Sound.play('golemChime')
 end
 
 -- ── Entrada ───────────────────────────────────────────────────────────────────
@@ -336,14 +434,30 @@ end
 
 -- ── Red ───────────────────────────────────────────────────────────────────────
 -- { fase, x de la caída, ángulo al guardar el péndulo ·1000, ondas, superficie de la caída, bordes de las ondas }
+-- … + nNotas, { id, x0, y0, tx, ty, t0·100 }…
+local NB = 7
 function G:netPackExtra()
-    return { self.phase or 1, math.floor(self.landX or self.x), math.floor((self.theta0 or 0) * 1000), self.wavesOn or 0,
-             math.floor(self.landSurf or self:zoneFloor()), math.floor(self.waveL or 0), math.floor(self.waveR or 0) }
+    local out = { self.phase or 1, math.floor(self.landX or self.x), math.floor((self.theta0 or 0) * 1000), self.wavesOn or 0,
+                  math.floor(self.landSurf or self:zoneFloor()), math.floor(self.waveL or 0), math.floor(self.waveR or 0),
+                  #(self.notes or {}) }
+    for _, n in ipairs(self.notes or {}) do
+        out[#out + 1] = n.id; out[#out + 1] = math.floor(n.x0); out[#out + 1] = math.floor(n.y0)
+        out[#out + 1] = math.floor(n.tx); out[#out + 1] = math.floor(n.ty); out[#out + 1] = math.floor(n.t0 * 100 + 0.5)
+    end
+    return out
 end
+local readList
 function G:netApplyExtra(a, b, f)
     if type(b[1]) ~= 'number' then return end
     self.phase, self.landX, self.theta0, self.wavesOn = b[1], b[2], b[3] / 1000, b[4]
     self.landSurf, self.waveL, self.waveR = b[5], b[6], b[7]
+    readList = readList or require('src/world/entities/base/NetList').read
+    self.notes = {}
+    if type(b[NB + 1]) == 'number' then
+        for _, e in ipairs(readList(b, NB + 1, 6)) do
+            self.notes[#self.notes + 1] = { id = e[1], x0 = e[2], y0 = e[3], tx = e[4], ty = e[5], t0 = e[6] / 100 }
+        end
+    end
 end
 
 -- ── Dibujo ────────────────────────────────────────────────────────────────────
@@ -364,6 +478,19 @@ function G:render(camX, camY)
         local now = love.timer.getTime()
         love.graphics.setColor(1, 0.45, 0.5, 0.6 + 0.4 * math.min(1, t / 0.4))
         BossFx.target(now, math.floor(self.landX - camX), math.floor((self.landSurf or self:zoneFloor()) - camY - 16), 8, 8)
+    end
+    -- las notas que caen y su diana
+    if self.notes and #self.notes > 0 then
+        local nimg = img('note')
+        for _, n in ipairs(self.notes) do
+            local x, y, u = self:notePos(n, beats)
+            if x then
+                love.graphics.setColor(0.75, 0.9, 1, 0.5 + 0.5 * u)
+                BossFx.target(love.timer.getTime(), math.floor(n.tx - camX), math.floor(n.ty - camY - 12), 6, 6)
+                love.graphics.setColor(1, 1, 1, 1)
+                love.graphics.draw(nimg, math.floor(x - camX), math.floor(y - camY), 0, 5, 5, nimg:getWidth() / 2, nimg:getHeight() / 2)
+            end
+        end
     end
     -- el péndulo (detrás del cuerpo)
     local bx, by, a, k = self:bobPos()

@@ -1,8 +1,10 @@
 -- tools/tests/metrogolem_rules — reglas del GÓLEM METRÓNOMO (types/bosses/metrogolem.lua) caso a caso, en su nivel
 -- real (assets/levels/santuario_del_compas.json), con el reloj de compás del nivel (150 BPM):
---   pendulo   en cada pulso la pesa está en un extremo y a mitad de pulso abajo; tocarla daña (hurt); lejos, nada; en
---             la fase 3 va dos lados por pulso
---   persigue  flotando va a por el jugador por toda la arena: en 7 s se le pone encima (en x) y la pesa, abajo, le pasa
+--   pendulo   la pesa va de un extremo al otro en 2 pulsos (abajo entre medias); tocarla daña (hurt); lejos, nada; en
+--             la fase 3, un lado cada 1,33 pulsos
+--   campanadas tras el aturdido vuela a la plataforma alta y se posa; deja caer notas que caen en la superficie del
+--             jugador y dañan; posado, un pisotón le da y lo echa abajo (vuelve a perseguir)
+--   persigue  flotando va a por el jugador por toda la arena: en 12 s se le pone encima (en x) y la pesa, abajo, le pasa
 --             a la altura del cuerpo — en el suelo y subido a una repisa —
 --   plataforma  cae donde está el jugador: en la repisa, en el suelo (también debajo de una repisa) o en la plataforma
 --             alta de Bloques Beep — nunca al fondo de la zona —
@@ -86,12 +88,13 @@ function cases.pendulo()
     local level, es, g = arena()
     local parts, ok = {}, true
     local function want(c, m) parts[#parts + 1] = m .. (c and '' or ' ✗'); ok = ok and c end
+    g.deadTimer = 5                                           -- (ya ha sacado el péndulo)
     local px, py = g:pivot()
     at(level, 8); local x0, y0 = g:bobPos()
-    at(level, 9); local x1 = g:bobPos()
-    at(level, 8.5); local xm, ym = g:bobPos()
-    want(x0 > px + 3 * T and x1 < px - 3 * T, ('extremos en el pulso (%d, %d)'):format(x0 - px, x1 - px))
-    want(math.abs(xm - px) < 2 and ym > y0 + T, 'a mitad de pulso, abajo')
+    at(level, 10); local x1 = g:bobPos()
+    at(level, 9); local xm, ym = g:bobPos()
+    want(x0 > px + 3 * T and x1 < px - 3 * T, ('un lado cada 2 pulsos (%d, %d)'):format(x0 - px, x1 - px))
+    want(math.abs(xm - px) < 2 and ym > y0 + T, 'entre medias, abajo')
     -- daña al tocarla
     local pa = PlayerAdventure:new(xm, ym)
     level.players = { pa }
@@ -100,8 +103,8 @@ function cases.pendulo()
     pa.x, pa.y = xm + 7 * T, ym
     want(Interactions.check(pa, g) == nil, 'lejos, nada')
     g.phase = 3
-    at(level, 8.5); local x3 = g:bobPos()
-    want(x3 < px - 3 * T, 'fase 3: dos lados por pulso (a mitad de pulso, en el otro extremo)')
+    at(level, 8 + 4 / 3); local x3 = g:bobPos()
+    want(x3 < px - 3 * T, 'fase 3: algo más rápido (un lado cada 1,33 pulsos)')
     check('pendulo', ok, table.concat(parts, ' · '))
 end
 
@@ -136,7 +139,7 @@ function cases.persigue()
         for _ = 1, 30 do pa:update(DT, level) end
         local px, py = pa.x, pa.y
         g.phr = -99                                                -- (sin golpes: solo persigue)
-        for _ = 1, 420 do
+        for _ = 1, 720 do
             level.players = { pa }
             BeatClock.update(level, DT, nil)
             pa.x, pa.y, pa.vx, pa.vy, pa.invT = px, py, 0, 0, 5
@@ -176,6 +179,44 @@ function cases.plataforma()
         parts[#parts + 1] = ('%s: pies %d / cara %d%s'):format(spot[3], math.floor(feet), want, good and '' or ' ✗')
     end
     check('plataforma', ok, table.concat(parts, ' · '))
+end
+
+function cases.campanadas()
+    local level, es, g = arena()
+    local parts, ok = {}, true
+    local function want(c, m) parts[#parts + 1] = m .. (c and '' or ' ✗'); ok = ok and c end
+    local pa = PlayerAdventure:new((85 - 0.5) * T, 25 * T - 60)          -- (en el ladrillo: no se cae al cambiar)
+    level.players = { pa }
+    for _ = 1, 30 do pa:update(DT, level) end
+    local px, py = pa.x, pa.y
+    g:enter('rise')
+    local perched, note, hurt
+    for _ = 1, 900 do
+        level.players = { pa }
+        BeatClock.update(level, DT, nil)
+        pa.x, pa.y, pa.vx, pa.vy, pa.invT = px, py, 0, 0, 5
+        g:update(DT, level)
+        if g.state == 'chime' then perched = perched or { g.x, g.y + g.outerH / 2 } end
+        for _, n in ipairs(g.notes or {}) do
+            local x, y, u = g:notePos(n)
+            if x and u > 0.95 and not note then
+                note = n
+                local q = PlayerAdventure:new(x, y)
+                hurt = Interactions.check(q, g)
+            end
+        end
+        if note and perched then break end
+    end
+    want(perched and math.abs(perched[2] - 13 * T) < 2, ('posado en la plataforma alta (pies %s)'):format(perched and math.floor(perched[2]) or '-'))
+    want(note and math.abs(note.tx - px) < 2 and math.abs(note.ty - 25 * T) < 2, ('la nota va a sus pies (%s, %s)'):format(
+        note and math.floor(note.tx - px) or '-', note and math.floor(note.ty) or '-'))
+    want(hurt == 'hurt', 'la nota daña (' .. tostring(hurt) .. ')')
+    -- posado, vulnerable: un pisotón
+    if g.state ~= 'chime' then g:enter('chime') end
+    local hp = g.hp
+    g:stomp()
+    want(g.hp == hp - 1 and g.state == 'hover', ('pisotón posado: %d → %d, %s'):format(hp, g.hp, g.state))
+    check('campanadas', ok, table.concat(parts, ' · '))
 end
 
 function cases.inmune()
@@ -276,7 +317,7 @@ end
 
 function love.load(arg)
     local only = os.getenv('CASE')
-    for _, n in ipairs({ 'pendulo', 'persigue', 'golpe', 'plataforma', 'inmune', 'ondas', 'fases', 'tempo', 'red' }) do
+    for _, n in ipairs({ 'pendulo', 'persigue', 'golpe', 'plataforma', 'campanadas', 'inmune', 'ondas', 'fases', 'tempo', 'red' }) do
         if not only or only == n then
             local ok, err = xpcall(cases[n], debug.traceback)
             if not ok then check(n, false, 'error: ' .. tostring(err)) end

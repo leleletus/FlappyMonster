@@ -5,7 +5,7 @@
 # (pirámide truncada), dos ojos, una ranura con marcas por delante, dos puños de piedra y la LÁMPARA dorada encima que
 # se enciende en el pulso. El PÉNDULO (varilla + pesa) cuelga por debajo y se dibuja aparte (gira).
 #   body_idle / body_lit / body_wind / body_dazed    el cuerpo (24x28)
-#   rod.png (2x56) · bob.png (12x12) · wave.png (8x6: la onda del golpe)
+#   rod.png (2x56) · bob.png (12x12) · wave.png (8x6: la onda del golpe) · note.png (8x11: la nota de las campanadas)
 #   Desde la raíz:  /usr/bin/python3 tools/art/bosses/make_metrogolem.py [--apply]
 # Sin --apply: vista previa en /home/mtvemo/FlappyMonster_pruebas/metrogolem/vista_previa.png
 import os, sys
@@ -122,12 +122,24 @@ def wave():
     return im
 
 
+def note():
+    """la NOTA de cristal que deja caer en las campanadas (8x11): una corchea"""
+    rows = ['....oo..', '....owo.', '....olwo', '....ol.o', '....ol..', '....ol..', '.ooool..', 'owwlll..', 'owllld..',
+            'olllddo.', '.ooooo..']
+    pal = {'o': O, 'w': CRY[2], 'l': CRY[1], 'd': CRY[0]}
+    im = Image.new('RGBA', (8, 11), (0, 0, 0, 0))
+    for y, r in enumerate(rows):
+        for x, ch in enumerate(r):
+            if ch != '.': im.putpixel((x, y), pal[ch])
+    return im
+
+
 def up(im, k=S): return im.resize((im.width * k, im.height * k), Image.NEAREST)
 
 
 def build():
     return {'body_idle': body('idle'), 'body_lit': body('lit'), 'body_wind': body('wind'), 'body_dazed': body('dazed'),
-            'rod': rod(), 'bob': bob(), 'wave': wave()}
+            'rod': rod(), 'bob': bob(), 'wave': wave(), 'note': note()}
 
 
 def preview(ims):
