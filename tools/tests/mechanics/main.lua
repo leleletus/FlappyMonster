@@ -2578,7 +2578,7 @@ end
 
 -- RACHA DE PISOTONES (0.5.220, src/world/systems/StompChain.lua): sin tocar el suelo, cada pisotón multiplica los puntos
 -- del enemigo ×1, ×2, ×4… ×64; del 8º en adelante, una vida; los jefes ni cuentan ni la cortan; tocar el suelo, el agua
--- o un golpe la cortan
+-- o un golpe la cortan; el sonido del pisotón sube la escala mayor con la racha
 function cases.racha()
     local okM, SC = pcall(require, 'src/world/systems/StompChain')
     if not okM then check('racha', false, 'falta src/world/systems/StompChain.lua'); return end
@@ -2603,8 +2603,26 @@ function cases.racha()
     pa:hurt(1, { what = 'gummy', part = 'body' })
     local p2 = SC.award(pa, g, 30)
     local okHurt = p2 == 30
-    check('racha', okSeq and okGround and okHurt,
-        ('sin tocar el suelo: %s · al tocar el suelo vuelve a ×1=%s · un golpe la corta=%s'):format(seq, tostring(okGround), tostring(okHurt)))
+    -- LA ESCALERITA (0.5.235): el sonido del pisotón de un enemigo de verdad (Entity:stomp, con quien le cae encima en
+    -- lastHitter) sube un grado de la escala mayor por pisotón de la racha; el 8º (la vida) en la octava, y ahí se queda
+    local realS, pitches = Sound, {}
+    Sound = setmetatable({ play = function(n, p) if n == 'enemyExplode' then pitches[#pitches + 1] = p or 1 end end }, { __index = realS })
+    pa.stompChain, pa.onGround = 0, false
+    for _ = 1, 9 do
+        local _, es = room(12, 8, {}, { { type = 'gummy', col = 6, row = 7 } })
+        es[1].lastHitter = pa
+        es[1]:stomp()
+        SC.award(pa, es[1], 30)
+    end
+    Sound = realS
+    local semis, okPitch = {}, #pitches == 9
+    for k, p in ipairs(pitches) do
+        semis[k] = math.floor(12 * math.log(p) / math.log(2) + 0.5)
+    end
+    okPitch = okPitch and table.concat(semis, ',') == '0,2,4,5,7,9,11,12,12'
+    check('racha', okSeq and okGround and okHurt and okPitch,
+        ('sin tocar el suelo: %s · al tocar el suelo vuelve a ×1=%s · un golpe la corta=%s · tono del pisotón (semitonos) %s'):format(
+         seq, tostring(okGround), tostring(okHurt), table.concat(semis, ',')))
 end
 
 function cases.puffer_cycle()

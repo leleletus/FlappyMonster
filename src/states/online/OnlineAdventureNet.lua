@@ -188,7 +188,7 @@ function OnlineAdventureState:_onSnapshot(snap)
                 Sound.play('dies2')
             end
             -- Pisotón que solo detectó el servidor: su sonido
-            if r.missedBounce then Sound.play('enemyExplode') end
+            if r.missedBounce then Sound.play('enemyExplode', require('src/world/systems/StompChain').pitch(self.localPa)) end
             -- Golpe que solo vio el servidor (un jefe nos cayó encima)
             if r.hpDrop then Sound.play('dies') end
             self:_syncDrownAudio()

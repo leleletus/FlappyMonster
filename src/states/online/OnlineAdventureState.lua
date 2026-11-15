@@ -39,6 +39,7 @@ local RhythmDuel           = require 'src/ui/RhythmDuel'
 local AutoScroll           = require 'src/world/systems/AutoScroll'
 local Floods               = require 'src/world/systems/Floods'
 local PointAreas           = require 'src/world/systems/PointAreas'
+local StompChain           = require 'src/world/systems/StompChain'
 local Sim                  = require 'src/world/systems/Sim'
 local BeatClock            = require 'src/world/systems/BeatClock'
 local StartCountdown       = require 'src/world/systems/StartCountdown'
@@ -458,7 +459,11 @@ function OnlineAdventureState:_checkLocalBounce()
                 self.localBounceCooldown[idx] = 0.3
                 self.predictor:recordBounce(bvy, dir, soft)
                 -- Los jefes suenan con su propio golpe (lo manda el servidor)
-                if not er.def.boss and result ~= 'bounce' then Sound.play('enemyExplode') end
+                if not er.def.boss and result ~= 'bounce' then
+                    -- (la escalerita de la racha: el tono y la cuenta solo para el sonido; puntos y vidas los da el servidor)
+                    Sound.play('enemyExplode', StompChain.pitch(pa))
+                    StompChain.award(pa, er, result == 'stomp' and bdir or nil)
+                end
                 if er.state == 'frozen' then Sound.play('cryoFree') end       -- (le rompió el hielo)
                 return
             end

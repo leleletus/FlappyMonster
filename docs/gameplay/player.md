@@ -184,8 +184,14 @@ stomp on, each gives ONE LIFE instead (max 99). Bosses and things that give no p
 landing, entering water, dying or getting hurt (`hurt` sets `stompChain = 0`) break it (`StompChain.update`, at the
 start of every player step). The popup shows the multiplier ("x4 +120!") or `hud.plus_life`. Single player
 (`AdventureState` stomp callback) and the server (`server/srv/sim.lua`: points, `pa.lives`, a `pickup life` event, the
-`score` event carries `mult`); lives gained follow golden rule 7 (saved only when the level is finished). Tests:
-`mechanics` `racha`, `story_flow` `racha`.
+`score` event carries `mult`); lives gained follow golden rule 7 (saved only when the level is finished).
+
+The stomp sound climbs with the chain (0.5.235, the user: "so the little staircase is obvious"): each stomp plays
+`enemyExplode` one step higher on a major scale (`StompChain.SCALE`, semitones 0 2 4 5 7 9 11 12), the 8th stomp — the
+one that gives the life — on the octave, later ones stay there. `StompChain.pitch(pa)` is read before `award` by
+`Entity:stomp` (via `lastHitter`; SP and server, whose sound event carries the pitch to the other clients) and by the
+online client's stomp prediction, which also keeps its own `stompChain` count only for this sound. Tests:
+`mechanics` `racha` (also checks the pitches), `story_flow` `racha`.
 
 ## Pushes and special states
 

@@ -7,9 +7,13 @@
 --   StompChain.award(pa, e, pts) → puntos que da, el multiplicador, true si da una vida (puntos 0)
 --   StompChain.update(pa)        cada paso del jugador (la corta en el suelo, en el agua o muriendo)
 --   StompChain.reset(pa)         (un golpe)
+--   StompChain.pitch(pa)         tono del sonido del pisotón que va a caer (0.5.235, el usuario: que se oiga la escalerita)
 local StompChain = {}
 
 StompChain.MULTS = { 1, 2, 4, 8, 16, 32, 64 }
+-- LA ESCALERITA: cada pisotón de la racha sube un grado de la escala mayor (semitonos sobre el tono normal); el que da
+-- la vida cae en la octava y los siguientes se quedan arriba
+StompChain.SCALE = { 0, 2, 4, 5, 7, 9, 11, 12 }
 
 function StompChain.award(pa, e, pts)
     pts = pts or 0
@@ -26,5 +30,12 @@ function StompChain.update(pa)
 end
 
 function StompChain.reset(pa) pa.stompChain = 0 end
+
+-- (antes de award: el pisotón que suena es el n.º stompChain + 1; sin jugador, el tono normal)
+function StompChain.pitch(pa)
+    local sc = StompChain.SCALE
+    local i = math.min(((pa and pa.stompChain) or 0) + 1, #sc)
+    return 2 ^ (sc[i] / 12)
+end
 
 return StompChain

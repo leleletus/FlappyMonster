@@ -1315,14 +1315,14 @@ end
 
 -- Le rompen el bloque de hielo (pisotón, ground pound): muere si se le puede
 -- pisotear; si no (pez globo...), solo se descongela
-function Entity:shatter()
+function Entity:shatter(pitch)
     if self.state ~= 'frozen' then return end
     if self.props.stompable then
         self.flying = self.frozenFlying
         self.state, self.deadTimer = 'dead', 0
         self.vx, self.vy = 0, 0
         Sound.play('cryoFree')
-        Sound.play('enemyExplode')
+        Sound.play('enemyExplode', pitch)
         Entity.emitFx('ice_shatter', self.x, self.y)
     else
         self:thaw()
@@ -1332,14 +1332,16 @@ end
 -- ── Pisotón ───────────────────────────────────────────────────────────────────
 function Entity:stomp()
     if self.state == 'dead' then return end
-    if self.state == 'frozen' then return self:shatter() end
+    -- (el tono sube con la racha de pisotones de quien le cae encima: la escalerita, systems/StompChain)
+    local pitch = require('src/world/systems/StompChain').pitch(self.lastHitter)
+    if self.state == 'frozen' then return self:shatter(pitch) end
     if self.stompProof or not self:canBeStomped() then return end   -- (a prueba de pisotones: Interactions.check)
     self.state     = 'dead'
     self.deadTimer = 0
     self.vx        = 0
     self.vy        = 0
     self:onStomp()
-    Sound.play('enemyExplode')
+    Sound.play('enemyExplode', pitch)
     require('src/world/systems/Noise').emit(self.x, self.y, require('src/world/systems/Noise').R.kill)   -- (un enemigo que muere se oye)
 end
 
