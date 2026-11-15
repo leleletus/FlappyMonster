@@ -129,7 +129,9 @@ if it should exist as a mini block, add it to `SubTiles.KINDS`. Then
   events and the push-out of whoever is inside (`Level:pushOutOfCell`) are the shared code. No links in the editor (the Conectar
   tool ignores them).
 - **The beat clock** `src/world/systems/BeatClock.lua` (`level.beat`, built by `Level.fromData` only when the level has
-  Beep Blocks; JSON optional `"beat": {"period": 4, "start": "pink"|"cyan"}`). Its `t` IS the level music's position:
+  Beep Blocks; JSON optional `"beat": {"period": 4, "start": "pink"|"cyan"}`; `period` = the music's phrase of 8 beats,
+  8 × 60 / BPM: 4 for `via_estelar`, 3.4285714 for `estelar_pulsar`, 3.8095238 for `estelar_bonus`, 3.2 for
+  `estelar_boss` — the Starway music family, [music-catalog](../audio/music-catalog.md)). Its `t` IS the level music's position:
   it starts with the music (single player: entering the level; online: tick 0, as the clients' synced music), keeps
   running in the intro card, countdown and hit-stop, goes ×`Hurry.RATE` once the hurry jingle ends (`Hurry.rateAt`:
   a pure function of the time left, so the server computes the same), and goes back to 0 when the music restarts from

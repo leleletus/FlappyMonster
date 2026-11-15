@@ -1016,3 +1016,42 @@ The user's verdict is pending.
   Left alone: the accents. On-beat vs off-beat onset strength is 0.97 (now 0.95; `map_flappy` 0.96, others 1.17-1.55) because the rim is on beat 4 only; that is the composition, and it was not what the numbers pointed at. If the track still feels loose, try the rim on beats 2 and 4 in `TEXT` (phrases A, B, V; D and A‴ already have it).
 - **Fix (`tutorial.py` only, two lines of substance):** `SWING = 0` (the mapping stays, so a swing can be tried again by changing that number), and this track's driver runs at 63 Hz (`F.FRAME_S = 700` samples), so a 16th is exactly 9 frames and every chip note starts on the same sample as the drums (a `comprueba()` assert keeps it so). Same notes, MIDI byte-identical.
 - Result: all 11 chip voices 0.0 ms from the 16th grid (were up to 57); the "and" on the grid; intro 4.000 + loop 64.000 bars; loop end → start jump 0.013 (was 0.25); master −11.6 LUFS, loop −11.4; `levels.py` volume 0.64 → −15.3 in game (unchanged). **Verified by numbers only: nobody has listened to the fix.**
+
+## The Starway family (`tools/music/estelar.py`: `via_estelar` remaster, `estelar_pulsar`, `estelar_bonus`, `estelar_boss`; 2026-11-15)
+
+- **Before:** `via_estelar` (2026-11-14, `via_estelar.py`), the beep-block level's music. The user first rejected two themes as "disordered,
+  unpredictable"; the simple, repeated, consonant variant B (flute) was installed. Then (2026-11-15): good, but for a long level
+  **repetitive and boring** — it lacks variety and excitement. The same brief asked for three more tracks in the same family: a faster
+  parkour level ("Púlsar", 140), a bonus (126) and a boss for a beep-block arena (150, the boss is not designed yet).
+- **What was kept:** the beep contract (see the catalog row), the clarity (2-bar phrases, question / answer, chord tones on long notes,
+  passing notes by step), the cast (GM flute + glockenspiel over the chip) and, in the remaster, the theme note for note (it is section A).
+- **What makes them develop:** every track has sections that grow by layers, a new chorus or a heroic part, a breakdown about 4 dB
+  quieter, a build (kick on every beat, an arpeggio that climbs, a tom roll) and a climax that is the loudest section; each section
+  enters its own way (tom fill, stop on beats 7-8, kick pickup, roll). Remaster: a new chorus on I-V-vi-IV with a "ta-TAA ta-ta TAAA"
+  hook, the llamada on glockenspiel in the breakdown, and the final chorus a whole tone up (E major) with saw, glockenspiel and a
+  countermelody; the way back is the deceptive B7 → C (♭VI, the one dark turn) → D → G A7 → the seam in D. Púlsar: B minor with the
+  chorus in D major, the PULSAR (an N163 bell ticking in 16ths with 3+3+2 accents), a galloping bass, the pulse lead in 3+3+2, the flute
+  taking the melody in the build and the breakdown, and in the climax the flute as a countermelody under the chorus. Bonus: G major,
+  a jumping pulse tune with a 16th anticipation, the flute answers and closes with the llamada in G, and an 8-bar percussion solo of its
+  own ("estelar": the crystal asks in 3+3+2, the toms answer; then together, a tom run, the crystal climbs). Boss: D minor, slap bass,
+  boss kit, a dotted heroic theme (pulse + saw), a heroic part in the relative major with the Neapolitan E♭ → A7, the crystal alone in
+  the breakdown, a build and a climax; a thinner 4-bar way back so it never cuts from the peak to the opening.
+- **Two mixing fixes found by the checker:** hats on the beat and the 2nd/3rd harmonics of held pulse notes polluted the beep band
+  (a beep measured 119 ms long and 22 % harmonics in the first bonus render) → no hats on the beat, the solo's crystal never sounds on
+  beats 6-8, and three narrow notches in the mix (2290 Hz ± 75, 4580 ± 60, 6870 ± 60); the impact's noise click made the loop seam
+  jump → the impact (kick + crash) fades in over 0.7 ms.
+- **Numbers (verified by numbers only: NOT listened to):**
+  - `via_estelar` R: 152 s, −11.5 LUFS, volume 0.71; melody chord tones 82 %, by step 48 % (over the 20-44 of the approved melodies:
+    the original theme and the neighbour-note hook), repeated 1 %, long 41 %; flute 15 % of the energy. Sections A1 −16.3 · A2 −16.0 ·
+    B −15.7 · C −15.1 · D −19.6 · E −15.7 · F −14.5 · K −16.2 dB.
+  - `estelar_pulsar`: 123.4 s, −11.0 LUFS, volume 0.67; 82 / 44 / 0 / 36 %; pulse lead 15 %, pulsar 8 %. P −15.6 · V −15.8 · B −14.9 ·
+    C −14.7 · D −19.0 · F −14.1 dB.
+  - `estelar_bonus`: 61 s, −11.0 LUFS, volume 0.67; 85 / 43 / 2 / 30 %; lead 16 %. A −15.2 · B −14.3 · S −16.7 · A2 −14.7 dB.
+  - `estelar_boss`: 102.4 s, −10.6 LUFS, volume 0.67 (boss target −14); 85 / 39 / 1 / 39 %; lead 16 %. A −15.2 · B −14.2 · C −18.7 ·
+    D −14.6 · E −13.6 · R −15.8 dB.
+  - All four: no loose non-chord note, no bass or countermelody clash, and `bloques_beep_check.py` TODO OK (tempo, 3 beeps per phrase
+    on beats 6-8 within 0.8-1.5 ms, ~72 ms, harmonics ≤ 2 %, impacts, quiet section −4.0 dB, climax the loudest, seam).
+- **To judge by ear:** whether the remaster's new chorus and the key lift feel like the same song; the Púlsar bell's level and the
+  galloping triangle at 140; the bonus solo; the boss's slap bass under the pulse lead; the notches (they should be inaudible).
+- **For the levels:** a level using Púlsar, the bonus or the boss must set `"beat": {"period": …}` to its phrase (3.4285714 · 3.8095238 ·
+  3.2 s); no level uses them yet.
