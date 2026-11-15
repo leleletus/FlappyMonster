@@ -1,5 +1,5 @@
 -- src/fx/Edge.lua
--- EL BORDE DE CONTRASTE de los personajes (docs/design/entity-edge-shader.md): un filo claro u oscuro que separa al
+-- EL BORDE DE CONTRASTE de los personajes (docs/art/contrast-edge.md): un filo claro u oscuro que separa al
 -- jugador, a los enemigos, a los jefes y a los objetos de lo que tienen detrás, solo donde se pierden. Dos modos
 -- (ajuste BORDE, pestaña AYUDAS; por defecto según el aparato):
 --   'shader'  los personajes se dibujan en su propio lienzo; por cada uno se mira qué parte de su contorno se pierde
@@ -49,7 +49,9 @@ function Edge.mode()
     if m ~= 'shader' and m ~= 'simple' then
         m = Edge.defaultMode(love.system and love.system.getOS() or 'Linux')
     end
-    if m == 'shader' and not Shaders.get('edge_composite') then m = 'simple' end
+    if m == 'shader' and not (Shaders.get('edge_composite') and Shaders.get('edge_measure') and Shaders.get('edge_decide')) then
+        m = 'simple'
+    end
     return m
 end
 
@@ -194,19 +196,32 @@ function Edge.suspendForce(fn, ...)
 end
 
 -- ── Modo shader ──────────────────────────────────────────────────────────────
--- POR PERSONAJE, SPRITE ENTERO (el usuario, 2026-11-12: "lo hace o no lo hace, pero con el fundido"; antes se decidía
--- píxel a píxel y el filo salía solo en los trozos que se perdían):
+-- POR PERSONAJE, SPRITE ENTERO (el usuario, 2026-11-12: "lo hace o no lo hace, pero con el fundido"):
 --   1. Los personajes se dibujan en el LIENZO DE LOS PERSONAJES (transparente) y, otra vez y sin efectos, su NÚMERO en
 --      el LIENZO DE IDENTIDAD (cada dueño tiene uno fijo mientras exista: hasta SLOTS).
---   2. Una pasada por personaje (un píxel de la textura de ESTADO por número) mira su zona: de los píxeles del CONTORNO,
---      cuántos se pierden — luminancia del personaje y del fondo parecidas, con la luz del sitio (a oscuras, fuera de la
---      luz, no cuenta: no delata) —. Si son al menos NEED, su filo va hacia 1; si no, hacia 0, en FADE s. El estado
---      (alfa del filo y si el fondo es oscuro → filo claro) vive en la GPU, de fotograma en fotograma: nada se lee.
---   3. La composición pone el filo alrededor de TODO el sprite con el alfa de su personaje.
+--   2. MEDIDA (edge_measure): la zona de cada personaje se reparte en K×K trozos, un fragmento por trozo, que la
+--      recorren píxel a píxel (o cada `paso` px si es muy grande). Cuenta los píxeles del CONTORNO — fuera de todo
+--      personaje y con un píxel SUYO (su número) a `banda` px — y cuántos se PIERDEN: ni ese píxel del borde ni los de
+--      dentro hasta DEPTH px contrastan con el fondo de ese sitio (con la luz del sitio: a oscuras, fuera de la luz, no
+--      cuenta: no delata). Lo de otro personaje no cuenta nunca (ni su contorno ni su cuerpo).
+--   3. DECISIÓN (edge_decide): un píxel de la textura de ESTADO por número suma sus trozos. Si se pierde al menos NEED
+--      del contorno, su filo va hacia 1; por debajo de NEED_OFF, hacia 0 (en medio, sigue lo que había: no parpadea en
+--      el umbral), en FADE s. El estado (alfa, ¿filo claro?, lo que quiere) vive en la GPU: nada se lee.
+--   4. La composición pone el filo alrededor de TODO el sprite con el alfa de su personaje.
 -- Las pasadas leen la escena y escriben en su pareja: un shader no puede leer el lienzo en que dibuja.
-Edge.NEED  = 0.3                                 -- parte del contorno que se pierde para que lleve el filo
+--
+-- EL FALLO DE 0.5.214-0.5.230 (el usuario, 2026-11-15: «a oscuras no tengo el filo; a veces sale y a veces no en el
+-- mismo sitio; y sale donde no hace falta, también en otras entidades»): la pasada miraba 24×24 muestras sueltas de la
+-- zona (al contorno, de 2 px, le tocaban pocas y otras al moverse 1 px), contaba lo de los personajes vecinos como
+-- suyo, y el «cuerpo que destaca» (VIS) contaba la cara blanca del monstruo como cuerpo visible: con el cielo estelar
+-- casi negro se daba por visto, y en el umbral cambiaba con la pose. Ahora: todos los píxeles, solo los suyos, y lo de
+-- dentro cuenta solo pegado al contorno (un borde oscuro fino con cuerpo de color se ve; el monstruo negro no).
+Edge.NEED, Edge.NEED_OFF = 0.3, 0.2              -- parte del contorno que se pierde: filo / sin filo (en medio, sigue)
+Edge.DEPTH = 9                                   -- px hacia dentro que se miran tras el borde (pasa el contorno oscuro
+                                                 -- de 1 px de arte de un sprite a ×4..×8 y llega a su cuerpo)
 Edge.SLOTS = 255                                 -- números de personaje (el 0 = ninguno; caben en un canal de 8 bits)
-local GRID = 24                                  -- muestras por lado de la zona de cada personaje
+local K, MAXI = 12, 15                           -- trozos por lado de cada zona · muestras por lado de cada trozo
+local CELLS = 16                                 -- números por fila del lienzo de medidas (16×16 = 256)
 
 Shaders.define('edge_id', [[
     extern float slot;
@@ -216,83 +231,110 @@ Shaders.define('edge_id', [[
     }
 ]])
 
--- CONTRASTE DE COLOR Y CUERPO / BORDE (0.5.214; el usuario: «no solo luminosidad: el contraste del color; y separar
--- el cuerpo del borde oscuro de los enemigos»): el contraste mira la luminancia Y el color (YCbCr: un rojo oscuro sobre
--- un azul oscuro de la misma luminancia SÍ contrasta). Además del CONTORNO (como antes), se mira el CUERPO: los píxeles
--- del sprite salvo su BORDE (los oscuros — luminancia < BORDER — pegados al exterior: el contorno negro de casi todos
--- los enemigos). Si al menos VIS del cuerpo destaca del fondo, el personaje se ve: sin filo, aunque su borde se pierda.
--- El monstruo (casi todo negro, una cara blanca pequeña) sigue llevándolo.
-Edge.BORDER = 0.12                               -- luminancia por debajo de la que un píxel del contorno es «borde»
-Edge.VIS    = 0.5                                -- parte del cuerpo que destaca para que no haga falta el filo
-Edge.CK     = 1.0                                -- peso del color frente a la luminancia en el contraste
-Shaders.define('edge_decide', [[
+-- CONTRASTE DE COLOR (0.5.214; el usuario: «no solo luminosidad: el contraste del color»): la diferencia de
+-- luminancia o la de color (YCbCr: un rojo oscuro sobre un azul oscuro de la misma luminancia SÍ contrasta), la mayor
+Edge.CK = 1.0                                    -- peso del color frente a la luminancia en el contraste
+Shaders.define('edge_measure', [[
     extern Image actors;
+    extern Image ids;
     extern Image scene;
     extern Image light;
-    extern Image prev;
     extern vec2 lightK;
-    extern vec2 texel;
-    extern vec4 box;           // zona del personaje en uv: x0, y0, x1, y1
+    extern vec2 size;          // tamaño de la escena (px)
+    extern vec4 box;           // zona del personaje (px de la escena): x0, y0, x1, y1
+    extern vec2 tsize;         // px de cada trozo
+    extern vec2 origin;        // esquina de sus trozos en el lienzo de medidas (px)
     extern vec4 th;            // T_LO, T_HI, L_LO, L_HI
-    extern vec4 step;          // dt / FADE, reiniciar (1/0), NEED, W
-    extern vec4 body;          // BORDER, VIS, CK, -
-    extern float statsW;       // ancho de la textura de estado (este píxel = sc.x)
+    extern vec4 cfg;           // número, paso, banda, CK
+    extern vec3 probe;         // las 3 distancias hacia dentro tras el borde
     float lum(vec3 c) { return dot(c, vec3(0.299, 0.587, 0.114)); }
-    // contraste entre dos colores: la diferencia de luminancia o la de color (Cb, Cr), la mayor
     float contrast(vec3 a, vec3 b) {
         vec3 d = a - b;
         float dy = dot(d, vec3(0.299, 0.587, 0.114));
         float cb = dot(d, vec3(-0.169, -0.331, 0.5));
         float cr = dot(d, vec3(0.5, -0.419, -0.081));
-        return max(abs(dy), length(vec2(cb, cr)) * body.z);
+        return max(abs(dy), length(vec2(cb, cr)) * cfg.w);
+    }
+    // ¿es SUYO el píxel (en px de la escena)?
+    bool mine(vec2 q) {
+        if (q.x < 0.0 || q.y < 0.0 || q.x >= size.x || q.y >= size.y) return false;
+        vec2 u = q / size;
+        return Texel(actors, u).a > 0.0 && abs(Texel(ids, u).r * 255.0 - cfg.x) < 0.5;
     }
     vec4 effect(vec4 col, Image t, vec2 uv, vec2 sc) {
+        vec2 start = box.xy + floor(sc - origin) * tsize;
+        vec2 stop = min(start + tsize, box.zw);
         float total = 0.0, lost = 0.0, darkBg = 0.0;
-        vec2 o1 = texel * step.w;
-        // 1. EL CONTORNO: lo de fuera pegado al sprite, contra el borde del sprite
-        for (int j = 0; j < ]]..GRID..[[; j++) {
-            for (int i = 0; i < ]]..GRID..[[; i++) {
-                vec2 p = mix(box.xy, box.zw, (vec2(float(i), float(j)) + 0.5) / ]]..GRID..[[.0);
-                if (Texel(actors, p).a > 0.0) continue;
-                vec4 q = Texel(actors, p + vec2(o1.x, 0.0));
-                vec4 r = Texel(actors, p - vec2(o1.x, 0.0)); if (r.a > q.a) q = r;
-                r = Texel(actors, p + vec2(0.0, o1.y)); if (r.a > q.a) q = r;
-                r = Texel(actors, p - vec2(0.0, o1.y)); if (r.a > q.a) q = r;
-                if (q.a <= 0.0) continue;
-                float L = lum(Texel(light, p * lightK).rgb);
-                vec3 bg = Texel(scene, p).rgb * L;
-                float c = contrast(q.rgb / q.a * L, bg);
+        float s = cfg.y, band = cfg.z;
+        for (int j = 0; j < ]]..MAXI..[[; j++) {
+            float y = start.y + float(j) * s + 0.5;
+            if (y >= stop.y) break;
+            for (int i = 0; i < ]]..MAXI..[[; i++) {
+                float x = start.x + float(i) * s + 0.5;
+                if (x >= stop.x) break;
+                vec2 p = vec2(x, y);
+                if (Texel(actors, p / size).a > 0.0) continue;          // (dentro de un personaje: no es contorno)
+                // el píxel SUYO más opaco a `banda` px, y hacia dónde queda (hacia dentro)
+                vec2 dir = vec2(0.0);
+                float best = 0.0;
+                vec2 ds[4];
+                ds[0] = vec2(1.0, 0.0); ds[1] = vec2(-1.0, 0.0); ds[2] = vec2(0.0, 1.0); ds[3] = vec2(0.0, -1.0);
+                for (int k = 0; k < 4; k++) {
+                    vec2 q = p + ds[k] * band;
+                    if (!mine(q)) continue;
+                    float qa = Texel(actors, q / size).a;
+                    if (qa > best) { best = qa; dir = ds[k]; }
+                }
+                if (best <= 0.0) continue;
+                vec2 qp = p + dir * band;
+                vec4 qc = Texel(actors, qp / size);
+                float L = lum(Texel(light, p / size * lightK).rgb);
+                vec3 bg = Texel(scene, p / size).rgb * L;
+                float vis = smoothstep(th.x, th.y, contrast(qc.rgb / qc.a * L, bg));
+                // lo de DENTRO, pegado al borde: un contorno oscuro fino con el cuerpo de color se ve igual
+                for (int k = 0; k < 3; k++) {
+                    vec2 r = qp + dir * probe[k];
+                    if (!mine(r)) continue;
+                    vec4 rc = Texel(actors, r / size);
+                    vis = max(vis, smoothstep(th.x, th.y, contrast(rc.rgb / rc.a * L, bg)));
+                }
                 total += 1.0;
-                lost += (1.0 - smoothstep(th.x, th.y, c)) * smoothstep(th.z, th.w, L);
+                lost += (1.0 - vis) * smoothstep(th.z, th.w, L);
                 darkBg += (lum(bg) < 0.5) ? 1.0 : 0.0;
             }
         }
-        // 2. EL CUERPO: lo de dentro del sprite salvo su borde oscuro, contra lo que tiene detrás
-        float bodyN = 0.0, vis = 0.0;
-        if (total > 0.0) {
-            for (int j = 0; j < ]]..GRID..[[; j++) {
-                for (int i = 0; i < ]]..GRID..[[; i++) {
-                    vec2 p = mix(box.xy, box.zw, (vec2(float(i), float(j)) + 0.5) / ]]..GRID..[[.0);
-                    vec4 a = Texel(actors, p);
-                    if (a.a <= 0.0) continue;
-                    vec3 c0 = a.rgb / a.a;
-                    bool edge = Texel(actors, p + vec2(o1.x, 0.0)).a <= 0.0 || Texel(actors, p - vec2(o1.x, 0.0)).a <= 0.0
-                             || Texel(actors, p + vec2(0.0, o1.y)).a <= 0.0 || Texel(actors, p - vec2(0.0, o1.y)).a <= 0.0;
-                    if (edge && lum(c0) < body.x) continue;             // (su borde oscuro: no es el cuerpo)
-                    float L = lum(Texel(light, p * lightK).rgb);
-                    bodyN += 1.0;
-                    // (contra lo que tiene DETRÁS — la escena sin personajes —: un fondo variado no engaña)
-                    vis += smoothstep(th.x, th.y, contrast(c0 * L, Texel(scene, p).rgb * L));
-                }
+        return vec4(total / 255.0, lost / 255.0, darkBg / 255.0, 1.0);
+    }
+]])
+
+Shaders.define('edge_decide', [[
+    extern Image meas;
+    extern Image prev;
+    extern vec2 measSize;
+    extern vec2 origin;        // esquina de sus trozos en el lienzo de medidas (px)
+    extern vec4 step;          // dt / FADE, reiniciar (1/0), NEED, NEED_OFF
+    extern float statsW;       // ancho de la textura de estado (este píxel = sc.x)
+    vec4 effect(vec4 col, Image t, vec2 uv, vec2 sc) {
+        vec3 sum = vec3(0.0);
+        for (int j = 0; j < ]]..K..[[; j++) {
+            for (int i = 0; i < ]]..K..[[; i++) {
+                sum += Texel(meas, (origin + vec2(float(i), float(j)) + 0.5) / measSize).rgb;
             }
         }
         vec4 was = Texel(prev, vec2(sc.x / statsW, 0.5));
-        float a = (step.y > 0.5) ? 0.0 : was.r;
-        bool seen = bodyN > 0.0 && vis / bodyN >= body.y;            // (el cuerpo destaca: se ve)
-        float want = (total > 0.0 && lost / total >= step.z && !seen) ? 1.0 : 0.0;
+        bool reset = step.y > 0.5;
+        float a = reset ? 0.0 : was.r;
+        float want = reset ? 0.0 : was.b;
+        float lightEdge = was.g;
+        if (sum.r > 0.0) {
+            float r = sum.g / sum.r;
+            if (r >= step.z) want = 1.0; else if (r < step.w) want = 0.0;    // (en medio: lo que había)
+            float d = sum.b / sum.r;
+            if (reset) lightEdge = (d >= 0.5) ? 1.0 : 0.0;
+            else if (d >= 0.6) lightEdge = 1.0; else if (d <= 0.4) lightEdge = 0.0;
+        }
         a = (want > a) ? min(want, a + step.x) : max(want, a - step.x);
-        float lightEdge = (total > 0.0) ? ((darkBg / total >= 0.5) ? 1.0 : 0.0) : was.g;
-        return vec4(a, lightEdge, 0.0, 1.0);
+        return vec4(a, lightEdge, want, 1.0);
     }
 ]])
 
@@ -385,11 +427,20 @@ shaderBody = function(f, owner, x, y, fn, ...)
     local slot = slotFor(owner)
     idShader = idShader or Shaders.get('edge_id')
     if not (slot and idShader) then return end
-    local n = f.nSlots + 1
-    f.nSlots = n
-    local b = f.boxes[n] or {}
-    f.boxes[n] = b
-    b.slot, b[1], b[2], b[3], b[4] = slot, screenBox(owner, x, y)
+    -- (el mismo dueño dos veces en la escena: una zona que abarca las dos; si no, la segunda decisión — con dt 0 —
+    -- pisaba a la primera y su fundido no avanzaba)
+    local x0, y0, x1, y1 = screenBox(owner, x, y)
+    local b
+    for i = 1, f.nSlots do if f.boxes[i].slot == slot then b = f.boxes[i]; break end end
+    if b then
+        b[1], b[2], b[3], b[4] = math.min(b[1], x0), math.min(b[2], y0), math.max(b[3], x1), math.max(b[4], y1)
+    else
+        local n = f.nSlots + 1
+        f.nSlots = n
+        b = f.boxes[n] or {}
+        f.boxes[n] = b
+        b.slot, b[1], b[2], b[3], b[4] = slot, x0, y0, x1, y1
+    end
     local cur = love.graphics.getCanvas()
     love.graphics.setCanvas(f.ids)
     local bm, am = love.graphics.getBlendMode()
@@ -436,10 +487,11 @@ function Edge.begin(scene)
     love.graphics.setCanvas(f.actor)
 end
 
--- La textura de ESTADO (alfa del filo y color por número), en dos para ir y volver
-local statsA, statsB
-local buf2a, buf2b, buf4a, buf4b, buf4c = { 0, 0 }, { 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }
-local bodyBuf = { 0, 0, 0, 0 }
+-- La textura de ESTADO (por número: alfa del filo, ¿filo claro?, lo que quiere), en dos para ir y volver; y el lienzo
+-- de MEDIDAS (por número, K×K trozos: contorno, perdido, fondo oscuro — /255 —)
+local statsA, statsB, meas
+local buf2a, buf2b, buf2c, buf2d, buf3 = { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0, 0 }
+local buf4a, buf4b, buf4c, buf4d = { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }
 local function statsCanvas()
     if not statsA then
         statsA = sized(nil, Edge.SLOTS + 1, 1)
@@ -448,11 +500,37 @@ local function statsCanvas()
     end
     return statsA
 end
+local function measCanvas()
+    if not meas then
+        -- (en coma flotante si se puede: las sumas, sin redondeo de 8 bits; si no, también sirve)
+        local fmts = love.graphics.getCanvasFormats and love.graphics.getCanvasFormats(true) or {}
+        meas = love.graphics.newCanvas(CELLS * K, CELLS * K, { format = fmts.rgba16f and 'rgba16f' or nil, dpiscale = 1 })
+        meas:setFilter('nearest', 'nearest')
+    end
+    return meas
+end
+local function cellOf(s) return (s % CELLS) * K, math.floor(s / CELLS) * K end
 function Edge.stateOf(owner)                         -- (para las pruebas: alfa y ¿filo claro? del modo shader)
     local s = slotOf[owner]
     if not (s and statsA) then return 0, 0 end
     local r, g = statsA:newImageData():getPixel(s, 0)
     return r, g
+end
+-- (para las pruebas: la última medida de su contorno — píxeles del contorno, parte que se pierde, parte con fondo oscuro)
+function Edge.measureOf(owner)
+    local s = slotOf[owner]
+    if not (s and meas) then return 0, 0, 0 end
+    local d = meas:newImageData()
+    local cx, cy = cellOf(s)
+    local t, l, k = 0, 0, 0
+    for j = 0, K - 1 do
+        for i = 0, K - 1 do
+            local r, g, b = d:getPixel(cx + i, cy + j)
+            t, l, k = t + r, l + g, k + b
+        end
+    end
+    if t <= 0 then return 0, 0, 0 end
+    return math.floor(t * 255 + 0.5), l / t, k / t
 end
 
 local function whiteTex()
@@ -463,39 +541,69 @@ local function whiteTex()
     return whiteImg
 end
 
--- Decide el filo de cada personaje dibujado en esta escena (ver arriba)
+-- Mide y decide el filo de cada personaje dibujado en esta escena (ver arriba)
 local function decide(f, scene, light, w, h)
-    local sh = Shaders.get('edge_decide')
-    if not sh or f.nSlots == 0 then return end
+    local mh, dh = Shaders.get('edge_measure'), Shaders.get('edge_decide')
+    if not (mh and dh) or f.nSlots == 0 then return end
     statsCanvas()
-    local now = Edge.clock()
-    love.graphics.setCanvas(statsB)
+    local mc = measCanvas()
     love.graphics.setBlendMode('replace', 'premultiplied')
-    love.graphics.setShader()
-    love.graphics.draw(statsA, 0, 0)                -- (los que no se dibujan ahora se quedan como estaban)
-    love.graphics.setShader(sh)
-    sh:send('actors', f.actor)
-    sh:send('scene', scene)
-    sh:send('light', light or whiteTex())
-    sh:send('prev', statsA)
+    -- 1. MEDIDA: K×K fragmentos por personaje, cada uno con su trozo de la zona
+    love.graphics.setCanvas(mc)
+    love.graphics.setShader(mh)
+    mh:send('actors', f.actor)
+    mh:send('ids', f.ids)
+    mh:send('scene', scene)
+    mh:send('light', light or whiteTex())
     if light then buf2a[1], buf2a[2] = w / (light:getWidth() * 4), h / (light:getHeight() * 4) else buf2a[1], buf2a[2] = 1, 1 end
-    sh:send('lightK', buf2a)
-    buf2b[1], buf2b[2] = 1 / w, 1 / h
-    sh:send('texel', buf2b)
+    mh:send('lightK', buf2a)
+    buf2b[1], buf2b[2] = w, h
+    mh:send('size', buf2b)
     buf4a[1], buf4a[2], buf4a[3], buf4a[4] = Edge.T_LO, Edge.T_HI, Edge.L_LO, Edge.L_HI
-    sh:send('th', buf4a)
-    bodyBuf[1], bodyBuf[2], bodyBuf[3], bodyBuf[4] = Edge.BORDER, Edge.VIS, Edge.CK, 0
-    sh:send('body', bodyBuf)                         -- (el cuerpo y su borde: contraste de color)
-    sh:send('statsW', Edge.SLOTS + 1)
+    mh:send('th', buf4a)
+    local dp = Edge.DEPTH
+    buf3[1], buf3[2], buf3[3] = math.max(1, math.floor(dp / 3)), math.max(1, math.floor(dp * 2 / 3)), dp
+    mh:send('probe', buf3)
     for i = 1, f.nSlots do
         local b = f.boxes[i]
-        local s = b.slot
+        -- (la zona, recortada a la escena y en px enteros: lo que queda fuera no se ve ni se mide)
+        local x0, y0 = math.max(0, math.floor(b[1])), math.max(0, math.floor(b[2]))
+        local x1, y1 = math.min(w, math.ceil(b[3])), math.min(h, math.ceil(b[4]))
+        if x1 < x0 then x1 = x0 end
+        if y1 < y0 then y1 = y0 end
+        local tw, th = math.max(1, math.ceil((x1 - x0) / K)), math.max(1, math.ceil((y1 - y0) / K))
+        local stride = math.max(1, math.ceil(math.max(tw, th) / MAXI))   -- (zonas muy grandes: cada `stride` px)
+        buf4b[1], buf4b[2], buf4b[3], buf4b[4] = x0, y0, x1, y1
+        mh:send('box', buf4b)
+        buf2c[1], buf2c[2] = tw, th
+        mh:send('tsize', buf2c)
+        local cx, cy = cellOf(b.slot)
+        buf2d[1], buf2d[2] = cx, cy
+        mh:send('origin', buf2d)
+        buf4c[1], buf4c[2], buf4c[3], buf4c[4] = b.slot, stride, math.max(Edge.W, stride), Edge.CK
+        mh:send('cfg', buf4c)
+        love.graphics.rectangle('fill', cx, cy, K, K)
+    end
+    -- 2. DECISIÓN: un píxel de estado por personaje
+    local now = Edge.clock()
+    love.graphics.setCanvas(statsB)
+    love.graphics.setShader()
+    love.graphics.draw(statsA, 0, 0)                -- (los que no se dibujan ahora se quedan como estaban)
+    love.graphics.setShader(dh)
+    dh:send('meas', mc)
+    dh:send('prev', statsA)
+    buf2b[1], buf2b[2] = mc:getWidth(), mc:getHeight()
+    dh:send('measSize', buf2b)
+    dh:send('statsW', Edge.SLOTS + 1)
+    for i = 1, f.nSlots do
+        local s = f.boxes[i].slot
         local dt = lastT[s] and math.max(0, math.min(Edge.FADE, now - lastT[s])) or 0
         lastT[s] = now
-        buf4b[1], buf4b[2], buf4b[3], buf4b[4] = b[1] / w, b[2] / h, b[3] / w, b[4] / h
-        sh:send('box', buf4b)
-        buf4c[1], buf4c[2], buf4c[3], buf4c[4] = dt / Edge.FADE, fresh[s] and 1 or 0, Edge.NEED, Edge.W
-        sh:send('step', buf4c)
+        local cx, cy = cellOf(s)
+        buf2d[1], buf2d[2] = cx, cy
+        dh:send('origin', buf2d)
+        buf4d[1], buf4d[2], buf4d[3], buf4d[4] = dt / Edge.FADE, fresh[s] and 1 or 0, Edge.NEED, Edge.NEED_OFF
+        dh:send('step', buf4d)
         fresh[s] = nil
         love.graphics.rectangle('fill', s, 0, 1, 1)
     end
