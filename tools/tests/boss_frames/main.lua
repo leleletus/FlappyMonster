@@ -65,6 +65,7 @@ function love.load()
         level.solidBodies = Entities.solidBodies(ents)
         ctrl:update(dt)
         Floods.advance(level, dt)                -- (las inundaciones: la marea del Pez Globo Gigante)
+        if level.beat then require('src/world/systems/BeatClock').update(level, dt, nil) end   -- (reloj de compás: el Gólem Metrónomo)
         for _, e in ipairs(ents) do if e.alive then e:update(dt, level) end end
         Entities.interactions.run(pa, ents, {})
         if pa.dying or not pa.alive then pa:respawn(); pa.hp = pa.hpMax end

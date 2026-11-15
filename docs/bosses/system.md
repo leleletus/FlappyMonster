@@ -24,6 +24,7 @@ later, NOT built: [future-secret-bosses](future-secret-bosses.md). The four crab
 | Tifón / Typhoon, the Supreme Gust (Soplón Supremo, SECRET, drops the Brass Weather Vane) | `tifon` | [tifon](tifon.md) | `tejados_del_tifon` (secret exit of `taller_trampas`) | — |
 | The Groove (El Groove, SECRET, after the game; fights to its music) | `groovecrab` | [groovecrab](groovecrab.md) | `isla_del_groove` (secret map node) | — |
 | Net-Copter (Redcóptero; Flappy campaign, zone 1 — the Evil Monster flees, it comes back) | `netcopter` | [netcopter](netcopter.md) | `valle_redcoptero` (Plan 5, task 5) | — |
+| Metronome Golem (Gólem Metrónomo; Starway, Free Play; fights to the beat clock) | `metrogolem` | [metrogolem](metrogolem.md) | `santuario_del_compas` (Free Play) | — |
 | Crab Mega Mashup (EVENT: the four crabs in turns, adaptive music; Free Play) | `crabmashup` (director) | [crab-mashup](crab-mashup.md) | `mashup_cangrejos` | — |
 
 **Files:** `src/world/systems/BossZones.lua` (zones + the fight controller), `src/world/entities/base/Boss.lua`

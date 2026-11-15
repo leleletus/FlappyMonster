@@ -217,6 +217,7 @@ piece took damage, immortal online), and a rewound "stomp" may hit a boss that i
 
 v124: an ON/OFF or Beep block that turns solid with someone inside switches anyway and pushes them out (`Level:pushOutOfCell`; the client pushes its predicted player on the `set` event): predicted physics changed.
 v125: new type `orbitstars` (Orbiting stars) and the clap spikes' `dir` prop (ceilings and walls); both run on the beat clock, nothing new travels.
+v126: new boss type `metrogolem` (Metronome Golem) with its netPack `{phase, landX, theta0, wavesOn}`; its pendulum runs on the beat clock.
 
 v123: the star island (`estelar`): new types `gummy_star`, `crabby_star`, `crabbytramp_star`; the Starway tile pack (61-68).
 

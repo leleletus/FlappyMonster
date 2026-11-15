@@ -39,7 +39,7 @@ local TYPES = { 'enemies/gummy', 'enemies/crabby', 'traps/spikefall', 'traps/glo
                 'enemies/mole', 'enemies/piranha', 'enemies/carnivoreplant', 'enemies/penguin',
                 'mechanisms/iceberg', 'traps/avalanche', 'mechanisms/cablecar', 'mechanisms/door',
                 'enemies/scorpion', 'bosses/giantscorpion', 'bosses/carnqueen', 'bosses/tifon', 'bosses/netcopter', 'traps/netlauncher', 'items/snowball_ball', 'items/hint',
-                'mechanisms/metronome', 'traps/clapspikes', 'mechanisms/beatspring', 'traps/orbitstars',
+                'mechanisms/metronome', 'traps/clapspikes', 'mechanisms/beatspring', 'traps/orbitstars', 'bosses/metrogolem',
                 'enemies/gummy_star', 'enemies/crabby_star' }
 
 -- Un archivo puede definir varios tipos (p. ej. el trampolín en sus 4 direcciones)

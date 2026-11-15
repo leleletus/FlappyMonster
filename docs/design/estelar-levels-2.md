@@ -1,6 +1,10 @@
 # Starway, second wave: Pulsar, the Star Stage, the Sanctuary of the Beat, and the boss ideas (2026-11-15)
 
-Status: **levels built (0.5.230), not played by a person; the boss is NOT built — ideas below for the user to pick**.
+Status: **levels built (0.5.230); the user edited Pulsar and the Sanctuary by hand and picked idea 2: the Metronome Golem is BUILT (0.5.231, [metrogolem](../bosses/metrogolem.md))**.
+
+The user's notes after playing (2026-11-15): the mini blocks of the relief made some paths impossible and opened others
+("decoration must never help": now non-solid), the orbiting stars did not hurt (fixed), the nebula rock was too noisy
+(redrawn).
 
 The user's brief (2026-11-15), after Vía Estelar ("very good, but long, repetitive and somewhat tedious"):
 - a remaster of the Vía Estelar theme and three new tracks (another level, a bonus, a boss) — delegated to a music agent;
