@@ -57,7 +57,23 @@ function BeatClock.build(level, lvl)
     local b = type(lvl.beat) == 'table' and lvl.beat or {}
     local period = tonumber(b.period) or BeatClock.PERIOD
     if period <= 0 then period = BeatClock.PERIOD end
-    return { t = 0, period = period, start = (b.start == 'cyan') and 'cyan' or 'pink' }
+    return { t = 0, period = period, base = period, start = (b.start == 'cyan') and 'cyan' or 'pink' }
+end
+
+-- El periodo que MANDA ahora: mientras pelea una zona de jefe con música PROPIA que tiene su tempo en el índice
+-- (`bpm` en assets/music/index.json), el de esa pista; si no, el del nivel (0.5.232: el nivel del Gólem Metrónomo va con
+-- la música de un nivel normal y la pelea con la del jefe, a otro tempo — el usuario —). Las zonas y su estado los
+-- tienen igual un jugador, el servidor y el cliente.
+function BeatClock.periodNow(level)
+    local bc = level.beat
+    local BZ = package.loaded['src/world/systems/BossZones']
+    local z = BZ and BZ.fighting(level)
+    if z and z.music and z.music ~= 'level' then
+        local tr = require('src/audio/Music').get(z.music)
+        local bpm = tr and tonumber(tr.bpm)
+        if bpm and bpm > 0 then return BeatClock.BEATS * 60 / bpm end
+    end
+    return bc.base or bc.period
 end
 
 -- PULSOS desde que empezó la música (con decimales: 3.25 = un cuarto del pulso 4); 0 sin reloj. Lo que va al compás
@@ -109,6 +125,12 @@ end
 function BeatClock.update(level, dt, timeLeft)
     local bc = level.beat
     if not bc or not dt or dt <= 0 then return end
+    -- (cambia de música — empieza o acaba la pelea —: otro tempo, y el reloj vuelve a 0 con la pista nueva)
+    local want = BeatClock.periodNow(level)
+    if math.abs(want - bc.period) > 1e-6 then
+        bc.period, bc.t = want, 0
+        if level.canBreak ~= false then level:updateSwitchBlocks() end
+    end
     local before = phraseOf(bc)
     bc.rate = BeatClock.rate(timeLeft)
     bc.t = bc.t + dt * bc.rate

@@ -35,11 +35,11 @@ def clap(L, c, r, offset=0, d='up'):
     return L.ent('clapspikes', c, r, **p)
 
 
-def orbit(L, c, r, count=2, radius=2, per=4, d='cw', phase=0, motion=None):
+def orbit(L, c, r, count=2, radius=2, per=8, d='cw', phase=0, motion=None):
     p = {}
     if count != 2: p['count'] = count
     if radius != 2: p['radius'] = radius
-    if per != 4: p['beatsPerTurn'] = per
+    if per != 8: p['beatsPerTurn'] = per
     if d != 'cw': p['dir'] = d
     if phase: p['phase'] = phase
     if motion: p['motion'] = motion

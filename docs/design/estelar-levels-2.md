@@ -4,7 +4,8 @@ Status: **levels built (0.5.230); the user edited Pulsar and the Sanctuary by ha
 
 The user's notes after playing (2026-11-15): the mini blocks of the relief made some paths impossible and opened others
 ("decoration must never help": now non-solid), the orbiting stars did not hurt (fixed), the nebula rock was too noisy
-(redrawn).
+(redrawn). Second round (0.5.232): orbits at half speed (one turn per phrase), the Sanctuary plays `estelar_pulsar`
+(the fight keeps `estelar_boss`, the beat clock changes tempo with it), the Golem reworked ([metrogolem](../bosses/metrogolem.md#history)).
 
 The user's brief (2026-11-15), after Vía Estelar ("very good, but long, repetitive and somewhat tedious"):
 - a remaster of the Vía Estelar theme and three new tracks (another level, a bonus, a boss) — delegated to a music agent;

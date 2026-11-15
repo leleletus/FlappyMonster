@@ -35,6 +35,7 @@ local function load()
                 intro  = t.intro and (Music.DIR .. t.intro) or nil,
                 loopFile = (not t.file and type(t.loop) == 'string') and (Music.DIR .. t.loop) or nil,
                 volume = tonumber(t.volume) or 0.7,
+                bpm    = tonumber(t.bpm),               -- (tempo exacto: el reloj de compás de una pelea con esta música)
                 loops  = t.loop ~= false,
                 level  = t.level ~= false,
                 boss   = t.boss == true,

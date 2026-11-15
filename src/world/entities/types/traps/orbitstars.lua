@@ -1,8 +1,8 @@
 -- ESTRELLAS EN ÓRBITA (Vía Estelar, docs/design/starway-rhythm-objects.md #9; 0.5.230): de 1 a 4 estrellas de
--- pinchos que giran alrededor de un eje de cristal a `radius` casillas, AL COMPÁS: por defecto una vuelta por compás
--- (4 pulsos) y a golpes — en cada pulso avanzan un cuarto de vuelta en un momento (SNAP) y se quedan quietas el resto,
--- así que en cada pulso están en los mismos puntos (arriba / derecha / abajo / izquierda): se aprende y se pasa cuando
--- el hueco está de tu lado. `motion = 'smooth'` = giran sin parar (la misma vuelta). Tocarlas daña como un pincho.
+-- pinchos que giran alrededor de un eje de cristal a `radius` casillas, AL COMPÁS: por defecto una vuelta por FRASE
+-- (8 pulsos; 0.5.232 — antes una por compás: «increíblemente difíciles, un martirio», el usuario —) y a golpes — en
+-- cada pulso avanzan un octavo de vuelta en un momento (SNAP) y se quedan quietas el resto —: se aprende y se pasa
+-- cuando el hueco está de tu lado. `motion = 'smooth'` = giran sin parar (la misma vuelta). Tocarlas daña como un pincho.
 -- El eje no es sólido (solo dibujo); su lámpara se enciende en el pulso; unos puntos marcan el camino de la órbita.
 -- Todo es FUNCIÓN del reloj de compás (src/world/systems/BeatClock.lua): igual en un jugador, servidor y cliente, sin red.
 -- Arte: tools/art/world/make_starway_orbit.py (assets/anim/traps/orbitstars.json).
@@ -30,7 +30,7 @@ end
 -- Ángulo (radianes; 0 = arriba, a favor del reloj) de la estrella 1 a `beats` pulsos
 function O.angleAt(beats, p)
     p = p or {}
-    local per = math.max(1, p.beatsPerTurn or 4)
+    local per = math.max(1, p.beatsPerTurn or 8)
     local step
     if p.motion == 'smooth' then
         step = beats
@@ -134,15 +134,15 @@ end
 
 return {
     name = 'orbitstars', label = 'Estrellas en órbita', category = 'Trampas', class = O, beat = true,
-    description = 'Estrellas de pinchos que giran alrededor de un eje al compás: un cuarto de vuelta por pulso, a golpes (Vía Estelar).',
+    description = 'Estrellas de pinchos que giran alrededor de un eje al compás: una vuelta por frase, a golpes en cada pulso (Vía Estelar).',
     defaults = { movement = 'static' },
     props = {
         { key = 'count', kind = 'int', label = 'Estrellas', group = 'Estrellas en órbita', default = 2, min = 1, max = 4,
           help = 'Repartidas por igual en la órbita' },
         { key = 'radius', kind = 'number', label = 'Radio (casillas)', group = 'Estrellas en órbita', default = 2,
           min = 1, max = 6, step = 0.5 },
-        { key = 'beatsPerTurn', kind = 'int', label = 'Pulsos por vuelta', group = 'Estrellas en órbita', default = 4,
-          min = 2, max = 16, help = '4 = una vuelta por compás; 8 = una por frase (cuando cambian los Bloques Beep)' },
+        { key = 'beatsPerTurn', kind = 'int', label = 'Pulsos por vuelta', group = 'Estrellas en órbita', default = 8,
+          min = 2, max = 16, help = '8 = una vuelta por frase (cuando cambian los Bloques Beep: un octavo por pulso); 4 = una por compás (el doble de rápido)' },
         { key = 'dir', kind = 'enum', label = 'Sentido', group = 'Estrellas en órbita', default = 'cw',
           options = { { value = 'cw', label = 'Como el reloj' }, { value = 'ccw', label = 'Al revés' } } },
         { key = 'motion', kind = 'enum', label = 'Movimiento', group = 'Estrellas en órbita', default = 'snap',

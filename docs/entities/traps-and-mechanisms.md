@@ -287,9 +287,9 @@ sets `mechanisms/metronome`, `traps/clapspikes`, `mechanisms/beatspring`; the or
   (a wall): the two spikes come out of that face (`C:spikeCell`, the tile spikes' hitbox and drawing for that direction)
   and the plate is drawn turned so its stripe faces them.
 - **Orbiting stars** (`traps/orbitstars`, "Estrellas en órbita", Trampas, 0.5.230; proposal #9): `count` (1-4) spiked
-  steel stars orbit a crystal hub at `radius` tiles; by default one turn per bar (`beatsPerTurn` 4) in SNAPS — a
-  quarter turn at the start of each beat (`SNAP` 0.22 of the beat, smoothstep), still the rest — so on every beat they
-  sit on the same compass points (`motion = 'smooth'`: they turn without stopping). `dir` cw / ccw, `phase` (beats) to
+  steel stars orbit a crystal hub at `radius` tiles; by default one turn per PHRASE (`beatsPerTurn` 8; 0.5.232 — it was
+  one per bar, 4: "incredibly hard, a martyrdom", the user) in SNAPS — an eighth of a turn at the start of each beat
+  (`SNAP` 0.22 of the beat, smoothstep), still the rest — so they always sit on the same points (`motion = 'smooth'`: they turn without stopping). `dir` cw / ccw, `phase` (beats) to
   offset neighbours. Each star hurts with a 36 px box (part `hazard`); the hub is not solid and its lamp lights on the
   beat; dots mark the orbit. `netBounds` covers the whole orbit. The solver treats them like the clap spikes. 0.5.231: they did NOT hurt in the
   game (the user) — the type said `isGhost` and had an empty `interact`, so `Interactions.check` skipped it before the

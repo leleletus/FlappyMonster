@@ -63,7 +63,7 @@ Every file in `assets/levels/` (73). **Story** = world number, world id and posi
 | `reino_gummy` | Reino Gummy / Gummy Kingdom | 122x15 | 1 pradera · boss |  | `pradera_2` | `megagummy` | meadow |
 | `rio_revuelto` | Río Revuelto / The Churning River | 160x28 | 3 jungla · 2 | race, hide | `jungla_2` |  | jungle dusk · floods |
 | `ruta_del_espejo` | Ruta del Espejo / Mirror Route | 134x15 | 8 final · boss |  | `volcan_2` | `mirror` | volcano night |
-| `santuario_del_compas` | El Santuario del Compás / Sanctuary of the Beat | 130x32 |  | race | `estelar_boss` | `metrogolem` | starway night |
+| `santuario_del_compas` | El Santuario del Compás / Sanctuary of the Beat | 130x32 |  | race | `estelar_pulsar` | `metrogolem` | starway night |
 | `senda_del_dosel` | Senda del Dosel / The Canopy Trail | 170x28 | 3 jungla · 1 | race | `jungla_1` |  | jungle day |
 | `taller_trampas` | Taller de Trampas / Trap Workshop | 60x17 | 4 fortaleza · 3 |  | `fortaleza_1` |  | fortress · depth cave |
 | `tejados_del_tifon` | Tejados del Tifón / Typhoon's Rooftops | 60x17 |  |  | `fortaleza_2` | `tifon` | fortress night |

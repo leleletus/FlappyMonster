@@ -278,12 +278,12 @@
     {"col":129,"kind":"nebula_rock","row":26,"sub":3}
   ],
   "bossZones": [
-    {"col":84,"h":21,"id":1,"music":"level","row":8,"w":42}
+    {"col":84,"h":21,"id":1,"music":"estelar_boss","row":8,"w":42}
   ],
   "modes": ["race"],
-  "music": "estelar_boss",
+  "music": "estelar_pulsar",
   "light": "none",
   "background": "starway",
   "time": "night",
-  "beat": {"period":3.2,"start":"pink"}
+  "beat": {"period":3.4285714,"start":"pink"}
 }

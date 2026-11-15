@@ -388,8 +388,9 @@ function cases.ritmo_dirs()
         { type = 'clapspikes', col = 4, row = 2, props = { dir = 'down' } },
         { type = 'clapspikes', col = 2, row = 6, props = { dir = 'right' } },
         { type = 'clapspikes', col = 15, row = 6, props = { dir = 'left' } },
-        { type = 'orbitstars', col = 9, row = 6, props = { count = 2, radius = 2 } },
-        { type = 'orbitstars', col = 9, row = 6, props = { count = 1, radius = 2, dir = 'ccw' } } })
+        { type = 'orbitstars', col = 9, row = 6, props = { count = 2, radius = 2, beatsPerTurn = 4 } },
+        { type = 'orbitstars', col = 9, row = 6, props = { count = 1, radius = 2, dir = 'ccw', beatsPerTurn = 4 } },
+        { type = 'orbitstars', col = 9, row = 6, props = { count = 1, radius = 2 } } })
     for _, e in ipairs(es) do e.levelRef = level end
     local parts, ok = {}, true
     local function want(cond, msg) parts[#parts + 1] = msg .. (cond and '' or ' ✗'); ok = ok and cond end
@@ -415,6 +416,9 @@ function cases.ritmo_dirs()
     want(near(xc, yc, cx - 2 * T, cy), 'al revés: a la izquierda')
     at(1.05); local xm, ym = o:starPos(1)
     want(xm > cx + 1 and ym > cy + 1 and ym < cy + 2 * T - 1, 'da el paso al empezar el pulso')
+    -- por defecto (0.5.232), una vuelta por FRASE: a los 2 pulsos, un cuarto (a la derecha)
+    at(1.5); local xd, yd = es[6]:starPos(1)
+    want(near(xd, yd, cx + 2 * T, cy), ('por defecto, la mitad de rápido (%d,%d)'):format(xd - cx, yd - cy))
     at(1.5); local hb = o:getHazardBoxes()
     want(hb and #hb == 2 and math.abs(hb[1].x + hb[1].w / 2 - x1) < 1, 'la caja va con la estrella')
     -- DE VERDAD: un jugador en la estrella recibe daño; en el eje (sin estrella), nada; y las palmas de techo fuera,

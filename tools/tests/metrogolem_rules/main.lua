@@ -1,13 +1,18 @@
 -- tools/tests/metrogolem_rules — reglas del GÓLEM METRÓNOMO (types/bosses/metrogolem.lua) caso a caso, en su nivel
 -- real (assets/levels/santuario_del_compas.json), con el reloj de compás del nivel (150 BPM):
---   pendulo   en cada pulso la pesa está en un extremo y a mitad de pulso abajo, a la altura de quien está de pie;
---             tocarla daña (hurt); lejos, nada; en la fase 3 va dos lados por pulso
+--   pendulo   en cada pulso la pesa está en un extremo y a mitad de pulso abajo; tocarla daña (hurt); lejos, nada; en
+--             la fase 3 va dos lados por pulso
+--   persigue  flotando va a por el jugador por toda la arena: en 7 s se le pone encima (en x) y la pesa, abajo, le pasa
+--             a la altura del cuerpo — en el suelo y subido a una repisa —
+--   plataforma  cae donde está el jugador: en la repisa, en el suelo (también debajo de una repisa) o en la plataforma
+--             alta de Bloques Beep — nunca al fondo de la zona —
 --   golpe     con las frases cumplidas, en el pulso 5 carga (la diana sigue al jugador), en el pulso 1 de la frase
 --             siguiente cae EN la diana (≤ 24 px) justo en el cambio de los Bloques Beep; aplasta (-2) al de debajo y
 --             queda ATURDIDO
 --   inmune    flotando, caerle encima solo rebota; aturdido, el pisotón le quita 1 y se levanta (un golpe por ocasión)
 --   ondas     desde la fase 2, al caer salen dos ondas por el suelo que se separan y dañan a ras de suelo
 --   fases     la vida a 2/3 → fase 2, a 1/3 → fase 3
+--   tempo     el reloj de compás va al tempo de la música de la pelea mientras pelea (150) y vuelve al del nivel (140)
 --   red       netPackExtra → otro Gólem (cliente): misma fase, diana, ángulo guardado; con el mismo reloj, la misma
 --             pesa y las mismas zonas de peligro
 --
@@ -87,8 +92,6 @@ function cases.pendulo()
     at(level, 8.5); local xm, ym = g:bobPos()
     want(x0 > px + 3 * T and x1 < px - 3 * T, ('extremos en el pulso (%d, %d)'):format(x0 - px, x1 - px))
     want(math.abs(xm - px) < 2 and ym > y0 + T, 'a mitad de pulso, abajo')
-    local feet = g:floorY()
-    want(ym + 30 > feet - 64 and ym - 30 < feet, ('abajo, a la altura de la cabeza (pesa %d, suelo %d)'):format(ym, feet))
     -- daña al tocarla
     local pa = PlayerAdventure:new(xm, ym)
     level.players = { pa }
@@ -120,6 +123,59 @@ function cases.golpe()
         and (frac < 0.2 or frac > 7.9) and pa.hp == hp0 - 2,
         ('carga=%s, cae en el pulso %.2f de la frase (0 = el cambio), diana-jugador %d px, aturdido=%s, vida %d → %d')
         :format(tostring(wind), frac, math.floor(math.abs((g.landX or 0) - pa.x)), tostring(landed), hp0, pa.hp))
+end
+
+function cases.persigue()
+    local parts, ok = {}, true
+    local function want(c, m) parts[#parts + 1] = m .. (c and '' or ' ✗'); ok = ok and c end
+    for _, spot in ipairs({ { 92, nil, 'suelo' }, { 88, 20, 'repisa' } }) do
+        local level, es, g = arena()
+        g.x, g.y = (104 - 0.5) * T, g:hoverY()
+        local pa = PlayerAdventure:new((spot[1] - 0.5) * T, (spot[2] or 25) * T - 60)
+        level.players = { pa }
+        for _ = 1, 30 do pa:update(DT, level) end
+        local px, py = pa.x, pa.y
+        g.phr = -99                                                -- (sin golpes: solo persigue)
+        for _ = 1, 420 do
+            level.players = { pa }
+            BeatClock.update(level, DT, nil)
+            pa.x, pa.y, pa.vx, pa.vy, pa.invT = px, py, 0, 0, 5
+            g:update(DT, level)
+        end
+        local pvx, pvy = g:pivot()
+        local bottom = pvy + g.ROD
+        want(math.abs(g.x - px) < T and math.abs(bottom - py) < 40,
+             ('%s: encima a %d px, la pesa abajo a %d px de su cuerpo'):format(spot[3], math.floor(math.abs(g.x - px)), math.floor(bottom - py)))
+    end
+    check('persigue', ok, table.concat(parts, ' · '))
+end
+
+function cases.plataforma()
+    -- elige DÓNDE caer según dónde esté el jugador (como el panzazo del Rey Gummy): la repisa de cristal, el suelo de
+    -- verdad (también debajo de una repisa: la atraviesa) o el otro "suelo", la plataforma alta de Bloques Beep
+    local parts, ok = {}, true
+    for _, spot in ipairs({ { 88, 20, 'repisa' }, { 122, 25, 'suelo bajo la repisa' }, { 104, 13, 'plataforma alta' } }) do
+        local level, es, g = arena()
+        local pa = PlayerAdventure:new((spot[1] - 0.5) * T, spot[2] * T - 60)
+        level.players = { pa }
+        for _ = 1, 30 do pa:update(DT, level) end
+        local px, py = pa.x, pa.y
+        at(level, 8 * 3 + 3.9); g.lastBeats = BeatClock.beats(level); g.phr = 9
+        local landed
+        for _ = 1, 360 do
+            level.players = { pa }
+            BeatClock.update(level, DT, nil)
+            pa.x, pa.y, pa.vx, pa.vy, pa.invT = px, py, 0, 0, 5       -- (quieto: la prueba es dónde cae)
+            g:update(DT, level)
+            if g.state == 'dazed' then landed = true; break end
+        end
+        local feet = g.y + g.outerH / 2
+        local want = spot[2] * T
+        local good = landed and math.abs(feet - want) < 2
+        ok = ok and good
+        parts[#parts + 1] = ('%s: pies %d / cara %d%s'):format(spot[3], math.floor(feet), want, good and '' or ' ✗')
+    end
+    check('plataforma', ok, table.concat(parts, ' · '))
 end
 
 function cases.inmune()
@@ -159,7 +215,7 @@ function cases.ondas()
     end)
     -- una onda a ras de suelo daña
     local a = g:waveXs()
-    local q = PlayerAdventure:new(a, g:floorY() - 30)
+    local q = PlayerAdventure:new(a, g.landSurf - 30)
     level.players = { q }
     hurt = a and Interactions.check(q, g)
     check('ondas', n0 == 2 and n1 and n1 > 300 and hurt == 'hurt',
@@ -176,6 +232,24 @@ function cases.fases()
     end
     local s = table.concat(seen, ',')
     check('fases', seen[1] == 1 and seen[#seen] == 3 and s:find('2') ~= nil, ('vida %d: fases %s'):format(g.hpMax, s))
+end
+
+-- El TEMPO: el nivel va a 140 (su música, estelar_pulsar); con la zona en pelea, el reloj va al de la pista de la pelea
+-- (estelar_boss, 150: `bpm` del índice de música) y vuelve a 0; al acabar, otra vez el del nivel
+function cases.tempo()
+    local level, es, g = arena()
+    local z = level.bossZones[1]
+    local p0 = level.beat.period
+    level.beat.t = 5
+    BeatClock.update(level, DT, nil)
+    z.state = 'fight'
+    BeatClock.update(level, DT, nil)
+    local p1, t1 = level.beat.period, level.beat.t
+    z.state = 'cleared'
+    BeatClock.update(level, DT, nil)
+    local p2 = level.beat.period
+    check('tempo', math.abs(p0 - 8 * 60 / 140) < 1e-4 and math.abs(p1 - 3.2) < 1e-6 and t1 < 0.05 and math.abs(p2 - p0) < 1e-6,
+        ('nivel %.4f s/frase → pelea %.4f (t %.3f) → después %.4f'):format(p0, p1, t1, p2))
 end
 
 function cases.red()
@@ -202,7 +276,7 @@ end
 
 function love.load(arg)
     local only = os.getenv('CASE')
-    for _, n in ipairs({ 'pendulo', 'golpe', 'inmune', 'ondas', 'fases', 'red' }) do
+    for _, n in ipairs({ 'pendulo', 'persigue', 'golpe', 'plataforma', 'inmune', 'ondas', 'fases', 'tempo', 'red' }) do
         if not only or only == n then
             local ok, err = xpcall(cases[n], debug.traceback)
             if not ok then check(n, false, 'error: ' .. tostring(err)) end

@@ -151,6 +151,10 @@ if it should exist as a mini block, add it to `SubTiles.KINDS`. Then
 - Harness `mechanics` case `beep`. Design and the user's decisions: [beep-blocks](../design/beep-blocks.md). The level
   that uses them: Starway / Vía Estelar (`via_estelar`, Free Play), not built yet.
 
+
+**Tempo of a boss fight (0.5.232):** while a boss zone with its OWN track is fighting, the beat clock runs at that
+track's tempo (`bpm` in `assets/music/index.json`; `BeatClock.periodNow`) and restarts at 0 with each change of track
+(start and end of the fight). The Sanctuary of the Beat: level 140 (`estelar_pulsar`), fight 150 (`estelar_boss`).
 ## The Starway pack (0.5.226)
 
 Themed blocks of the Starway level (`starway_pack.lua`, tiles 61-68; textures `tools/art/world/make_starway_tiles.py`,
