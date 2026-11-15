@@ -74,8 +74,9 @@ and the network use; **Label** is the (Spanish) name in the editor. Own props = 
 | Id | Label | File | Flags | Own props |
 |---|---|---|---|---|
 | `avalanche` | Alud | `types/traps/avalanche.lua` |  | `width`: int = 2 · `length`: int = 10 · `period`: number = 6 · `warn`: number = 1.2 · `pour`: number = 2.5 · `delay`: number = 1 · `damage`: bool = true · `power`: number = 1 |
-| `clapspikes` | Pinchos de palmas | `types/traps/clapspikes.lua` |  | `offset`: int = 0 |
+| `clapspikes` | Pinchos de palmas | `types/traps/clapspikes.lua` |  | `offset`: int = 0 · `dir`: enum = up |
 | `cryo` | Congelador | `types/traps/cryo.lua` | activatable | `dir`: enum = right · `mode`: enum = interval · `interval`: number = 4 · `firstDelay`: number = 2 · `trigger`: enum = any · `windup`: number = 0.8 · `burst`: number = 0.8 · `range`: int = 8 · `freezeTime`: number = 3 · `affectPlayers`: bool = true · `affectEnemies`: bool = true · `phase`: int = 0 · `zone`: int = 0 |
+| `orbitstars` | Estrellas en órbita | `types/traps/orbitstars.lua` |  | `count`: int = 2 · `radius`: number = 2 · `beatsPerTurn`: int = 4 · `dir`: enum = cw · `motion`: enum = snap · `phase`: number = 0 |
 | `rainspike` | Pincho de lluvia | `types/traps/rainspike.lua` | ceiling only, sub-cell | `group`: int = 1 · `fallDelay`: number = 0.5 · `stuckTime`: number = 1.2 · `fallSpeed`: number = 1 |
 | `spikefall` | Pincho que cae | `types/traps/spikefall.lua` | ceiling only, sub-cell | `detectRange`: int = 6 · `fallDelay`: number = 0.45 · `stuckTime`: number = 2.5 |
 

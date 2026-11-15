@@ -1,0 +1,20 @@
+{
+  "id": "traps/orbitstars",
+  "scale": 4,
+  "origin": [0.5, 0.5],
+  "fallback": "idle",
+  "frames": [
+    {"image": "assets/images/traps/orbitstars/dot.png", "key": "dot.png"},
+    {"image": "assets/images/traps/orbitstars/hub.png", "key": "hub.png"},
+    {"image": "assets/images/traps/orbitstars/hub_lit.png", "key": "hub_lit.png"},
+    {"image": "assets/images/traps/orbitstars/star.png", "key": "star.png"},
+    {"image": "assets/images/traps/orbitstars/star_b.png", "key": "star_b.png"}
+  ],
+  "anims": {
+    "dot": {"fps": 4, "frames": [1], "loop": true},
+    "idle": {"fps": 4, "frames": [2], "loop": true},
+    "lit": {"fps": 4, "frames": [3], "loop": true},
+    "star": {"fps": 4, "frames": [4], "loop": true},
+    "star_lit": {"fps": 4, "frames": [5], "loop": true}
+  }
+}

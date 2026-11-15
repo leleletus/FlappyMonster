@@ -281,7 +281,8 @@ end
 -- TODOS los niveles con zonas de puntos (los 6 bonus de la historia y los demás de Rey de la Colina, que en Juego
 -- libre también se juegan contra el bot)
 local DEFAULT = { 'cala_de_los_muelles', 'cantera_real', 'ciudadela_alterna', 'cripta_del_silencio', 'lago_de_cristal',
-                  'claro_de_la_balanza', 'la_cima', 'isla_flotante', 'coliseo_pinchos', 'cascada_dorada', 'cumbre_cangrejo', 'marea_alta', 'rebote_real' }
+                  'claro_de_la_balanza', 'la_cima', 'isla_flotante', 'coliseo_pinchos', 'cascada_dorada', 'cumbre_cangrejo', 'marea_alta', 'rebote_real',
+                  'escenario_estelar' }
 local fails = 0
 
 function love.load(arg)

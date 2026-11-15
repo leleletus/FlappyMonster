@@ -216,6 +216,7 @@ piece took damage, immortal online), and a rewound "stomp" may hit a boss that i
 ## Protocol version history
 
 v124: an ON/OFF or Beep block that turns solid with someone inside switches anyway and pushes them out (`Level:pushOutOfCell`; the client pushes its predicted player on the `set` event): predicted physics changed.
+v125: new type `orbitstars` (Orbiting stars) and the clap spikes' `dir` prop (ceilings and walls); both run on the beat clock, nothing new travels.
 
 v123: the star island (`estelar`): new types `gummy_star`, `crabby_star`, `crabbytramp_star`; the Starway tile pack (61-68).
 

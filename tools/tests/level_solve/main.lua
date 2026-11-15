@@ -106,7 +106,7 @@ local function solve(path)
                 local e = Entities.create(pl)
                 e.levelRef = level
                 beatEnts[#beatEnts + 1] = e; doors[#doors + 1] = e
-                if pl.type == 'clapspikes' then claps[#claps + 1] = e end
+                if pl.type == 'clapspikes' or pl.type == 'orbitstars' then claps[#claps + 1] = e end   -- (lo que daña al compás)
                 if pl.type == 'beatspring' then springs[#springs + 1] = e end
             end
         end
@@ -262,7 +262,7 @@ local function solve(path)
                 if NODROWN then pa.drownTimer, pa.drownPhase, pa.drownAudT = 0, 'none', 0 end
                 tick()
                 pa:update(DT, level)
-                -- pinchos de palmas fuera: muerto (en el juego, daño: el resolvedor no se deja dañar)
+                -- pinchos de palmas fuera / estrellas en órbita: muerto (en el juego, daño: el resolvedor no se deja dañar)
                 if #claps > 0 then
                     local ob = pa:getOuterBounds()
                     for _, e in ipairs(claps) do

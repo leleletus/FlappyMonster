@@ -12,6 +12,7 @@ and describe the real thing in the system's page.
 
 | What | Page |
 |---|---|
+| **Starway, second wave (2026-11-15):** the faster level Pulsar (140 BPM), the bonus Star Stage, the boss level Sanctuary of the Beat (**built 0.5.230**, not played); ceiling / wall clap spikes and the orbiting stars (built); the double-jump rule for beep formations; **five boss ideas for the user to pick** (not built) | [estelar-levels-2](estelar-levels-2.md) |
 | **The level Starway / Vía Estelar (2026-11-14):** 420 × 48, six zones and a 72-chamber maze with crystal doors, all to the music; Free Play (**built 0.5.225**, waiting for the user to play it) | [via-estelar-level](via-estelar-level.md) |
 | **Starway rhythm objects (2026-11-14):** 10 objects, hazards and enemies that act on other parts of the beat (every beat, backbeat, kick, offbeats, 3-over-4, song sections) for the level Vía Estelar; the user picked metronome platform, clap spikes and on-beat star spring (**built 0.5.224**) | [starway-rhythm-objects](starway-rhythm-objects.md) |
 | **Beep blocks (2026-11-14):** a new block pair that swaps every 4 s on a level beat clock (3 beeps + impact in the music); reuses the ON/OFF Block base, not its code (**blocks, clock, blink and sounds built 0.5.221**; music to choose, level Vía Estelar to build) | [beep-blocks](beep-blocks.md) |

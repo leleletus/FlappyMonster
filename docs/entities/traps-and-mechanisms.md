@@ -265,13 +265,14 @@ Ground turret of the Evil Monster: glows 0.6 s, then fires a straight net upward
 
 ## Rhythm objects of Starway (0.5.224)
 
-Three types that act on the MUSIC's beat, for the level Starway / Vía Estelar (design and the user's pick:
+Four types (the fourth, the orbiting stars, 0.5.230) that act on the MUSIC's beat, for the level Starway / Vía Estelar (design and the user's pick:
 [starway-rhythm-objects](../design/starway-rhythm-objects.md)). Their state is a pure FUNCTION of the level's beat clock
 (`src/world/systems/BeatClock.lua`, `BeatClock.beats(level)` = beats since the music started, `BeatClock.offBeat(level)`
 = music seconds to the nearest beat), so single player, the server and the online client compute the same thing and
 nothing travels but the clock's `bt` (`netAtRest` always). Their type definitions carry `beat = true`: a level with
 any of them gets a beat clock even without Beep Blocks. Art: `tools/art/world/make_starway_objects.py --apply` (anim
-sets `mechanisms/metronome`, `traps/clapspikes`, `mechanisms/beatspring`). Harness `mechanics` case `ritmo`.
+sets `mechanisms/metronome`, `traps/clapspikes`, `mechanisms/beatspring`; the orbiting stars: `tools/art/world/make_starway_orbit.py
+--apply`, `traps/orbitstars`). Harness `mechanics` cases `ritmo` and `ritmo_dirs` (0.5.230: ceiling / wall claps, orbits).
 - **Metronome platform** (`mechanisms/metronome`, "Plataforma metrónomo", Mecanismos): a lavender crystal slab 2 tiles
   wide and half a tile tall, at the TOP of its cell. It steps ONE tile per beat, in a snap (`SNAP` = 0.16 of the beat,
   smoothstep), `steps` tiles (default 4) toward `dir` (right / left / up / down) and back: 4 + 4 = one phrase. Its gold
@@ -282,6 +283,15 @@ sets `mechanisms/metronome`, `traps/clapspikes`, `mechanisms/beatspring`). Harne
   snare) and hide on 1 and 3; `offset` = 1 swaps that (1 and 3). From half a beat before they come out the plate's
   stripe lights pink (the warning, `glint`). Out, they hurt exactly like tile spikes (`Level._spikeHitbox`, part
   `spike`); hidden, the tips still show (8 px). The user asked for spikes "like the rest of the game" (2026-11-14).
+  `dir` (0.5.230, the user: "the ceiling and wall version"): `up` (floor, default), `down` (ceiling), `left` / `right`
+  (a wall): the two spikes come out of that face (`C:spikeCell`, the tile spikes' hitbox and drawing for that direction)
+  and the plate is drawn turned so its stripe faces them.
+- **Orbiting stars** (`traps/orbitstars`, "Estrellas en órbita", Trampas, 0.5.230; proposal #9): `count` (1-4) spiked
+  steel stars orbit a crystal hub at `radius` tiles; by default one turn per bar (`beatsPerTurn` 4) in SNAPS — a
+  quarter turn at the start of each beat (`SNAP` 0.22 of the beat, smoothstep), still the rest — so on every beat they
+  sit on the same compass points (`motion = 'smooth'`: they turn without stopping). `dir` cw / ccw, `phase` (beats) to
+  offset neighbours. Each star hurts with a 36 px box (part `hazard`); the hub is not solid and its lamp lights on the
+  beat; dots mark the orbit. `netBounds` covers the whole orbit. The solver treats them like the clap spikes.
 - **On-beat star spring** (`mechanisms/beatspring`, "Trampolín de compás", Mecanismos): a CLASS OF THE TRAMPOLINE
   (`trampoline.lua` exports `defs.Base`), facing up: landing on it within `window` (0.15 s of music) of a BEEP BLOCK
   SWITCH (beat 1 of a phrase, `BeatClock.offSwitch`; the user, 2026-11-14 — first it was any beat) launches `high`

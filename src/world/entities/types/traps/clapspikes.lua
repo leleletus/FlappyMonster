@@ -5,6 +5,9 @@
 -- misma caja: Level._spikeHitbox). `offset` = 1 los adelanta un pulso (salen en el 1 y el 3), para alternar placas.
 -- Todo es FUNCIÓN del reloj de compás (src/world/systems/BeatClock.lua): igual en los tres sitios, sin red.
 -- Arte: la placa de tools/art/world/make_starway_objects.py (assets/anim/traps/clapspikes.json).
+-- `dir` (0.5.230): hacia dónde salen — 'up' (del suelo, por defecto), 'down' (del techo), 'left' / 'right' (de una
+-- pared). La placa gira con ellos (su franja mira a los pinchos) y la caja es la de los pinchos de casilla en esa
+-- dirección (Level._spikeHitbox con DIR_DOWN / LEFT / RIGHT).
 local Entity     = require 'src/world/entities/base/Entity'
 local BeatClock  = require 'src/world/systems/BeatClock'
 local SpikeSkins = require 'src/world/level/SpikeSkins'
@@ -49,17 +52,39 @@ function C:canFreeze() return false end
 function C:canBeLaunched() return false end
 function C:isObstacle() return true end
 
--- Fuera: dos pinchos de media casilla encima de la placa (la caja de los pinchos de casilla)
+-- Hacia dónde salen: (dx, dy) de la punta, el DIR_* de los pinchos de casilla y el giro de la placa
+local DIRS = {
+    up    = { 0, -1, 0, 0 },
+    down  = { 0,  1, 1, math.pi },
+    left  = { -1, 0, 2, -math.pi / 2 },
+    right = { 1,  0, 3, math.pi / 2 },
+}
+C.DIRS = DIRS
+function C:dirInfo() return DIRS[self.props.dir or 'up'] or DIRS.up end
+
+-- La subcelda (H x H) del pincho i (0, 1) cuando ha salido `rise` px de la placa (rise = H: del todo)
+function C:spikeCell(i, rise)
+    local d = self:dirInfo()
+    local x0, y0 = (self.col - 1) * T, (self.row - 1) * T
+    local a = i * H
+    if d[2] == -1 then return x0 + a, y0 - rise end
+    if d[2] == 1 then return x0 + a, y0 + T + rise - H end
+    if d[1] == -1 then return x0 - rise, y0 + a end
+    return x0 + T + rise - H, y0 + a
+end
+
+-- Fuera: dos pinchos de media casilla junto a la placa (la caja de los pinchos de casilla)
 local LevelMod
 function C:getHazardBoxes()
     if self:clap() ~= 'up' then return nil end
     LevelMod = LevelMod or package.loaded['src/world/level/Level'] or require('src/world/level/Level')
     local hb = self._hb
     if not hb then hb = { { part = 'spike' }, { part = 'spike' } }; self._hb = hb end
-    local x0, y0 = (self.col - 1) * T, (self.row - 1) * T - H
+    local dirN = self:dirInfo()[3]
     for i = 1, 2 do
         local b = hb[i]
-        b.x, b.y, b.w, b.h = LevelMod._spikeHitbox(x0 + (i - 1) * H, y0, H, 0)      -- 0 = DIR_UP
+        local sx, sy = self:spikeCell(i - 1, H)
+        b.x, b.y, b.w, b.h = LevelMod._spikeHitbox(sx, sy, H, dirN)
     end
     return hb
 end
@@ -80,24 +105,38 @@ end
 
 function C:render(camX, camY)
     local st, f = self:clap()
-    local x, y = math.floor((self.col - 1) * T - camX), math.floor((self.row - 1) * T - camY)
+    local d = self:dirInfo()
     local rise = C.HIDDEN
     if st == 'up' then rise = C.HIDDEN + (H - C.HIDDEN) * math.min(1, f / C.RISE) end
     if st == 'warn' then rise = C.HIDDEN + 2 end
+    rise = math.floor(rise)
     love.graphics.setColor(1, 1, 1, 1)
     local skin = self.levelRef and self.levelRef.spikeSkin
     local k = H / SpikeSkins.width(skin)
-    for i = 0, 1 do SpikeSkins.draw(skin, x + i * H, y - math.floor(rise), 0, k, k) end
-    C.anims(C):draw(st == 'warn' and 'glint' or 'idle', 0, x + T / 2, y + T / 2, 0, 4, 4, 0.5, 0.5)
+    -- (como los pinchos de casilla: LevelRender, drawSpike)
+    for i = 0, 1 do
+        local sx, sy = self:spikeCell(i, rise)
+        sx, sy = math.floor(sx - camX), math.floor(sy - camY)
+        if d[2] == -1 then SpikeSkins.draw(skin, sx, sy, 0, k, k)
+        elseif d[2] == 1 then SpikeSkins.draw(skin, sx, sy + H, 0, k, -k)
+        elseif d[1] == -1 then SpikeSkins.draw(skin, sx, sy + H, -math.pi / 2, k, k)
+        else SpikeSkins.draw(skin, sx + H, sy, math.pi / 2, k, k) end
+    end
+    local x, y = math.floor((self.col - 1) * T - camX), math.floor((self.row - 1) * T - camY)
+    C.anims(C):draw(st == 'warn' and 'glint' or 'idle', 0, x + T / 2, y + T / 2, d[4], 4, 4, 0.5, 0.5)
 end
 
 return {
     name = 'clapspikes', label = 'Pinchos de palmas', category = 'Trampas', class = C, beat = true,
-    description = 'Placa de la que salen pinchos en los pulsos 2 y 4 de cada compás, con la caja de la música (Vía Estelar).',
+    description = 'Placa de la que salen pinchos (del suelo, del techo o de una pared) en los pulsos 2 y 4 de cada compás, con la caja de la música (Vía Estelar).',
     defaults = { movement = 'static' },
     props = {
         { key = 'offset', kind = 'int', label = 'Adelanto (pulsos)', group = 'Pinchos de palmas', default = 0, min = 0, max = 1,
           help = '0 = salen en los pulsos 2 y 4; 1 = en el 1 y el 3 (para alternar placas)' },
+        { key = 'dir', kind = 'enum', label = 'Salen hacia', group = 'Pinchos de palmas', default = 'up',
+          options = { { value = 'up', label = 'Arriba (suelo)' }, { value = 'down', label = 'Abajo (techo)' },
+                      { value = 'left', label = 'Izquierda (pared)' }, { value = 'right', label = 'Derecha (pared)' } },
+          help = 'Del suelo, del techo o de una pared: la placa gira con ellos' },
     },
     editor = { sprite = 'assets/images/traps/clapspikes/plate.png' },
 }

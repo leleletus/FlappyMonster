@@ -42,6 +42,7 @@ enemy.claudio,Claudio,Claudio,
 enemy.crabmashup,Mega Mashup,Mega Mashup,
 enemy.rainspike,Lluvia de pinchos,Spike rain,
 enemy.clapspikes,Pinchos de palmas,Clap spikes,
+enemy.orbitstars,Estrellas en órbita,Orbiting stars,
 enemy.mirrorchase,Espejo,Mirror,
 enemy.gummy,Gummy,Gummy,Nombres de los enemigos (la causa de la muerte)
 enemy.crabby,Crabby,Crabby,
@@ -798,6 +799,10 @@ via.fork,"Arriba, por las piedras de colores; abajo, por las nubes. Los dos cami
 via.tower,"La escalera estelar: rebota a tiempo y sube con los ascensores.","The star staircase: bounce in time and ride the lifts up.",
 via.dance,"La pista de baile: el suelo y los muros de cristal cambian con la música. ¡Muévete con el ritmo!","The dance floor: the crystal floor and walls switch with the music. Move with the beat!",
 via.walls,"Muros de cristal: con cada cambio se abren los del otro color.","Crystal walls: each switch opens the ones of the other colour.",
+pulsar.intro,"Púlsar: aquí la música va más deprisa, y los bloques también. ¡No te pares!","Pulsar: the music is faster here, and so are the blocks. Don't stop!",Púlsar: carteles (tools/levelgen/levels_estelar_2.py)
+pulsar.claps,"Las palmas también salen del techo y de las paredes.","The clap spikes also come out of ceilings and walls.",
+pulsar.orbit,"Las estrellas giran un cuarto de vuelta en cada pulso: pasa cuando el hueco esté de tu lado.","The stars turn a quarter turn on every beat: go when the gap is on your side.",
+pulsar.drop,"El pozo: déjate caer del borde justo antes del cambio y aterrizarás en el otro color.","The shaft: drop off the edge just before the switch and you'll land on the other colour.",
 tut.missing,(texto del cartel sin poner),(sign text not set),Nivel tutorial: los carteles de ayuda (src/world/entities/types/items/hint.lua)
 tut.walk,"Muévete con {left} {right}. La meta está al final, a la derecha.","Move with {left} {right}. The goal is at the end, to the right.",
 tut.run,Mantén {run} para correr.,Hold {run} to run.,

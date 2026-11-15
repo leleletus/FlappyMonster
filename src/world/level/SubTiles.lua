@@ -21,9 +21,11 @@ local TileCodec = require 'src/world/tiles/TileCodec'
 local SubTiles = {}
 
 SubTiles.KINDS = { 'solid', 'dirt', 'grass', 'sand', 'deep_stone', 'basalt', 'ash', 'mud', 'jungle_grass', 'temple_brick',
-                   'snow', 'ice', 'frost_brick', 'ice_rock', 'snow_brick', 'glacier_ice', 'ice_brick' }
+                   'snow', 'ice', 'frost_brick', 'ice_rock', 'snow_brick', 'glacier_ice', 'ice_brick',
+                   'star_crystal', 'nebula_rock', 'cloud_block', 'star_brick' }
 -- (piedra, tierra, césped, arena, roca abisal, basalto, ceniza; la jungla: barro, su césped, sillar del templo; y lo
--- helado, 2026-10-29: nieve, hielo, ladrillo helado, roca helada, bloque de nieve, hielo glaciar, sillar de hielo)
+-- helado, 2026-10-29: nieve, hielo, ladrillo helado, roca helada, bloque de nieve, hielo glaciar, sillar de hielo; y el
+-- paquete estelar, 0.5.230: cristal estelar, roca nebular, nube maciza, ladrillo estelar — el relieve de sus niveles —)
 
 local QUAD = { { 0, 0 }, { 0.5, 0 }, { 0, 0.5 }, { 0.5, 0.5 } }   -- esquina de cada subcelda (fracción)
 SubTiles.QUAD = QUAD

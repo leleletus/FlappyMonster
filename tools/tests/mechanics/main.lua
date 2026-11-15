@@ -5,6 +5,7 @@
 --   onoff_pound  un ground pound encima lo cambia UNA vez y el jugador se queda encima
 --   beep         Bloques Beep: cambian a los 4 s de música, parpadeo solo visual, esperan al jugador, ¡date prisa!
 --   ritmo        plataforma metrónomo, pinchos de palmas y trampolín de compás (Vía Estelar)
+--   ritmo_dirs   pinchos de palmas de techo y pared, estrellas en órbita
 --   hidden_up    se atraviesa subiendo y se queda de pie encima
 --   hidden_drop  agachado encima no se baja (no traspasable)
 --   hidden_side  se atraviesa andando de lado
@@ -377,6 +378,46 @@ function cases.ritmo()
     want(vyOn < vyOff and vyOn < -math.abs(ADV_JUMP_VEL) * 2 and vyOff > -math.abs(ADV_JUMP_VEL) * 1.2,
          ('trampolín: en el cambio %d, en otro pulso %d'):format(vyOn, vyOff))
     check('ritmo', ok, table.concat(parts, ' · '))
+end
+
+-- Pinchos de palmas de TECHO y PARED (prop `dir`) y ESTRELLAS EN ÓRBITA (0.5.230): las cajas salen por el lado que
+-- toca, solo fuera; las estrellas están en los 4 puntos en cada pulso (un cuarto de vuelta por pulso: en el 1.º ya
+-- a la derecha), dan su paso al empezar el pulso y su caja va con ellas
+function cases.ritmo_dirs()
+    local level, es = room(16, 12, {}, {
+        { type = 'clapspikes', col = 4, row = 2, props = { dir = 'down' } },
+        { type = 'clapspikes', col = 2, row = 6, props = { dir = 'right' } },
+        { type = 'clapspikes', col = 15, row = 6, props = { dir = 'left' } },
+        { type = 'orbitstars', col = 9, row = 6, props = { count = 2, radius = 2 } },
+        { type = 'orbitstars', col = 9, row = 6, props = { count = 1, radius = 2, dir = 'ccw' } } })
+    for _, e in ipairs(es) do e.levelRef = level end
+    local parts, ok = {}, true
+    local function want(cond, msg) parts[#parts + 1] = msg .. (cond and '' or ' ✗'); ok = ok and cond end
+    local function at(beats) level.beat.t = beats * 0.5 end
+    at(1.2)
+    local d, r, l = es[1]:getHazardBoxes(), es[2]:getHazardBoxes(), es[3]:getHazardBoxes()
+    want(d and d[1].y >= 2 * T - 0.01 and d[1].y + d[1].h <= 2 * T + T / 2 + 0.01, 'techo: debajo de la placa')
+    want(r and r[1].x >= 2 * T - 0.01 and r[1].x + r[1].w <= 2 * T + T / 2 + 0.01, 'pared derecha: a su derecha')
+    want(l and l[1].x + l[1].w <= 14 * T + 0.01 and l[1].x >= 14 * T - T / 2 - 0.01, 'pared izquierda: a su izquierda')
+    want(d and r and l and d[1].x ~= d[2].x and r[1].y ~= r[2].y, 'dos pinchos en fila a lo largo de la placa')
+    at(0.2); want(es[1]:getHazardBoxes() == nil, 'escondidos, nada')
+    local o, o2 = es[4], es[5]
+    local cx, cy = o:center()
+    local function near(x, y, ex, ey) return math.abs(x - ex) < 1 and math.abs(y - ey) < 1 end
+    at(0.5); local x0, y0 = o:starPos(1)
+    at(1.5); local x1, y1 = o:starPos(1)
+    at(2.5); local x2, y2 = o:starPos(1)
+    want(near(x0, y0, cx + 2 * T, cy) and near(x1, y1, cx, cy + 2 * T) and near(x2, y2, cx - 2 * T, cy),
+         ('órbita: derecha, abajo, izquierda (%d,%d %d,%d %d,%d)'):format(x0 - cx, y0 - cy, x1 - cx, y1 - cy, x2 - cx, y2 - cy))
+    at(1.5); local xb, yb = o:starPos(2)
+    want(near(xb, yb, cx, cy - 2 * T), 'la 2.ª estrella, al otro lado')
+    at(0.5); local xc, yc = o2:starPos(1)
+    want(near(xc, yc, cx - 2 * T, cy), 'al revés: a la izquierda')
+    at(1.05); local xm, ym = o:starPos(1)
+    want(xm > cx + 1 and ym > cy + 1 and ym < cy + 2 * T - 1, 'da el paso al empezar el pulso')
+    at(1.5); local hb = o:getHazardBoxes()
+    want(hb and #hb == 2 and math.abs(hb[1].x + hb[1].w / 2 - x1) < 1, 'la caja va con la estrella')
+    check('ritmo_dirs', ok, table.concat(parts, ' · '))
 end
 
 function cases.hidden_up()
@@ -4996,7 +5037,7 @@ local function junglaShot()
 end
 
 function love.load()
-    for _, n in ipairs({ 'fuente_base', 'fuente_contacto', 'fuente_partes', 'fuente_entorno', 'fuente_textos', 'fuente_red', 'aviso_opcion', 'empuje', 'racha', 'inicio_fases', 'onoff_head', 'onoff_pound', 'beep', 'ritmo', 'hidden_up', 'hidden_drop', 'hidden_side', 'hidden_vis',
+    for _, n in ipairs({ 'fuente_base', 'fuente_contacto', 'fuente_partes', 'fuente_entorno', 'fuente_textos', 'fuente_red', 'aviso_opcion', 'empuje', 'racha', 'inicio_fases', 'onoff_head', 'onoff_pound', 'beep', 'ritmo', 'ritmo_dirs', 'hidden_up', 'hidden_drop', 'hidden_side', 'hidden_vis',
                          'helmet_jump', 'helmet_ride', 'helmet_gp', 'helmet_side', 'stomp_fast',
                          'puffer_through', 'puffer_concave', 'puffer_cycle', 'puffer_dry', 'flyer_anim', 'vuelo_libre', 'boxed_in',
                          'bloque_roto', 'activador', 'tramp_avanza', 'tramp_pinchos', 'ping_icono',
