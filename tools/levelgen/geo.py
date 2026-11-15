@@ -32,11 +32,16 @@ class Geo:
         self._subset = set()
 
     # ── mini bloques ────────────────────────────────────────────────────────────────────────────────────────────
-    def sub(self, c, r, q, kind=None):
-        """un cuarto de casilla (q: 1 arriba-izq, 2 arriba-der, 3 abajo-izq, 4 abajo-der) en una casilla VACÍA"""
+    def sub(self, c, r, q, kind=None, solid=False):
+        """un cuarto de casilla (q: 1 arriba-izq, 2 arriba-der, 3 abajo-izq, 4 abajo-der) en una casilla VACÍA.
+        DECORATIVO por defecto (`solid: false`): el relieve no cambia el camino — ni lo corta, ni abre atajos, ni da un
+        apoyo de más — (el usuario, 2026-11-15: «lo decorativo no debe de ayudar»; la primera tanda los ponía sólidos y
+        tuvo que arreglar Púlsar y el Santuario a mano)"""
         if self.L.get(c, r) != EMPTY or (c, r, q) in self._subset: return
         self._subset.add((c, r, q))
-        self.subs.append({'col': c, 'row': r, 'sub': q, 'kind': kind or self.sub_body})
+        d = {'col': c, 'row': r, 'sub': q, 'kind': kind or self.sub_body}
+        if not solid: d['solid'] = False
+        self.subs.append(d)
 
     def solid(self, c, r):
         return self.L.get(c, r) != EMPTY

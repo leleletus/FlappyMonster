@@ -159,7 +159,9 @@ background plane: `star_crystal` 61 (the road: lavender facets with tiny stars, 
 62 (the dark rock under it), `cloud_block` 63 (solid cloud, cotton top; material snow; own join group), `star_brick` 64
 (walls: bricks with a gold star now and then), `crystal_pillar` 65 (shaft + capital + base), `star_window` 66 (the
 brick with a starry porthole: for the background plane), `cloud_platform` 67 and `crystal_ledge` 68 (drop-through).
-Cold light colours, never pink / cyan (the Beep Blocks) nor bright gold (the rhythm objects). Star crystal, nebula
+Cold light colours, never pink / cyan (the Beep Blocks) nor bright gold (the rhythm objects). The nebula rock was redrawn in 0.5.231 (the user: "too noisy and detailed for the game's style, something simpler but
+effective"): a flat colour with two wavy strata, two pebbles and three star specks; the per-pixel-noise original is in
+`FlappyMonster_originals/world/tiles/nebula_rock.png`, before / after in `FlappyMonster_pruebas/via_estelar/bloques/roca_nebular_antes_despues.png`. Star crystal, nebula
 rock, cloud block and star brick are also MINI BLOCK kinds (0.5.230: the relief of the new Starway levels, `tools/levelgen/geo.py`).
 
 ## Secret exit

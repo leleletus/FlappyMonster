@@ -64,18 +64,22 @@ def star_crystal():
 
 
 def nebula_rock():
+    """0.5.231 (el usuario: «muy ruidosa y muy detallada para el estilo del juego; algo más simple pero efectivo»): un
+    color plano con dos ESTRATOS ondulados (la línea de sombra con su filo de luz encima), dos guijarros y tres motas de
+    polvo de estrellas. Sin ruido por píxel. Sin costuras (32 = 2 casillas: las ondas tienen periodo 32).
+    El original (ruido por píxel, vetas, 10 motas) está en FlappyMonster_originals/world/tiles/nebula_rock.png"""
+    import math
     im = canvas(32, 32, NEB[2])
-    r = random.Random(9)
-    for y in range(32):
+    for base, amp, ph in ((9, 1.5, 0.0), (25, 1.5, 2.2)):
         for x in range(32):
-            n = (x * 7 + y * 13 + (x * y) % 5) % 11
-            c = NEB[1] if n < 3 else (NEB[3] if n > 8 else NEB[2])
-            im.putpixel((x, y), c)
-    for _ in range(14):                                    # vetas oscuras
-        x, y = r.randrange(32), r.randrange(32)
-        for k in range(r.randrange(2, 5)): im.putpixel(((x + k) % 32, (y + k // 2) % 32), NEB[0])
-    for _ in range(10):                                    # polvo de estrellas
-        im.putpixel((r.randrange(32), r.randrange(32)), NEB[4] if r.random() < 0.7 else NEB[5])
+            y = base + int(round(amp * math.sin(2 * math.pi * x / 32 + ph)))
+            im.putpixel((x, y % 32), NEB[1])
+            im.putpixel((x, (y + 1) % 32), NEB[1] if x % 9 else NEB[2])   # (la sombra, de 2 a ratos)
+            im.putpixel((x, (y - 1) % 32), NEB[3])                       # el filo de luz
+    for (x, y) in ((5, 16), (21, 15)):                                     # guijarros
+        for dx, dy, c in ((0, 0, 3), (1, 0, 3), (2, 0, 2), (0, 1, 2), (1, 1, 1), (2, 1, 1)):
+            if not (dx == 2 and dy == 0): im.putpixel((x + dx, y + dy), NEB[c])
+    for (x, y, k) in ((12, 4, 4), (28, 19, 5), (17, 30, 4)): im.putpixel((x, y), NEB[k])
     return im
 
 
@@ -258,5 +262,7 @@ if __name__ == '__main__':
     ims = build()
     preview(ims)
     if '--apply' in sys.argv:
+        only = sys.argv[sys.argv.index('--only') + 1].split(',') if '--only' in sys.argv else None   # (--only a,b)
         for n, im in ims.items():
+            if only and n not in only: continue
             up(im).save(os.path.join(OUT, n + '.png')); print('  escrito', n)

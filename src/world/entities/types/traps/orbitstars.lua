@@ -57,13 +57,14 @@ end
 
 function O:getOuterBounds(into) return Entity.box(into, (self.col - 1) * T, (self.row - 1) * T, T, T) end
 O.getInnerBounds = O.getOuterBounds
-function O:isGhost() return true end
+-- (dañan SOLO sus estrellas — getHazardBoxes, que mira Interactions.defaultCheck —; el eje no tiene cuerpo. Antes era
+-- un `isGhost` con `interact` vacío y Interactions.check se lo saltaba entero: no dañaban — el usuario, 2026-11-15 —)
+function O:isBodyDisabled() return true end
 function O:canBeStomped() return false end
 function O:canBeKnocked() return false end
 function O:canFreeze() return false end
 function O:canBeLaunched() return false end
 function O:isObstacle() return true end
-function O:interact() return nil end
 
 function O:getHazardBoxes()
     local hb = self._hb

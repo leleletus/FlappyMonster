@@ -417,6 +417,22 @@ function cases.ritmo_dirs()
     want(xm > cx + 1 and ym > cy + 1 and ym < cy + 2 * T - 1, 'da el paso al empezar el pulso')
     at(1.5); local hb = o:getHazardBoxes()
     want(hb and #hb == 2 and math.abs(hb[1].x + hb[1].w / 2 - x1) < 1, 'la caja va con la estrella')
+    -- DE VERDAD: un jugador en la estrella recibe daño; en el eje (sin estrella), nada; y las palmas de techo fuera,
+    -- también (antes las estrellas no dañaban: Interactions.check se las saltaba — el usuario, 2026-11-15 —)
+    level.players = {}
+    local pa = PlayerAdventure:new(x1, y1)
+    local r1 = Interactions.check(pa, o)
+    pa.x, pa.y = cx, cy
+    local r2 = Interactions.check(pa, o)
+    want(r1 == 'kill' or r1 == 'hurt', 'la estrella daña (' .. tostring(r1) .. ')')
+    want(r2 == nil, 'el eje no (' .. tostring(r2) .. ')')
+    at(1.2)
+    local db = es[1]:getHazardBoxes()
+    pa.x = db[1].x + db[1].w / 2
+    local ob = pa:getOuterBounds()
+    pa.y = pa.y + (db[1].y + 4 - ob.y)                    -- (la cabeza, justo dentro de los pinchos)
+    local r3 = Interactions.check(pa, es[1])
+    want(r3 == 'kill' or r3 == 'hurt', 'las palmas del techo dañan (' .. tostring(r3) .. ')')
     check('ritmo_dirs', ok, table.concat(parts, ' · '))
 end
 
