@@ -110,8 +110,10 @@ if it should exist as a mini block, add it to `SubTiles.KINDS`. Then
   OFF; inactive = passable + outline texture. Source = level JSON `"blockLinks":
   [{col,row,from=[c,r]}]` or the NEAREST activator. `Level:updateSwitchBlocks` (after
   every toggle; swaps tile ids, queues `tile` events with `k='set'` = no fx) — a block
-  never turns solid with a player/obstacle inside (`pending`, retried in `Level:update`,
-  only where tiles are decided: SP/server). Editor: Conectar tool → pick an activator,
+  ALWAYS switches: whoever is inside one that turns solid (players, moving entities) is PUSHED OUT by the smallest move
+  to a free side, up winning ties (`Level:pushOutOfCell`; the online client pushes its predicted player the same way
+  when the `set` event arrives). Until 0.5.228 it WAITED for the cell to be empty (`pending`); the user (2026-11-14):
+  "it must switch whether or not there is an entity; just push it out". Editor: Conectar tool → pick an activator,
   then click/drag ON/OFF Blocks to (un)link; cyan lines = links, faint = nearest.
   An activator can drive **several** objects (one `links` row each; the inspector's buttons toggle them, 2026-11-10).
   Harness `flood_control` case `switchblocks`. Protocol v27.
@@ -124,7 +126,7 @@ if it should exist as a mini block, add it to `SubTiles.KINDS`. Then
   `tools/art/ui/make_cb_symbols.py`). They SWAP ON THEIR OWN every `period` s of music (4 s = a 2-bar phrase at 120 BPM):
   pink solid ↔ cyan solid. Same base as the ON/OFF Blocks (`switchBlock` with `beat = true`, `kind = 'beep_pink' |
   'beep_cyan'`): `Level:updateSwitchBlocks` asks `BeatClock.wants` instead of an activator; the tile swap, the `set`
-  events and "never solid with someone inside" (`pending`) are the shared code. No links in the editor (the Conectar
+  events and the push-out of whoever is inside (`Level:pushOutOfCell`) are the shared code. No links in the editor (the Conectar
   tool ignores them).
 - **The beat clock** `src/world/systems/BeatClock.lua` (`level.beat`, built by `Level.fromData` only when the level has
   Beep Blocks; JSON optional `"beat": {"period": 4, "start": "pink"|"cyan"}`). Its `t` IS the level music's position:

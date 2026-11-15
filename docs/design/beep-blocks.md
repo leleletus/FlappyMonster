@@ -53,8 +53,8 @@ Today `Level:updateSwitchBlocks` asks only "is my activator ON?". Make the sourc
   is beep_pink)`.
 
 Everything after the decision is the existing code: the tile swap keeping water / spikes bits, `brokenQueue` with
-`k = 'set'`, and the rule that a block never turns solid with a player or an obstacle inside (`pending`, retried in
-`Level:update`). That rule matters: a block appearing on the player waits, it never crushes.
+`k = 'set'`, and what happens with someone inside: since 0.5.228 the block switches anyway and PUSHES OUT whoever is in
+it (`Level:pushOutOfCell`; before, it waited for the cell to be empty — the user called that a bug).
 
 ### The clock = the music's position
 

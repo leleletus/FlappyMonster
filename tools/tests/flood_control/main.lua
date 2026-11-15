@@ -14,7 +14,7 @@
 --   editor       conexiones guardadas y cargadas, números de inundación únicos y
 --                aviso de una conexión a una inundación que no existe
 --   switchblocks Bloques ON/OFF: estado inicial según su activador, cambian al
---                golpearlo, esperan si hay alguien dentro, conexión explícita o
+--                golpearlo, con alguien dentro se activan igual y lo sacan, conexión explícita o
 --                al más cercano, y el editor limpia conexiones
 --   conexiones   al borrar el bloque (o pintar otro encima) su conexión se va con
 --                él; ON↔OFF la conserva; "Quitar conexión"; clave antigua `flood`
@@ -279,15 +279,15 @@ function cases.switchblocks()
                 and n(12, 3) == 'switchblock_on_x'      -- (el suelto sigue a B, que sigue en OFF)
     local sets = 0
     for _, e in ipairs(level.brokenQueue or {}) do if e[4] == 'set' then sets = sets + 1 end end
-    -- Alguien dentro de (8,8): al volver A a OFF, el Bloque OFF espera
+    -- Alguien dentro de (8,8): al volver A a OFF, el Bloque OFF se activa IGUAL y lo saca empujado (antes esperaba)
     local other = PlayerAdventure:new(7.5 * T, 8 * T - 20)
     other.invT = 99
     level.players = { pa, other }
     bump()                                              -- A → OFF
-    local waited = n(4, 7) == 'switch_off' and n(7, 8) == 'switchblock_on_x' and n(8, 8) == 'switchblock_off_x'
-    other.x, other.y = 11.5 * T, 3 * T
-    for _ = 1, 5 do level:update(DT) end
-    local after = n(8, 8) == 'switchblock_off'
+    local ob = other:getOuterBounds()
+    local out = not (ob.x < 8 * T and ob.x + ob.w > 7 * T and ob.y < 8 * T and ob.y + ob.h > 7 * T)
+    local waited = n(4, 7) == 'switch_off' and n(7, 8) == 'switchblock_on_x' and n(8, 8) == 'switchblock_off'
+    local after = out
     -- Editor: borrar el activador A borra las conexiones de sus bloques
     local Model = require 'src/editor/EditorModel'
     local m = Model.fromData(json.decode(json.encode(data)))
@@ -296,7 +296,7 @@ function cases.switchblocks()
     local src, implicit = m:blockSource(7, 8)
     local toB = src ~= nil and src[1] == 11 and implicit
     check('switchblocks', init and on1 and sets == 2 and waited and after and had == 2 and #m.blockLinks == 0 and toB,
-        ('inicio=%s; A→ON bloques=%s (%d cambios "set"); con alguien dentro espera=%s, luego se activa=%s; editor: %d conexiones → %d al borrar A, pasa al más cercano=%s'):format(
+        ('inicio=%s; A→ON bloques=%s (%d cambios "set"); con alguien dentro se activa=%s, y lo saca=%s; editor: %d conexiones → %d al borrar A, pasa al más cercano=%s'):format(
             tostring(init), tostring(on1), sets, tostring(waited), tostring(after), had, #m.blockLinks, tostring(toB)))
 end
 

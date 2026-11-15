@@ -129,8 +129,55 @@ function Level:cellOccupied(c, r)
     return false
 end
 
+-- EMPUJAR FUERA de una celda que se acaba de volver sólida a quien esté dentro (jugadores y entidades que se mueven: un
+-- Bloque ON/OFF o Beep que se activa NUNCA espera — el usuario, 2026-11-14: «debe activarse da igual si hay una entidad;
+-- si hay alguien dentro, se le empuja fuera» —). A cada uno se le mueve lo MENOS posible hacia el lado que tenga sitio
+-- (arriba gana los empates: queda de pie encima). Igual en un jugador, el servidor y el cliente online (al recibir el
+-- cambio de tile: OnlineAdventureNet), así la predicción no se separa.
+local PUSH_PAD = 0.5                       -- px de holgura al sacarlo (que no quede rozando la cara)
+local function boxFree(level, x, y, w, h)
+    local xs = { x + 1, x + w / 2, x + w - 1 }
+    local ys = { y + 1, y + h / 2, y + h - 1 }
+    for _, px in ipairs(xs) do
+        for _, py in ipairs(ys) do
+            local d = level:getDefAt(px, py)
+            if d.collision == 'solid' then return false end
+        end
+    end
+    return y + h <= level.tileH * TILE_PX and y >= -TILE_PX and x >= 0 and x + w <= level.tileW * TILE_PX
+end
+-- `players` = a quién mirar (por defecto level.players; el cliente pasa su jugador predicho)
+function Level:pushOutOfCell(c, r, players)
+    local T = TILE_PX
+    local x0, y0 = (c - 1) * T, (r - 1) * T
+    local function push(o, b)
+        if not (b.x < x0 + T and b.x + b.w > x0 and b.y < y0 + T and b.y + b.h > y0) then return end
+        local best, bdx, bdy
+        for _, mv in ipairs({ { 0, y0 - (b.y + b.h) - PUSH_PAD, 0.8 }, { 0, y0 + T - b.y + PUSH_PAD, 1 },
+                              { x0 - (b.x + b.w) - PUSH_PAD, 0, 1 }, { x0 + T - b.x + PUSH_PAD, 0, 1 } }) do
+            local dx, dy = mv[1], mv[2]
+            local cost = (math.abs(dx) + math.abs(dy)) * mv[3]
+            if (not best or cost < best) and boxFree(self, b.x + dx, b.y + dy, b.w, b.h) then best, bdx, bdy = cost, dx, dy end
+        end
+        if not best then bdx, bdy = 0, y0 - (b.y + b.h) - PUSH_PAD end      -- (sin sitio: arriba, encima del bloque)
+        o.x, o.y = o.x + bdx, o.y + bdy
+        if bdy < 0 and (o.vy or 0) > 0 then o.vy = 0 end
+        if bdy > 0 and (o.vy or 0) < 0 then o.vy = 0 end
+        if bdx ~= 0 then o.vx = 0 end
+    end
+    for _, pa in ipairs(players or self.players or {}) do
+        if pa.alive ~= false and not pa.dying then push(pa, pa:getOuterBounds()) end
+    end
+    if players then return end                                     -- (el cliente: solo su jugador)
+    for _, e in ipairs(self.liveEntities or {}) do
+        if e.alive and not e.solidFull and not (e.isGhost and e:isGhost()) and e.state ~= 'reserve' then
+            push(e, e:getOuterBounds())
+        end
+    end
+end
+
 -- Pone cada Bloque ON/OFF en su estado según su activador (y cada Bloque Beep según el reloj de compás). `silent` = al cargar
--- (sin cola: todos parten igual)
+-- (sin cola: todos parten igual). Cambia SIEMPRE: quien esté dentro de uno que se vuelve sólido sale empujado.
 function Level:updateSwitchBlocks(silent)
     for _, b in ipairs(self.switchBlocks or {}) do
         local def = self:getDef(b.c, b.r)
@@ -143,9 +190,8 @@ function Level:updateSwitchBlocks(silent)
                 local on = b.src and self:getDef(b.src[1], b.src[2]).name == 'switch_on' or false
                 want = (sb.kind == 'on') == on
             end
-            -- (no se vuelve sólido con alguien dentro: espera a que se aparte)
-            b.pending = want and not sb.active and not silent and self:cellOccupied(b.c, b.r)
-            if want ~= sb.active and not b.pending then
+            b.pending = nil
+            if want ~= sb.active then
                 local to = TileTypes.byName[sb.other]
                 local _, water, spikes = decTile(self:getRaw(b.c, b.r))
                 local new = TileCodec.encode(to.id, water, spikes)
@@ -153,6 +199,7 @@ function Level:updateSwitchBlocks(silent)
                 if not silent then
                     self.brokenQueue = self.brokenQueue or {}
                     table.insert(self.brokenQueue, { b.c, b.r, new, 'set' })
+                    if want then self:pushOutOfCell(b.c, b.r) end      -- (se volvió sólido: fuera quien esté dentro)
                 end
             end
         end

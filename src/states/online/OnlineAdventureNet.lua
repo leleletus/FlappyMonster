@@ -375,7 +375,9 @@ function OnlineAdventureState:_processEvent(ev)
         if c and r and v then
             self.level:setTileRaw(c, r, v)
             if ev.k == 'set' then
-                -- (Bloque ON/OFF que cambia con su activador: sin efectos)
+                -- (Bloque ON/OFF / Beep que cambia: sin efectos; si se volvió sólido, el jugador predicho sale empujado
+                --  como en el servidor — Level:pushOutOfCell —)
+                if self.level:getDef(c, r).collision == 'solid' and self.localPa then self.level:pushOutOfCell(c, r, { self.localPa }) end
             elseif ev.k == 'crack' or ev.k == 'icebreak' then
                 -- Hielo fino que se agrieta / se rompe
                 local x, y = (c - 0.5) * TILE_PX, (r - 1) * TILE_PX + TILE_PX / 4

@@ -296,7 +296,7 @@ end
 
 -- BLOQUES BEEP (docs/design/beep-blocks.md, src/world/systems/BeatClock.lua): al cargar, rosa sólido y cian
 -- atravesable; a los 4 s de música cambian (cola 'set'); los beeps de los pulsos 6-8 hacen PARPADEAR el dibujo sin
--- tocar la colisión; un bloque que debe volverse sólido con el jugador dentro espera a que se aparte; el ¡date prisa!
+-- tocar la colisión; un bloque que se vuelve sólido con el jugador dentro cambia igual y lo saca empujado; el ¡date prisa!
 -- acelera el reloj (×Hurry.RATE tras el jingle); volver a empezar la música lo pone a 0
 function cases.beep()
     local BC = require 'src/world/systems/BeatClock'
@@ -312,11 +312,15 @@ function cases.beep()
     want(not BC.blink(level), 'entre beeps no parpadea')
     BC.update(level, 1.25, nil)                          -- (4,05 s: cambio)
     local q = level.brokenQueue or {}
-    want(name(level, 3, 5) == 'beepblock_pink_x' and name(level, 6, 5) == 'beepblock_cyan' and #q == 2 and q[1][4] == 'set',
+    want(name(level, 3, 5) == 'beepblock_pink_x' and name(level, 6, 5) == 'beepblock_cyan' and #q == 3 and q[1][4] == 'set',
          'a los 4 s cambian (cola ' .. #q .. ')')
-    want(name(level, 4, 7) == 'beepblock_cyan_x', 'con el jugador dentro espera')
-    pa.x = 7.5 * T; level:update(1 / 60)
-    want(name(level, 4, 7) == 'beepblock_cyan', 'apartado, se vuelve sólido')
+    -- (con el jugador DENTRO cambia igual y lo saca empujado — el usuario, 2026-11-14 —)
+    local ob = pa:getOuterBounds()
+    local inside = ob.x < 4 * T and ob.x + ob.w > 3 * T and ob.y < 7 * T and ob.y + ob.h > 6 * T
+    want(name(level, 4, 7) == 'beepblock_cyan' and not inside, ('con el jugador dentro cambia y lo saca (pie en %.0f, techo del bloque %d)'):format(ob.y + ob.h, 6 * T))
+    for _ = 1, 30 do pa:update(1 / 60, level) end
+    local ob2 = pa:getOuterBounds()
+    want(math.abs(ob2.y + ob2.h - 6 * T) < 2 and pa.onGround, 'queda de pie encima')
     local H = require 'src/audio/Hurry'
     local t0 = level.beat.t
     BC.update(level, 1, H.AT - H.DUCK - 1)
