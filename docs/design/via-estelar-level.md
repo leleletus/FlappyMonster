@@ -44,6 +44,16 @@ the background plane, and more varied use of beep blocks (longer parkour, walls 
 - Background plane (`backplane()`): the whole maze has a brick wall with starry windows behind it (inside a temple);
   behind every long stretch of road, a brick tower with windows or a portico of crystal columns.
 
+## Relief pass (0.5.234)
+
+The user: "the same restructuring as the new levels, so it doesn't look so flat or square — and this time be careful
+with the mini blocks" (they had removed them from the three new levels). The level is hand-edited, so it is NOT rebuilt:
+`tools/levelgen/relief.py via_estelar` only ADDS to the existing file — 702 cells of nebula rock as domes and
+stalactites under the crystal islands (only where the column and 3 columns each side are empty down to the void and no
+entity or patrol is near; never the 2 edge columns; grown downward from the island, so no new surface faces up: checked,
+0 new footholds) and 4 395 background-plane cells (spires out of a cloud sea, distant islands) where the plane was
+empty. No mini blocks; the brick temples, the maze and every route untouched.
+
 ## How it was checked
 
 `level_solve` learnt the beat (0.5.225): time is part of the state (each action is 0.1 s; the key holds the moment of
