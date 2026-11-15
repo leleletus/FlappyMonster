@@ -22,8 +22,12 @@
 #   B "flauta" flauta GM (GeneralUser GS) sobre el reparto de chip, con una voz de N163 debajo (el color de la casa);
 #              motivo "TAAA ta-ta-ta-ta | TAAAA" (nota larga y una ola por grados); en B el glockenspiel GM la dobla
 # La armonía, el bajo, el arpegio y la batería son los mismos en las dos.
+# Y la variante R "remaster" (2026-11-15, la INSTALADA): el usuario, "buena pero repetitiva y aburrida para un nivel
+# largo" → el tema B como sección A y luego subida, estribillo nuevo, corte, subida y clímax un tono arriba; 76
+# compases = 152 s. Vive en tools/music/estelar.py (la familia estelar: también Púlsar, el bonus y el jefe); aquí
+# `R` solo la llama. La B instalada hasta entonces y la A se pueden volver a generar como siempre (sin instalarse).
 #
-#   ~/.venvs/fm-music/bin/python tools/music/via_estelar.py [A|B ...]   → FlappyMonster_pruebas/musica/via_estelar/
+#   ~/.venvs/fm-music/bin/python tools/music/via_estelar.py [A|B|R ...]   → FlappyMonster_pruebas/musica/via_estelar/
 #   REPORT=1 → solo números (no escribe nada)
 # Se comprueba con números (tools/music/bloques_beep_check.py); NO se ha escuchado.
 import os, sys, wave
@@ -471,8 +475,9 @@ def variante(v):
         if nombre.endswith('juego'): os.remove(wp)                 # (el .wav con pitidos se queda: lo mide el comprobador)
     escribe_mid(v, mel, os.path.join(PRUEBAS, f'{v}.mid'))
     print(f'  → {PRUEBAS}/{v}_juego.ogg · {v}_con_beeps.ogg/.wav · {v}.mid')
-    # INSTALL=1: la elegida (VIA_ESTELAR=B, la del usuario 2026-11-14; la A se guarda sin instalar) SIN pitidos → el juego
-    if os.environ.get('INSTALL') and v == os.environ.get('VIA_ESTELAR', 'B'):
+    # INSTALL=1 VIA_ESTELAR=A|B: instala esa SIN pitidos → el juego. Desde 2026-11-15 la instalada es la R (estelar.py):
+    # sin VIA_ESTELAR, A y B ya no se instalan.
+    if os.environ.get('INSTALL') and v == os.environ.get('VIA_ESTELAR', 'R'):
         dst = os.path.join(ROOT_REPO, 'assets', 'music', 'worlds', 'via_estelar')
         os.makedirs(dst, exist_ok=True)
         wp = os.path.join(dst, 'via_estelar.wav')
@@ -485,6 +490,10 @@ def variante(v):
 
 
 if __name__ == '__main__':
-    vs = [a for a in sys.argv[1:] if a in ('A', 'B')] or ['A', 'B']
+    vs = [a for a in sys.argv[1:] if a in ('A', 'B', 'R')] or ['A', 'B']
     for v in vs:
-        variante(v)
+        if v == 'R':                                                  # el remaster: tools/music/estelar.py
+            import estelar
+            estelar.pista('via_estelar')
+        else:
+            variante(v)

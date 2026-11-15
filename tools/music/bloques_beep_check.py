@@ -8,9 +8,14 @@
 #     ≥ 2 × la media de la frase;
 #   · el puente C 3-4 dB por debajo de A y de B (RMS de la mezcla entera);
 #   · la costura del bucle sin clic ni salto de nivel.
+# Para pistas con más secciones (estelar.py): `--sections 8,8,16,... --names A1,A2,C,... --quiet D[,..] --climax F`
+#   · cada sección TRANQUILA, 3-6 dB por debajo de la media de las demás (sin `--quiet`, con 3 secciones: la regla de
+#     arriba, la 3.ª 3-4 dB por debajo de las otras dos); el CLÍMAX, la sección más fuerte de todas;
+#   · el tempo se busca alrededor de `--bpm` (cualquier tempo, no solo 120); la frase es siempre de 8 tiempos.
 # Sin `--fade`: el archivo es el BUCLE (empieza en el tiempo 1 de la frase 1). Con `--fade`: la versión con final
 # (bucle + cola que se apaga): además comprueba que los pitidos siguen durante el fundido.
 #   python3 tools/music/bloques_beep_check.py <wav> [--fade] [--freq 2290] [--bpm 120] [--sections 20,16,4]
+#        [--names A,B,C] [--quiet C] [--climax B]
 # Sale con código 1 si algo falla. NO escucha: solo mide.
 import sys, wave, json
 import numpy as np
@@ -56,8 +61,9 @@ def section_levels(x, sr, bar_s, sections):
     return out
 
 
-def tempo(x, sr):
-    """tempo por autocorrelación del flujo espectral (ventana 2048, salto 256), afinado en el retardo de un compás"""
+def tempo(x, sr, bpm=120.0):
+    """tempo por autocorrelación del flujo espectral (ventana 2048, salto 256), afinado en el retardo de un compás
+    (las ventanas de búsqueda, alrededor del tempo esperado)"""
     hop, n = 256, 2048
     win = np.hanning(n)
     fr = np.lib.stride_tricks.sliding_window_view(x, n)[::hop] * win
@@ -73,9 +79,10 @@ def tempo(x, sr):
         y0, y1, y2 = ac[i - 1], ac[i], ac[i + 1]
         d = 0.5 * (y0 - y2) / (y0 - 2 * y1 + y2 + 1e-20)
         return (i + d) / fps
-    beat = peak(0.4, 0.6)
-    bar = peak(1.9, 2.1)                                                  # 4 tiempos: más precisión
-    long_ = peak(7.9, 8.1)                                                # 16 tiempos
+    b0 = 60.0 / bpm
+    beat = peak(0.8 * b0, 1.25 * b0)
+    bar = peak(0.95 * 4 * b0, 1.05 * 4 * b0)                              # 4 tiempos: más precisión
+    long_ = peak(0.99 * 16 * b0, 1.01 * 16 * b0)                          # 16 tiempos
     return 60 / beat, 240 / bar, 960 / long_
 
 
@@ -117,8 +124,16 @@ def detect_beeps(x, sr, freq, thr_db=-14.0, local=None):
     return out
 
 
-def check(path, freq=2290.0, bpm=120.0, sections=(20, 16, 4), fade=False, verbose=True):
+def check(path, freq=2290.0, bpm=120.0, sections=(20, 16, 4), fade=False, verbose=True, names=None, quiet=None,
+          climax=None):
     x, sr = load(path)
+    return check_signal(x, sr, path, freq, bpm, sections, fade, verbose, names, quiet, climax)
+
+
+def check_signal(x, sr, path='(mezcla)', freq=2290.0, bpm=120.0, sections=(20, 16, 4), fade=False, verbose=True,
+                 names=None, quiet=None, climax=None):
+    """lo mismo sobre una señal mono ya cargada (estelar.py la mide sin escribir archivos)"""
+    names = list(names or 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'[:len(sections)])
     beat = 60.0 / bpm; bar = 4 * beat; phrase = 2 * bar
     loop_bars = sum(sections); loop_n = int(round(loop_bars * bar * sr))
     total = len(x) / sr
@@ -131,11 +146,11 @@ def check(path, freq=2290.0, bpm=120.0, sections=(20, 16, 4), fade=False, verbos
         ok &= bool(good)
         say(f'  [{"OK" if good else "FALLA"}] {name}: {txt}')
 
-    say(f'── {path}  ({total:.3f} s, {len(x)} muestras, {nph} frases de {phrase:.0f} s)')
+    say(f'── {path}  ({total:.3f} s, {len(x)} muestras, {nph} frases de {phrase:.3g} s)')
     if not fade:
         verdict('longitud del bucle', len(x) == loop_n, f'{len(x)} muestras (esperadas {loop_n} = {loop_bars} compases)')
     # TEMPO
-    t1, t4, t16 = tempo(x[:loop_n], sr)
+    t1, t4, t16 = tempo(x[:loop_n], sr, bpm)
     beeps = detect_beeps(x, sr, freq, local=phrase if fade else None)
     gaps = [b2['t'] - b1['t'] for b1, b2 in zip(beeps, beeps[1:]) if b2['t'] - b1['t'] < 1.0]
     per = [b2['t'] - b1['t'] for b1, b2 in zip(beeps, beeps[1:]) if b2['t'] - b1['t'] > 2.0]
@@ -162,7 +177,7 @@ def check(path, freq=2290.0, bpm=120.0, sections=(20, 16, 4), fade=False, verbos
     verdict('casi senoidal', max(hs) < 0.10, f'2º/3er armónico como mucho {100 * max(hs):.1f} % de la fundamental (en la mezcla)')
     say(f'        (sobresale de la mezcla: su pico {min(overs):.0f}-{max(overs):.0f} dB por encima del espectro medio 0,3-12 kHz)')
     secs, b0 = [], 0
-    for name, L in zip('ABC', sections):
+    for name, L in zip(names, sections):
         secs.append((name, b0 // 2, (b0 + L) // 2)); b0 += L
     have = {name: all(counts[p] == 3 for p in range(a, b)) for name, a, b in secs}
     txt = ', '.join(f'{k} {"sí" if v else "NO"}' for k, v in have.items())
@@ -190,9 +205,22 @@ def check(path, freq=2290.0, bpm=120.0, sections=(20, 16, 4), fade=False, verbos
     # SECCIONES
     lv = section_levels(x[:loop_n], sr, bar, sections)
     R['levels'] = lv
-    dA, dB = lv[2] - lv[0], lv[2] - lv[1]
-    verdict('C 3-4 dB por debajo de A y B', -4.0 <= dA <= -3.0 and -4.0 <= dB <= -3.0,
-            f'A {lv[0]:.2f} · B {lv[1]:.2f} ({lv[1] - lv[0]:+.2f}) · C {lv[2]:.2f} dB → C−A {dA:+.2f}, C−B {dB:+.2f}')
+    if quiet is None and len(sections) == 3:
+        dA, dB = lv[2] - lv[0], lv[2] - lv[1]
+        verdict('C 3-4 dB por debajo de A y B', -4.0 <= dA <= -3.0 and -4.0 <= dB <= -3.0,
+                f'A {lv[0]:.2f} · B {lv[1]:.2f} ({lv[1] - lv[0]:+.2f}) · C {lv[2]:.2f} dB → C−A {dA:+.2f}, C−B {dB:+.2f}')
+    else:
+        quiet = list(quiet or [])
+        say('        secciones: ' + ' · '.join(f'{n} {v:.2f}' for n, v in zip(names, lv)) + ' dB')
+        loud = [v for n, v in zip(names, lv) if n not in quiet]
+        ref = float(np.mean(loud))
+        for q in quiet:
+            d = lv[names.index(q)] - ref
+            verdict(f'{q} (tranquila) 3-6 dB por debajo de las demás', -6.0 <= d <= -3.0, f'{d:+.2f} dB respecto a su media')
+        if climax:
+            c = lv[names.index(climax)]
+            otros = max(v for n, v in zip(names, lv) if n != climax)
+            verdict(f'{climax} (clímax) la sección más fuerte', c >= otros, f'{c:.2f} dB; la siguiente {otros:.2f} ({c - otros:+.2f})')
     # COSTURA
     if not fade:
         y = x[:loop_n]
@@ -202,7 +230,7 @@ def check(path, freq=2290.0, bpm=120.0, sections=(20, 16, 4), fade=False, verbos
         q = int(0.25 * sr)
         pre_seam, pre_ref = rms_db(y[-q:]), rms_db(y[int((loop_bars - 2) * bar * sr) - q:int((loop_bars - 2) * bar * sr)])
         post_seam = rms_db(y[:q])
-        posts = [rms_db(y[int(p * phrase * sr):int(p * phrase * sr) + q]) for p in range(1, sections[0] // 2)]
+        posts = [rms_db(y[int(p * phrase * sr):int(p * phrase * sr) + q]) for p in range(1, max(2, sections[0] // 2))]
         # la cola de antes de la costura frente a la de antes del golpe de dentro de C; la cabeza después de la costura
         # frente a la de las otras frases de A (el salto propio de pasar de C a A, pero ninguno de más)
         good = jump <= lim and abs(pre_seam - pre_ref) <= 1.5 and abs(post_seam - np.mean(posts)) <= 1.5
@@ -226,8 +254,11 @@ if __name__ == '__main__':
     opt = lambda k, d: type(d)(a[a.index(k) + 1]) if k in a else d
     files = [f for i, f in enumerate(a) if f.endswith('.wav') and (i == 0 or not a[i - 1].startswith('--'))]
     secs = tuple(int(s) for s in opt('--sections', '20,16,4').split(','))
+    names = opt('--names', '').split(',') if '--names' in a else None
+    quiet = opt('--quiet', '').split(',') if '--quiet' in a else None
     bad = 0
     for f in files:
-        r = check(f, opt('--freq', 2290.0), opt('--bpm', 120.0), secs, fade='--fade' in a)
+        r = check(f, opt('--freq', 2290.0), opt('--bpm', 120.0), secs, fade='--fade' in a, names=names, quiet=quiet,
+                  climax=opt('--climax', '') or None)
         bad += not r['ok']
     sys.exit(1 if bad else 0)
