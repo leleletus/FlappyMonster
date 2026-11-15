@@ -1,4 +1,4 @@
--- tools/tests/edge_look — EL BORDE DE CONTRASTE (src/fx/Edge.lua, docs/design/entity-edge-shader.md): el modo (shader /
+-- tools/tests/edge_look — EL BORDE DE CONTRASTE (src/fx/Edge.lua, docs/art/contrast-edge.md): el modo (shader /
 -- simple, por aparato y por ajuste), las reglas del modo simple (qué color, el fundido, lo que va sin borde) y, en modo
 -- shader, la pasada que compara cada borde con lo que tiene detrás, píxel a píxel, en lienzos pequeños.
 --   tools/tests/run.sh edge_look            (ONLY=a,b: solo esos casos; SHOT=1: capturas <save>/edge_*.png)
@@ -652,6 +652,166 @@ case('luz_propia', function()
     Settings.edge = prev
     check('luz_propia', own == 0 and far == 1 and none == 1,
         ('con luz propia=%.2f (quiero 0) · con una luz lejos=%.2f · sin luz=%.2f'):format(own, far, none))
+end)
+
+-- ── EL FILO EN UN NIVEL DE VERDAD, estable (el usuario, 2026-11-15: «a oscuras no tengo el filo; a veces sale y a
+-- veces no en el mismo sitio y momento; y sale donde no hace falta, también en otras entidades») ──────────────────
+-- `sweep`: la cámara corrida 0..n-1 px (lo que cambia al moverse un poco: la rejilla de muestras antes caía en otros
+-- sitios); en cada sitio, 8 fotogramas; el estado del filo de cada dueño. `still`: n fotogramas sin mover nada
+local function frames(st, n, cv)
+    for _ = 1, n do
+        at(clockT + 1 / 60)
+        love.graphics.setCanvas(cv); love.graphics.clear(0, 0, 0, 1)
+        st:render()
+        love.graphics.setCanvas()
+    end
+end
+local function sweep(st, owners, n, cv)
+    local baseX = st.camX
+    local res = {}
+    for i = 1, #owners do res[i] = { min = 1, max = 0, list = {} } end
+    for k = 0, n - 1 do
+        st.camX = baseX + k
+        frames(st, 8, cv)
+        for i, o in ipairs(owners) do
+            local a = Edge.stateOf(o)
+            local r = res[i]
+            r.min, r.max = math.min(r.min, a), math.max(r.max, a)
+            r.list[#r.list + 1] = ('%.2f'):format(a)
+        end
+    end
+    st.camX = baseX
+    return res
+end
+local function still(st, owner, n, cv)
+    local lo, hi = 1, 0
+    for _ = 1, n do
+        frames(st, 1, cv)
+        local a = Edge.stateOf(owner)
+        lo, hi = math.min(lo, a), math.max(hi, a)
+    end
+    return lo, hi
+end
+-- (el reloj del filo, siempre hacia delante como el del juego: `numeros` dejó números usados hasta los 10 s y, con el
+-- reloj atrás, el que más tiempo lleva sin dibujarse sería el personaje de ahora)
+local function forward() at(math.max(clockT, 10) + 100) end
+-- El monstruo negro sobre el cielo estelar casi negro (Vía Estelar, `light: "none"`, de noche): CON filo, siempre; un
+-- Gummy estelar (claro) a su lado: SIN filo (antes la zona de uno contaba el contorno del otro)
+case('estelar', function()
+    forward()
+    local prev = Settings.edge
+    Settings.edge = 'shader'
+    local Entities = require 'src/world/entities/Entities'
+    local st = scene('via_estelar', { frames = 40 })
+    local p = st.player
+    local g = Entities.create({ type = 'gummy_star', col = 4, row = 29, props = {} })
+    g.x = p.x + 70                                       -- (pegado al monstruo: las dos zonas se pisan)
+    st.enemies[#st.enemies + 1] = g
+    local cv = love.graphics.newCanvas(WINDOW_W, WINDOW_H)
+    frames(st, 30, cv)
+    local lo, hi = still(st, p, 40, cv)
+    local r = sweep(st, { p, g }, 24, cv)
+    cv:newImageData():encode('png', 'edge_estelar.png')
+    love.timer.getTime = realGetTime
+    Settings.edge = prev
+    check('estelar', lo > 0.97 and r[1].min > 0.97 and r[2].max < 0.03,
+        ('monstruo quieto 40 fotogramas=%.2f..%.2f · corriendo la cámara 24 px=%.2f..%.2f (quiero 1) · Gummy estelar al lado=%.2f..%.2f (quiero 0) · %s'):format(
+        lo, hi, r[1].min, r[1].max, r[2].min, r[2].max, r[1].min < 0.97 and table.concat(r[1].list, ' ') or ''))
+end)
+-- El sprite DE VERDAD del monstruo (×6) sobre el azul casi negro del cielo estelar, corrido 0..11 px y en sus poses:
+-- con filo en todas (antes, la rejilla de 24×24 muestras y la cara blanca contada como «cuerpo que se ve» lo decidían
+-- según dónde cayeran las muestras)
+case('monstruo_estelar', function()
+    forward()
+    local prev = Settings.edge
+    Settings.edge = 'shader'
+    local Stage = require 'src/story/Stage'
+    local target = love.graphics.newCanvas(240, 200)
+    local bad, notes = false, {}
+    -- (el azul del cielo estelar donde se vio — 20,18,54 —, uno casi negro y el gris oscuro de una cueva: CON filo; un
+    -- gris medio — un cielo de noche más claro, 70,70,84 — y uno claro: SIN filo, el monstruo ya se ve)
+    for _, bg in ipairs({ { 20, 18, 54, 'estelar', 1 }, { 8, 8, 14, 'negro', 1 }, { 30, 28, 32, 'cueva', 1 },
+                          { 70, 70, 84, 'medio', 0 }, { 200, 210, 230, 'claro', 0 } }) do
+        local lo, hi, list = 1, 0, {}
+        for _, frame in ipairs({ 1, 2, 3 }) do
+            for k = 0, 11 do
+                local owner = { edgeW = 60, edgeH = 100 }
+                for i = 1, 5 do
+                    at(clockT + 0.1)
+                    love.graphics.push('all'); love.graphics.origin()
+                    love.graphics.setCanvas(target); love.graphics.clear(0, 0, 0, 1)
+                    Edge.scene(function()
+                        love.graphics.setColor(bg[1] / 255, bg[2] / 255, bg[3] / 255, 1)
+                        love.graphics.rectangle('fill', 0, 0, 240, 200)
+                        Stage.monster(110 + k, 100, { frame = frame, scale = PLAYER_SCALE, edgeOwner = owner })
+                    end, {})
+                    love.graphics.pop()
+                end
+                local a = Edge.stateOf(owner)
+                lo, hi = math.min(lo, a), math.max(hi, a)
+                list[#list + 1] = ('%.0f'):format(a)
+            end
+        end
+        local okBg = (bg[5] == 1 and lo > 0.97) or (bg[5] == 0 and hi < 0.03)
+        if not okBg then bad = true end
+        notes[#notes + 1] = ('%s=%.2f..%.2f%s'):format(bg[4], lo, hi, okBg and '' or (' [' .. table.concat(list, '') .. ']'))
+        target:newImageData():encode('png', 'edge_monstruo_' .. bg[4] .. '.png')
+    end
+    Settings.edge = prev
+    check('monstruo_estelar', not bad, ('36 sitios y poses por fondo (estelar, negro, cueva: quiero 1; medio, claro: 0): %s'):format(table.concat(notes, ' · ')))
+end)
+-- SIN CRUCE entre personajes, en lienzo pequeño: A (oscuro sobre fondo oscuro: necesita filo) y B (blanco: no) pegados;
+-- la zona de cada uno incluye al otro, y cada uno se juzga solo por lo suyo
+case('cruce', function()
+    forward()
+    local prev = Settings.edge
+    Settings.edge = 'shader'
+    local W, H = 96, 64
+    local scene = love.graphics.newCanvas(W, H)
+    local A = { x = 30, y = 32, edgeW = 16, edgeH = 16 }
+    local B = { x = 50, y = 32, edgeW = 16, edgeH = 16 }
+    local out
+    for i = 1, 6 do
+        at(clockT + 0.1)
+        love.graphics.setCanvas(scene); love.graphics.clear(DARKBG[1], DARKBG[2], DARKBG[3], 1); love.graphics.setCanvas()
+        Edge.camX, Edge.camY = 0, 0
+        Edge.begin(scene)
+        Edge.draw(A, A.x, A.y, function()
+            love.graphics.setColor(DARKSP[1], DARKSP[2], DARKSP[3], 1); love.graphics.rectangle('fill', 22, 24, 16, 16)
+        end)
+        Edge.draw(B, B.x, B.y, function()
+            love.graphics.setColor(1, 1, 1, 1); love.graphics.rectangle('fill', 42, 24, 16, 16)
+        end)
+        love.graphics.setColor(1, 1, 1, 1)
+        out = Edge.finish(nil)
+        love.graphics.setCanvas()
+    end
+    local img = out:newImageData()
+    local a, b = Edge.stateOf(A), Edge.stateOf(B)
+    local la = px(img, 21, 30)                         -- (1 px a la izquierda de A)
+    local rb = px(img, 58, 30)                         -- (1 px a la derecha de B)
+    Settings.edge = prev
+    check('cruce', a > 0.97 and b < 0.03 and la > 0.7 and near(rb, DARKBG[1], 0.02),
+        ('A oscuro=%.2f (quiero 1), filo a su izquierda=%.2f · B blanco=%.2f (quiero 0), a su derecha=%.2f (fondo)'):format(a, la, b, rb))
+end)
+-- Donde NO hace falta (de día, el bosque: el monstruo negro contrasta): sin filo, en ningún sitio
+case('de_dia', function()
+    forward()
+    local prev = Settings.edge
+    Settings.edge = 'shader'
+    local st = scene('jardin_gummies', { frames = 40 })
+    local cv = love.graphics.newCanvas(WINDOW_W, WINDOW_H)
+    local owners, names = { st.player }, { 'monstruo' }
+    for _, e in pairs(st.enemies) do
+        if e.alive and e.edge and #owners < 6 then owners[#owners + 1] = e; names[#names + 1] = e.def and e.def.name or '?' end
+    end
+    frames(st, 30, cv)
+    local r = sweep(st, owners, 12, cv)
+    local bad = {}
+    for i, x in ipairs(r) do if x.max > 0.03 then bad[#bad + 1] = names[i] .. '=' .. ('%.2f'):format(x.max) end end
+    love.timer.getTime = realGetTime
+    Settings.edge = prev
+    check('de_dia', #bad == 0, ('%d personajes de día con contraste: con filo %s'):format(#owners, #bad == 0 and 'ninguno' or table.concat(bad, ' ')))
 end)
 
 -- Capturas de escenas de verdad en modo shader (SHOT=1): para mirarlas
