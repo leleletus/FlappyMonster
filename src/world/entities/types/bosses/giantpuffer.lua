@@ -57,28 +57,34 @@ local MS = 13                                   -- escala del cuerpo (16x16 → 
                                                 -- del cuadro; a 10, como los Mega, se veía pequeño para un jefe)
 GP.MS = MS
 
--- Ritmo: { normal, enfadado }
-local SWIM_SPD   = { 150, 200 }                -- px/s nadando hacia el jugador
+-- Ritmo por FASE { 1, 2, 3 } (2026-11-16: tres fases por la vida — fase 2 con ≤ 4 de 6, fase 3 con ≤ 2 —)
+local SWIM_SPD   = { 150, 200, 210 }                -- px/s nadando hacia el jugador
 local SWIM_ACC   = 2.2                          -- (cuánto tarda en coger su velocidad)
-local ATK_EVERY  = { 3.6, 2.6 }                 -- s nadando entre ataques
+local ATK_EVERY  = { 3.4, 2.8, 2.3 }                 -- s nadando entre ataques
 local PUFF_NEAR  = 4.5 * T                        -- más cerca que esto: se hincha; más lejos: púas
-local WARN_T     = { 0.75, 0.6 }                -- aviso (tiembla a medio hinchar)
-local PUFF_T     = { 1.4, 2.0 }                 -- hinchado
+local WARN_T     = { 0.75, 0.6, 0.6 }                -- aviso (tiembla a medio hinchar)
+local PUFF_T     = { 1.4, 2.0, 2.0 }                 -- hinchado
 local DEFLATE_T  = 0.45
-local SPINE_WARN = { 0.7, 0.55 }
+local SPINE_WARN = { 0.7, 0.55, 0.55 }
 local BURSTS     = { 0, 0.249, 0.497 }          -- ráfagas a golpe de 3+3+2 semicorcheas a 181 BPM
-local BURSTS_N   = { 2, 3 }                     -- cuántas de ellas (enfadado, las tres)
-local SPINES_N   = { 6, 8 }                     -- púas por ráfaga
+local BURSTS_N   = { 2, 3, 3 }                   -- cuántas de ellas (enfadado, las tres)
+local SPINES_N   = { 6, 8, 8 }                   -- púas por ráfaga
 local SPINES_T   = 0.95                         -- lo que dura el estado (la última ráfaga + un respiro)
 local SPINE_SPD  = 400
 local SPINE_LIFE = 1.7
-local GASP_T     = { 1.7, 1.25 }                -- boqueando (vulnerable)
-local FLOP_WIND  = { 0.45, 0.35 }
+local GASP_T     = { 1.6, 1.4, 1.2 }                -- boqueando (vulnerable)
+local FLOP_WIND  = { 0.45, 0.38, 0.32 }
 local FLOP_LOCK  = 0.15                         -- últimos s del aviso: la marca ya no sigue al jugador
 local FLOP_REACH = 3.5 * T                      -- lo más lejos que llega de un coletazo
 local FLOP_UP    = 2                            -- casillas que sube por encima de lo más alto
 local HURT_T     = 0.8
 local GRACE      = 0.8                          -- s sin volver a aplastar tras un aplastón
+-- BOLA DE PÚAS (tras el golpe de la marea baja: UNA ocasión por marea): rebota por la cala hasta que llega el agua
+local BALL_H     = { 3, 4, 4.5 }                -- casillas que sube en cada bote
+local BALL_VX    = 260                          -- px/s de lado, hacia el jugador (sin prisa: se le puede esquivar)
+local BALL_STEER = 1.5                          -- 1/s: lo que tarda en torcer hacia él
+local BALL_FIRST = 0.4                          -- s: el primer bote, en el sitio (y parpadea: aviso)
+local BALL_G     = 2200                         -- (la gravedad de la física compartida, Snow)
 local PUFF_R     = 6.4 * MS                     -- radio que pincha hinchado (el cuerpo y media púa: no pincha "por el aire")
 
 -- Golpes a los jugadores: { vida, vx, vy, s sin control, s aturdido }
@@ -113,13 +119,22 @@ function GP.sizePx() return 16 * MS, 16 * MS end
 local function rand(a, b) return a + math.random() * (b - a) end
 
 function GP:feetY() return self.y + self.outerH / 2 end
-function GP:ph() return self.rage and 2 or 1 end
+-- Fase por la vida que le queda (fracciones: `rageAt` = fase 2, `phase3At` = fase 3); se guarda en self.phase al
+-- recibir un golpe (viaja en el netPack)
+function GP:ph() return self.phase or 1 end
+function GP:phaseFor(hp)
+    local f = hp / math.max(1, self.hpMax or hp)
+    if f <= (self.props.phase3At or 0.34) + 1e-6 then return 3 end
+    if f <= (self.props.rageAt or 0.67) + 1e-6 then return 2 end
+    return 1
+end
 
 function GP:initBoss()
     self.y = self.row * T - self.outerH / 2          -- (de pie en el suelo de su celda)
     self.vx, self.vy, self.onGround = 0, 0, true
     self.facing = -1
-    self.rage = false
+    self.rage, self.phase = false, 1
+    self.opened = false                              -- (la ocasión de esta marea baja ya se gastó)
     self.spines, self.nextId = {}, 0
     self.atkT, self.graceT, self.burst = 0, 0, 0
     self.markX, self.markY = math.floor(self.x), math.floor(self:feetY())
@@ -256,7 +271,7 @@ function GP:aimFlop(level)
 end
 
 -- ── Estados que sabe hacer el cuerpo ─────────────────────────────────────────
-local SPIKY = { puffed = true, spines = true, hurt_puff = true }   -- (con las púas fuera)
+local SPIKY = { puffed = true, spines = true, hurt_puff = true, ball = true }   -- (con las púas fuera)
 function GP:isActive() return Boss.isActive(self) and not DEATH[self.state] end
 function GP:isDying() return DEATH[self.state] == true or Boss.isDying(self) end
 function GP:isVulnerable() return self:isActive() and self.state == 'gasp' end
@@ -268,10 +283,13 @@ function GP:canBeKnocked() return false end
 -- Tras un golpe: se hincha de golpe y aparta a quien tenga al lado (sin daño)
 function GP:onDamaged(n, kind)
     if self:isDying() then return end
-    if not self.rage and self.hp <= self.hpMax * (self.props.rageAt or 0.5) then
-        self.rage = true
+    local ph = self:phaseFor(self.hp)
+    if ph > (self.phase or 1) then
+        self.phase = ph
         Entity.emitFx('shake_roar', self.x, self.y)
     end
+    self.rage = self.phase >= 2
+    self.opened = true                               -- (UNA ocasión por marea baja: ahora, bola hasta el agua)
     self.vx = 0
     self:enter('hurt_puff')
     Sound.play('pufferInflate', 0.5)
@@ -299,8 +317,31 @@ end
 function GP:resume(level)
     self.atkT = 0
     if self:wet(level) then self:enter('swim')
+    elseif self.opened then self:enterBall()
     elseif self.onGround then self:enter('flop_wind'); self.markX, self.markY = self:aimFlop(level)
     else self:enter('fall') end
+end
+
+-- Cambio de estado; al volver a NADAR (con agua) vuelve la ocasión de la próxima marea baja
+function GP:enter(st)
+    Boss.enter(self, st)
+    if st == 'swim' then self.opened = false end
+end
+
+-- Bola de púas: el primer bote en el sitio
+function GP:enterBall()
+    self:enter('ball')
+    self.vx = 0
+    if self.onGround then self.vy = -math.sqrt(2 * BALL_G * BALL_H[self:ph()] * T); self.onGround = false end
+    Sound.play('pufferInflate', 0.6)
+    Entity.emitFx('puffer_pop', self.x, self.y)
+end
+
+-- Cae al suelo: boquea (la ocasión) o, si ya se gastó la de esta marea, bola
+function GP:landed()
+    if self.opened then self:enterBall(); return end
+    self:enter('gasp')
+    Sound.play('stunned')
 end
 
 -- ── Update ────────────────────────────────────────────────────────────────────
@@ -385,9 +426,25 @@ function GP:updateBoss(dt, level)
             self.vx = 0
             Sound.play('kingFlop', 1.4)
             Entity.emitFx('gp_land', self.x, self:feetY())
-            self:enter('gasp')
-            Sound.play('stunned')
+            self:landed()
         end
+
+    elseif st == 'ball' then
+        if self:wet(level) then self:enter('deflate'); Sound.play('pufferDeflate', 0.5); return end
+        local pa = self:target(level)
+        local want = (t >= BALL_FIRST and pa) and ((pa.x >= self.x) and BALL_VX or -BALL_VX) or 0
+        self.vx = self.vx + (want - self.vx) * math.min(1, BALL_STEER * dt)
+        local vx0 = self.vx
+        local hit = self:physics(level, dt)
+        if hit == 'wall' then self.vx = -vx0 end
+        if self.onGround then
+            self.vy = -math.sqrt(2 * BALL_G * BALL_H[ph] * T)
+            self.onGround = false
+            Sound.play('kingHop', 1.5)
+            Entity.emitFx('gp_land', self.x, self:feetY())
+        end
+        if math.abs(self.vx) > 20 then self.facing = (self.vx > 0) and 1 or -1 end
+        self:prick(level, HIT_PUFF)
 
     elseif st == 'gasp' then
         self:physics(level, dt); self:friction(level, dt)
@@ -419,8 +476,7 @@ function GP:updateBoss(dt, level)
             Sound.play('kingFlop', 1.4)
             Entity.emitFx('gp_land', self.x, self:feetY())
             Entity.emitFx('shake_small', self.x, self.y)
-            self:enter('gasp')
-            Sound.play('stunned')
+            self:landed()
         end
 
     elseif st == 'dying_deflate' then
@@ -503,7 +559,7 @@ end
 -- { enfadado 0/1, marca x, y, ráfaga, nPúas, {id, x, y, ángulo·1000, t·100}… }
 local NB = 4
 function GP:netPackExtra()
-    local out = { self.rage and 1 or 0, self.markX or 0, self.markY or 0, self.burst or 0, #self.spines }
+    local out = { self.phase or 1, self.markX or 0, self.markY or 0, self.burst or 0, #self.spines }
     for _, s in ipairs(self.spines) do
         out[#out + 1] = s.id; out[#out + 1] = math.floor(s.x); out[#out + 1] = math.floor(s.y)
         out[#out + 1] = math.floor(s.a * 1000); out[#out + 1] = math.floor(s.t * 100)
@@ -515,7 +571,8 @@ local readList = require('src/world/entities/base/NetList').read      -- (listas
 
 function GP:netApplyExtra(a, b, f)
     if type(b[1]) ~= 'number' then return end
-    self.rage, self.markX, self.markY, self.burst = b[1] == 1, b[2], b[3], b[4]
+    self.phase, self.markX, self.markY, self.burst = b[1], b[2], b[3], b[4]
+    self.rage = (self.phase or 1) >= 2
     local prev = {}
     if type(a[NB + 1]) == 'number' then
         for _, e in ipairs(readList(a, NB + 1, 5)) do if e[1] then prev[e[1]] = e end end
@@ -543,6 +600,13 @@ function GP:pose()
     elseif st == 'puff_warn' or st == 'spines_warn' then
         name, at, shake = 'warn', t, 3
         if t > 0.36 then name = 'half' end
+    elseif st == 'ball' then
+        -- bola de púas: hinchada, aplastándose un poco al botar; los primeros BALL_FIRST s parpadea (aviso)
+        name, at = 'puffed', t
+        local sq = math.max(0, 1 - math.abs(self.vy or 0) / 900)
+        sy = 1 - 0.12 * sq
+        k = 1 + 0.06 * sq
+        if t < BALL_FIRST then shake = 2 end
     elseif SPIKY[st] then
         name, at = 'puffed', t
         if t < 0.15 then k = 1 + 0.15 * math.sin(t / 0.15 * math.pi) end
@@ -645,9 +709,11 @@ return {
     boss = { title = 'PEZ GLOBO GIGANTE' },
     hide = Boss.HIDE,
     defaults = { points = 30 },
-    props = Boss.props({ hp = 10, hpPerPlayer = 4 }, {
-        { key = 'rageAt', kind = 'number', label = 'Se enfada con (fracción de vida)', group = G, default = 0.5,
-          min = 0.1, max = 0.9, step = 0.05 },
+    props = Boss.props({ hp = 6, hpPerPlayer = 2 }, {
+        { key = 'rageAt', kind = 'number', label = 'Fase 2 (enfadado) con (fracción de vida)', group = G, default = 0.67,
+          min = 0.1, max = 0.9, step = 0.01 },
+        { key = 'phase3At', kind = 'number', label = 'Fase 3 con (fracción de vida)', group = G, default = 0.34,
+          min = 0.05, max = 0.9, step = 0.01 },
     }),
     editor = { sprite = 'assets/images/enemies/pufferfish/puffer_fish-Sheet.png', frameW = 16 },
     -- Peces globo de la segunda fase: de reserva, los crea el nivel al cargar (Level.fromData), detrás de las

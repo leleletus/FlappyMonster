@@ -10,7 +10,10 @@
 --   resaca      mientras el agua BAJA arrastra al jugador quieto hacia la derecha (≈ la velocidad de la resaca);
 --               con el agua quieta arriba, no; al empezar a arrastrar suena el aviso y salta el cartel "¡RESACA!"
 --               (f.alertAt) si el jugador está cerca, lejos no, y se quita al dejar de bajar
---   enfado      a mitad de vida se enfada: tres ráfagas de 8 púas
+--   fases       6 de vida; fase 2 con 4 (enfadado), fase 3 con 2; un nivel viejo con rageAt 0.5: fase 2 con 3
+--   una_ocasion UNA ocasión por marea baja: tras el golpe, bola de púas (no se le daña, pincha) y no boquea hasta el agua
+--   bola        la bola rebota dentro de la zona (3 casillas en la fase 1), no se para, pincha, con el agua nada
+--   ultima_ocasion golpe justo cuando vuelve el agua: bola → nada; la ocasión no vuelve hasta nadar
 --   derrota     el último golpe: se deshincha y queda APLASTADO también aturdido (no vuelve de golpe a su forma),
 --               huye de un salto que atraviesa el suelo (libera la zona) y se va del todo
 --   peces       enfadado y nadando suelta peces globo, tantos a la vez como diga la dificultad (Difícil 3, Fácil 1),
@@ -292,22 +295,143 @@ function cases.resaca()
         ('aviso: cerca %s (sonó %d), lejos %s, agua quieta %s'):format(tostring(near), n1, tostring(far), tostring(held)))
 end
 
-function cases.enfado()
+-- Fases por la vida (2026-11-16): fase 2 a ≤ 4 de 6 (rageAt 0.67), fase 3 a ≤ 2 (phase3At 0.34); un nivel viejo
+-- con su `rageAt` (0.5) entra en la fase 2 con 3
+function cases.fases()
     local level, es, boss = arena()
-    tideTo(level, 'hold', 5.9)
-    putBoss(boss, 18); boss.y = boss.y - T
     local pa = playerAt(level, 28)
     level.players = { pa }
     boss.levelRef = level
-    while boss.hp > boss.hpMax * 0.5 do boss:enter('gasp'); boss.inv = 0; boss:stomp() end
-    boss:enter('spines'); boss.burst = 0; boss.spines = {}
-    boss:fireBurst(level, 0)
-    local per = #boss.spines
-    boss.spines = {}
-    boss:enter('spines'); boss.burst = 0
-    for _ = 1, 50 do boss:update(DT, level) end
-    check('enfado', boss.rage and per == 8 and boss.burst == 3,
-        ('vida %d/%d: enfadado=%s, púas por ráfaga %d, ráfagas %d'):format(boss.hp, boss.hpMax, tostring(boss.rage), per, boss.burst))
+    local function hitTo(b, hp) while b.hp > hp do b:enter('gasp'); b.inv = 0; b.opened = false; b:stomp() end end
+    local hp0, p1 = boss.hpMax, boss:ph()
+    hitTo(boss, 5); local p5 = boss:ph()
+    hitTo(boss, 4); local p4, r4 = boss:ph(), boss.rage
+    hitTo(boss, 3); local p3 = boss:ph()
+    hitTo(boss, 2); local p2 = boss:ph()
+    local props = {}
+    for k, v in pairs(boss.props) do props[k] = v end
+    props.rageAt, props.phase3At = 0.5, nil
+    local old = Entities.create({ type = 'giantpuffer', col = 23, row = 12, props = props })
+    old.levelRef = level
+    old:startFight(1)
+    hitTo(old, 4); local o4 = old:ph()
+    hitTo(old, 3); local o3 = old:ph()
+    check('fases', hp0 == 6 and p1 == 1 and p5 == 1 and p4 == 2 and r4 and p3 == 2 and p2 == 3 and o4 == 1 and o3 == 2,
+        ('vida %d; fase con 6/5/4/3/2: %d/%d/%d/%d/%d (enfadado con 4=%s); nivel viejo rageAt 0.5: con 4 → %d, con 3 → %d'):format(
+            hp0, p1, p5, p4, p3, p2, tostring(r4), o4, o3))
+end
+
+-- UNA ocasión por marea baja (2026-11-16, el usuario: "con ground pounds seguidos se le baja en 2 mareas"): tras el
+-- golpe se hace BOLA DE PÚAS (no se le puede dañar; tocarla pincha) y no vuelve a boquear hasta que vuelva el agua.
+-- Con dos jugadores, la ocasión es del jefe, no de cada uno.
+function cases.una_ocasion()
+    local level, es, boss = arena()
+    putBoss(boss, 22)
+    local pa, pb = playerAt(level, 14), playerAt(level, 30)
+    level.players = { pa, pb }
+    boss.levelRef = level
+    boss:enter('gasp'); boss.inv = 0
+    local hp0 = boss.hp
+    boss:stomp()
+    local hp1 = boss.hp
+    local ballAt, t = nil, 0
+    stepAll(level, es, { pa, pb }, 1.5, function()
+        t = t + DT
+        pa.invT, pb.invT = 9, 9
+        pa.x, pb.x = 13.5 * T, 31.5 * T
+        if boss.state == 'ball' then ballAt = t; return true end
+    end)
+    local vuln = boss:isVulnerable()
+    -- el segundo jugador le cae encima: rebota, el jefe no pierde vida y a él le pincha
+    local gob = boss:getOuterBounds()
+    local p2 = dropOn(level, boss.x, gob.y, true)
+    pb.x, pb.y, pb.vy, pb.gpPhase, pb.invT = p2.x, p2.y, p2.vy, 'fall', 0
+    level.players = { pa, pb }
+    local r = boss:interact(pb)
+    local hpB0 = pb.hp
+    boss:update(DT, level)
+    local hurtB = pb.hp == hpB0 - 1
+    -- hasta que vuelve el agua, nunca boquea otra vez
+    pb.y = 5 * T
+    local regasp = false
+    stepAll(level, es, { pa, pb }, 12, function()
+        pa.invT, pb.invT = 9, 9
+        pa.x, pb.x = 13.5 * T, 31.5 * T
+        if boss.state == 'gasp' then regasp = true end
+        return flood(level).level > 0.5
+    end)
+    check('una_ocasion', hp1 == hp0 - 1 and ballAt and ballAt <= 0.9 and not vuln and r == 'bounce' and boss.hp == hp1
+        and hurtB and not regasp,
+        ('golpe %d→%d; bola a los %.2f s; vulnerable siendo bola=%s; el 2º encima: %s, vida jefe %d, le pincha=%s; vuelve a boquear antes del agua=%s'):format(
+            hp0, hp1, ballAt or -1, tostring(vuln), tostring(r), boss.hp, tostring(hurtB), tostring(regasp)))
+end
+
+-- La BOLA DE PÚAS rebota por la cala sin salirse ni pararse (altura de la fase 1: 3 casillas), pincha al tocarla y,
+-- cuando el agua la alcanza, se deshincha y nada
+function cases.bola()
+    local level, es, boss = arena()
+    putBoss(boss, 22)
+    local pa = playerAt(level, 14)
+    level.players = { pa }
+    boss.levelRef = level
+    boss.opened = true
+    boss:enter('ball')
+    local zx0, zx1, zy0, zy1 = boss:zoneBounds()
+    local floorY = (FLOOR - 1) * T
+    local inside, maxH, stillT, maxStill = true, 0, 0, 0
+    local lx, ly = boss.x, boss.y
+    local wetAt, swimAt, t = nil, nil, 0
+    local touched = false
+    stepAll(level, es, { pa }, 25, function()
+        t = t + DT
+        pa.invT = 9; pa.x = 13.5 * T
+        if boss.state == 'ball' then
+            if boss.x < zx0 or boss.x > zx1 or boss.y < zy0 or boss.y > zy1 then inside = false end
+            maxH = math.max(maxH, floorY - boss:feetY())
+            if math.abs(boss.x - lx) + math.abs(boss.y - ly) < 0.5 then stillT = stillT + DT else stillT = 0 end
+            maxStill = math.max(maxStill, stillT)
+            lx, ly = boss.x, boss.y
+            if not touched and t > 2 then
+                -- tocarla: -1
+                touched = true
+                pa.x, pa.y, pa.invT = boss.x + 20, boss.y, 0
+                local h0 = pa.hp
+                boss:update(DT, level)
+                touched = (pa.hp == h0 - 1) and 'hit' or 'nohit'
+                pa.invT = 9
+            end
+        end
+        if not wetAt and boss:wet(level) then wetAt = t end
+        if boss.state == 'swim' then swimAt = t; return true end
+    end)
+    local late = (wetAt and swimAt) and (swimAt - wetAt) or 99
+    check('bola', inside and maxH >= 2.5 * T and maxH <= 3.5 * T and maxStill < 0.5 and touched == 'hit' and late <= 2,
+        ('dentro de la zona=%s; altura %.1f casillas; parada como mucho %.2f s; tocarla=%s; del agua a nadar %.2f s'):format(
+            tostring(inside), maxH / T, maxStill, tostring(touched), late))
+end
+
+-- La última ocasión: le pegas boqueando justo cuando ya vuelve el agua → bola → nada; la ocasión se gasta y no se
+-- recupera hasta que nada (y nunca vuelve a boquear esa marea)
+function cases.ultima_ocasion()
+    local level, es, boss = arena()
+    tideTo(level, 'rise', 0)
+    putBoss(boss, 22)
+    local pa = playerAt(level, 14)
+    level.players = { pa }
+    boss.levelRef = level
+    boss:enter('gasp'); boss.inv = 0; boss.opened = false
+    boss:stomp()
+    local seen, openedBeforeSwim, regasp = {}, true, false
+    stepAll(level, es, { pa }, 10, function()
+        pa.invT = 9; pa.x = 13.5 * T
+        if boss.state ~= 'hurt_puff' and boss.state ~= 'swim' and not boss.opened then openedBeforeSwim = false end
+        seen[boss.state] = true
+        if boss.state == 'gasp' then regasp = true end
+        return boss.state == 'swim'
+    end)
+    check('ultima_ocasion', seen.ball and boss.state == 'swim' and openedBeforeSwim and boss.opened == false and not regasp,
+        ('bola=%s; final %s; gastada hasta nadar=%s; al nadar se recupera=%s; reboquea=%s'):format(
+            tostring(seen.ball), boss.state, tostring(openedBeforeSwim), tostring(boss.opened == false), tostring(regasp)))
 end
 
 function cases.derrota()
@@ -341,12 +465,12 @@ end
 function cases.red()
     local level, es, boss = arena()
     putBoss(boss, 20)
-    boss.rage, boss.markX, boss.markY, boss.burst = true, 999, 777, 2
+    boss.phase, boss.rage, boss.markX, boss.markY, boss.burst = 2, true, 999, 777, 2
     boss.spines = { { id = 5, x = 100, y = 200, a = 1.25, t = 0.4, hit = {} }, { id = 6, x = 300, y = 210, a = -2, t = 0.1, hit = {} } }
     local b = boss:netPackExtra()
     local c = Entities.create({ type = 'giantpuffer', col = 20, row = 12, props = {} })
     c:netApplyExtra(b, b, 1)
-    local ok = c.rage and c.markX == 999 and c.markY == 777 and c.burst == 2 and #c.spines == 2
+    local ok = c.rage and c:ph() == 2 and c.markX == 999 and c.markY == 777 and c.burst == 2 and #c.spines == 2
     for i, s in ipairs(boss.spines) do
         local q = c.spines[i]
         if not q or math.abs(q.x - s.x) > 1 or math.abs(q.y - s.y) > 1 or math.abs(q.a - s.a) > 0.002 then ok = false end
@@ -441,7 +565,7 @@ end
 
 function love.load(arg)
     local only = os.getenv('CASE')
-    for _, n in ipairs({ 'varado', 'coletazo', 'marea', 'hincha', 'puas', 'resaca', 'enfado', 'derrota', 'red', 'pez_chico', 'peces' }) do
+    for _, n in ipairs({ 'varado', 'coletazo', 'marea', 'hincha', 'puas', 'resaca', 'fases', 'una_ocasion', 'bola', 'ultima_ocasion', 'derrota', 'red', 'pez_chico', 'peces' }) do
         if not only or only == n then
             local ok, err = xpcall(cases[n], debug.traceback)
             if not ok then check(n, false, 'error: ' .. tostring(err)) end
