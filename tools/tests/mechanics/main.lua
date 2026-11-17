@@ -2124,8 +2124,9 @@ function cases.meta()
         if dt > 1 then seen[r] = true end
         keys[#keys + 1] = r == last and 'ultimo' or (r == vc.recs[1] and '1' or (r == vc.recs[2] and '2' or '?'))
     end
-    local n = 0; for _ in pairs(seen) do n = n + 1 end
-    loops = loops and n >= 2
+    local n, flip = 0, false
+    for r in pairs(seen) do n = n + 1; if r.data and r.data.flipX then flip = true end end
+    loops = loops and n >= 2 and flip                    -- (y cambia de brazo: el puño espejado — flipX —)
     check('meta', popped == 9 and farOk and st.score == want and pa.lives == 5 and flagGone and math.abs(pa.x - x0) < 2 and not jumped and loops,
         ('revientan %d/9 (lejos sigue: %s) · puntos %d (quiere %d) · vidas %d (quiere 5) · bandera fuera, la otra no: %s · se movió %.1f px, saltó: %s · bucle: %s'):format(
             popped, tostring(farOk), st.score, want, pa.lives, tostring(flagGone), math.abs(pa.x - x0), tostring(jumped), table.concat(keys, ',')))

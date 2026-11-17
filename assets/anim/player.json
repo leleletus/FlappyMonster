@@ -33,7 +33,8 @@
     {"image": "assets/images/player/actions/idle_wiggle2.png", "key": "idle_wiggle2.png", "eye": "normal", "ex": 4.5, "ey": 5.5, "esep": 1.0},
     {"image": "assets/images/player/actions/victory1.png", "key": "victory1.png", "eye": "happy", "ex": 6.5, "ey": 7.5, "esep": 1.25},
     {"image": "assets/images/player/actions/victory2.png", "key": "victory2.png", "eye": "happy", "ex": 6.5, "ey": 5.25, "esep": 1.25},
-    {"image": "assets/images/player/actions/victory3.png", "key": "victory3.png", "eye": "sparkle", "ex": 6.5, "ey": 5.5, "esep": 1.0}
+    {"image": "assets/images/player/actions/victory3.png", "key": "victory3.png", "eye": "sparkle", "ex": 6.5, "ey": 5.5, "esep": 1.0},
+    {"image": "assets/images/player/actions/victory2.png", "key": "victory2_flip", "flipX": true, "eye": "happy", "ex": 6.5, "ey": 5.25, "esep": 1.25}
   ],
   "anims": {
     "act_crouch_look_down": {"fps": 8, "frames": [24], "loop": true},
@@ -43,7 +44,7 @@
     "act_push": {"fps": 5, "frames": [21, 22], "loop": true},
     "act_throw": {"fps": 8, "frames": [20], "loop": true},
     "act_victory": {"frames": [28, 29, 30], "durations": [0.15, 0.3, 0.22], "loop": false, "next": "act_victory_loop"},
-    "act_victory_loop": {"frames": [28, 29], "durations": [0.18, 0.3], "loop": true},
+    "act_victory_loop": {"frames": [28, 29, 28, 31], "durations": [0.18, 0.3, 0.18, 0.3], "loop": true},
     "crouch": {"fps": 8, "frames": [7], "loop": true},
     "dead": {"fps": 8, "frames": [6], "loop": true},
     "dead_eyes": {"fps": 8, "frames": [1], "loop": true},

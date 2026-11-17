@@ -81,6 +81,9 @@ end
 
 function PS.draw(f, x, y, r, sx, sy, ox, oy)
     if not (f and f.image) then return end
+    -- (`flipX` en el cuadro del JSON: el mismo dibujo ESPEJADO, sin otra imagen — la celebración cambia de brazo, el
+    --  usuario 2026-11-17 —. Todos los que lo dibujan anclan en el centro del cuadro: se espeja en su sitio)
+    if f.data and f.data.flipX then sx = -(sx or 1); sy = sy or -sx end
     love.graphics.draw(f.image, f.quad, x, y, r or 0, sx or 1, sy or sx or 1, ox or 0, oy or 0)
     if f.data and f.data.eye then PS.drawEyes(f, x, y, r, sx, sy, ox, oy) end
 end

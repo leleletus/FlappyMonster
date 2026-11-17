@@ -41,9 +41,11 @@ love . --anim [id]        open (or create) a set
 ```
 
 - **frames** — numbered from 1. A whole image, or a rectangle of a sheet. Any mix of images.
+  A frame may carry its own fields (`frame.data`): the player set uses `eye`/`ex`/`ey`/`esep` (painted eyes) and
+  `flipX: true` (the same image mirrored, drawn by `PlayerSprite.draw`; the victory cheer switching arms).
 - **anims** — a sequence is a list of frame numbers with `fps`, `loop`, optional per-frame `durations` (seconds; 0 or
   absent = 1/fps), optional `events` (a name fired on entering that position of the sequence) and `next` (what
-  follows a non-looping sequence in `Anim.player`).
+  follows a non-looping sequence in `Anim.player` and in `PlayerSprite.recOf`).
 - **origin** — the anchor inside a frame (0..1); `[0.5, 1]` = the feet.
 - **fallback** — the sequence used when code asks for one that does not exist.
 - **variants** — the SAME sequences with other images: every frame path that starts with `from` is rewritten to
