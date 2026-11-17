@@ -17,7 +17,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.normpath(os.path.join(HERE, '..', '..', '..'))
-OUT = '/home/mtvemo/FlappyMonster_pruebas/escorpion'
+OUT = os.path.expanduser('~/FlappyMonster_pruebas/escorpion')
 SMALL_K, BOSS_K = 3, 7
 W, H = 40, 24
 GROUND = 22
@@ -341,8 +341,8 @@ def player():
 
 
 try:
-    FONT = ImageFont.truetype('/usr/share/fonts/TTF/DejaVuSans.ttf', 15)
-    FONT_B = ImageFont.truetype('/usr/share/fonts/TTF/DejaVuSans-Bold.ttf', 20)
+    FONT = ImageFont.truetype('DejaVuSans.ttf', 15)
+    FONT_B = ImageFont.truetype('DejaVuSans-Bold.ttf', 20)
 except Exception:
     FONT = FONT_B = None
 

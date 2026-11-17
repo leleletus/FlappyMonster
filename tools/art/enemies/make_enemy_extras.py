@@ -19,7 +19,7 @@ from PIL import Image
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 IMG = os.path.join(HERE, '..', '..', '..', 'assets', 'images')
-PREVIEW = '/home/mtvemo/FlappyMonster_pruebas/extras/vista_previa.png'
+PREVIEW = os.path.expanduser('~/FlappyMonster_pruebas/extras/vista_previa.png')
 
 WHITE = {'a': '#1e1e2a', 'h': '#ffffff', 'w': '#f2f2f6', 's': '#c4c8d6'}
 ORANGE = {'a': '#1e1e2a', 'h': '#ffd8a8', 'w': '#f89e58', 's': '#e26832', 'd': '#a83e28'}

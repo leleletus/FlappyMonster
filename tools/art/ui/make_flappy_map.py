@@ -14,8 +14,8 @@
 #                          con gorro y delantal y su saco de monedas; 30x24, 2 cuadros (quieto, saludando)
 # Los sitios de los nodos son DATOS (src/flappy/Zones.lua `map`); la vista previa usa unos de ejemplo.
 # Por defecto solo la VISTA PREVIA (fuera del repo):
-#   /home/mtvemo/FlappyMonster_pruebas/valle/mapa_vista_previa.png   (el mapa a 1280 y a 960)
-#   /home/mtvemo/FlappyMonster_pruebas/valle/mapa_sprites.png        (cada sprite a x8)
+#   ~/FlappyMonster_pruebas/valle/mapa_vista_previa.png   (el mapa a 1280 y a 960)
+#   ~/FlappyMonster_pruebas/valle/mapa_sprites.png        (cada sprite a x8)
 # --apply escribe en assets/images/flappy/map/ (no pisa lo que exista; --force sí: estos archivos son de este generador
 # y nadie los ha retocado a mano — si eso cambia, quitar --force de la lista en docs/art/generators.md).
 # Desde la raíz del repo:
@@ -33,7 +33,7 @@ sys.argv = _argv
 
 APPLY = '--apply' in sys.argv
 FORCE = '--force' in sys.argv
-PREV = '/home/mtvemo/FlappyMonster_pruebas/valle'
+PREV = os.path.expanduser('~/FlappyMonster_pruebas/valle')
 OUT = os.path.join(REPO, 'assets/images/flappy/map')
 S = 4                                             # la escala del juego
 rgb = V.rgb

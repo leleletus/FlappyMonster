@@ -21,7 +21,7 @@ sys.path.insert(0, os.path.join(HERE, '..', 'enemies'))
 from make_jungle_enemies import E, Sh, Pg, P, D, Xf, render, tube, r3, hx, LEAF, _lobe, margin_ok
 from make_scorpion import Chain, bez as bez3, text, FONT_B
 
-OUT = os.path.join(os.environ.get('FM_PRUEBAS', '/home/mtvemo/FlappyMonster_pruebas'), 'reina_carnivora')
+OUT = os.path.join(os.environ.get('FM_PRUEBAS', os.path.expanduser('~/FlappyMonster_pruebas')), 'reina_carnivora')
 TAU = math.tau
 PLAYER_K, SMALL_K = 6, 4
 

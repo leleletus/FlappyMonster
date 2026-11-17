@@ -14,7 +14,7 @@ from PIL import Image
 
 ROOT = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', '..'))
 OUT = os.path.join(ROOT, 'assets', 'images', 'world', 'tiles')
-PREV = '/home/mtvemo/FlappyMonster_pruebas/beep_blocks'
+PREV = os.path.expanduser('~/FlappyMonster_pruebas/beep_blocks')
 K = 4
 
 # Paletas: o contorno (el tono más oscuro del propio color), d sombra, m medio, b base, l luz, w brillo

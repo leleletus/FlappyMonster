@@ -34,7 +34,7 @@ IMG = os.path.join(ROOT, 'assets', 'images')
 BOSS = os.path.join(IMG, 'bosses', 'snowboss')                      # (del usuario: solo se lee)
 SHEET_REL = 'assets/images/enemies/snowball/snowball-Sheet.png'
 ANIM_REL = 'assets/anim/enemies/snowball.json'
-OUT = os.path.join(os.environ.get('FM_PRUEBAS', '/home/mtvemo/FlappyMonster_pruebas'), 'bola_de_nieve')
+OUT = os.path.join(os.environ.get('FM_PRUEBAS', os.path.expanduser('~/FlappyMonster_pruebas')), 'bola_de_nieve')
 
 FW, FH = 14, 12                                                    # cuadro (los pies abajo del todo)
 

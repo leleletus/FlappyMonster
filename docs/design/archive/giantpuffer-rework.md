@@ -91,7 +91,7 @@ Unchanged (fall into the cove, puff, deflate; deflate flat → daze → leap thr
 - The boss spine projectile (`bosses/giantpuffer/spine.png`) gets a variant per island too.
 - Generator: a new `tools/art/enemies/make_puffer_skins.py` that READS the user's sheet and adds each island's
   palette + detail (never rewrites the Coast sheet). No flag = preview to
-  `/home/mtvemo/FlappyMonster_pruebas/pez_globo/vista_previa.png`; `--apply` writes only missing files. Art rules:
+  `~/FlappyMonster_pruebas/pez_globo/vista_previa.png`; `--apply` writes only missing files. Art rules:
   few colours, flat areas, pixel density of the small enemy (`docs/art/style-rules.md`).
 - `mechanics islas_arte` must pass with the pufferfish listed.
 

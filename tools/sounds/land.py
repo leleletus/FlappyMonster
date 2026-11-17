@@ -11,7 +11,7 @@ from scipy.signal import butter, sosfilt
 
 SR = 22050
 ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..'))
-PRUEBAS = os.path.join(os.environ.get('FM_PRUEBAS', '/home/mtvemo/FlappyMonster_pruebas'), 'caida')
+PRUEBAS = os.path.join(os.environ.get('FM_PRUEBAS', os.path.expanduser('~/FlappyMonster_pruebas')), 'caida')
 rng = np.random.default_rng(1110)
 
 

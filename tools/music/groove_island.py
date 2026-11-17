@@ -33,7 +33,7 @@ BPM = 132
 S16 = 60.0 / BPM / 4
 BAR = 16 * S16
 NAME = 'groove_island'
-PREVIEW = '/home/mtvemo/FlappyMonster_pruebas/musica/groove_island'
+PREVIEW = os.path.expanduser('~/FlappyMonster_pruebas/musica/groove_island')
 MAJ, MIN = (0, 4, 7), (0, 3, 7)
 
 # ══ LA PARTITURA: la de Calipso ══════════════════════════════════════════════════════════════════════════════════

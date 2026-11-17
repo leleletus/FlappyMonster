@@ -10,7 +10,7 @@
 #   jungle_rustle   hojas que se agitan (algo que se mueve entre las plantas)
 #   fire_crackle    chisporroteo del brasero del templo
 # Sin flags: escribe las vistas previas (cada sonido + una mezcla de 40 s de cómo sonaría el nivel) en
-# /home/mtvemo/FlappyMonster_pruebas/selva/sonidos/. Con --apply: assets/sounds/ambience/ (aún NO).
+# ~/FlappyMonster_pruebas/selva/sonidos/. Con --apply: assets/sounds/ambience/ (aún NO).
 #   python3 tools/sounds/jungle.py [--apply] [nombres...]
 import os, sys, wave
 import numpy as np
@@ -18,7 +18,7 @@ from scipy.signal import lfilter, butter
 
 SR = 22050
 APPLY = '--apply' in sys.argv
-OUT = 'assets/sounds/ambience' if APPLY else '/home/mtvemo/FlappyMonster_pruebas/selva/sonidos'
+OUT = 'assets/sounds/ambience' if APPLY else os.path.expanduser('~/FlappyMonster_pruebas/selva/sonidos')
 rng = np.random.default_rng(1234)
 
 

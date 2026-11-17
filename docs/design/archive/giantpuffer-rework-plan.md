@@ -186,7 +186,7 @@ anim-set `variants` + `isleArt` pattern of the Mole (`src/world/entities/types/e
 - [ ] **Step 1:** script reads the user's sheet, maps its palette per island + adds each island's detail (spec list:
   pradera spots, fortaleza plates/rivets, nieve crystal spines, cueva glowing spots + lure, volcan magma cracks +
   ember tips, jungla yellow/black bands, estelar star specks / star tips); few colours, flat areas.
-- [ ] **Step 2:** no flag → `/home/mtvemo/FlappyMonster_pruebas/pez_globo/vista_previa.png` (8 rows: costa original +
+- [ ] **Step 2:** no flag → `~/FlappyMonster_pruebas/pez_globo/vista_previa.png` (8 rows: costa original +
   7, every frame, ×6, plus the spine variants); `--apply` writes only missing files (`--force` to overwrite).
 - [ ] **Step 3:** a check in the script: for every frame, alpha mask of each variant == mask of the original
   (silhouette unchanged) unless a pixel is listed as island detail; it prints `OK` / the differing frames.

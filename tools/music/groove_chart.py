@@ -24,7 +24,7 @@ import groove_mejora as G
 import worlds_nes as W
 
 OUT = 'assets/charts/groove.json'
-PREVIAS = '/home/mtvemo/FlappyMonster_pruebas/groove_duelo'
+PREVIAS = os.path.expanduser('~/FlappyMonster_pruebas/groove_duelo')
 POP, GHOST = 122, 48
 LOOP_FROM = 8                                                         # (la O vuelve al compás 8, la A)
 

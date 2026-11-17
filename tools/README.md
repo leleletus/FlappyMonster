@@ -16,6 +16,23 @@ Run everything from the repo root. Documentation: `docs/README.md`. Python tools
 | `story/` | `test_saves.py`: story save slots already advanced to a level (to test something late in the story) | `docs/story/cinematics.md` |
 | `deploy_server.sh` | update the game server after a push (`--status` = look only) | `docs/architecture/updates-and-release.md` |
 
+## Two machines: Linux and Mac
+
+Every path is relative to the home folder (`~`, the same user on both), so the tools run unchanged on either:
+previews in `~/FlappyMonster_pruebas/`, originals in `~/FlappyMonster_originals/` (env `FM_PRUEBAS` / `FM_PREVIEWS`
+override where a tool reads them), fonts by NAME (`ImageFont.truetype('DejaVuSans.ttf')`: PIL finds them in the system
+fonts on both), the GM soundfont from wherever `pretty_midi` is installed (`FM_SF_GM` overrides). Setup:
+
+| | Linux | Mac |
+|---|---|---|
+| art generators | `/usr/bin/python3` (PIL, numpy) | `~/.venvs/fm-music/bin/python` (the system `python3` has no packages) |
+| music / sounds | `~/.venvs/fm-music` | `~/.venvs/fm` (pillow numpy scipy mido soundfile pretty_midi), linked as `~/.venvs/fm-music` |
+| images | ImageMagick | `brew install imagemagick` |
+| soundfont | `~/.local/share/soundfonts/GeneralUser-GS.sf2` | the same file, copied to the same path |
+| fonts | DejaVu (system) | `brew install --cask font-dejavu` |
+| test battery | xvfb-run / gamescope | `love` directly (`run.sh` picks it); `edge_look` `estelar` fails on the Mac's GPU |
+| deploy | `tools/deploy_server.sh` | not from the Mac (ssh) |
+
 ## Three traps
 
 1. `python3 tools/levelgen/build.py --all` rewrites EVERY generated level. Without `--only <level>` or `--all` it refuses

@@ -35,7 +35,7 @@ import make_food_sprites as FS
 
 ROOT = os.path.normpath(os.path.join(HERE, '..', '..', '..'))
 IMG = os.path.join(ROOT, 'assets', 'images')
-PRUEBAS = os.path.join(os.environ.get('FM_PRUEBAS', '/home/mtvemo/FlappyMonster_pruebas'), 'jungla', 'variantes')
+PRUEBAS = os.path.join(os.environ.get('FM_PRUEBAS', os.path.expanduser('~/FlappyMonster_pruebas')), 'jungla', 'variantes')
 ISLE = 'jungla'
 ISLES6 = ['pradera', 'costa', 'fortaleza', 'nieve', 'cueva', 'volcan']
 rgb = D.rgb

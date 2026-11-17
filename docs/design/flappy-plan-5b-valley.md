@@ -36,7 +36,7 @@ roadmap row 5b. System pages: [flappy-campaign](../gameplay/flappy-campaign.md),
 - Golden rules 1–4, 6 (no wings: on any flappy), 7 (points enter the wallet only when a stage is FINISHED).
 - Ids stored forever: biome `valley`, entity `netlauncher`, stage `valle_pilares_3`, shop data keyed by zone id.
 - Pixel art at the game's one pixel density; simple flat shapes ([style-rules](../art/style-rules.md)). Previews to
-  `/home/mtvemo/FlappyMonster_pruebas/valle/`; art applied provisionally (the user judges in play, as with the boss).
+  `~/FlappyMonster_pruebas/valle/`; art applied provisionally (the user judges in play, as with the boss).
 - Level tools: generators write only their own files; never `build.py` without `--only`.
 - Player-facing text in `assets/lang/translations.csv` (CRLF, every language column; keep its line endings).
 - Flappy save version + 1 for the wallet, migrating older slots (wallet starts at 0).

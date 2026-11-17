@@ -35,7 +35,7 @@ import crab_icy as CI
 import montana_nes as MN
 import gm as GM
 
-PRUEBAS = '/home/mtvemo/FlappyMonster_pruebas/musica_jefes_helados'
+PRUEBAS = os.path.expanduser('~/FlappyMonster_pruebas/musica_jefes_helados')
 P = MN   # (los instrumentos: MN.CRYSTAL, MN.CELESTA…)
 STEEL, MARIMBA, SEASHORE, SHAKER = 114, 12, (0, 122), 82
 

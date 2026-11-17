@@ -45,8 +45,8 @@ when asked. The user writes in Spanish. This does not apply to code, comments, c
 4. **Every image and sound is a real asset file**, never only drawn or synthesised in code. Generators are fine when
    their output is committed. Pixel art, integer positions, hard rectangles (see `docs/art/style-rules.md`).
 5. **Never overwrite a sprite the user hand-edited** (list in `docs/art/generators.md`). Originals of redesigned
-   images and `.aseprite` sources live OUTSIDE the repo in `/home/mtvemo/FlappyMonster_originals/` (mirrors
-   `assets/images/`); previews for the user go to `/home/mtvemo/FlappyMonster_pruebas/<thing>/vista_previa.png`.
+   images and `.aseprite` sources live OUTSIDE the repo in `~/FlappyMonster_originals/` (mirrors
+   `assets/images/`); previews for the user go to `~/FlappyMonster_pruebas/<thing>/vista_previa.png`.
 6. **The monster has NO wings** — it flaps by magic. Never draw or mention wings on it.
 7. **Nothing gained in a level is saved until the level is finished** (lives picked up, shards, points). Any new
    thing a level can give must follow this.

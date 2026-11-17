@@ -30,14 +30,14 @@ import sys
 from PIL import Image, ImageDraw, ImageFont
 
 try:
-    FONT = ImageFont.truetype('/usr/share/fonts/TTF/DejaVuSans.ttf', 13)
+    FONT = ImageFont.truetype('DejaVuSans.ttf', 13)
 except Exception:
     FONT = None
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.normpath(os.path.join(HERE, '..', '..', '..'))
 IMG = os.path.join(ROOT, 'assets', 'images')
-OUT = os.environ.get('FM_PREVIEWS', '/home/mtvemo/FlappyMonster_pruebas') + '/gloomy'
+OUT = os.environ.get('FM_PREVIEWS', os.path.expanduser('~/FlappyMonster_pruebas')) + '/gloomy'
 
 W, H = 26, 15                 # lienzo de cada cuadro (px de arte); los pies, en la fila de abajo
 CX = W // 2

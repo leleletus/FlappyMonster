@@ -17,7 +17,7 @@ from PIL import Image
 
 REPO = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', '..'))
 os.chdir(REPO)
-PREV = '/home/mtvemo/FlappyMonster_pruebas/via_estelar/enemigos'
+PREV = os.path.expanduser('~/FlappyMonster_pruebas/via_estelar/enemigos')
 APPLY, FORCE = '--apply' in sys.argv, '--force' in sys.argv
 ISLE = 'estelar'
 

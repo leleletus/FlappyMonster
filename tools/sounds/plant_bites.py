@@ -13,7 +13,7 @@ import numpy as np
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from jungle_enemies import SR, t_, band, low, noise, env, place, thud, click
 
-PREV = '/home/mtvemo/FlappyMonster_pruebas/reina/sonidos'
+PREV = os.path.expanduser('~/FlappyMonster_pruebas/reina/sonidos')
 rng = np.random.default_rng(1101)
 
 

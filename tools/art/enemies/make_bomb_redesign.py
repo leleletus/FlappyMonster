@@ -15,8 +15,8 @@ from PIL import Image
 
 REPO = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..'))
 DIR = os.path.join(REPO, 'assets/images/enemies/bomb')
-ORIG = '/home/mtvemo/FlappyMonster_originals/assets/images/enemies/bomb'
-PREVIEW = '/home/mtvemo/FlappyMonster_pruebas/bombas'
+ORIG = os.path.expanduser('~/FlappyMonster_originals/assets/images/enemies/bomb')
+PREVIEW = os.path.expanduser('~/FlappyMonster_pruebas/bombas')
 FW, FH = 15, 16
 K, B, D, H, W = (0, 0, 0, 255), (46, 50, 68, 255), (28, 31, 44, 255), (96, 106, 138, 255), (236, 241, 255, 255)
 C, c = (178, 184, 198, 255), (112, 118, 136, 255)                 # casquillo

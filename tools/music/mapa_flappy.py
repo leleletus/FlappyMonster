@@ -31,7 +31,7 @@ NB = 24
 MAJ, MIN, DOM = W.MAJ, W.MIN, W.DOM
 C, D, E, F_, G, A, B_ = 0, 2, 4, 5, 7, 9, 11
 FS = 6                                    # Fa# (clase de nota)
-PRUEBAS = os.path.join(os.environ.get('FM_PRUEBAS', '/home/mtvemo/FlappyMonster_pruebas'), 'musica', 'mapa_flappy')
+PRUEBAS = os.path.join(os.environ.get('FM_PRUEBAS', os.path.expanduser('~/FlappyMonster_pruebas')), 'musica', 'mapa_flappy')
 
 # ── La melodía (compás, semicorchea, nota MIDI, duración en semicorcheas) ────────────────────────────────────
 # A: la llamada en Re (La-Re-Fa#-La) abre; el compás 5 la repite más alto; 4 y 8 se quedan quietos (contesta el aleteo)

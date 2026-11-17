@@ -18,7 +18,7 @@ from PIL import Image, ImageDraw
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.normpath(os.path.join(HERE, '..', '..', '..'))
-OUT = '/home/mtvemo/FlappyMonster_pruebas/escarabajo'
+OUT = os.path.expanduser('~/FlappyMonster_pruebas/escarabajo')
 W, H = 22, 20
 OY = 4                                              # (4 px de aire arriba: el cuerno alto y las alas del gigante)
 
@@ -334,7 +334,7 @@ def load(rel):
 
 try:
     from PIL import ImageFont
-    FONT = ImageFont.truetype('/usr/share/fonts/TTF/DejaVuSans.ttf', 15)
+    FONT = ImageFont.truetype('DejaVuSans.ttf', 15)
 except Exception:
     FONT = None
 
@@ -604,7 +604,7 @@ def recolor_preview():
     from PIL import ImageDraw
     E = os.path.join(ROOT, 'assets/images/enemies/beetle/')
     srcs = [Image.open(E + f).convert('RGBA') for f in ('beetle-Sheet.png', 'dead.png', 'fly-Sheet.png')]
-    bg = Image.open('/home/mtvemo/FlappyMonster_pruebas/selva/fondo/superficie_day.png').convert('RGBA').crop((0, 300, 1280, 720))
+    bg = Image.open(os.path.expanduser('~/FlappyMonster_pruebas/selva/fondo/superficie_day.png')).convert('RGBA').crop((0, 300, 1280, 720))
     rows = [('Actual (castaño y verde)', None)] + [(p['name'], p) for p in RECOLORS.values()]
     out = Image.new('RGBA', (1280, len(rows) * 140 + 20), (30, 34, 40, 255)); d = ImageDraw.Draw(out)
     for i, (name, pal) in enumerate(rows):

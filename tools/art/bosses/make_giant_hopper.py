@@ -13,7 +13,7 @@ from PIL import Image
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.normpath(os.path.join(HERE, '..', '..', '..'))
 OUT = os.path.join(ROOT, 'assets', 'images', 'bosses', 'gianthopper')
-PREVIEW = '/home/mtvemo/FlappyMonster_pruebas/jefes/saltarin_gigante'
+PREVIEW = os.path.expanduser('~/FlappyMonster_pruebas/jefes/saltarin_gigante')
 
 
 def hx(s):

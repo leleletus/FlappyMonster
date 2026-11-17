@@ -9,7 +9,7 @@
 #   python3 tools/art/bosses/make_icecrab_sprites.py                 # sprites + maqueta en --out
 #   python3 tools/art/bosses/make_icecrab_sprites.py --apply         # escribe assets/images/bosses/megacrabby_ice/
 #   (--out DIR: carpeta de la vista previa; por defecto $FM_PREVIEWS/megacrabby_ice o
-#    /home/mtvemo/FlappyMonster_pruebas/megacrabby_ice — fuera del repo)
+#    ~/FlappyMonster_pruebas/megacrabby_ice — fuera del repo)
 #
 # Piezas (como las del Mega Crabby):
 #   crab1/2/3.png         cuerpo + patas, 3 cuadros de andar (18x13 a escala 10, como el Mega)
@@ -428,7 +428,7 @@ def main():
     ap.add_argument('--apply', action='store_true')
     ap.add_argument('--rabia', default=None, help='opción de la coraza de rabia que se escribe (A/B/C/D): el cuerpo')
     ap.add_argument('--rabia-pinza', default=None, help='opción para las pinzas (por defecto la de --rabia)')
-    ap.add_argument('--out', default=os.path.join(os.environ.get('FM_PREVIEWS', '/home/mtvemo/FlappyMonster_pruebas'),
+    ap.add_argument('--out', default=os.path.join(os.environ.get('FM_PREVIEWS', os.path.expanduser('~/FlappyMonster_pruebas')),
                                                   'megacrabby_ice'))
     a = ap.parse_args()
     sp = build()

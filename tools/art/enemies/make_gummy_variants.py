@@ -6,7 +6,7 @@
 #     Mega Crabby (escala 10), con su misma cara y detalles propios por opción.
 #
 #   python3 tools/art/enemies/make_gummy_variants.py      # vista previa (fuera del repo)
-#   (--out DIR; por defecto $FM_PREVIEWS/gummy_variantes o /home/mtvemo/FlappyMonster_pruebas/...)
+#   (--out DIR; por defecto $FM_PREVIEWS/gummy_variantes o ~/FlappyMonster_pruebas/...)
 #
 # Vista previa: opciones.png (todas las opciones ampliadas, cuadros quieto / andar 1 / andar 2 /
 # muerto), maqueta.png (a escala de juego en un nivel helado y en uno normal, junto al Gummy,
@@ -406,7 +406,7 @@ def main():
                     help='escribe el Gummy helado elegido (A "Escarcha" sin carámbanos) en assets/images/enemies/gummy_ice/')
     ap.add_argument('--apply-mega', action='store_true',
                     help='escribe el jefe Rey Gummy (opción B) en assets/images/bosses/megagummy/ (boss_art)')
-    ap.add_argument('--out', default=os.path.join(os.environ.get('FM_PREVIEWS', '/home/mtvemo/FlappyMonster_pruebas'),
+    ap.add_argument('--out', default=os.path.join(os.environ.get('FM_PREVIEWS', os.path.expanduser('~/FlappyMonster_pruebas')),
                                                   'gummy_variantes'))
     a = ap.parse_args()
     preview(a.out)

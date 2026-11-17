@@ -10,7 +10,7 @@ import os
 from PIL import Image, ImageDraw
 
 OUT = 'assets/images/ui/rhythm'
-PREV = '/home/mtvemo/FlappyMonster_pruebas/groove_duelo/flechas_vista_previa.png'
+PREV = os.path.expanduser('~/FlappyMonster_pruebas/groove_duelo/flechas_vista_previa.png')
 S = 24
 LINE = (24, 20, 38, 255)
 #          relleno           luz                sombra

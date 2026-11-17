@@ -3,7 +3,7 @@
 
 # Shared brief for the frozen level agents
 
-Repo: /home/mtvemo/FlappyMonster (LÖVE 11 pixel-art platformer, story mode).
+Repo: ~/FlappyMonster (LÖVE 11 pixel-art platformer, story mode).
 
 ## Read first
 - CLAUDE.md. Obey it strictly:
@@ -13,7 +13,7 @@ Repo: /home/mtvemo/FlappyMonster (LÖVE 11 pixel-art platformer, story mode).
   - Spanish comments; player-facing text in both es/en.
   - Untracked root files are the user's.
   - Don't commit and don't bump versions.
-- The approved design for all frozen levels: /home/mtvemo/FlappyMonster_pruebas/islas_heladas/diseno.md, including the user's verdict at the end.
+- The approved design for all frozen levels: ~/FlappyMonster_pruebas/islas_heladas/diseno.md, including the user's verdict at the end.
 - A finished example of a full level job: the jungle levels.
   - Builders: `tools/levelgen/levels_jungle_1.py` … `levels_jungle_4.py`, `levels_jungle_bonus.py`.
   - How to use the builder, solver and retheme: their docstrings and docs/levels/ (generator-and-solver.md, level-format.md, retheme.md, editor.md).
@@ -42,7 +42,7 @@ Repo: /home/mtvemo/FlappyMonster (LÖVE 11 pixel-art platformer, story mode).
 ## Checks
 - `level_check` must end TODO OK.
 - `level_solve` must reach the finish with the real physics. Use solver variants for mechanics it can't model, as the jungle agents did; delete the variants afterwards.
-- Capture the whole level and each section to /home/mtvemo/FlappyMonster_pruebas/niveles_helados/<level_id>/.
+- Capture the whole level and each section to ~/FlappyMonster_pruebas/niveles_helados/<level_id>/.
 - Finish with `run.sh docs_reference`.
 
 ## Shared files

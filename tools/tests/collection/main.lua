@@ -16,7 +16,7 @@
 --  7. lo que llevan PUESTO los jefes (Boss:drawWear): el Mega Crabby su corona y el Lúgubre su amuleto se dibujan;
 --     con props.wear = false, no; el Mega Crabby helado no la lleva (`piezas`).
 -- Capturas: <save>/collection_{1280,960,960_abajo,1600,mapa,jefes}.png, copiadas también a
--- /home/mtvemo/FlappyMonster_pruebas/coleccion/ (si existe la carpeta).
+-- ~/FlappyMonster_pruebas/coleccion/ (si existe la carpeta).
 --   tools/tests/run.sh collection
 io.stdout:setvbuf('no')
 love.filesystem.setSymlinksEnabled(true)
@@ -31,7 +31,7 @@ local function check(name, ok, msg)
     if not ok then fails = fails + 1 end
 end
 local step, t, T, shotQ = 'start', 0, 0, {}
-local PREV = '/home/mtvemo/FlappyMonster_pruebas/coleccion/'
+local PREV = (os.getenv('HOME') .. '/FlappyMonster_pruebas/coleccion/')
 local Save, Run, Collect, L
 local MAP, MAPPOS, NAV, N, STOLEN
 

@@ -49,7 +49,7 @@ import bloques_beep_check as BC
 
 AQUI = os.path.dirname(os.path.abspath(__file__))
 ROOT_REPO = os.path.normpath(os.path.join(AQUI, '..', '..'))
-PRUEBAS = '/home/mtvemo/FlappyMonster_pruebas/musica/via_estelar'
+PRUEBAS = os.path.expanduser('~/FlappyMonster_pruebas/musica/via_estelar')
 DST = os.path.join(ROOT_REPO, 'assets', 'music', 'worlds', 'via_estelar')
 BEEP_WAV = os.path.join(ROOT_REPO, 'assets', 'sounds', 'mechanics', 'beep_warn.wav')
 BEEP_TIEMPOS = (5, 6, 7)                 # tiempos 6, 7 y 8 de la frase (contando desde 0)

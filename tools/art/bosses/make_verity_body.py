@@ -40,7 +40,7 @@ for k, v in missing.items(): print('  (sin pareja) %s ≈ %s → %s' % (k, v, MA
 if '--apply' in sys.argv:
     path = os.path.join(D, 'verity', 'body-Sheet.png')
 else:
-    d = '/home/mtvemo/FlappyMonster_pruebas/verity'
+    d = os.path.expanduser('~/FlappyMonster_pruebas/verity')
     os.makedirs(d, exist_ok=True)
     path = os.path.join(d, 'body-Sheet.png')
     out.resize((src.width * 6, src.height * 6), Image.NEAREST).save(os.path.join(d, 'vista_previa.png'))

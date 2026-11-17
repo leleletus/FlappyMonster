@@ -12,7 +12,7 @@
 # src/world/entities/types/items/cage.lua dibuja el flappy DENTRO (entre la pared del fondo y los barrotes) con el
 # cuadro de la jaula encima. El flappy de cada jaula sale de su casilla (Cage.variantAt): igual en cada partida y en
 # cada cliente.
-# Sin flags: solo la vista previa (FlappyMonster_pruebas/jaulas/vista_previa.png si existe /home/mtvemo, si no la
+# Sin flags: solo la vista previa (FlappyMonster_pruebas/jaulas/vista_previa.png en tu carpeta personal, ~, si no la
 # carpeta que diga --preview). --apply escribe los tres PNG (no están retocados a mano: se puede volver a generar).
 #   python3 tools/art/items/make_cage.py [--apply] [--preview DIR]
 import os, sys, struct, zlib
@@ -275,7 +275,7 @@ def preview(dirpath):
 
 if __name__ == '__main__':
     args = sys.argv[1:]
-    pdir = '/home/mtvemo/FlappyMonster_pruebas/jaulas'
+    pdir = os.path.expanduser('~/FlappyMonster_pruebas/jaulas')
     if '--preview' in args: pdir = args[args.index('--preview') + 1]
     preview(pdir)
     if '--apply' in args:

@@ -10,7 +10,7 @@
 #   crystal_shard    esquirla de cristal (subcelda)               cloud_puff     nubecilla (celda, delante)
 #   star_banner      banderín con una estrella (ondea, 3 cuadros)
 # Escribe assets/images/world/decorations/starway/*.png y assets/anim/world/decorations/starway.json (--apply); sin él,
-# la hoja en /home/mtvemo/FlappyMonster_pruebas/via_estelar/decoraciones/vista_previa.png.
+# la hoja en ~/FlappyMonster_pruebas/via_estelar/decoraciones/vista_previa.png.
 import os, sys
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'lib'))
 import animjson  # noqa: E402
@@ -21,7 +21,7 @@ REPO = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), 
 os.chdir(REPO)
 OUT = 'assets/images/world/decorations/starway'
 ANIM = 'assets/anim/world/decorations/starway.json'
-PREV = '/home/mtvemo/FlappyMonster_pruebas/via_estelar/decoraciones'
+PREV = os.path.expanduser('~/FlappyMonster_pruebas/via_estelar/decoraciones')
 
 
 def rgb(h, a=255): return (int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16), a)

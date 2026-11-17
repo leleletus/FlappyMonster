@@ -16,7 +16,7 @@ from PIL import Image
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.normpath(os.path.join(HERE, '..', '..', '..'))
-PRUEBAS = os.path.join(os.environ.get('FM_PRUEBAS', '/home/mtvemo/FlappyMonster_pruebas'), 'nuevos', 'ventisca_geiser')
+PRUEBAS = os.path.join(os.environ.get('FM_PRUEBAS', os.path.expanduser('~/FlappyMonster_pruebas')), 'nuevos', 'ventisca_geiser')
 OUT_W = os.path.join(ROOT, 'assets', 'images', 'mechanisms', 'wind')
 OUT_G = os.path.join(ROOT, 'assets', 'images', 'mechanisms', 'geyser')
 

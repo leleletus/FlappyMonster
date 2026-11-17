@@ -317,7 +317,7 @@ def biquad(x, kind, f0, gain_db, q=0.9):
 import os as _os
 MUSIC_DIR = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), '..', '..', 'assets', 'music')
 MID_DIR = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), 'mid')
-REF_DIR = _os.path.join(_os.environ.get('FM_ORIGINALS', '/home/mtvemo/FlappyMonster_originals'), 'music', 'placeholders')
+REF_DIR = _os.path.join(_os.environ.get('FM_ORIGINALS', os.path.expanduser('~/FlappyMonster_originals')), 'music', 'placeholders')
 PATHS = {
     # (las cinemáticas de la historia: tools/music/story_music.py)
     'story_intro': 'story/story_intro', 'story_ending': 'story/story_ending',

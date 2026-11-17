@@ -13,13 +13,13 @@
 #   cloud_platform.png  Nube traspasable                                                             (tile 67)
 #   crystal_ledge.png   Repisa de cristal traspasable                                                (tile 68)
 #   star_top.png        el filo de luz estelar encima del cristal, la roca y el ladrillo
-# Sin --apply: la hoja en /home/mtvemo/FlappyMonster_pruebas/via_estelar/bloques/vista_previa.png. --apply escribe los
+# Sin --apply: la hoja en ~/FlappyMonster_pruebas/via_estelar/bloques/vista_previa.png. --apply escribe los
 # PNG (ninguno está retocado a mano: se pueden regenerar).   Desde la raíz:  python3 tools/art/world/make_starway_tiles.py
 import os, sys, random
 from PIL import Image
 
 OUT = 'assets/images/world/tiles'
-PREV = '/home/mtvemo/FlappyMonster_pruebas/via_estelar/bloques'
+PREV = os.path.expanduser('~/FlappyMonster_pruebas/via_estelar/bloques')
 X = 4
 
 

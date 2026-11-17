@@ -27,7 +27,7 @@ import jungle_enemies as JE
 from jungle_enemies import SR, t_, band, low, noise, env, place, thud, click
 from scorpion import write, res
 
-PREV = '/home/mtvemo/FlappyMonster_pruebas/tifon/sonidos'
+PREV = os.path.expanduser('~/FlappyMonster_pruebas/tifon/sonidos')
 rng = np.random.default_rng(1104)
 
 

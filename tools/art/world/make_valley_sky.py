@@ -11,7 +11,7 @@
 # distinto (color, antenas o cuernos, cola) y SIN ALAS: aletean por arte de magia (brazos arriba).
 # Colores claros y apagados: los pilares del nivel (tile 59, casi negros) se leen siempre por delante.
 # Por defecto solo hace la VISTA PREVIA (fuera del repo):
-#   /home/mtvemo/FlappyMonster_pruebas/valle/   (vista_previa.png: las tres horas con pilares de verdad delante,
+#   ~/FlappyMonster_pruebas/valle/   (vista_previa.png: las tres horas con pilares de verdad delante,
 #                                                capas.png, capas/ con cada PNG a su tamaño)
 # --apply escribe en assets/ (no pisa lo que exista; los degradados se AÑADEN a gradients.png como cuadros 18..20:
 # tras make_sky.py, make_jungle_sky.py --apply y make_frozen_coast_sky.py --apply A, ejecutarlo otra vez).
@@ -30,7 +30,7 @@ sys.argv = _argv
 
 APPLY = '--apply' in sys.argv
 FORCE = '--force' in sys.argv                     # con --apply, rehace SOLO valley_near.png (lo demás no se pisa)
-PREV = '/home/mtvemo/FlappyMonster_pruebas/valle'
+PREV = os.path.expanduser('~/FlappyMonster_pruebas/valle')
 SKY = os.path.join(REPO, 'assets/images/world/sky')
 W, S = J.W, J.S
 rgb, L = J.rgb, J.L

@@ -8,7 +8,7 @@
 #   python3 tools/art/enemies/make_icecrabby_claws.py            # vista previa de las opciones (fuera del repo)
 #   python3 tools/art/enemies/make_icecrabby_claws.py --apply X  # escribe la opción X en assets/images/enemies/crabby_ice/
 #   (--out DIR: carpeta de la vista previa; por defecto $FM_PREVIEWS/crabby_ice_claws o
-#    /home/mtvemo/FlappyMonster_pruebas/crabby_ice_claws)
+#    ~/FlappyMonster_pruebas/crabby_ice_claws)
 #
 # Vista previa: opciones.png (todas las opciones ampliadas: cuadros abierta/cerrada, junto a la
 # pinza del Mega), maqueta.png (el Crabby helado en el juego con cada opción, junto al Crabby
@@ -310,7 +310,7 @@ def preview(out):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--apply', default=None)
-    ap.add_argument('--out', default=os.path.join(os.environ.get('FM_PREVIEWS', '/home/mtvemo/FlappyMonster_pruebas'),
+    ap.add_argument('--out', default=os.path.join(os.environ.get('FM_PREVIEWS', os.path.expanduser('~/FlappyMonster_pruebas')),
                                                   'crabby_ice_claws'))
     a = ap.parse_args()
     preview(a.out)

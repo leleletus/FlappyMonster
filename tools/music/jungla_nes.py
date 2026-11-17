@@ -48,7 +48,7 @@ import gm as GM
 
 P, CH = W.P, W.CH
 MAJ, MIN = (0, 4, 7), (0, 3, 7)
-PRUEBAS = '/home/mtvemo/FlappyMonster_pruebas/musica/jungla'
+PRUEBAS = os.path.expanduser('~/FlappyMonster_pruebas/musica/jungla')
 INSTALL_DIR = os.path.join(F.MUSIC_DIR, 'worlds', 'jungla')
 NAMES = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B']
 nm = lambda m: NAMES[m % 12] + str(m // 12 - 1)

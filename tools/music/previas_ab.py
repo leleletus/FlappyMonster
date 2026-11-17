@@ -56,7 +56,7 @@ if __name__ == '__main__':
         for c in sys.argv[sys.argv.index('--contra') + 1:]:
             if c.startswith('--'): break
             contra.append(c)
-    base = sys.argv[sys.argv.index('--salida') + 1] if '--salida' in sys.argv else os.path.join(os.environ.get('FM_PRUEBAS', '/home/mtvemo/FlappyMonster_pruebas'), 'musica', 'revision')
+    base = sys.argv[sys.argv.index('--salida') + 1] if '--salida' in sys.argv else os.path.join(os.environ.get('FM_PRUEBAS', os.path.expanduser('~/FlappyMonster_pruebas')), 'musica', 'revision')
     out = os.path.join(base, name)
     os.makedirs(out, exist_ok=True)
     bar = 16 * 60.0 / W.TRACKS[name]['bpm'] / 4

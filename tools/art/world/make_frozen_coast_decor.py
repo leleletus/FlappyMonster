@@ -10,8 +10,8 @@
 #      mástil de un pecio, arco de hielo, medusa en hielo, témpano facetado
 # Arte a 1x; el juego lo dibuja a x4 (1 casilla = 16 px de arte). 1 px de margen (pad) como todas las decoraciones.
 # Por defecto SOLO hace la vista previa (fuera del repo):
-#     /home/mtvemo/FlappyMonster_pruebas/fondo_costa_helada/decoraciones.png    catálogo A y B a x4 con su nombre
-#     /home/mtvemo/FlappyMonster_pruebas/fondo_costa_helada/sprites_A|B/       cada sprite a 1x
+#     ~/FlappyMonster_pruebas/fondo_costa_helada/decoraciones.png    catálogo A y B a x4 con su nombre
+#     ~/FlappyMonster_pruebas/fondo_costa_helada/sprites_A|B/       cada sprite a 1x
 # Elegida y aplicada la A (2026-10-29; su iceberg y su témpano, en facetas planas como el hielo del fondo). --apply A
 # escribe en assets/images/world/decorations/frozen_coast/ y registra sus animaciones (no pisa lo que exista; --force
 # para rehacerlo; tipo: src/world/decorations/types/frozen_coast_set.lua). Desde la raíz del repo:
@@ -28,7 +28,7 @@ sys.argv = _argv
 
 APPLY = '--apply' in sys.argv
 FORCE = '--force' in sys.argv
-PREV = '/home/mtvemo/FlappyMonster_pruebas/fondo_costa_helada'
+PREV = os.path.expanduser('~/FlappyMonster_pruebas/fondo_costa_helada')
 REPO = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', '..'))
 DEST = os.path.join(REPO, 'assets/images/world/decorations/frozen_coast')
 

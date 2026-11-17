@@ -63,7 +63,7 @@ import gm as GM
 
 P, CH, nm, place = W.P, W.CH, J.nm, J.place
 MAJ, MIN = (0, 4, 7), (0, 3, 7)
-PRUEBAS = '/home/mtvemo/FlappyMonster_pruebas/musica_montanas'
+PRUEBAS = os.path.expanduser('~/FlappyMonster_pruebas/musica_montanas')
 GM_LAT = M.GM_LAT                                                    # (muestras: el retraso mínimo de fluidsynth)
 
 # ══ INSTRUMENTOS GM (banco, programa) del GeneralUser GS — el reparto helado ══════════════════════════════════════

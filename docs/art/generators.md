@@ -78,7 +78,7 @@ the diff before committing anything they write.
   irregular per id; an entry may fix its own `seed`; `tint` = its island's colour; ids must be 1..N. Without flags =
   preview `FlappyMonster_pruebas/espejo/vista_previa.png`, `--apply` writes the assets. A new boss with a shard = a line
   in the catalog and `--apply`. The 7-piece set of before is kept in
-  `/home/mtvemo/FlappyMonster_originals/story/mirror_7/`.
+  `~/FlappyMonster_originals/story/mirror_7/`.
 - `tools/art/enemies/make_beetle.py`: the jungle's Rhino Beetle and the Giant Rhino Beetle (22x20 frames: 4-frame tripod walk, charge, on its back; the giant adds toss, wings, landing and the gold rune) + the giant's temple block, debris, floor wave and dust; design D chosen by the user (2026-10-28); without flags = previews, mockups and GIFs in `FlappyMonster_pruebas/escarabajo/`; `--apply` writes the attack sprites and both anim sets; it never rewrites the two body sheets the user retouched (`KEEP`).
 - `tools/art/enemies/make_scorpion.py`: the volcano's Scorpion and the Triple Strike Scorpion, chosen design C ([future-secret-bosses](../bosses/future-secret-bosses.md)): the body in 30x24 frames, tails and arms as loose pieces animated live; no flags = previews of the chosen one, `--all` = the 4 designs, `--apply` = `assets/`.
 - `tools/art/bosses/make_carnivorous_queen.py`: the Carnivorous Queen, chosen look A without the face ([carnqueen](../bosses/carnqueen.md)); no flags = previews of the 4 looks, `--apply` = `assets/`.

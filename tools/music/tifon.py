@@ -56,7 +56,7 @@ import slap as SL
 import gm as GM
 
 CH, place, nm = M.CH, M.place, J.nm
-PRUEBAS = '/home/mtvemo/FlappyMonster_pruebas/musica/tifon'
+PRUEBAS = os.path.expanduser('~/FlappyMonster_pruebas/musica/tifon')
 TRACK = 'tifon'
 BPM, LUFS, CEILING = 160, -10.5, 0.70
 VNAME = {'A': 'remolino', 'B': 'vendaval', 'C': 'granizo'}

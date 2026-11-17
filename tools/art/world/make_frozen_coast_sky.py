@@ -13,7 +13,7 @@
 # (facetas planas con su reflejo en franjas: crystal / ice_wall) y la aurora (verde con un toque de magenta). Aplicada
 # la A; la B se queda aquí y en la vista previa.
 # Por defecto solo hace la VISTA PREVIA (fuera del repo):
-#   /home/mtvemo/FlappyMonster_pruebas/fondo_costa_helada/   (vista_previa.png, escenas A/B por hora, capas/, README)
+#   ~/FlappyMonster_pruebas/fondo_costa_helada/   (vista_previa.png, escenas A/B por hora, capas/, README)
 # --apply A escribe la opción en assets/ (no pisa lo que exista; los degradados se AÑADEN a gradients.png como
 # cuadros 15..17). Desde la raíz del repo:
 #     ~/.venvs/fm-music/bin/python tools/art/world/make_frozen_coast_sky.py [--apply A|B]
@@ -27,7 +27,7 @@ import make_jungle_sky as J                       # capa L, perfil, composición
 sys.argv = _argv
 
 APPLY = '--apply' in sys.argv
-PREV = '/home/mtvemo/FlappyMonster_pruebas/fondo_costa_helada'
+PREV = os.path.expanduser('~/FlappyMonster_pruebas/fondo_costa_helada')
 REPO = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', '..'))
 SKY = os.path.join(REPO, 'assets/images/world/sky')
 W, S = J.W, J.S

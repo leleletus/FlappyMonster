@@ -51,7 +51,7 @@ SECCIONES = [('A', 20), ('B', 16), ('C', 4)]
 NB = sum(n for _, n in SECCIONES)        # 40 compases = 80 s
 LOOP_N = NB * BAR_N
 COPIAS = 3                               # se toca el bucle 3 veces seguidas y se queda la del medio: costura exacta
-PRUEBAS = '/home/mtvemo/FlappyMonster_pruebas/musica/via_estelar'
+PRUEBAS = os.path.expanduser('~/FlappyMonster_pruebas/musica/via_estelar')
 ROOT_REPO = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..'))
 BEEP_WAV = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'assets', 'sounds', 'mechanics', 'beep_warn.wav')
 BEEP_TIEMPOS = (5, 6, 7)                 # tiempos 6, 7 y 8 de la frase (contando desde 0)

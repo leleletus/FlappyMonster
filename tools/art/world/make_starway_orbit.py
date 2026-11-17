@@ -6,14 +6,14 @@
 #   hub / hub_lit   el eje (8x8): cristal lavanda con la lámpara dorada (encendida en el pulso), como el metrónomo
 #   dot             un punto del camino de la órbita (2x2)
 #   Desde la raíz del repo:  /usr/bin/python3 tools/art/world/make_starway_orbit.py [--apply]
-# Sin --apply: solo la vista previa en /home/mtvemo/FlappyMonster_pruebas/via_estelar/orbita/vista_previa.png
+# Sin --apply: solo la vista previa en ~/FlappyMonster_pruebas/via_estelar/orbita/vista_previa.png
 import os, sys, math
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'lib'))
 import animjson  # noqa: E402
 from PIL import Image
 
 REPO = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', '..'))
-PREV = '/home/mtvemo/FlappyMonster_pruebas/via_estelar/orbita'
+PREV = os.path.expanduser('~/FlappyMonster_pruebas/via_estelar/orbita')
 K = 4
 
 

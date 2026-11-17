@@ -7,13 +7,13 @@
 #   body_idle / body_lit / body_wind / body_dazed    el cuerpo (24x28)
 #   rod.png (2x56) · bob.png (12x12) · wave.png (8x6: la onda del golpe) · note.png (8x11: la nota de las campanadas)
 #   Desde la raíz:  /usr/bin/python3 tools/art/bosses/make_metrogolem.py [--apply]
-# Sin --apply: vista previa en /home/mtvemo/FlappyMonster_pruebas/metrogolem/vista_previa.png
+# Sin --apply: vista previa en ~/FlappyMonster_pruebas/metrogolem/vista_previa.png
 import os, sys
 from PIL import Image
 
 REPO = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', '..'))
 OUT = os.path.join(REPO, 'assets/images/bosses/metrogolem')
-PREV = '/home/mtvemo/FlappyMonster_pruebas/metrogolem'
+PREV = os.path.expanduser('~/FlappyMonster_pruebas/metrogolem')
 S = 8
 
 

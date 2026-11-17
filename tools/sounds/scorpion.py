@@ -24,7 +24,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import jungle_enemies as JE
 from jungle_enemies import SR, t_, band, low, noise, env, place, thud, click
 
-PREV = '/home/mtvemo/FlappyMonster_pruebas/escorpion/sonidos'
+PREV = os.path.expanduser('~/FlappyMonster_pruebas/escorpion/sonidos')
 GAP = 0.09                                 # (segundos entre clics: make_scorpion.py RATTLE_F, 3 cuadros de 0,03 s)
 CLICK_F = (0.94, 1.0, 1.07)                # (cada clic, un poco más agudo que el anterior)
 

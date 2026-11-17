@@ -35,7 +35,7 @@ BPM = 150
 S16 = 60.0 / BPM / 4
 BAR = 16 * S16
 NAME = 'slap_boss'
-PREVIEW = '/home/mtvemo/FlappyMonster_pruebas/musica/slap_boss'
+PREVIEW = os.path.expanduser('~/FlappyMonster_pruebas/musica/slap_boss')
 NN = {'C': 0, 'C#': 1, 'D': 2, 'D#': 3, 'Eb': 3, 'E': 4, 'F': 5, 'F#': 6, 'G': 7, 'G#': 8, 'A': 9, 'Bb': 10, 'B': 11}
 MAJ, MIN = (0, 4, 7), (0, 3, 7)
 

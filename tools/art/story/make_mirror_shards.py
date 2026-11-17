@@ -17,7 +17,7 @@ from PIL import Image, ImageDraw
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(HERE, '..', '..', '..', 'assets', 'images', 'story', 'mirror')
-PREVIEW = '/home/mtvemo/FlappyMonster_pruebas/espejo/vista_previa.png'
+PREVIEW = os.path.expanduser('~/FlappyMonster_pruebas/espejo/vista_previa.png')
 
 W, H = 48, 64
 CX, CY, RX, RY = 23.5, 27.5, 16.5, 22.5           # el cristal: un óvalo

@@ -14,7 +14,7 @@ from PIL import Image
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.normpath(os.path.join(HERE, '..', '..', '..'))
-PRUEBAS = os.path.join(os.environ.get('FM_PRUEBAS', '/home/mtvemo/FlappyMonster_pruebas'), 'mecanicas_heladas', 'iceberg')
+PRUEBAS = os.path.join(os.environ.get('FM_PRUEBAS', os.path.expanduser('~/FlappyMonster_pruebas')), 'mecanicas_heladas', 'iceberg')
 OUT = os.path.join(ROOT, 'assets', 'images', 'mechanisms', 'iceberg')
 OUT_ICON = os.path.join(ROOT, 'assets', 'images', 'ui', 'icons', 'frost.png')
 MAX_W, MAX_H = 8, 3          # (Iceberg.MAX_W / MAX_H)

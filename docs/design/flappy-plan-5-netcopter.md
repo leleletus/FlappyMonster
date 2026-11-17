@@ -58,7 +58,7 @@ reward for ALL cages (still PENDING, the user).
 - Boss zone music: `"music": "tuffi"`.
 - Art: [pixel-density](../art/style-rules.md) — one pixel size for all sprites; the Evil Monster on the SAME 26x21 grid
   as `assets/images/bosses/miniboss1/monster/Idle1.png` (extend, do not redesign); the machine big with few art pixels
-  (×6), never fine detail. Previews to `/home/mtvemo/FlappyMonster_pruebas/redcoptero/vista_previa.png`, applied only
+  (×6), never fine detail. Previews to `~/FlappyMonster_pruebas/redcoptero/vista_previa.png`, applied only
   after the user's verdict. Check the hand-edited list in [generators](../art/generators.md) before writing anything
   under `miniboss1/`.
 - Sounds: reuse existing ids from `src/audio/Sound.lua` (`bossHurt`, explosions, a laugh); new sounds are not part of

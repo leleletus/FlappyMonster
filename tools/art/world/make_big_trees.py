@@ -6,8 +6,8 @@
 # Arte a 1x; el juego lo dibuja a x4 (1 casilla = 16 px de arte).
 #
 # Por defecto SOLO hace la vista previa (no toca assets/):
-#     /home/mtvemo/FlappyMonster_pruebas/arboles/vista_previa.png   catálogo x4 por isla, con el árbol actual y el monstruo
-#     /home/mtvemo/FlappyMonster_pruebas/arboles/sprites/*.png      cada sprite a 1x
+#     ~/FlappyMonster_pruebas/arboles/vista_previa.png   catálogo x4 por isla, con el árbol actual y el monstruo
+#     ~/FlappyMonster_pruebas/arboles/sprites/*.png      cada sprite a 1x
 # --apply escribe en assets/images/world/decorations/<tema>/ (no pisa lo que existe salvo con --force).
 # Las palmeras van en 3 capas del mismo tamaño (tronco, cocos, hojas) para que las hojas se mezan aparte,
 # como foliage/palmtree.  Desde la raíz del repo:
@@ -19,7 +19,7 @@ from PIL import Image, ImageDraw, ImageFont
 APPLY = '--apply' in sys.argv
 FORCE = '--force' in sys.argv
 ONLY = {a for a in sys.argv[1:] if not a.startswith('--')}
-PRUEBAS = os.environ.get('FM_PRUEBAS', '/home/mtvemo/FlappyMonster_pruebas')
+PRUEBAS = os.environ.get('FM_PRUEBAS', os.path.expanduser('~/FlappyMonster_pruebas'))
 OUT = os.path.join(PRUEBAS, 'arboles')
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..'))
 

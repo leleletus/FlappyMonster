@@ -11,7 +11,7 @@
 #   starway_near    las crestas de nubes cercanas y las agujas de cristal (rosa / cian, como los Bloques Beep)
 #   + 3 degradados propios (`grads`; los tres son de noche: el nivel es siempre de noche, la hora solo lo matiza)
 # Por defecto solo hace la VISTA PREVIA (fuera del repo):
-#   /home/mtvemo/FlappyMonster_pruebas/via_estelar/fondo/ (vista_previa.png, capas/)
+#   ~/FlappyMonster_pruebas/via_estelar/fondo/ (vista_previa.png, capas/)
 # --apply escribe en assets/ (no pisa lo que exista; los degradados se AÑADEN a gradients.png como cuadros 21..23:
 # tras make_sky.py, make_jungle_sky.py --apply, make_frozen_coast_sky.py --apply A y make_valley_sky.py --apply,
 # ejecutarlo otra vez).  Desde la raíz del repo:  /usr/bin/python3 tools/art/world/make_starway_sky.py [--apply]
@@ -29,7 +29,7 @@ sys.argv = _argv
 
 APPLY = '--apply' in sys.argv
 FORCE = '--force' in sys.argv                     # con --apply, REHACE los starway_* y sus 3 degradados (21..23)
-PREV = '/home/mtvemo/FlappyMonster_pruebas/via_estelar/fondo'
+PREV = os.path.expanduser('~/FlappyMonster_pruebas/via_estelar/fondo')
 SKY = os.path.join(REPO, 'assets/images/world/sky')
 W, S = J.W, J.S
 rgb, L = J.rgb, J.L

@@ -21,7 +21,7 @@ from PIL import Image, ImageDraw
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.normpath(os.path.join(HERE, '..', '..', '..'))
 SHEET = os.path.join(ROOT, 'assets', 'images', 'enemies', 'pufferfish', 'puffer_fish-Sheet.png')
-PREVIEW = '/home/mtvemo/FlappyMonster_pruebas/enemigos/pez_globo'
+PREVIEW = os.path.expanduser('~/FlappyMonster_pruebas/enemigos/pez_globo')
 
 
 def hx(s):

@@ -28,7 +28,7 @@ from PIL import Image
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.normpath(os.path.join(HERE, '..', '..', '..'))
-PRUEBAS = os.path.join(os.environ.get('FM_PRUEBAS', '/home/mtvemo/FlappyMonster_pruebas'), 'mecanicas_heladas')
+PRUEBAS = os.path.join(os.environ.get('FM_PRUEBAS', os.path.expanduser('~/FlappyMonster_pruebas')), 'mecanicas_heladas')
 OUT_AV = os.path.join(ROOT, 'assets', 'images', 'traps', 'avalanche')
 OUT_CC = os.path.join(ROOT, 'assets', 'images', 'mechanisms', 'cablecar')
 ISLE_IDS = ['pradera', 'costa', 'fortaleza', 'nieve', 'cueva', 'volcan', 'jungla']

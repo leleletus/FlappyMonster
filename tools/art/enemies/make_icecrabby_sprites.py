@@ -10,7 +10,7 @@
 #
 #   python3 tools/art/enemies/make_icecrabby_sprites.py            # vista previa en --out
 #   python3 tools/art/enemies/make_icecrabby_sprites.py --apply    # escribe assets/images/enemies/crabby_ice/
-#   (--out: $FM_PREVIEWS/crabby_ice o /home/mtvemo/FlappyMonster_pruebas/crabby_ice, fuera del repo)
+#   (--out: $FM_PREVIEWS/crabby_ice o ~/FlappyMonster_pruebas/crabby_ice, fuera del repo)
 #
 # Salida (como assets/images/enemies/crabby/ + tapas):
 #   crab1/2/3.png   andar (18x13; los de assets/images/bosses/megacrabby_ice)
@@ -249,7 +249,7 @@ def mockup(sp, out):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--apply', action='store_true')
-    ap.add_argument('--out', default=os.path.join(os.environ.get('FM_PREVIEWS', '/home/mtvemo/FlappyMonster_pruebas'),
+    ap.add_argument('--out', default=os.path.join(os.environ.get('FM_PREVIEWS', os.path.expanduser('~/FlappyMonster_pruebas')),
                                                   'crabby_ice'))
     a = ap.parse_args()
     sp = build()

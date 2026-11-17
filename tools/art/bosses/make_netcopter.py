@@ -20,7 +20,7 @@ from PIL import Image, ImageDraw
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.normpath(os.path.join(HERE, '..', '..', '..'))
-OUT = os.path.join(os.environ.get('FM_PRUEBAS', '/home/mtvemo/FlappyMonster_pruebas'), 'redcoptero')
+OUT = os.path.join(os.environ.get('FM_PRUEBAS', os.path.expanduser('~/FlappyMonster_pruebas')), 'redcoptero')
 DEST = os.path.join(ROOT, 'assets', 'images', 'bosses', 'netcopter')
 K = 6
 SKY = (150, 205, 240, 255)

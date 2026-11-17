@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# tools/music/tuffi.py — "TUFFI": tema ÉPICO nuevo sobre la melodía del usuario (/home/mtvemo/Descargas/tuffi.mid: 8
+# tools/music/tuffi.py — "TUFFI": tema ÉPICO nuevo sobre la melodía del usuario (~/Descargas/tuffi.mid: 8
 # compases a 135 BPM, un arpegio en corcheas agrupado 3+3+2 — Re-Fa#-Do# · Do#-Mi#-Si · Fa#-La-Mi · Mi-Sol#-Re —, con
 # un bajo que en la segunda vuelta sube Re-Mi#-Fa# y baja La-Sol#-Fa#-Mi-Re-Do# en 3+3+3+3+2+2). PREVIAS para que el
 # usuario elija; no toca assets/ ni el index.json. Se comprueba con números: NO SE HA ESCUCHADO.
@@ -48,7 +48,7 @@ import slap as SL
 import gm as GM
 
 place, nm = M.place, J.nm
-PRUEBAS = '/home/mtvemo/FlappyMonster_pruebas/musica/tuffi'
+PRUEBAS = os.path.expanduser('~/FlappyMonster_pruebas/musica/tuffi')
 TRACK = 'tuffi'
 BPM, LUFS, CEILING = 180, -10.0, 0.70
 VNAME = {'A': 'chip_epico', 'B': 'orquesta'}

@@ -6,7 +6,7 @@
 --
 --   love tools/video/ost <jefe> [segundos]   jefe: megagummy | megacrabby | miniboss1 | snowboss | megacrabby_ice |
 --                                                  megagloomy | mirror | groovecrab
---   → $FM_PREVIEWS/videos/<pista>.mp4 (por defecto /home/mtvemo/FlappyMonster_pruebas/videos/)
+--   → $FM_PREVIEWS/videos/<pista>.mp4 (por defecto ~/FlappyMonster_pruebas/videos/)
 --   tools/video/make_ost.sh                  todos
 --
 -- Cómo: no se graba la pantalla; se dibuja fotograma a fotograma (30 fps, reloj virtual: lo que anima con love.timer
@@ -135,7 +135,7 @@ function love.load(arg)
     show = assert(SHOWS[arg[1] or ''], 'jefe: megagummy | megacrabby | miniboss1 | snowboss | megacrabby_ice | megagloomy | mirror | groovecrab')
     show.id = arg[1]
     local base = love.filesystem.getSource() .. '/'
-    local out = (os.getenv('FM_PREVIEWS') or '/home/mtvemo/FlappyMonster_pruebas') .. '/videos'
+    local out = (os.getenv('FM_PREVIEWS') or (os.getenv('HOME') .. '/FlappyMonster_pruebas')) .. '/videos'
     os.execute('mkdir -p "' .. out .. '"')
     -- LA PISTA: intro + bucle, seguidos (del catálogo de música del juego)
     local idx = json.decode(love.filesystem.read('assets/music/index.json'))

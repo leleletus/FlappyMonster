@@ -30,7 +30,7 @@ from PIL import Image
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.normpath(os.path.join(HERE, '..', '..', '..'))
 OUT = os.path.join(ROOT, 'assets', 'images', 'bosses', 'groovecrab')
-PREVIEW = '/home/mtvemo/FlappyMonster_pruebas/jefes/groove'
+PREVIEW = os.path.expanduser('~/FlappyMonster_pruebas/jefes/groove')
 sys.path.insert(0, HERE)
 from make_giant_hopper import FRAMES as WAVE_SHAPES   # noqa: E402
 

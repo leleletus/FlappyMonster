@@ -94,18 +94,18 @@ it up. The generated tables in [reference/](../reference/) list what is register
    (tools/sounds/*.py, tools/art/ui/make_sprites.py …) as long as their output files are committed
    and loaded by the game; code only places/animates them. When a generator REDESIGNS an
    existing image, the original goes OUTSIDE the repo (`tools/art/lib/originals.py`:
-   `/home/mtvemo/FlappyMonster_originals/<same path>-orig.png`, or `$FM_ORIGINALS`) and the
+   `~/FlappyMonster_originals/<same path>-orig.png`, or `$FM_ORIGINALS`) and the
    generator always starts from it. `*-orig.png` is gitignored: never commit backups. The
    user's `.aseprite` source files live there too (same relative paths; gitignored), and so
    does reference audio (`music/TentacleTantrum.wav`). Design previews for the user go to
-   `/home/mtvemo/FlappyMonster_pruebas/<thing>/vista_previa.png` (also outside the repo).
+   `~/FlappyMonster_pruebas/<thing>/vista_previa.png` (also outside the repo).
 6. Data-driven catalogs: new tiles/entities/decorations/modes are a new file
    + one name in a list. The editor and server pick them up automatically.
 7. Don't commit the many ` M` files in git status (they're mode-only changes).
 
 ## The original Unity project (reference only)
 
-`/home/mtvemo/Escritorio/Proyecto_Unity_Exportado/ExportedProject/Assets` —
+`~/Escritorio/Proyecto_Unity_Exportado/ExportedProject/Assets` —
 scripts in `Scripts/Assembly-CSharp/`, real inspector values in
 `Scenes/Level1.unity`. Port *behaviour and timings*; the physics differ, so
 don't copy speeds/forces literally (the user tunes feel by hand).

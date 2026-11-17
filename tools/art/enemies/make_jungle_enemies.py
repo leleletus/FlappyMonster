@@ -39,7 +39,7 @@ from PIL import Image, ImageDraw, ImageFont
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.normpath(os.path.join(HERE, '..', '..', '..'))
 IMG = os.path.join(ROOT, 'assets', 'images')
-OUT = os.path.join(os.environ.get('FM_PRUEBAS', '/home/mtvemo/FlappyMonster_pruebas'), 'enemigos_nuevos')
+OUT = os.path.join(os.environ.get('FM_PRUEBAS', os.path.expanduser('~/FlappyMonster_pruebas')), 'enemigos_nuevos')
 ISLES = ['pradera', 'costa', 'fortaleza', 'nieve', 'cueva', 'volcan', 'jungla']      # (el orden de Isles.IDS)
 
 

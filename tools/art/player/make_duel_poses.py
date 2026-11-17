@@ -16,7 +16,7 @@ from PIL import Image
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.normpath(os.path.join(HERE, '..', '..', '..'))
 OUT = os.path.join(ROOT, 'assets', 'images', 'player', 'duel')
-PREVIEW = '/home/mtvemo/FlappyMonster_pruebas/jugador/duelo'
+PREVIEW = os.path.expanduser('~/FlappyMonster_pruebas/jugador/duelo')
 
 PAL = {'k': (12, 12, 20, 255), 'd': (50, 52, 74, 255), 'g': (196, 200, 214, 255), 'l': (242, 242, 246, 255),
        'w': (255, 255, 255, 255)}

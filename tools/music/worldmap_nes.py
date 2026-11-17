@@ -309,7 +309,7 @@ def build(island):
 # ══ map_jungla: el arreglo de la JUNGLA, con los instrumentos y las herramientas de jungla_nes.py ═══════════════
 # (J.Rig toca los canales de Famicom y las grabaciones GM y apunta las notas de cada voz; MapSong le da la rejilla
 # de esta canción con la forma que espera: compases de 16 semicorcheas, un acorde por compás)
-PRUEBAS = '/home/mtvemo/FlappyMonster_pruebas/musica/mapa'
+PRUEBAS = os.path.expanduser('~/FlappyMonster_pruebas/musica/mapa')
 GM_LAT = 64                                                          # (muestras: el retraso MÍNIMO de fluidsynth, medido: 71)
 SCALE_C = {0, 2, 4, 5, 7, 9, 11}
 

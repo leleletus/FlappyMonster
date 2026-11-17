@@ -41,7 +41,7 @@ import slap as SL
 import gm as GM
 
 place, nm = M.place, J.nm
-PRUEBAS = '/home/mtvemo/FlappyMonster_pruebas/musica/resaca_rework'
+PRUEBAS = os.path.expanduser('~/FlappyMonster_pruebas/musica/resaca_rework')
 INSTALL_DIR = os.path.join(F.MUSIC_DIR, 'bosses')
 TRACK = 'resaca_rework'
 BPM, LUFS, CEILING = 126, -10.5, 0.64                               # (techo bajo: ni el OGG ni el MP3 deben pasar de 1,0)

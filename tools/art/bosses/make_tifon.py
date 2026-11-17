@@ -22,7 +22,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.normpath(os.path.join(HERE, '..', '..', '..'))
-OUT = os.path.join(os.environ.get('FM_PRUEBAS', '/home/mtvemo/FlappyMonster_pruebas'), 'tifon')
+OUT = os.path.join(os.environ.get('FM_PRUEBAS', os.path.expanduser('~/FlappyMonster_pruebas')), 'tifon')
 PLAYER_K, SMALL_K = 6, 4
 SCALES = (10, 8, 6)                 # (las escalas que se enseñan: 10 = opción 1, 6 / 8 = opción 2)
 Q = 0.5                             # (la geometría de la ronda 1, a mitad de resolución)
@@ -42,8 +42,8 @@ def up(im, k):
 
 
 try:
-    FONT = ImageFont.truetype('/usr/share/fonts/TTF/DejaVuSans.ttf', 15)
-    FONT_B = ImageFont.truetype('/usr/share/fonts/TTF/DejaVuSans-Bold.ttf', 20)
+    FONT = ImageFont.truetype('DejaVuSans.ttf', 15)
+    FONT_B = ImageFont.truetype('DejaVuSans-Bold.ttf', 20)
 except Exception:
     FONT = FONT_B = None
 

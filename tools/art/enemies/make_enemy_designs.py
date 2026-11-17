@@ -6,12 +6,12 @@
 #     aire) x 6 islas (misma forma; cambia la paleta, las motas y lo que lleva en la cabeza).
 # Estilo del juego: contorno azul marino muy oscuro (1e1e2a, nunca negro), luz arriba-izquierda, sombra abajo-derecha,
 # caras de dos rayitas y una boca.
-#   python3 tools/art/enemies/make_enemy_designs.py  →  /home/mtvemo/FlappyMonster_pruebas/enemigos/*.png
+#   python3 tools/art/enemies/make_enemy_designs.py  →  ~/FlappyMonster_pruebas/enemigos/*.png
 import os
 from PIL import Image, ImageDraw
 
 ROOT = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'assets', 'images')
-OUT = '/home/mtvemo/FlappyMonster_pruebas/enemigos'
+OUT = os.path.expanduser('~/FlappyMonster_pruebas/enemigos')
 NAVY = '1e1e2a'
 BG = {'pradera': '8cc8f0', 'costa': '9cdcf0', 'fortaleza': '8a8ea8', 'nieve': 'b8d4f0', 'cueva': '3a3450', 'volcan': '6a2c2c',
       'neutro': '6e9a6e', 'ceniza': 'c08868'}

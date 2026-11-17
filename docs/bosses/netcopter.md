@@ -139,7 +139,7 @@ STATES=intro,hover,aim_net,sweep_warn,sweep,dying_hold,fleeing` (a special hit e
 `boss_frames LEVEL=tools/levelgen/arenas/NetcopterArena.json FX=1 HOVER=1 ENTSTATE=netshot:wrap EVERY=0.1` (a net
 wrapping the player, drawn in front of it); `boss_frames LEVEL=tools/levelgen/arenas/NetcopterArena.json FX=1 RAGE=1
 ZOOM=2.4 STATES=sweep_warn,sweep EVERY=0.1` (the claw opening; `ZONE=1` for the whole arena with its floor). Round 2
-capture: `/home/mtvemo/FlappyMonster_pruebas/redcoptero/ronda2.png`.
+capture: `~/FlappyMonster_pruebas/redcoptero/ronda2.png`.
 
 **Not judged yet** (needs the user): the feel and timings of the patrol, the lobbed bomb and the nets; the whole
 plan 5c art (arm, laugh, angry frame, smoke, sparks); the eleven own sounds (verified by numbers only, never listened
@@ -169,7 +169,7 @@ fight in the `T` table of `netcopter.lua`. A new reflectable projectile: the `re
   player's body (neck, arms, dark torso with its shade, legs) with only his own antennae and head from `Idle1` (`hurt`
   for the hurt frame), at the player's pixel size; the stick figure on the `Idle1` grid was wrong. To fit him standing
   between the balloon and the gondola the frame grew from 44x40 to 44x54 (longer ropes); the hitbox is still
-  0.75 x 0.9 of the frame. Preview `/home/mtvemo/FlappyMonster_pruebas/redcoptero/vista_previa.png` (with
+  0.75 x 0.9 of the frame. Preview `~/FlappyMonster_pruebas/redcoptero/vista_previa.png` (with
   `monstrito1` beside the pilot frames).
 - Hp prop 12 is the base; the difficulty's `bossHp` scales it (Normal 11, Extreme 14 with the extra-player bonus).
 - The Evil Monster flees instead of dying: he comes back in every zone.

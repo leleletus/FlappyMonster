@@ -55,7 +55,7 @@ Default health: `hp` for 1 player (8-14) and `hpPerPlayer` (3-4) for each extra 
   projectiles / waves, stun stars, pieces that fly off.
 - Pieces that separate from the body (crown, helmet…): in a SEPARATE image with the same grid and origin, drawn on
   top → they can fly off later.
-- Before applying, show options to the user: preview in `/home/mtvemo/FlappyMonster_pruebas/<thing>/vista_previa.png`
+- Before applying, show options to the user: preview in `~/FlappyMonster_pruebas/<thing>/vista_previa.png`
   (or `$FM_PREVIEWS`), with an `--apply` flag.
 - Example: `tools/art/enemies/make_gummy_variants.py --apply-mega` (function `boss_art`).
 

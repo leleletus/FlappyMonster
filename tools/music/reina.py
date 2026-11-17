@@ -39,7 +39,7 @@ import slap as SL
 import gm as GM
 
 P, nm, place = M.P, J.nm, M.place
-PRUEBAS = '/home/mtvemo/FlappyMonster_pruebas/musica/reina_v2'
+PRUEBAS = os.path.expanduser('~/FlappyMonster_pruebas/musica/reina_v2')
 INSTALL_DIR = os.path.join(F.MUSIC_DIR, 'bosses')
 TRACK = 'reina'
 BPM, LUFS, CEILING = 140, -10.0, 0.66

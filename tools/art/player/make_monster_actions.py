@@ -29,8 +29,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.normpath(os.path.join(HERE, '..', '..', '..'))
 BASE = os.path.join(ROOT, 'assets', 'images', 'player')
 OUT = os.path.join(BASE, 'actions')
-_PRUEBAS = os.environ.get('FM_PRUEBAS') or (
-    '/home/mtvemo/FlappyMonster_pruebas' if os.path.isdir('/home/mtvemo') else os.path.expanduser('~/FlappyMonster_pruebas'))
+_PRUEBAS = os.environ.get('FM_PRUEBAS') or os.path.expanduser('~/FlappyMonster_pruebas')
 PREVIEW = os.path.join(_PRUEBAS, 'monstrito_animaciones')
 
 # Paleta de monstrito1-5 (# contorno · o cara · s sombra · w brillo · v brillo de la barriga)

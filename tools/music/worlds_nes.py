@@ -1816,7 +1816,7 @@ if __name__ == '__main__':
     var = sys.argv[sys.argv.index('--variante') + 1] if '--variante' in sys.argv else None
     for a in args:
         if a == 'previas':
-            out = os.path.join(os.environ.get('FM_PRUEBAS', '/home/mtvemo/FlappyMonster_pruebas'), 'musica')
+            out = os.path.join(os.environ.get('FM_PRUEBAS', os.path.expanduser('~/FlappyMonster_pruebas')), 'musica')
             os.makedirs(out, exist_ok=True)
             for v, kw in VARIANTS.items():
                 y, mel, bpm, _ = build('pradera_1 variante ' + v, **kw)
@@ -1833,7 +1833,7 @@ if __name__ == '__main__':
         kw = dict(TRACKS[a])
         if var and a == 'pradera_1': kw = dict(VARIANTS[var])
         if '--capas' in sys.argv:                  # capas por separado (no exporta la pista): FlappyMonster_pruebas/musica/<pista>_capas/
-            STEMS_TO = os.path.join(os.environ.get('FM_PRUEBAS', '/home/mtvemo/FlappyMonster_pruebas'), 'musica', a + '_capas')
+            STEMS_TO = os.path.join(os.environ.get('FM_PRUEBAS', os.path.expanduser('~/FlappyMonster_pruebas')), 'musica', a + '_capas')
             build(a, **kw)
             continue
         y, mel, bpm, n_i = build(a, **kw)

@@ -9,7 +9,7 @@
 # NUNCA escribe la de la costa. La silueta es la misma en todos los cuadros (las animaciones y cajas no cambian);
 # solo el señuelo del pez de la cueva añade píxeles fuera de ella (DETAIL_EXTRA, comprobado abajo).
 #
-#   python tools/art/enemies/make_puffer_skins.py             → /home/mtvemo/FlappyMonster_pruebas/pez_globo/vista_previa.png
+#   python tools/art/enemies/make_puffer_skins.py             → ~/FlappyMonster_pruebas/pez_globo/vista_previa.png
 #   python tools/art/enemies/make_puffer_skins.py --apply     → escribe <isla>-Sheet.png y <isla>-spine.png que falten
 #   python tools/art/enemies/make_puffer_skins.py --apply --force   → también los que ya existen
 import os, sys
@@ -19,7 +19,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.normpath(os.path.join(HERE, '..', '..', '..'))
 SHEET = os.path.join(ROOT, 'assets', 'images', 'enemies', 'pufferfish', 'puffer_fish-Sheet.png')
 SPINE = os.path.join(ROOT, 'assets', 'images', 'bosses', 'giantpuffer', 'spine.png')
-PREVIEW = '/home/mtvemo/FlappyMonster_pruebas/pez_globo'
+PREVIEW = os.path.expanduser('~/FlappyMonster_pruebas/pez_globo')
 FW = 16
 
 

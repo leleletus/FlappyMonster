@@ -29,8 +29,8 @@ BAR = 16 * SX
 NBARS = 148
 ORIG_T0 = 0.07                          # primer tiempo del compás 1 en el m4a original (medido: onsets + rejilla)
 FUENTE = os.path.expanduser('~/Escritorio/Cae por el equipo')
-MUESTRAS = os.path.join(os.environ.get('FM_ORIGINALS', '/home/mtvemo/FlappyMonster_originals'), 'music', 'muestras', 'cae_equipo')
-SALIDA = '/home/mtvemo/FlappyMonster_pruebas/musica/cae_por_el_equipo'
+MUESTRAS = os.path.join(os.environ.get('FM_ORIGINALS', os.path.expanduser('~/FlappyMonster_originals')), 'music', 'muestras', 'cae_equipo')
+SALIDA = os.path.expanduser('~/FlappyMonster_pruebas/musica/cae_por_el_equipo')
 SF_GS = os.path.expanduser('~/.local/share/soundfonts/GeneralUser-GS.sf2')
 RNG = np.random.default_rng(7)
 

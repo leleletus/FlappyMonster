@@ -11,7 +11,7 @@
 #       dibujo de 4x4 casillas: span = 4), temple_moss (capa de musgo que se pinta ENCIMA del sillar si su cara de
 #       arriba da al aire), jungle_platform (A: tablones atados con liana) y jungle_platform_b (B: bambú con cuerda)
 # Por defecto solo hace la VISTA PREVIA (fuera del repo):
-#   /home/mtvemo/FlappyMonster_pruebas/selva/fondo/vista_previa.png  (+ capas/ con cada PNG a su tamaño real)
+#   ~/FlappyMonster_pruebas/selva/fondo/vista_previa.png  (+ capas/ con cada PNG a su tamaño real)
 # --apply escribe los archivos de verdad en assets/ (no pisa lo que exista; los degradados se AÑADEN a
 # gradients.png como cuadros 11..15). Desde la raíz del repo:
 #     ~/.venvs/fm-music/bin/python tools/art/world/make_jungle_sky.py [--apply]
@@ -20,7 +20,7 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 
 APPLY = '--apply' in sys.argv
-PREV = '/home/mtvemo/FlappyMonster_pruebas/selva/fondo'
+PREV = os.path.expanduser('~/FlappyMonster_pruebas/selva/fondo')
 SKY = 'assets/images/world/sky'
 TIL = 'assets/images/world/tiles'
 W = 320

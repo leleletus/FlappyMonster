@@ -6,9 +6,9 @@
 # con el contorno cerrado). Arte a 1x; el juego lo dibuja a x4 (1 casilla = 16 px de arte).
 #
 # Por defecto SOLO hace la vista previa (fuera del repo):
-#     /home/mtvemo/FlappyMonster_pruebas/selva/decoraciones/vista_previa.png   catálogo a x4 con su nombre
-#     /home/mtvemo/FlappyMonster_pruebas/selva/decoraciones/maqueta.gif        escena con lo que se anima
-#     /home/mtvemo/FlappyMonster_pruebas/selva/decoraciones/sprites/           cada sprite a 1x
+#     ~/FlappyMonster_pruebas/selva/decoraciones/vista_previa.png   catálogo a x4 con su nombre
+#     ~/FlappyMonster_pruebas/selva/decoraciones/maqueta.gif        escena con lo que se anima
+#     ~/FlappyMonster_pruebas/selva/decoraciones/sprites/           cada sprite a 1x
 # --apply escribe los sprites en assets/images/world/decorations/jungle/ (y las partículas en .../fx/); no pisa
 # lo que ya exista (--force para rehacerlo). Desde la raíz del repo:
 #     ~/.venvs/fm-music/bin/python tools/art/world/make_jungle_decor.py [--apply [--force]]
@@ -61,7 +61,7 @@ class Canvas(_Canvas):
 
 APPLY = '--apply' in sys.argv
 FORCE = '--force' in sys.argv
-PREV = '/home/mtvemo/FlappyMonster_pruebas/selva/decoraciones'
+PREV = os.path.expanduser('~/FlappyMonster_pruebas/selva/decoraciones')
 REPO = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', '..'))
 DEST = os.path.join(REPO, 'assets/images/world/decorations/jungle')
 DEST_FX = os.path.join(REPO, 'assets/images/world/decorations/fx')

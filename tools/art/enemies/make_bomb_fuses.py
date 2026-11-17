@@ -18,7 +18,7 @@ from PIL import Image
 REPO = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..'))
 DIR = os.path.join(REPO, 'assets/images/enemies/bomb')
 P = 'assets/images/enemies/bomb/'
-PREVIEW = '/home/mtvemo/FlappyMonster_pruebas/bombas'
+PREVIEW = os.path.expanduser('~/FlappyMonster_pruebas/bombas')
 BW, BH = 13, 16            # recorte del cuerpo (todas las bombas caben; la más ancha mide 13)
 PX, PY = 5, 8              # margen de la celda de la cuerda: a cada lado y arriba
 CW, CH = BW + 2 * PX, BH + PY

@@ -15,11 +15,11 @@
 - **House style:** dark outline (the darkest tone of the object's OWN colour, never pure black), highlight
   top-left, soft shade bottom-right, 3-4 tones, no noise, 1-px transparent margin so nothing looks cut.
 - **A redesign keeps every pixel of the user's original shape** and only adds the style.
-- **Originals live OUTSIDE the repo:** `/home/mtvemo/FlappyMonster_originals/<same path>-orig.png` (or
+- **Originals live OUTSIDE the repo:** `~/FlappyMonster_originals/<same path>-orig.png` (or
   `$FM_ORIGINALS`; helper `tools/art/lib/originals.py`). The user's `.aseprite` sources live there too. `*-orig.png`
   and `*.aseprite` are gitignored: never commit backups. The folder mirrors `assets/images/` (moved together on
   2026-10-07; log in `MUDANZA_2026-10-07.txt` there).
-- **Previews for the user** go to `/home/mtvemo/FlappyMonster_pruebas/<thing>/vista_previa.png` (outside the repo).
+- **Previews for the user** go to `~/FlappyMonster_pruebas/<thing>/vista_previa.png` (outside the repo).
   Show options before applying; generators take `--apply`.
 - **Never overwrite a sprite the user hand-edited** — the list is in [generators](generators.md).
 - **The monster has NO wings.** (Flying enemies do: `assets/images/enemies/wings/`.)

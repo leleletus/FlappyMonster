@@ -10,14 +10,14 @@
 #   smoke-Sheet.png     bocanada de humo, 4 cuadros 12x12 (nace, crece, grande, se deshace): humo y polvo
 #   flash-Sheet.png     el fogonazo, 3 cuadros 16x16
 #   spark-Sheet.png     la chispa de la mecha, 3 cuadros 7x7
-# y una hoja de muestra (x4) en /home/mtvemo/FlappyMonster_pruebas/canones/hoja.png
+# y una hoja de muestra (x4) en ~/FlappyMonster_pruebas/canones/hoja.png
 #   python3 tools/art/story/make_cannon.py        (determinista)
 import math, os
 from PIL import Image
 
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', '..')
 OUT = os.path.join(ROOT, 'assets', 'images', 'story', 'cannon')
-PREVIEW = '/home/mtvemo/FlappyMonster_pruebas/canones/hoja.png'
+PREVIEW = os.path.expanduser('~/FlappyMonster_pruebas/canones/hoja.png')
 
 INK = (24, 22, 32, 255)
 RED, RED_L = (196, 48, 52, 255), (240, 104, 84, 255)

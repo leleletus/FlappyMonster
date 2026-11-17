@@ -26,7 +26,7 @@
 #   --seam A|B   la COSTURA de la nieve sobre los otros bloques (snow_spill.png, TileTypes.drawSpill; el usuario,
 #                2026-10-29: «así como el hielo / la arena tiene costura con otros bloques, la nieve también debe»):
 #                A = labio de nieve con grumos redondos (por defecto) · B = escarcha tramada
-# Sin --apply: solo la hoja de texturas en /home/mtvemo/FlappyMonster_pruebas/tiles_helados/paquete/ (la maqueta en el
+# Sin --apply: solo la hoja de texturas en ~/FlappyMonster_pruebas/tiles_helados/paquete/ (la maqueta en el
 # juego: tools/levelgen/arenas/make_hielo_paquete.py + run.sh level_shots).
 # --apply escribe los PNG; el snow.png / ice.png de antes se guardan una vez FUERA del repo
 # (FlappyMonster_originals/assets/images/world/tiles/<nombre>-antes_capas.png).
@@ -49,7 +49,7 @@ SNOW_OPT = arg('--snow', 'A')
 ICE_OPT = arg('--ice', 'A')
 SEAM_OPT = arg('--seam', 'A')
 T = 'assets/images/world/tiles'
-PRUEBAS = '/home/mtvemo/FlappyMonster_pruebas/tiles_helados'
+PRUEBAS = os.path.expanduser('~/FlappyMonster_pruebas/tiles_helados')
 X = 4                                   # escala del arte
 
 

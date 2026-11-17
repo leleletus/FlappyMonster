@@ -32,7 +32,7 @@ from PIL import Image, ImageDraw
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.normpath(os.path.join(HERE, '..', '..', '..'))
 OUT = os.path.join(ROOT, 'assets', 'images', 'story', 'collectibles')
-PREV_DIR = '/home/mtvemo/FlappyMonster_pruebas/coleccion'
+PREV_DIR = os.path.expanduser('~/FlappyMonster_pruebas/coleccion')
 
 
 def rgb(h):

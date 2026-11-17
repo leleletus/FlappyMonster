@@ -50,7 +50,7 @@ import slap as SL
 import gm as GM
 
 CH, place, nm = M.CH, M.place, J.nm
-PRUEBAS = '/home/mtvemo/FlappyMonster_pruebas/musica/escorpion_nuevo'
+PRUEBAS = os.path.expanduser('~/FlappyMonster_pruebas/musica/escorpion_nuevo')
 INSTALL_DIR = os.path.join(F.MUSIC_DIR, 'bosses')
 TRACK = 'obsidiana'
 BPM, LUFS, CEILING = 160, -10.5, 0.72

@@ -36,7 +36,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from make_jungle_enemies import (E, R, Pg, Xf, P, D, render, sheet, r3, tube, Above, Below, LeftOf, margin_ok,  # noqa
                                  hx, ground, big, put, text, FONT, FONTM, FONTB, PLAYER, ID, IMG, ROOT)
 
-OUT = os.path.join(os.environ.get('FM_PRUEBAS', '/home/mtvemo/FlappyMonster_pruebas'), 'pinguino')
+OUT = os.path.join(os.environ.get('FM_PRUEBAS', os.path.expanduser('~/FlappyMonster_pruebas')), 'pinguino')
 FW, FH = 24, 20
 S = 4
 FRAMES = ['walk1', 'walk2', 'walk3', 'walk4', 'idle1', 'idle2', 'dive1', 'dive2', 'slide1', 'slide2',

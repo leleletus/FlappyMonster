@@ -17,7 +17,7 @@
 import os, math
 from PIL import Image, ImageDraw
 
-PREVIEW = '/home/mtvemo/FlappyMonster_pruebas/logo_mtvemo'
+PREVIEW = os.path.expanduser('~/FlappyMonster_pruebas/logo_mtvemo')
 W, H = 320, 180
 FPS = 25
 GIF_K = 3                                           # (los GIF a ×3: 960x540)
