@@ -6,7 +6,8 @@
 --   coletazo    deshinchado no hace daño (0.5.31): en el aire a su lado, nada; si CAE encima de alguien, aplasta: -1
 --   marea       cuando sube el agua, nada hacia el jugador; tocarlo NO hace nada (deshinchado)
 --   hincha      con el jugador cerca, en el agua: avisa (tiembla) y se hincha; hinchado pincha -1
---   puas        con el jugador lejos: dos ráfagas en corro (6 púas cada una); una púa le da -1; se paran en la pared
+--   aro_hueco   aros de {12,14,16} púas con un hueco de 3 que gira; en el hueco a salvo; 2 aros en la fase 1; pared
+--   embestida   aviso 0,8 s con línea (se fija 0,2 s antes), cruza a 700 px/s pinchando sin salir del agua; fase 3: aros
 --   resaca      mientras el agua BAJA arrastra al jugador quieto hacia la derecha (≈ la velocidad de la resaca);
 --               con el agua quieta arriba, no; al empezar a arrastrar suena el aviso y salta el cartel "¡RESACA!"
 --               (f.alertAt) si el jugador está cerca, lejos no, y se quita al dejar de bajar
@@ -223,33 +224,99 @@ function cases.hincha()
         ('aviso=%s, hinchado=%s, pincha=%s'):format(tostring(seen.puff_warn), tostring(seen.puffed), tostring(pricked)))
 end
 
-function cases.puas()
+-- AROS CON HUECO (2026-11-16): {12, 14, 16} púas con un hueco de 3 que gira de un aro al siguiente (3 púas); quien
+-- está en el hueco del primero no recibe; las púas se paran en la pared
+function cases.aro_hueco()
     local level, es, boss = arena()
     tideTo(level, 'hold', 5.9)
     putBoss(boss, 18); boss.y = boss.y - T
-    boss:enter('spines_warn')
     local pa = playerAt(level, 29, 12)
-    local maxN, bursts = 0, 0
-    local hp0 = pa.hp
-    stepAll(level, es, { pa }, 2.5, function()
-        maxN = math.max(maxN, #boss.spines)
-        bursts = math.max(bursts, boss.burst or 0)
-        pa.vx = 0
-    end)
-    -- una púa que va derecha hacia el jugador
-    boss.spines = { { id = 1, x = pa.x - 8, y = pa.y, a = 0, t = 0, hit = {} } }
-    pa.invT = 0
-    local hpA = pa.hp
     level.players = { pa }
-    boss:updateSpines(level, DT)
-    local hitP = pa.hp == hpA - 1
+    boss.levelRef = level
+    boss:enter('spines'); boss.burst = 0; boss.spines = {}
+    boss:fireBurst(level, 0)
+    local n1, g1 = #boss.spines, boss.gapA
+    -- el jugador en el hueco del primer aro, a 4 casillas
+    pa.x, pa.y = boss.x + math.cos(g1) * 4 * T, boss.y + math.sin(g1) * 4 * T
+    pa.invT = 0
+    local hp0 = pa.hp
+    for _ = 1, 50 do pa.vx, pa.vy = 0, 0; boss:updateSpines(level, DT) end
+    local safe = pa.hp == hp0
+    boss:fireBurst(level, 1)
+    local g2 = boss.gapA
+    local step = 2 * math.pi / 12
+    local moved = math.abs(((g2 - g1) % (2 * math.pi)) - 3 * step) < 0.01
+    -- cuántos aros en la fase 1
+    local level2, es2, boss2 = arena()
+    tideTo(level2, 'hold', 5.9)
+    putBoss(boss2, 18); boss2.y = boss2.y - T
+    local pb = playerAt(level2, 29, 12)
+    boss2:enter('spines_warn')
+    local rings = 0
+    stepAll(level2, es2, { pb }, 2.5, function() pb.invT = 9; rings = math.max(rings, boss2.burst or 0) end)
     -- una púa contra la pared de la zona se para
     local zx0 = boss:zoneBounds()
     boss.spines = { { id = 2, x = zx0 + 4, y = boss.y, a = math.pi, t = 0, hit = {} } }
     boss:updateSpines(level, 0.05)
-    check('puas', bursts == 2 and maxN >= 10 and hitP and #boss.spines == 0,
-        ('ráfagas %d, púas a la vez hasta %d, una púa: vida %d→%d, en la pared se para=%s'):format(
-            bursts, maxN, hpA, pa.hp, tostring(#boss.spines == 0)))
+    check('aro_hueco', n1 == 9 and safe and moved and rings == 2 and #boss.spines == 0,
+        ('púas en el aro %d (12 - 3); en el hueco a salvo=%s; el hueco gira 3 púas=%s; aros en la fase 1: %d; en la pared se para=%s'):format(
+            n1, tostring(safe), tostring(moved), rings, tostring(#boss.spines == 0)))
+end
+
+-- EMBESTIDA: aviso 0,8 s con una línea que sigue al jugador hasta 0,2 s antes; luego cruza por ella a {700, 800, 900}
+-- px/s con las púas fuera (-1 y empujón), sin salir del agua, hasta la pared; fase 3: después, aros (combo)
+function cases.embestida()
+    local level, es, boss = arena()
+    tideTo(level, 'hold', 5.9)
+    putBoss(boss, 15); boss.y = (FLOOR - 1) * T - 2 * T
+    local pa = playerAt(level, 30, 11)
+    level.players = { pa }
+    boss.levelRef = level
+    boss:enter('charge_warn')
+    local tgtY = (FLOOR - 1) * T - 2 * T
+    local t, warnLen, followed, lockedOk, startX = 0, nil, false, true, nil
+    local lockLine
+    local maxSp, above, hit, ended = 0, false, false, nil
+    local hp0 = pa.hp
+    local f = flood(level)
+    local lx = boss.x
+    stepAll(level, es, { pa }, 4, function()
+        t = t + DT
+        pa.vx, pa.vy = 0, 0
+        pa.x = 30.5 * T
+        if boss.state == 'charge_warn' then
+            pa.invT = 9
+            pa.y = tgtY + ((t < 0.5) and 0 or 60)           -- (se mueve a los 0,5 s y a los 0,65: lo primero se sigue)
+            if t >= 0.65 then pa.y = tgtY - 60 end
+            if t > 0.55 and t < 0.6 and math.abs(boss.lineY - pa.y) < 4 then followed = true end
+            if t > 0.62 and not lockLine then lockLine = boss.lineY end
+            if t > 0.7 and lockLine and boss.lineY ~= lockLine then lockedOk = false end
+        elseif boss.state == 'charge' then
+            if not warnLen then warnLen = t - DT; pa.invT = 0; pa.y = boss.lineY end
+            maxSp = math.max(maxSp, math.abs(boss.x - lx) / DT)
+            if boss.y - boss.outerH * 0.45 < f.surf - 2 then above = true end
+            if pa.hp < hp0 then hit = true end
+        elseif warnLen and not ended then ended = boss.state end
+        lx = boss.x
+        return ended ~= nil
+    end)
+    -- combo de la fase 3
+    local level3, es3, boss3 = arena()
+    tideTo(level3, 'hold', 5.9)
+    putBoss(boss3, 15); boss3.y = (FLOOR - 1) * T - 2 * T
+    local pc = playerAt(level3, 30, 11)
+    boss3.levelRef = level3
+    boss3.phase = 3
+    boss3:enter('charge_warn')
+    local after
+    stepAll(level3, es3, { pc }, 4, function()
+        pc.invT = 9; pc.x, pc.y, pc.vx, pc.vy = 30.5 * T, tgtY, 0, 0
+        if boss3.state ~= 'charge_warn' and boss3.state ~= 'charge' then after = boss3.state; return true end
+    end)
+    check('embestida', warnLen and math.abs(warnLen - 0.8) < 0.05 and followed and lockedOk and maxSp > 650 and maxSp < 760
+        and hit and not above and ended == 'deflate' and after == 'spines_warn',
+        ('aviso %.2f s; la línea sigue=%s y se fija=%s; velocidad %.0f px/s; pincha=%s; asoma del agua=%s; acaba en %s; fase 3 → %s'):format(
+            warnLen or -1, tostring(followed), tostring(lockedOk), maxSp, tostring(hit), tostring(above), tostring(ended), tostring(after)))
 end
 
 function cases.resaca()
@@ -650,7 +717,7 @@ end
 
 function love.load(arg)
     local only = os.getenv('CASE')
-    for _, n in ipairs({ 'varado', 'coletazo', 'marea', 'hincha', 'puas', 'resaca', 'fases', 'una_ocasion', 'bola', 'ultima_ocasion', 'ola_suelo', 'derrota', 'red', 'pez_chico', 'peces' }) do
+    for _, n in ipairs({ 'varado', 'coletazo', 'marea', 'hincha', 'aro_hueco', 'embestida', 'resaca', 'fases', 'una_ocasion', 'bola', 'ultima_ocasion', 'ola_suelo', 'derrota', 'red', 'pez_chico', 'peces' }) do
         if not only or only == n then
             local ok, err = xpcall(cases[n], debug.traceback)
             if not ok then check(n, false, 'error: ' .. tostring(err)) end

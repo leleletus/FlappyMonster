@@ -37,7 +37,8 @@ local Snow   = require('src/world/entities/types/bosses/snowboss').class
 local BossFx = require 'src/fx/BossFx'
 
 local GP = Entity.extend(Boss, {
-    ATTACKS  = { puff_warn = true, puffed = true, spines_warn = true, spines = true, flop_wind = true, flop = true },
+    ATTACKS  = { puff_warn = true, puffed = true, spines_warn = true, spines = true, flop_wind = true, flop = true,
+                 ball = true, charge_warn = true, charge = true },
     OPENINGS = { gasp = true },
     debugColor = { 1, 0.85, 0.35 },
     hitbox = { outerW = 11 / 16, outerH = 10 / 16, innerW = 10 / 16, innerH = 9 / 16 },    -- (el pez gordito: 0.5.31)
@@ -68,7 +69,8 @@ local DEFLATE_T  = 0.45
 local SPINE_WARN = { 0.7, 0.55, 0.55 }
 local BURSTS     = { 0, 0.249, 0.497 }          -- ráfagas a golpe de 3+3+2 semicorcheas a 181 BPM
 local BURSTS_N   = { 2, 3, 3 }                   -- cuántas de ellas (enfadado, las tres)
-local SPINES_N   = { 6, 8, 8 }                   -- púas por ráfaga
+local SPINES_N   = { 12, 14, 16 }                 -- púas por ráfaga
+local GAP_N      = 3                            -- púas que faltan en cada aro (el hueco; gira GAP_N púas por aro)
 local SPINES_T   = 0.95                         -- lo que dura el estado (la última ráfaga + un respiro)
 local SPINE_SPD  = 400
 local SPINE_LIFE = 1.7
@@ -92,6 +94,11 @@ local WAVE_W     = 24
 local WAVE_LIFE  = 3
 local WAVE_2ND   = 0.35                         -- fase 3: la segunda pareja, tantos s después
 local HIT_WAVE   = { 1, 300, -380, 0.15, 0 }
+-- EMBESTIDA (lejos, nadando): aviso con una línea en el agua que sigue al jugador y se fija al final; cruza por ella
+local CHARGE_WARN = 0.8
+local CHARGE_LOCK = 0.2                         -- últimos s del aviso: la línea ya no sigue al jugador
+local CHARGE_SPD  = { 700, 800, 900 }
+local CHARGE_MAX  = 2.0                         -- s como mucho cruzando
 local PUFF_R     = 6.4 * MS                     -- radio que pincha hinchado (el cuerpo y media púa: no pincha "por el aire")
 
 -- Golpes a los jugadores: { vida, vx, vy, s sin control, s aturdido }
@@ -193,14 +200,26 @@ end
 -- ── Púas ──────────────────────────────────────────────────────────────────────
 function GP:spineBox(s) return { x = s.x - 9, y = s.y - 9, w = 18, h = 18 } end
 
+-- Un aro de púas con un HUECO de GAP_N: el primero, con el hueco al lado contrario del jugador (hay que ir a por él);
+-- cada aro siguiente lo gira GAP_N púas
 function GP:fireBurst(level, k)
     local n = SPINES_N[self:ph()]
-    local off = (k % 2 == 1) and (math.pi / n) or 0           -- (ráfagas alternas, desfasadas: no hay hueco fijo)
+    local step = 2 * math.pi / n
+    if k == 0 or not self.gapA then
+        local pa = self:target(level)
+        self.gapA = pa and (math.atan2(self.y - pa.y, self.x - pa.x) % (2 * math.pi)) or 0
+    else
+        self.gapA = (self.gapA + GAP_N * step) % (2 * math.pi)
+    end
+    local half = math.floor(GAP_N / 2)
     for i = 0, n - 1 do
-        local a = off + i * (2 * math.pi / n)
-        self.nextId = self.nextId % 999 + 1
-        self.spines[#self.spines + 1] = { id = self.nextId, x = self.x + math.cos(a) * 6 * MS, y = self.y + math.sin(a) * 5 * MS,
-                                          a = a, t = 0, hit = {} }
+        local j = (i <= half) and i or (i - n)                    -- (distancia en púas al centro del hueco)
+        if math.abs(j) > half then
+            local a = self.gapA + i * step
+            self.nextId = self.nextId % 999 + 1
+            self.spines[#self.spines + 1] = { id = self.nextId, x = self.x + math.cos(a) * 6 * MS, y = self.y + math.sin(a) * 5 * MS,
+                                              a = a, t = 0, hit = {} }
+        end
     end
     Sound.play('pufferPrick', 0.55)
     Entity.emitFx('puffer_pop', self.x, self.y)
@@ -320,7 +339,7 @@ function GP:aimFlop(level)
 end
 
 -- ── Estados que sabe hacer el cuerpo ─────────────────────────────────────────
-local SPIKY = { puffed = true, spines = true, hurt_puff = true, ball = true }   -- (con las púas fuera)
+local SPIKY = { puffed = true, spines = true, hurt_puff = true, ball = true, charge = true }   -- (con las púas fuera)
 function GP:isActive() return Boss.isActive(self) and not DEATH[self.state] end
 function GP:isDying() return DEATH[self.state] == true or Boss.isDying(self) end
 function GP:isVulnerable() return self:isActive() and self.state == 'gasp' end
@@ -431,11 +450,22 @@ function GP:updateBoss(dt, level)
         if self.rage then self:spawnPuffers(level, dt) end
         if self.atkT >= ATK_EVERY[ph] and self:mayAttack(level) then
             self.atkT = 0
-            -- (cerca: se hincha; lejos: púas — y nunca dos hinchazones seguidas: si te pegas a él, también púas)
+            -- (cerca: se hincha; lejos: aros o embestida — nunca el mismo ataque dos veces seguidas)
             local near = pa and math.abs(pa.x - self.x) + math.abs(pa.y - self.y) < PUFF_NEAR
-            local puff = near and self.lastAtk ~= 'puff'
-            self.lastAtk = puff and 'puff' or 'spines'
-            self:enter(puff and 'puff_warn' or 'spines_warn')
+            local pick
+            if near and self.lastAtk ~= 'puff' then pick = 'puff'
+            else
+                local opts = {}
+                for _, a in ipairs({ 'spines', 'charge' }) do if a ~= self.lastAtk then opts[#opts + 1] = a end end
+                pick = opts[math.random(#opts)]
+            end
+            self.lastAtk = pick
+            if pick == 'charge' then
+                self:enter('charge_warn')
+                self.lineX, self.lineY = math.floor(tx), math.floor(ty)
+            else
+                self:enter((pick == 'puff') and 'puff_warn' or 'spines_warn')
+            end
             Sound.play('pufferWarn', 0.55)
         end
 
@@ -452,6 +482,44 @@ function GP:updateBoss(dt, level)
             else
                 self.burst = 0
                 self:enter('spines')
+            end
+        end
+
+    elseif st == 'charge_warn' then
+        -- se para y apunta: la línea sigue al jugador hasta CHARGE_LOCK s antes
+        self.vx, self.vy = self.vx * (1 - 4 * dt), self.vy * (1 - 4 * dt)
+        self:physics(level, dt, not self:wet(level))
+        local pa = self:target(level)
+        if pa and t < CHARGE_WARN - CHARGE_LOCK then self.lineX, self.lineY = math.floor(pa.x), math.floor(pa.y) end
+        self.lineX, self.lineY = self.lineX or math.floor(self.x), self.lineY or math.floor(self.y)
+        if self.lineX ~= math.floor(self.x) then self.facing = (self.lineX > self.x) and 1 or -1 end
+        if t >= CHARGE_WARN then
+            local dx, dy = self.lineX - self.x, self.lineY - self.y
+            local d = math.max(1, math.sqrt(dx * dx + dy * dy))
+            self.chargeDx, self.chargeDy = dx / d, dy / d
+            self:enter('charge')
+            Sound.play('pufferInflate', 0.7)
+            Sound.play('kingJump', 1.6)
+            Entity.emitFx('puffer_pop', self.x, self.y)
+        end
+
+    elseif st == 'charge' then
+        -- cruza por la línea con las púas fuera hasta una pared, el fondo o la superficie (nunca asoma)
+        local sp = CHARGE_SPD[ph]
+        local dx, dy = self.chargeDx or self.facing or 1, self.chargeDy or 0
+        self.vx, self.vy = dx * sp, dy * sp
+        local top = self.y - self.outerH * 0.45 + self.vy * dt
+        local surfaced = self.vy < 0 and level:liquidAt(self.x, top) == nil
+        if surfaced then self.vy = 0 end
+        local hit = self:physics(level, dt, false)
+        self:prick(level, HIT_PUFF)
+        if hit == 'wall' or surfaced or (dy > 0.2 and self.onGround) or t >= CHARGE_MAX or not self:wet(level) then
+            self.vx, self.vy = self.vx * 0.2, 0
+            Entity.emitFx('shake_small', self.x, self.y)
+            if ph >= 3 and self:wet(level) then
+                self:enter('spines_warn'); Sound.play('pufferWarn', 0.55)          -- (fase 3: combo, aros detrás)
+            else
+                self:enter('deflate'); Sound.play('pufferDeflate', 0.5)
             end
         end
 
@@ -656,7 +724,7 @@ function GP:pose()
         if it >= PUFF_AT and it < DEFL_AT then name, at = 'puffed', it - PUFF_AT; k = 1 + 0.15 * math.max(0, 1 - (it - PUFF_AT) / 0.2)
         elseif it >= DEFL_AT then name, at = 'deflate', it - DEFL_AT
         else name, at = 'half', it end
-    elseif st == 'puff_warn' or st == 'spines_warn' then
+    elseif st == 'puff_warn' or st == 'spines_warn' or st == 'charge_warn' then
         name, at, shake = 'warn', t, 3
         if t > 0.36 then name = 'half' end
     elseif st == 'ball' then
@@ -719,6 +787,17 @@ function GP:render(camX, camY)
         local blink = (math.floor(now * 12) % 2 == 0) and 0.95 or 0.55
         love.graphics.setColor(1, 0.85, 0.3, blink * alpha)
         BossFx.target(now * 1.2, math.floor(self.markX - camX), math.floor(self.markY - camY - 16), 8, 8)
+    end
+    -- Línea de la embestida (por dónde cruzará): cuadritos que parpadean, del pez a su punta
+    if st == 'charge_warn' and self.lineX and not EDITOR_VIEW then
+        local locked = (self.deadTimer or 0) >= CHARGE_WARN - CHARGE_LOCK
+        local blink = (math.floor(now * (locked and 16 or 8)) % 2 == 0) and 0.95 or 0.5
+        love.graphics.setColor(1, locked and 0.35 or 0.85, 0.3, blink * alpha)
+        local dx, dy = self.lineX - self.x, self.lineY - self.y
+        local d = math.max(1, math.sqrt(dx * dx + dy * dy))
+        for k = 6 * MS, d, 28 do
+            love.graphics.rectangle('fill', math.floor(self.x + dx / d * k - camX) - 4, math.floor(self.y + dy / d * k - camY) - 4, 8, 8)
+        end
     end
     -- Estrellitas (boqueando / vencido): las de detrás, antes del cuerpo
     local dizzy = (st == 'gasp' or st == 'dying_daze') and not EDITOR_VIEW
