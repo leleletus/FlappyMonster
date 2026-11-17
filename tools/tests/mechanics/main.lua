@@ -852,6 +852,47 @@ function cases.tramp_atasco()
     check('tramp_atasco', ok, 'lanzamientos en 12 s, encima de uno: ' .. table.concat(res, ' · '))
 end
 
+-- TRAMPOLÍN ENFRIÁNDOSE (el usuario, 2026-11-17): quien cae encima mientras está extendido (sin lanzar: es pared) y se
+-- queda ahí, al recogerse y volver a estar listo SALE LANZADO; antes se quedaba de pie para siempre (apoyarse quieto no
+-- lanza). Quien se pone encima de uno YA listo, quieto, sigue sin salir lanzado. El trampolín y el de compás (su clase).
+-- (El Crabby trampolín no: su cojín no es sólido, enfriándose se le atraviesa hasta el suelo)
+function cases.tramp_enfriado()
+    local function trial(ty, cooling)
+        local level, es = room(18, 8, {}, { { type = ty, col = 9, row = 7 } })
+        local tr = es[1]
+        local pa = PlayerAdventure:new(tr.x, tr.y - 3 * T)
+        level.players = { pa }
+        if cooling then
+            tr.state, tr.deadTimer = 'extended', 0
+        else                                                                      -- (de pie, quieto, ya listo)
+            local ob = pa:getOuterBounds()
+            pa.y, pa.vy = pa.y + (tr:getOuterBounds().y - (ob.y + ob.h)) - 1, 0
+        end
+        clear()
+        local launched, landed = false, false
+        for _ = 1, math.floor(3 * 60) do
+            level.solidBodies = Entities.solidBodies(es)
+            pa:update(1 / 60, level)
+            if pa.onGround then landed = true end
+            for _, e in ipairs(es) do if e.alive then e:update(1 / 60, level) end end
+            Interactions.run(pa, es, {})
+            if landed and pa.vy < -300 then launched = true end
+        end
+        return launched, landed
+    end
+    local parts, ok = {}, true
+    for _, ty in ipairs({ 'trampoline', 'beatspring' }) do
+        if require('src/world/entities/base/EntityTypes').byName[ty] then
+            local l, land = trial(ty, true)
+            local q = trial(ty, false)
+            ok = ok and l and land and not q
+            parts[#parts + 1] = ('%s: cae enfriándose y sale al estar listo=%s (se apoyó=%s), quieto encima de uno listo no sale=%s'):format(
+                ty, tostring(l), tostring(land), tostring(not q))
+        end
+    end
+    check('tramp_enfriado', ok and #parts == 2, table.concat(parts, ' · '))
+end
+
 function cases.tramp_pinchos()
     local TileCodec = require 'src/world/tiles/TileCodec'
     local level, es = trampRoom(function(level)
@@ -5144,7 +5185,7 @@ function love.load()
     for _, n in ipairs({ 'fuente_base', 'fuente_contacto', 'fuente_partes', 'fuente_entorno', 'fuente_textos', 'fuente_red', 'aviso_opcion', 'empuje', 'racha', 'inicio_fases', 'onoff_head', 'onoff_pound', 'beep', 'ritmo', 'ritmo_dirs', 'hidden_up', 'hidden_drop', 'hidden_side', 'hidden_vis',
                          'helmet_jump', 'helmet_ride', 'helmet_gp', 'helmet_side', 'stomp_fast',
                          'puffer_through', 'puffer_concave', 'puffer_cycle', 'puffer_dry', 'flyer_anim', 'vuelo_libre', 'boxed_in',
-                         'bloque_roto', 'activador', 'tramp_avanza', 'tramp_pinchos', 'ping_icono',
+                         'bloque_roto', 'activador', 'tramp_avanza', 'tramp_pinchos', 'tramp_enfriado', 'ping_icono',
                          'bomba_activa', 'bomba_pisada', 'bomba_radios', 'bomba_mundo', 'bomba_objeto',
                          'hielo_solido', 'hielo_desgaste', 'hielo_nivel', 'hielo_vuelve', 'mirar', 'salto_variable', 'esquina', 'hitstop', 'poses', 'caida_fuerte', 'tramp_atasco', 'empujables', 'bola_esquina', 'saltarin_ruta', 'causa_muerte', 'polvo_correr', 'tutorial', 'hielo_gp', 'hielo_bomba', 'encerrado', 'trepador_canto', 'hielo_resbala', 'filo_propio', 'saltarin', 'saltarin_cueva', 'persecucion', 'persecucion_cuerpo', 'inofensivos', 'tapa_base', 'manzana', 'meta',
                          'cryo_jugador', 'cryo_enemigo', 'cryo_activador', 'cryo_corte', 'lava', 'pocos_fps', 'ahogo_ganado', 'techo_pinchos',

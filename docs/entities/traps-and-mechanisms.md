@@ -26,6 +26,12 @@ its linked Activators and how to link one (the Door).
   bounces) → extended (`cooldown`, just a wall) → retract → ready.
 
 - ENTITIES on trampolines (0.5.195, the user: "every entity always gets stuck bouncing on trampolines"): an up trampoline always sends an entity sideways (towards where it faces, at least `LAUNCH_MIN_VX` 170 px/s; before, only entities with `moving`, so the Hopper bounced in place forever), and the SAME trampoline does not launch the same entity again for `TRAMP_AGAIN` 4 s (it is floor: routes that cross it no longer relaunch on every pass). `Entity:touchBody`; harness `mechanics` `tramp_atasco`.
+- OWED BOUNCE (2026-11-17, the user: landing on a trampoline that had just launched someone left the player standing on
+  it for good, until jumping off and back): whoever stays on the launching face while it does not launch (extended,
+  cooling) is launched as soon as it is ready again, even standing still (`Interactions.trampOwed`, `pa.trampOwed`;
+  forgotten on touching other ground). Standing still on a trampoline that is ALREADY ready still does not launch. The
+  beat spring inherits it; the Crabby trampoline does not need it (its pad is not solid: cooling, you fall through it).
+  Harness `mechanics` `tramp_enfriado`.
 - FROZEN TRAMPOLINES (3.73.0): trampoline prop `skin` = 'auto' (default) | 'normal' | 'ice' (render only; editor
   "Aspecto"). Auto = the ICE texture (`trampoline/ice_normal.png` / `ice_extended.png`, the same art as the Icy
   Crabby's trampoline) in snowy levels — `level.spikeSkin == 'ice'` or `level.snow` — so no level data had to change

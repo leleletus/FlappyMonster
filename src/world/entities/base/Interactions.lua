@@ -111,6 +111,22 @@ local EMPTY = {}          -- (en vez de crear una tabla vacía en cada comprobac
 local EOB, GIB, MAG = {}, {}, {}   -- (las de la entidad: igual)
 local function fill(t, x, y, w, h) t.x, t.y, t.w, t.h = x, y, w, h; return t end
 local POB = {}            -- (la caja del jugador, rellenada en cada comprobación: se hace una por entidad y fotograma)
+-- TRAMPOLÍN QUE SE ENFRÍA (el usuario, 2026-11-17): quien se queda sobre la cara que lanza mientras NO lanza (extendido,
+-- enfriándose) le queda un bote DEBIDO: en cuanto vuelve a estar listo sale lanzado aunque no traiga velocidad (antes se
+-- quedaba de pie encima para siempre: apoyarse quieto no lanza). Lo usan todos los trampolines desde su `interact`.
+-- touching = está sobre su cara ahora; ready = ahora lanzaría. → true si hay que lanzarlo aunque esté quieto.
+-- (`pa.trampOwed`: del jugador, sin efectos fuera de él — el cliente lo predice igual —; se olvida al pisar otra cosa;
+-- volando un momento — la cara baja al recogerse — no)
+function Interactions.trampOwed(pa, e, touching, ready)
+    if touching then
+        if not ready then pa.trampOwed = e; return false end
+        if pa.trampOwed == e then pa.trampOwed = nil; return true end
+        return false
+    end
+    if pa.trampOwed == e and pa.onGround then pa.trampOwed = nil end
+    return false
+end
+
 function Interactions.defaultCheck(pa, e)
     local pob = pa:getOuterBounds(POB)
 

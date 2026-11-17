@@ -13,6 +13,7 @@
 -- cliente) y el estado del trampolín lo decide el servidor.
 
 local Entity = require 'src/world/entities/base/Entity'
+local Interactions = require 'src/world/entities/base/Interactions'
 
 local Tramp = Entity.extend(Entity, { debugColor = { 1, 0.85, 0.2 },
     hitbox = { outerW = 1, outerH = 1, innerW = 1, innerH = 1 } })
@@ -89,15 +90,18 @@ end
 -- ¿Lanza a este jugador? (sin efectos: el cliente lo usa para predecir)
 function Tramp:interact(pa)
     local h = pa.bodyHit
-    if not h or h.o ~= self or h.face ~= self.face then return nil end
+    local touching = h ~= nil and h.o == self and h.face == self.face
+    local ready = self.state == 'ready' or self.state == 'bounce'                -- (extendido: pared)
+    -- (se quedó encima mientras se enfriaba: al estar listo lo lanza aunque esté quieto — Interactions.trampOwed —)
+    local owed = Interactions.trampOwed(pa, self, touching, ready)
+    if not touching or not ready then return nil end
     -- Cayendo encima / saltando contra él: con velocidad (apoyarse quieto no
     -- lanza). De lado basta con empujarlo, aunque sea despacio.
     local sideways = (self.face == 'left' or self.face == 'right')
     -- (bajo el agua se cae muy despacio — nunca se llegaba a MIN_SPEED y solo lanzaba con un ground pound —:
     -- ahí basta con caerle encima)
     local min = sideways and 1 or ((pa.inWater and MIN_SPEED_WATER) or MIN_SPEED)
-    if (h.speed or 0) < min then return nil end
-    if self.state ~= 'ready' and self.state ~= 'bounce' then return nil end      -- extendido: pared
+    if (h.speed or 0) < min and not owed then return nil end
     return 'launch', self:launchVelocity()
 end
 
