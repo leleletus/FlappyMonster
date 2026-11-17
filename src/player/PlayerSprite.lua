@@ -37,7 +37,14 @@ function PS.recOf(obj, pose)
     if obj._psPose ~= pose then obj._psPose, obj._psT0 = pose, now end
     local c = PS.clip(pose)
     if c.seq.loop then return c:rec(c:at(now)) end
-    return c:rec(c:at(now - obj._psT0))
+    local t = now - obj._psT0
+    -- (al acabar, la que la sigue — `next` en su JSON —: la victoria sigue celebrando en bucle en vez de quedarse
+    --  clavada en su último cuadro; el usuario, 2026-11-17)
+    if c.seq.next and t >= c.seq.length then
+        local n = Anim.clip(PS.SET, c.seq.next)
+        if n then return n:rec(n:at(t - c.seq.length)) end
+    end
+    return c:rec(c:at(t))
 end
 
 -- ── Los OJOS de quita y pon (como DeadEyes y los de risa del Espejo): imágenes de assets/images/player/actions/eyes/ a

@@ -73,6 +73,15 @@ Harness `story_flow` `copiar`.
   detects the `finish` trigger → `win()` (fanfare, banner `hud.level_clear`, invulnerable) → after `WIN_TIME` calls
   `args.onFinish(result {score, time, lives})` or goes to `returnTo`. The story passes `onFinish`; Free Play and the
   editor just return.
+- **The arrival** (the user, 2026-11-17; `src/states/adventure/WinCelebration.lua`): from the touch the player has
+  **no control** (`player.victory`: an empty input, but the inertia it carried decays as on releasing the pad — not the
+  hard stop of `frozen`), is invulnerable **without blinking**, and plays the victory pose (`act_victory`, then the
+  looping cheer `act_victory_loop` until the level closes — the last frame used to stay frozen for ~1.5 s and looked
+  "macabre"). Every enemy **on screen** (+1 tile, no bosses) bursts, nearest first, ~0.09 s apart (≤ 1 s in all), and
+  pays with the stomp-chain rule (`StompChain.step`: ×1…×64, then one life each) and its rising pitch. The flag (the
+  `finish` / `secret_exit` cells connected to the touched one) leaves the level: a hop with a white flash, spins
+  narrowing, and vanishes in gold sparkles. Wins without a flag (boss, Boss Rush) only burst the enemies. Single
+  player only: online the finish belongs to the Race mode and the enemies are shared. Test: `run.sh mechanics ONLY=meta`.
 
 - **3.83.2 — NOTHING GAINED IN A LEVEL IS SAVED UNTIL IT IS FINISHED** (user's rule, after an exploit: enter, grab the
   extra life, leave by the pause menu, repeat forever). `AdventureState.finished` (set when `onFinish` is called: the

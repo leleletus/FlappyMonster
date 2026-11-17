@@ -2076,6 +2076,61 @@ function cases.tapa_base()
 end
 
 -- MANZANA: con vida de menos cura 1 (sin puntos); con la vida llena, da sus puntos
+-- LA META (src/states/adventure/WinCelebration.lua, el usuario 2026-11-17): al ganar, los enemigos a la vista revientan
+-- con la regla de la racha (×1…×64 y luego vidas), los de fuera de la pantalla no; la bandera (casillas unidas) se quita
+-- del nivel; el jugador ya no se mueve con el mando; la victoria no se queda clavada en su último cuadro
+function cases.meta()
+    local WC = require 'src/states/adventure/WinCelebration'
+    local SC = require 'src/world/systems/StompChain'
+    local ents = {}
+    for c = 3, 11 do ents[#ents + 1] = { type = 'gummy', col = c, row = 11 } end      -- 9 a la vista
+    ents[#ents + 1] = { type = 'gummy', col = 50, row = 11 }                          -- 1 lejos
+    local level, es = room(60, 12, { { 14, 11, 'finish' }, { 14, 10, 'finish' }, { 30, 11, 'finish' } }, ents)
+    local pa = playerAt(level, 13, 11)
+    pa.lives = 3
+    pa.x = 14 * T - T / 2
+    local st = { level = level, player = pa, camX = 0, camY = 0, score = 0, popups = 0 }
+    function st:spawnPopup() self.popups = self.popups + 1 end
+    pa.victory = true
+    local wc = WC.new(st, 'finish')
+    local x0 = pa.x
+    clear(); stub.state.right = true; stub.state.jump = true; stub.state.jump_pressed = true
+    local jumped = false
+    for _ = 1, 90 do
+        stub.state.jump_pressed = true
+        wc:update(1 / 60); pa:update(1 / 60, level)
+        if not pa.onGround then jumped = true end
+        for _, e in ipairs(es) do if e.alive then e:update(1 / 60, level) end end
+    end
+    clear()
+    local want = 0
+    for n = 1, 7 do want = want + 10 * SC.MULTS[n] end
+    local popped, far = 0, es[#es]
+    local function gone(e) return not e.alive or e.state == 'dead' or e:isGhost() end
+    for i = 1, 9 do if gone(es[i]) then popped = popped + 1 end end
+    local farOk = not gone(far)
+    local flagGone = name(level, 14, 11) ~= 'finish' and name(level, 14, 10) ~= 'finish' and name(level, 30, 11) == 'finish'
+    -- la animación: pasado su final sigue celebrando (el bucle), no el último cuadro quieto
+    local PS = require 'src/player/PlayerSprite'
+    local obj = {}
+    PS.recOf(obj, PS.VICTORY)
+    local vc = PS.clip(PS.VICTORY)
+    local last, keys, loops = vc.recs[vc.count], {}, true
+    local seen = {}
+    for _, dt in ipairs({ 0.5, 1.0, 1.2, 1.5, 1.8, 2.0, 2.2, 2.4, 2.6 }) do
+        obj._psT0 = love.timer.getTime() - dt
+        local r = PS.recOf(obj, PS.VICTORY)
+        if dt > 1 and r == last then loops = false end
+        if dt > 1 then seen[r] = true end
+        keys[#keys + 1] = r == last and 'ultimo' or (r == vc.recs[1] and '1' or (r == vc.recs[2] and '2' or '?'))
+    end
+    local n = 0; for _ in pairs(seen) do n = n + 1 end
+    loops = loops and n >= 2
+    check('meta', popped == 9 and farOk and st.score == want and pa.lives == 5 and flagGone and math.abs(pa.x - x0) < 2 and not jumped and loops,
+        ('revientan %d/9 (lejos sigue: %s) · puntos %d (quiere %d) · vidas %d (quiere 5) · bandera fuera, la otra no: %s · se movió %.1f px, saltó: %s · bucle: %s'):format(
+            popped, tostring(farOk), st.score, want, pa.lives, tostring(flagGone), math.abs(pa.x - x0), tostring(jumped), table.concat(keys, ',')))
+end
+
 function cases.manzana()
     local function take(hp)
         local level, es = room(16, 10, {}, { { type = 'apple', col = 8, row = 9 } })
@@ -5090,7 +5145,7 @@ function love.load()
                          'puffer_through', 'puffer_concave', 'puffer_cycle', 'puffer_dry', 'flyer_anim', 'vuelo_libre', 'boxed_in',
                          'bloque_roto', 'activador', 'tramp_avanza', 'tramp_pinchos', 'ping_icono',
                          'bomba_activa', 'bomba_pisada', 'bomba_radios', 'bomba_mundo', 'bomba_objeto',
-                         'hielo_solido', 'hielo_desgaste', 'hielo_nivel', 'hielo_vuelve', 'mirar', 'salto_variable', 'esquina', 'hitstop', 'poses', 'caida_fuerte', 'tramp_atasco', 'empujables', 'bola_esquina', 'saltarin_ruta', 'causa_muerte', 'polvo_correr', 'tutorial', 'hielo_gp', 'hielo_bomba', 'encerrado', 'trepador_canto', 'hielo_resbala', 'filo_propio', 'saltarin', 'saltarin_cueva', 'persecucion', 'persecucion_cuerpo', 'inofensivos', 'tapa_base', 'manzana',
+                         'hielo_solido', 'hielo_desgaste', 'hielo_nivel', 'hielo_vuelve', 'mirar', 'salto_variable', 'esquina', 'hitstop', 'poses', 'caida_fuerte', 'tramp_atasco', 'empujables', 'bola_esquina', 'saltarin_ruta', 'causa_muerte', 'polvo_correr', 'tutorial', 'hielo_gp', 'hielo_bomba', 'encerrado', 'trepador_canto', 'hielo_resbala', 'filo_propio', 'saltarin', 'saltarin_cueva', 'persecucion', 'persecucion_cuerpo', 'inofensivos', 'tapa_base', 'manzana', 'meta',
                          'cryo_jugador', 'cryo_enemigo', 'cryo_activador', 'cryo_corte', 'lava', 'pocos_fps', 'ahogo_ganado', 'techo_pinchos',
                          'caja_empuje', 'caja_rota', 'caja_borde', 'cargar', 'bomba_reaparece', 'islas', 'islas_arte', 'viento', 'cuerpo_mueve', 'cajas_golpes', 'balanza', 'soplon', 'semilla', 'ventisca', 'geiser', 'balanza_tope', 'caja_choques', 'cargar_gp', 'gp_radio', 'dejar_encima', 'jump_buffer', 'jefe_puntos', 'persecucion_toque', 'secreto_reina', 'secreto_tifon', 'paredes_falsas', 'aire_caja', 'geiser_peso', 'bomba_cajas', 'cajas_fila', 'balanza_impacto', 'balanza_salto', 'balanza_techo', 'escarabajo', 'escarabajo_lanzado', 'escarabajo_ruta', 'escarabajo_manos', 'escarabajo_arrolla',
                          'topo', 'topo_culetazo', 'topo_suelo', 'topo_borde', 'pirana', 'pirana_pisar', 'pirana_rebota', 'pirana_nada', 'planta', 'planta_pisar', 'planta_traga', 'planta_colgada', 'planta_come', 'planta_bomba',

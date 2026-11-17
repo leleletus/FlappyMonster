@@ -568,11 +568,16 @@ function AdventureState:updateShards(dt)
     end
 end
 
--- Ha llegado a la meta: ya no le pasa nada, suena la fanfarria y sale el cartel
+-- Ha llegado a la meta: ya no le pasa nada, suena la fanfarria y sale el cartel. Sin mando desde ya (con la inercia
+-- que traía: PlayerAdventure.update), los enemigos a la vista revientan dando puntos (y vidas, con la racha) y la
+-- bandera se va (src/states/adventure/WinCelebration.lua). `trigger` = la casilla que tocó ('finish', 'secret_exit';
+-- nil = gana sin meta: el jefe, el Boss Rush)
 AdventureState.WIN_TIME = 2.6
-function AdventureState:win()
+function AdventureState:win(trigger)
     self.won, self.wonT = true, 0
     self.player.victory = true                               -- (su pose de victoria: PlayerAdventure.actionPose)
+    self.player.jumpBufT = 0                                 -- (un salto pulsado justo antes no sale al aterrizar)
+    self.winFx = require('src/states/adventure/WinCelebration').new(self, trigger)
     -- (contrarreloj: ¿su mejor tiempo? se guarda el fantasma nuevo y se dice)
     if self.ghost and require('src/story/Ghost').finish(self.levelPath, self.levelTime, self.ghost.rec) then
         self:spawnPopup(L('free.ghost_record'), self.player.x, self.player.y - 90)
@@ -696,6 +701,7 @@ function AdventureState:update(dt)
     -- ── Nivel superado: un momento de celebración y se sale ───────────────────
     if self.won then
         self.wonT = self.wonT + dt
+        if self.winFx then self.winFx:update(dt) end
         if self.wonT >= AdventureState.WIN_TIME then
             self.finished = true                              -- (terminado: lo conseguido SÍ se guarda; ver exit)
             if self.onFinish then self.onFinish(self:result()) else gStateMachine:change(self.returnTo) end
@@ -878,12 +884,12 @@ end
 function AdventureState:_checkGoals()
     if self.won or self.endingT or self.player.dying then return end
     local ob = self.player:getOuterBounds()
-    if self.level:triggerInBox(ob.x, ob.y, ob.w, ob.h, 'finish') then self:win() end
+    if self.level:triggerInBox(ob.x, ob.y, ob.w, ob.h, 'finish') then self:win('finish') end
     -- (la SALIDA SECRETA, tile `secret_exit`: termina el nivel como la meta y el resultado lo dice — `secretExit` —; en
     --  la historia abre además el camino secreto: Worlds `secrets`, StoryMapState. Fuera de la historia es una meta más)
     if not self.won and self.level:triggerInBox(ob.x, ob.y, ob.w, ob.h, 'secret_exit') then
         self.secretExit = true
-        self:win()
+        self:win('secret_exit')
     end
 end
 
@@ -1019,6 +1025,7 @@ function AdventureState:_drawActors(camX, camY)
     if self.bonus then self.bonus:render(camX, camY) end
     -- (en el duelo de ritmo no está en la arena: sale bailando en el minijuego — src/ui/RhythmDuel.lua —)
     if self.ghost and self.ghost.draw then self.ghost.draw(self.levelTime, camX, camY) end   -- (el fantasma, detrás)
+    if self.winFx then self.winFx:draw(camX, camY) end            -- (la bandera de la meta, yéndose)
     if not RhythmDuel.hides(self.level, self.player.x, self.player.y) then self.player:render(camX, camY) end
     require('src/fx/Edge').over(PointAreas.drawProgress, self.level, self.player, self.player.x - camX, self.player.y - camY)   -- (sin borde)
 end

@@ -41,7 +41,8 @@ function PlayerAdventure:_renderBody(camX, camY)
     local s=((self.sizeK or 1) < 1 and 4 or PLAYER_SCALE)*self.puff
     local r, g, b = PlayerAdventure.hurtTint(self.dying and 0 or self.hurtT)
     local ghostA = (not self.dying and self.hasEffect and self:hasEffect('ghost')) and 0.5 or 1
-    love.graphics.setColor(r, g, b, PlayerAdventure.invulnAlpha(not self.dying and self.invT or 0) * ghostA)
+    -- (en la VICTORIA es invulnerable pero se ve normal, sin parpadeo: el usuario, 2026-11-17)
+    love.graphics.setColor(r, g, b, PlayerAdventure.invulnAlpha(not self.dying and not self.victory and self.invT or 0) * ghostA)
     local squashed = not self.dying and (self.squashT or 0) > 0
     local iced = not self.dying and (self.iceT or 0) > 0
     local stunned = not self.dying and (self.stunT or 0) > 0

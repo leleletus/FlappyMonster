@@ -8,6 +8,8 @@
 --   StompChain.update(pa)        cada paso del jugador (la corta en el suelo, en el agua o muriendo)
 --   StompChain.reset(pa)         (un golpe)
 --   StompChain.pitch(pa)         tono del sonido del pisotón que va a caer (0.5.235, el usuario: que se oiga la escalerita)
+--   StompChain.step(n, pts)      la regla sola: el n.º `n` de una racha → puntos, multiplicador, true si da una vida
+--   StompChain.pitchOf(n)        el tono del n.º `n` (la escalerita) — los usa también la racha de la META (WinCelebration) —
 local StompChain = {}
 
 StompChain.MULTS = { 1, 2, 4, 8, 16, 32, 64 }
@@ -20,9 +22,13 @@ function StompChain.award(pa, e, pts)
     if pts <= 0 or (e and e.def and e.def.boss) then return pts, 1, false end
     local n = (pa.stompChain or 0) + 1
     pa.stompChain = n
+    return StompChain.step(n, pts)
+end
+
+function StompChain.step(n, pts)
     local m = StompChain.MULTS[n]
     if not m then return 0, nil, true end
-    return pts * m, m, false
+    return (pts or 0) * m, m, false
 end
 
 function StompChain.update(pa)
@@ -32,10 +38,11 @@ end
 function StompChain.reset(pa) pa.stompChain = 0 end
 
 -- (antes de award: el pisotón que suena es el n.º stompChain + 1; sin jugador, el tono normal)
-function StompChain.pitch(pa)
+function StompChain.pitch(pa) return StompChain.pitchOf(((pa and pa.stompChain) or 0) + 1) end
+
+function StompChain.pitchOf(n)
     local sc = StompChain.SCALE
-    local i = math.min(((pa and pa.stompChain) or 0) + 1, #sc)
-    return 2 ^ (sc[i] / 12)
+    return 2 ^ (sc[math.max(1, math.min(n, #sc))] / 12)
 end
 
 return StompChain

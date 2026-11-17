@@ -26,7 +26,7 @@ flashlight in dark levels, carrying (UP: pick up / throw; crouch + UP: put down 
 approved by the user — `tools/art/player/make_monster_actions.py` → `assets/images/player/actions/`, anims `act_*` in
 `assets/anim/player.json`): the pose NUMBER (`frame`, it travels online) 6 hard landing, 7 free (it was a curled ground-pound sprite; the user removed it, the ground pound shows the classic jump frame 2), 8 throw, 9 push, 10 look
 up (UP held standing still 0.6 s), 11 crouched looking down (DOWN held crouched 0.6 s, the camera look), 12 long idle
-(5 s still: blink, antennae), 13 victory (on winning the level). Built and then removed in play (the user: "it does
+(5 s still: blink, antennae), 13 victory (on winning the level: `act_victory` then the looping `act_victory_loop` — `PlayerSprite.recOf` follows a one-shot clip's `next` —; no control, no invulnerability blink: `docs/story/story-mode.md` § Finishing a level). Built and then removed in play (the user: "it does
 not quite work"): skid, hurt. Chosen by priority at the end of `PlayerAdventure:update`
 (`actionPose`); drawing only. Walking and running keep the idle / jump frames (the user: part of its essence); the
 ledge pose and the swim / carry / double-jump ones were rejected. **Eyes** are separate overlay sprites

@@ -431,6 +431,16 @@ function PlayerAdventure:update(dt, level)
         end
         return
     end
+    if self.victory and not self.dying then
+        -- META (el usuario, 2026-11-17: «al llegar no debe poder controlarlo»): sin mando, pero con la inercia que traía
+        -- (frena como al soltar el mando y cae si estaba en el aire) — no se para en seco como `frozen` —
+        local real = Input
+        Input = setmetatable(FROZEN_INPUT, { __index = real })
+        local ok, err = pcall(self._update, self, dt, level)
+        Input = real
+        if not ok then error(err, 0) end
+        return
+    end
     if self.frozen then
         -- (quieto de verdad: sin la inercia que traía; la gravedad sigue)
         if not self.stunT or self.stunT <= 0 then self.vx = 0 end
