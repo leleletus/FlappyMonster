@@ -1,6 +1,8 @@
+> **Archived design document.** Status: BUILT (fight 0.5.236, island skins 0.5.237, review minors 0.5.238). The system pages win where they differ: [giantpuffer](../../bosses/giantpuffer.md), [enemies](../../entities/enemies.md).
+
 # Giant Pufferfish hyper-rework + pufferfish island skins (2026-11-16)
 
-Status: **design, waiting for the user's approval**. Current boss: [giantpuffer](../bosses/giantpuffer.md).
+Status: **design, waiting for the user's approval**. Current boss: [giantpuffer](../../bosses/giantpuffer.md).
 
 ## Why
 

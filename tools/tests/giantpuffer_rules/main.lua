@@ -18,9 +18,16 @@
 --   bola_baja   la bola en una plataforma con el jugador debajo baja a por él (la atraviesa)
 --   bola_aviso  el primer bote de la bola (aviso) no pincha
 --   pareja      Xtra extremo: la bola no le quita el turno al otro toda la marea (su primer bote, sí)
---   ultima_ocasion golpe justo cuando vuelve el agua: bola → nada; la ocasión no vuelve hasta nadar
+--   ultima_ocasion golpe justo cuando vuelve el agua: bola → nada; la ocasión no vuelve hasta la marea alta
 --   ola_suelo   al caer de un coletazo, dos olas de púas por el suelo; de pie -1, saltándola nada; se acaban en la
 --               pared y en el borde de la superficie; fase 3: otra pareja 0,35 s después
+--   marea_ocasion la ocasión vuelve con la marea alta (no al nadar mientras sube)
+--   remolino_pared no tira a través de una pared; en seco deja el remolino
+--   combo_ultimo los combos cuentan como el ataque al que pasan
+--   reinicio    reiniciar la pelea no deja nada de la anterior
+--   bola_solido la bola no atraviesa bloques macizos
+--   nunca_enfada rageMode 'never': ni enfado ni fases
+--   embestida_baja con poca agua la embestida sigue de lado
 --   derrota     el último golpe: se deshincha y queda APLASTADO también aturdido (no vuelve de golpe a su forma),
 --               huye de un salto que atraviesa el suelo (libera la zona) y se va del todo
 --   peces       enfadado y nadando suelta peces globo, tantos a la vez como diga la dificultad (Difícil 3, Fácil 1),
@@ -604,9 +611,12 @@ function cases.ultima_ocasion()
         if boss.state == 'gasp' then regasp = true end
         return boss.state == 'swim'
     end)
-    check('ultima_ocasion', seen.ball and boss.state == 'swim' and openedBeforeSwim and boss.opened == false and not regasp,
-        ('bola=%s; final %s; gastada hasta nadar=%s; al nadar se recupera=%s; reboquea=%s'):format(
-            tostring(seen.ball), boss.state, tostring(openedBeforeSwim), tostring(boss.opened == false), tostring(regasp)))
+    local swimOpened = boss.opened
+    stepAll(level, es, { pa }, 20, function() pa.invT = 9; return flood(level).phase == 'hold' end)
+    boss:update(DT, level)
+    check('ultima_ocasion', seen.ball and boss.state ~= 'gasp' and openedBeforeSwim and swimOpened and boss.opened == false and not regasp,
+        ('bola=%s; final %s; gastada hasta nadar=%s (y nadando con el agua subiendo=%s); con la marea arriba se recupera=%s; reboquea=%s'):format(
+            tostring(seen.ball), boss.state, tostring(openedBeforeSwim), tostring(swimOpened), tostring(boss.opened == false), tostring(regasp)))
 end
 
 -- OLA DE PÚAS por el suelo al caer de cada coletazo: dos (izquierda y derecha) a {500, 560, 620} px/s; quita 1 a quien
@@ -690,6 +700,127 @@ function cases.ola_suelo()
         ('olas %d (izq=%s der=%s) a %.0f px/s; de pie: -1=%s; saltándola sin daño=%s; en la pared se acaba=%s; en el borde de la plataforma=%s (x %.1f); fase 3: %d y la segunda pareja a %.2f s'):format(
             n, tostring(dirs[-1]), tostring(dirs[1]), spd, tostring(hitStand), tostring(jumped), tostring(wallGone),
             tostring(edgeGone), lastX / T, first, secondAt or -1))
+end
+
+-- ── Los 7 menores de la revisión (2026-11-16) ─────────────────────────────────
+-- M1: la ocasión vuelve con la MAREA ALTA (agua arriba o bajando), no al ponerse a nadar mientras sube
+function cases.marea_ocasion()
+    local level, es, boss = arena()
+    tideTo(level, 'rise', 1)
+    putBoss(boss, 22)
+    boss.levelRef = level
+    boss.opened = true
+    boss:enter('swim')
+    boss:update(DT, level)
+    local keptRising = boss.opened == true
+    tideTo(level, 'hold', 5.9)
+    boss:update(DT, level)
+    check('marea_ocasion', keptRising and boss.opened == false,
+        ('nadando con el agua subiendo, gastada=%s; con la marea arriba, vuelve=%s'):format(tostring(keptRising), tostring(boss.opened == false)))
+end
+
+-- M2: el remolino no tira a través de una pared, y si el agua lo deja en seco a medias, se acaba
+function cases.remolino_pared()
+    local level, es, boss = arena()
+    tideTo(level, 'hold', 5.9)
+    putBoss(boss, 26); boss.y = (FLOOR - 1) * T - 2 * T
+    boss.phase, boss.rage, boss.levelRef = 2, true, level
+    for r = 7, 12 do level:setTileRaw(20, r, 1) end              -- (una pared entre los dos, columna 20)
+    boss:enter('whirl')
+    local probe = { inWater = true }
+    local through = boss:pushAt(16.5 * T, (FLOOR - 1) * T - 1.5 * T, probe)
+    local open = boss:pushAt(23.5 * T, (FLOOR - 1) * T - 1.5 * T, probe)
+    -- en seco (marea baja): deja el remolino
+    local level2, es2, boss2 = arena()
+    putBoss(boss2, 22)
+    boss2.phase, boss2.levelRef = 2, level2
+    boss2:enter('whirl')
+    boss2:update(DT, level2)
+    check('remolino_pared', through == nil and open ~= nil and boss2.state ~= 'whirl',
+        ('detrás de la pared tira=%s; sin pared=%s; en seco sigue en remolino=%s'):format(tostring(through), tostring(open),
+            tostring(boss2.state == 'whirl')))
+end
+
+-- M3: los combos cuentan como el ataque al que pasan (remolino → hincharse: 'puff'; embestida → aros: 'spines')
+function cases.combo_ultimo()
+    local level, es, boss = arena()
+    tideTo(level, 'hold', 5.9)
+    putBoss(boss, 22); boss.y = (FLOOR - 1) * T - 2 * T
+    boss.phase, boss.levelRef = 2, level
+    level.players = {}
+    boss.lastAtk = 'whirl'
+    boss:enter('whirl'); boss.deadTimer = 99
+    boss:update(DT, level)
+    local a = boss.lastAtk
+    boss.phase = 3
+    boss.lastAtk = 'charge'
+    boss:enter('charge'); boss.chargeDx, boss.chargeDy = -1, 0
+    for _ = 1, 200 do boss:update(DT, level); if boss.state ~= 'charge' then break end end
+    check('combo_ultimo', a == 'puff' and boss.state == 'spines_warn' and boss.lastAtk == 'spines',
+        ('tras el remolino: %s; tras la embestida (fase 3, %s): %s'):format(tostring(a), boss.state, tostring(boss.lastAtk)))
+end
+
+-- M4: al reiniciar la pelea no queda nada de la anterior (ni una ola pendiente)
+function cases.reinicio()
+    local level, es, boss = arena()
+    boss.wave2T, boss.passY, boss.lastAtk, boss.gapA = 0.2, 500, 'charge', 1.5
+    boss.chargeDx, boss.chargeDy, boss.lineX, boss.lineY = 1, 0, 100, 200
+    boss.waves = { { id = 1, x = 0, y = 0, dir = 1, t = 0, hit = {} } }
+    boss:init()
+    local clean = boss.wave2T == nil and boss.passY == nil and boss.lastAtk == nil and boss.gapA == nil
+        and boss.chargeDx == nil and boss.lineX == nil and #boss.waves == 0
+    check('reinicio', clean, ('todo limpio tras reiniciar=%s'):format(tostring(clean)))
+end
+
+-- M5: la bola atraviesa plataformas a por el jugador, pero NO bloques macizos
+function cases.bola_solido()
+    local level, es, boss = arena()
+    for c = 24, 28 do level:setTileRaw(c, 9, 1) end              -- (un estante MACIZO en la fila 9, columnas 24-28)
+    local pa = playerAt(level, 26)
+    level.players = { pa }
+    boss.levelRef = level
+    boss.x, boss.y = 26 * T, 8 * T - boss.outerH / 2
+    boss.vx, boss.vy, boss.onGround = 0, 0, true
+    boss.opened = true
+    boss:enter('ball')
+    local maxFeet = 0
+    stepAll(level, es, { pa }, 2.5, function()
+        pa.invT = 9; pa.x, pa.vx = 26.5 * T, 0
+        if boss.x > 24 * T and boss.x < 27 * T then maxFeet = math.max(maxFeet, boss:feetY()) end
+    end)
+    check('bola_solido', maxFeet <= 8 * T + 6, ('encima del estante macizo, sus pies llegan a %.1f casillas (el estante, 8)'):format(maxFeet / T))
+end
+
+-- M7: rageMode 'never' (props de evento): ni se enfada ni pasa de fase
+function cases.nunca_enfada()
+    local level, es, boss = arena()
+    local props = {}
+    for k, v in pairs(boss.props) do props[k] = v end
+    props.rageMode = 'never'
+    local b = Entities.create({ type = 'giantpuffer', col = 23, row = 12, props = props })
+    b.levelRef = level
+    b:startFight(1)
+    level.players = {}
+    while b.hp > 1 do b:enter('gasp'); b.inv = 0; b.opened = false; b:stomp() end
+    check('nunca_enfada', b:ph() == 1 and not b.rage, ('con 1 de vida: fase %d, enfadado=%s'):format(b:ph(), tostring(b.rage)))
+end
+
+-- M8: con poca agua, una línea que apunta un poco hacia arriba no deja la embestida en nada: sigue de lado
+function cases.embestida_baja()
+    local level, es, boss = arena()
+    tideTo(level, 'rise', 1.5)
+    putBoss(boss, 15)
+    boss.y = (FLOOR - 1) * T - boss.outerH / 2 - 4
+    boss.levelRef = level
+    level.players = {}
+    boss:enter('charge')
+    local dx, dy = 1, -0.3
+    local d = math.sqrt(dx * dx + dy * dy)
+    boss.chargeDx, boss.chargeDy = dx / d, dy / d
+    local x0, t = boss.x, 0
+    for _ = 1, 120 do boss:update(DT, level); t = t + DT; if boss.state ~= 'charge' then break end end
+    check('embestida_baja', (boss.x - x0) > 3 * T,
+        ('con el agua baja cruza %.1f casillas (%.2f s)'):format((boss.x - x0) / T, t))
 end
 
 function cases.derrota()
@@ -837,7 +968,7 @@ end
 
 function love.load(arg)
     local only = os.getenv('CASE')
-    for _, n in ipairs({ 'varado', 'coletazo', 'marea', 'hincha', 'aro_hueco', 'embestida', 'remolino', 'resaca', 'fases', 'una_ocasion', 'bola', 'bola_baja', 'bola_aviso', 'pareja', 'ultima_ocasion', 'ola_suelo', 'derrota', 'red', 'pez_chico', 'peces' }) do
+    for _, n in ipairs({ 'varado', 'coletazo', 'marea', 'hincha', 'aro_hueco', 'embestida', 'remolino', 'resaca', 'fases', 'una_ocasion', 'bola', 'bola_baja', 'bola_aviso', 'pareja', 'ultima_ocasion', 'ola_suelo', 'marea_ocasion', 'remolino_pared', 'combo_ultimo', 'reinicio', 'bola_solido', 'nunca_enfada', 'embestida_baja', 'derrota', 'red', 'pez_chico', 'peces' }) do
         if not only or only == n then
             local ok, err = xpcall(cases[n], debug.traceback)
             if not ok then check(n, false, 'error: ' .. tostring(err)) end

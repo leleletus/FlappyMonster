@@ -223,13 +223,16 @@ end
 local MAX_STEP = 16
 -- `self.passY` (saltos a una marca): atraviesa plataformas y bloques por el camino (de lado y
 -- hacia arriba) y solo se posa en una cara superior a la altura de la marca o más abajo;
--- así llega a donde marcó (antes se quedaba enganchada en las plataformas de en medio)
+-- así llega a donde marcó (antes se quedaba enganchada en las plataformas de en medio).
+-- Con `self.passOneway` (la bola del Pez Globo Gigante) solo atraviesa plataformas de un sentido: los bloques macizos
+-- paran de lado, por arriba y por abajo como siempre
 function Snow:move(level, dx, dy)
     local hw, hh = self.outerW / 2, self.outerH / 2
     local x, y = self.x + dx, self.y
     local hitX, hitDef
     local pass = self.passY
-    if dx ~= 0 and not pass then
+    local only1 = pass and self.passOneway
+    if dx ~= 0 and (not pass or only1) then
         local edge = (dx > 0) and (x + hw) or (x - hw)
         local face
         for _, py in ipairs(level:samples(y - hh + 4, y + hh - 4)) do
@@ -263,16 +266,18 @@ function Snow:move(level, dx, dy)
         if step > 0 then
             local f0, f1 = y + hh, ny + hh
             for _, px in ipairs(cols) do
-                local _, top = level:landingCross(px, f0, f1)
+                local td, top = level:landingCross(px, f0, f1)
                 if not top then
                     local o, b = level:bodyAt(px, f1, self)
                     if o and f0 <= b.y + 0.5 then top = b.y end
                 end
-                if top and pass and top < pass - 8 then top = nil end      -- (más arriba que la marca: la atraviesa)
+                if top and pass and top < pass - 8 and not (only1 and td and td.collision == 'solid') then
+                    top = nil                                               -- (más arriba que la marca: la atraviesa)
+                end
                 if top and (not stop or top < stop) then stop = top end
             end
             if stop then y = stop - hh; self.vy = 0; self.onGround = true; break end
-        elseif not pass then
+        elseif not pass or only1 then
             local e = ny - hh
             for _, px in ipairs(cols) do
                 local f

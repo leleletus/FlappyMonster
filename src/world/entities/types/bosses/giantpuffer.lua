@@ -6,7 +6,7 @@
 -- que sube y baja sola durante la pelea (un ciclo puro del tiempo: igual online). Al bajar, el agua ARRASTRA hacia un
 -- lado (la RESACA: prop `undertow` de la inundación, Floods.currentAt) y se ve espuma corriendo hacia allí.
 -- El pez hace lo que le deja el agua EN SU SITIO (REHECHO 2026-11-16, el usuario: "un jefe miserable": con ground
--- pounds seguidos tras sus coletazos se le bajaba en 2 mareas bajas; docs/design/giantpuffer-rework.md):
+-- pounds seguidos tras sus coletazos se le bajaba en 2 mareas bajas; docs/design/archive/giantpuffer-rework.md):
 -- REGLA DE DAÑO (0.5.31): DESHINCHADO NO HACE DAÑO. Pinchan las púas (hinchado, bola, embestida, aros, olas) y aplasta
 -- si cae del coletazo JUSTO encima de ti (lo marca antes).
 --   · 6 de vida, TRES FASES: fase 2 con ≤ 4 (`rageAt`, enfadado), fase 3 con ≤ 2 (`phase3At`). Ritmo por fase.
@@ -177,6 +177,9 @@ function GP:initBoss()
     self.opened = false                              -- (la ocasión de esta marea baja ya se gastó)
     self.spines, self.nextId = {}, 0
     self.waves, self.waveN = {}, 0
+    -- (nada de la pelea anterior al reiniciar: ola pendiente, embestida, hueco, último ataque, atravesar)
+    self.wave2T, self.passY, self.passOneway, self.lastAtk, self.gapA = nil, nil, nil, nil, nil
+    self.chargeDx, self.chargeDy, self.lineX, self.lineY = nil, nil, nil, nil
     self.atkT, self.graceT, self.burst = 0, 0, 0
     self.markX, self.markY = math.floor(self.x), math.floor(self:feetY())
     self.summonKey = 'gp' .. self.col .. ',' .. self.row
@@ -383,6 +386,14 @@ function GP:pushAt(x, y, o)
     if x < zx0 or x > zx1 then return nil end
     local dx = self.x - x
     if math.abs(dx) < 12 then return nil end
+    -- (no a través de una pared: nada macizo entre los dos a la altura del jugador)
+    local lv = self.levelRef
+    if lv then
+        local step = (dx > 0) and T / 2 or -T / 2
+        for xx = x + step, self.x - step, step do
+            if lv:collisionAt(xx, y) then return nil end
+        end
+    end
     return ((dx > 0) and 1 or -1) * WHIRL_PULL[self:ph()], 0, 1
 end
 
@@ -438,10 +449,13 @@ function GP:resume(level)
     else self:enter('fall') end
 end
 
--- Cambio de estado; al volver a NADAR (con agua) vuelve la ocasión de la próxima marea baja
-function GP:enter(st)
-    Boss.enter(self, st)
-    if st == 'swim' then self.opened = false end
+-- ¿Marea ALTA donde está? (el agua arriba o ya bajando): la ocasión de la próxima marea baja vuelve entonces, no al
+-- ponerse a nadar mientras sube (revisión M1: un nadar a medias con el agua subiendo daba otra ocasión)
+function GP:highTide(level)
+    for _, f in ipairs(level.floods or {}) do
+        if (f.phase == 'hold' or f.phase == 'fall') and self.x >= f.x0 and self.x < f.x1 then return true end
+    end
+    return false
 end
 
 -- Turnos con un aliado (Xtra extremo): la bola solo cuenta como ataque en su primer bote; si no, el otro se quedaba
@@ -486,6 +500,7 @@ function GP:updateBoss(dt, level)
     end
     local st, t, ph = self.state, self.deadTimer, self:ph()
 
+    if self.opened and self:highTide(level) then self.opened = false end
     if st == 'fight' then self:resume(level); return end
 
     if st == 'swim' then
@@ -538,13 +553,15 @@ function GP:updateBoss(dt, level)
 
     elseif st == 'whirl_warn' or st == 'whirl' then
         -- quieto en el agua, girando; después del tirón, se hincha
+        if not self:wet(level) then self:resume(level); return end      -- (el agua lo dejó en seco: se acabó)
         self.vx, self.vy = self.vx * (1 - 4 * dt), self.vy * (1 - 4 * dt)
-        self:physics(level, dt, not self:wet(level))
+        self:physics(level, dt, false)
         if st == 'whirl_warn' and t >= WHIRL_WARN then
             self:enter('whirl')
             Sound.play('undertowAlert', 0.8)
         elseif st == 'whirl' and t >= WHIRL_T then
             self:enter('puff_warn'); Sound.play('pufferWarn', 0.55)
+            self.lastAtk = 'puff'                                          -- (el combo cuenta como hincharse)
         end
 
     elseif st == 'charge_warn' then
@@ -572,7 +589,11 @@ function GP:updateBoss(dt, level)
         self.vx, self.vy = dx * sp, dy * sp
         local top = self.y - self.outerH * 0.45 + self.vy * dt
         local surfaced = self.vy < 0 and level:liquidAt(self.x, top) == nil
-        if surfaced then self.vy = 0 end
+        if surfaced then
+            self.vy = 0
+            -- (con poca agua y la línea un poco hacia arriba: sigue de lado en vez de acabarse en nada)
+            if math.abs(dx) > 0.3 then self.chargeDy, surfaced = 0, false; self.vx = ((dx > 0) and 1 or -1) * sp end
+        end
         local hit = self:physics(level, dt, false)
         self:prick(level, HIT_PUFF)
         if hit == 'wall' or surfaced or (dy > 0.2 and self.onGround) or t >= CHARGE_MAX or not self:wet(level) then
@@ -580,6 +601,7 @@ function GP:updateBoss(dt, level)
             Entity.emitFx('shake_small', self.x, self.y)
             if ph >= 3 and self:wet(level) then
                 self:enter('spines_warn'); Sound.play('pufferWarn', 0.55)          -- (fase 3: combo, aros detrás)
+                self.lastAtk = 'spines'
             else
                 self:enter('deflate'); Sound.play('pufferDeflate', 0.5)
             end
@@ -629,10 +651,10 @@ function GP:updateBoss(dt, level)
         self.passY = nil
         if pa and self.vy > 0 then
             local foot = pa.y + pa:getOuterBounds().h / 2
-            if foot > self:feetY() + T / 2 then self.passY = foot - T / 2 end
+            if foot > self:feetY() + T / 2 then self.passY, self.passOneway = foot - T / 2, true end
         end
         local hit = self:physics(level, dt)
-        self.passY = nil
+        self.passY, self.passOneway = nil, nil
         if hit == 'wall' then self.vx = -vx0 end
         if self.onGround then
             self.vy = -math.sqrt(2 * BALL_G * BALL_H[ph] * T)

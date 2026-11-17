@@ -12,7 +12,6 @@ and describe the real thing in the system's page.
 
 | What | Page |
 |---|---|
-| **Giant Pufferfish rework + pufferfish island skins (2026-11-16):** one opening per low tide + spike ball, floor spine waves, rings with a gap, charge, whirlpool, 3 phases (**fight built 0.5.236**, not played); per-island pufferfish skins (approved and **built 0.5.237**) | [giantpuffer-rework](giantpuffer-rework.md) · [plan](giantpuffer-rework-plan.md) |
 | **Starway, second wave (2026-11-15):** the faster level Pulsar (140 BPM), the bonus Star Stage, the boss level Sanctuary of the Beat (**built 0.5.230**, not played); ceiling / wall clap spikes and the orbiting stars (built); the double-jump rule for beep formations; **five boss ideas for the user to pick** (not built) | [estelar-levels-2](estelar-levels-2.md) |
 | **The level Starway / Vía Estelar (2026-11-14):** 420 × 48, six zones and a 72-chamber maze with crystal doors, all to the music; Free Play (**built 0.5.225**, waiting for the user to play it) | [via-estelar-level](via-estelar-level.md) |
 | **Starway rhythm objects (2026-11-14):** 10 objects, hazards and enemies that act on other parts of the beat (every beat, backbeat, kick, offbeats, 3-over-4, song sections) for the level Vía Estelar; the user picked metronome platform, clap spikes and on-beat star spring (**built 0.5.224**) | [starway-rhythm-objects](starway-rhythm-objects.md) |
@@ -54,6 +53,7 @@ and describe the real thing in the system's page.
 | [frozen-coast-background](archive/frozen-coast-background.md) | background A against B and the final mix | applied |
 | [frozen-tiles](archive/frozen-tiles.md) | continuous snow / ice, tiles 50-58, snow seam, where to place them by hand | applied; placements not tracked |
 | [jungle-levels-design](archive/jungle-levels-design.md) | the jungle's four levels and bonus as proposed | built (0.5.99) |
+| [giantpuffer-rework](archive/giantpuffer-rework.md) · [plan](archive/giantpuffer-rework-plan.md) | Giant Pufferfish rework B (one opening per low tide, spike ball, floor waves, rings with a gap, charge, whirlpool, 3 phases) + pufferfish island skins; the user's verdict "miserable, killed in 2 low tides" | built (0.5.236-238) → [giantpuffer](../bosses/giantpuffer.md) |
 | [snowball-boss-plan](archive/snowball-boss-plan.md) | the Big Snowball's full original plan | built (3.20.0), with changes |
 
 The archive is history: `project_check` does not check its paths, and it is not rewritten when files move.

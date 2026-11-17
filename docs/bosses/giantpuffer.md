@@ -23,14 +23,15 @@ drown at high tide; the centre one (row 6) is always dry; two air vents on the f
 
 ## Behaviour
 
-**Reworked 2026-11-16** ([design](../design/giantpuffer-rework.md), approach B chosen by the user): it used to give
+**Reworked 2026-11-16** ([design](../design/archive/giantpuffer-rework.md), approach B chosen by the user): it used to give
 several openings per low tide, so a chain of ground pounds killed it in 2 low tides.
 
 **Damage rule** (0.5.31, unchanged): DEFLATED IT DOES NO DAMAGE. Only spines hurt (puffed, spike ball, charge, rings,
 floor waves) and the flop CRUSHES only a player right under it while it falls (the mark shows where).
 
 **HP and phases:** HP 6 (+2 per extra player). Phase 2 at ≤ 4 HP (prop `rageAt`, default 0.67: anger symbols, the
-small pufferfish), phase 3 at ≤ 2 HP (prop `phase3At`, 0.34). Pace tables are `{phase 1, 2, 3}`.
+small pufferfish), phase 3 at ≤ 2 HP (prop `phase3At`, 0.34). Pace tables are `{phase 1, 2, 3}`. `rageMode = 'never'`
+(event props) also sets `phase3At` to −1 (Boss.init): no anger, no phases.
 
 - **High tide (in water)** — 'swim': chases the player (touching it does nothing). Every `ATK_EVERY` {3.4, 2.8, 2.3} s
   an attack with a warning, never the same twice in a row (`GP:pickAttack`): near (< `PUFF_NEAR` 4.5 tiles) → puff;
@@ -41,10 +42,12 @@ small pufferfish), phase 3 at ≤ 2 HP (prop `phase3At`, 0.34). Pace tables are 
     spines. 400 px/s, 1 HP + push, stop at walls.
   - **Charge** — 'charge_warn' (0.8 s, a blinking line on the water that follows the player and locks 0.2 s before)
     → 'charge': crosses along the line puffed at {700, 800, 900} px/s until a wall, the bottom or the surface (never
-    leaves the water; 2 s max). Phase 3: followed at once by rings (combo).
+    leaves the water; 2 s max; in shallow water a line pointing a bit upward keeps going sideways). Phase 3: followed
+    at once by rings (combo, which counts as 'spines' for the never-twice rule).
   - **Whirlpool** (phases 2-3) — 'whirl_warn' (1.0 s, foam spiral) → 'whirl' (1.6 s): pulls players IN THE WATER
     sideways toward it at {—, 220, 280} px/s (`GP:pushAt` through the air system `systems/Push`, so the online client
-    predicts it; no vertical pull, never pulls fish or boxes) → 'puff_warn'.
+    predicts it; no vertical pull, never pulls fish or boxes, never through a solid block) → 'puff_warn' (counts as
+    'puff'). If the tide strands it mid-whirl, the whirl ends.
   - Nothing is vulnerable in water: stomping it only bounces.
 - **Low tide (stranded)** — 'flop_wind' (target mark, locked the last 0.15 s; {0.45, 0.38, 0.32} s) → 'flop' (onto
   the mark, max 3.5 tiles; crushes only a player under it) → on landing a **floor spine wave** each way along the
@@ -52,9 +55,12 @@ small pufferfish), phase 3 at ≤ 2 HP (prop `phase3At`, 0.34). Pace tables are 
   phase 3: a second pair 0.35 s later) → 'gasp' ({1.6, 1.4, 1.2} s): the ONLY vulnerable state, stomp 1 / ground
   pound 2.
 - **One opening per low tide** (`opened`): after a hit → 'hurt_puff' (shove, 0 damage) → **'ball'**, a spike ball that
-  bounces around the cove ({3, 4, 4.5} tiles high, drifting toward the player at 260 px/s, first bounce in place and
-  blinking): touching it = 1 HP, it cannot be hurt. When the water reaches it, it deflates and swims, and the next
-  low tide gives a new opening (a gasp started while the water is already rising still used that tide's opening).
+  bounces around the cove ({3, 4, 4.5} tiles high, drifting toward the player at 260 px/s; the first bounce is in place,
+  shakes and does NOT hurt; falling toward a lower player it drops through one-way platforms, never solid blocks —
+  `passOneway` in `Snow.move`): touching it = 1 HP, it cannot be hurt. When the water reaches it, it deflates and
+  swims. The opening comes back with HIGH tide (flood phase 'hold' or 'fall' at its position, `GP:highTide`), not when
+  it starts swimming while the water is still rising. In Xtra Extreme (pair) the ball counts as an attack for the
+  turn-taking only during its first bounce.
 - **Small pufferfish** from phase 2 (0.5.32 rules unchanged): while swimming it releases one every `SPAWN_EVERY` 3 s,
   up to `PUFFERS` at once by difficulty (Easy 1, Normal / none 2, Hard 3, Extreme 4, Xtra 5); reserve entities
   (`def.summons`, `PUFFER_POOL` 5), cannot be killed, die on dry land at low tide and when the boss is beaten.
@@ -77,5 +83,8 @@ state + x + phase. Protocol 61; 129 for the rework.
   per low tide, killed in 2 low tides with ground pounds. Rework B (chosen over a pure patch and over a new
   structure): one opening per low tide + spike ball, floor waves, rings with a gap, charge, whirlpool, 3 phases,
   HP 10 → 6. Not yet played by the user.
+- 0.5.238 the 7 minor findings of the rework's review fixed (opening back with high tide, whirlpool not through walls
+  and ends when stranded, combos count for the never-twice rule, fight reset clears everything, ball never through
+  solid blocks, `rageMode` never, charge in shallow water).
 - 0.5.237 one look per island (`isleArt`, the small pufferfish's island variants + `<isle>-spine.png`); the cove is
   Coast, so the fight looks as before.

@@ -1,3 +1,5 @@
+> **Archived design document.** Status: BUILT (fight 0.5.236, island skins 0.5.237, review minors 0.5.238). The system pages win where they differ: [giantpuffer](../../bosses/giantpuffer.md), [enemies](../../entities/enemies.md).
+
 # Giant Pufferfish rework + pufferfish island skins — Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or

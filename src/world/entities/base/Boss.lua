@@ -130,7 +130,7 @@ end
 function Boss:init()
     -- (rageMode: el enfado no depende de la vida — los umbrales de cada tipo, a un valor que nunca / siempre se cumple)
     local rm = self.props and self.props.rageMode
-    if rm == 'never' then self.props.rageAt, self.props.phase2 = -1, -1
+    if rm == 'never' then self.props.rageAt, self.props.phase2, self.props.phase3At = -1, -1, -1
     elseif rm == 'always' then self.props.rageAt, self.props.phase2 = 2, 2 end
     if self.props and self.props.mashupRole == 'none' then self.props.mashupRole = nil end
     self.moving, self.flying, self.vx, self.vy = false, false, 0, 0

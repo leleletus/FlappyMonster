@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # tools/art/enemies/make_puffer_skins.py — el PEZ GLOBO de cada ISLA (2026-11-16, el usuario: "que según la isla salga
-# con el aspecto respectivo… con su propio detalle, como los crabbies"; docs/design/giantpuffer-rework.md).
+# con el aspecto respectivo… con su propio detalle, como los crabbies"; docs/design/archive/giantpuffer-rework.md).
 #
 # LEE la hoja de la costa, RETOCADA A MANO por el usuario (assets/images/enemies/pufferfish/puffer_fish-Sheet.png:
 # 4 cuadros 16x16 — nadar 1, nadar 2, medio hinchado, hinchado —) y la púa del Pez Globo Gigante
