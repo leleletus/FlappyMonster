@@ -105,6 +105,7 @@ function AdventureState:enter(args)
     self.powerups = args.powerups
     self.won, self.wonT = false, 0
     self.finished = false
+    self.zoom = require('src/fx/CameraZoom').new()                -- (el zoom de la cámara: la llegada a la meta)
 
     self.level  = Level.new(self.levelPath, args.difficulty)
     -- (modo historia, nivel de jefe: sin META — acaba al vencer al jefe y recoger su fragmento, src/story/Shards —;
@@ -394,8 +395,8 @@ function AdventureState:renderPopups()
             alpha    = 1 - ft
         end
 
-        local sx = math.floor(pop.wx - self.camX)
-        local sy = math.floor(pop.wy - self.camY - offsetY)
+        local sx, sy = self.zoom:point(pop.wx - self.camX, pop.wy - self.camY)     -- (con el zoom, sobre lo suyo)
+        sx, sy = math.floor(sx), math.floor(sy - offsetY)
 
         -- Sombra pixel-art
         love.graphics.setColor(0, 0, 0, alpha * 0.6)
@@ -573,11 +574,13 @@ end
 -- bandera se va (src/states/adventure/WinCelebration.lua). `trigger` = la casilla que tocó ('finish', 'secret_exit';
 -- nil = gana sin meta: el jefe, el Boss Rush)
 AdventureState.WIN_TIME = 2.6
+AdventureState.WIN_ZOOM, AdventureState.WIN_ZOOM_T = 1.25, 1.6     -- (la cámara se acerca al monstruo: «modesto», el usuario)
 function AdventureState:win(trigger)
     self.won, self.wonT = true, 0
     self.player.victory = true                               -- (su pose de victoria: PlayerAdventure.actionPose)
     self.player.jumpBufT = 0                                 -- (un salto pulsado justo antes no sale al aterrizar)
     self.winFx = require('src/states/adventure/WinCelebration').new(self, trigger)
+    if not self.demo then self.zoom:to(AdventureState.WIN_ZOOM, AdventureState.WIN_ZOOM_T) end
     -- (contrarreloj: ¿su mejor tiempo? se guarda el fantasma nuevo y se dice)
     if self.ghost and require('src/story/Ghost').finish(self.levelPath, self.levelTime, self.ghost.rec) then
         self:spawnPopup(L('free.ghost_record'), self.player.x, self.player.y - 90)
@@ -698,6 +701,7 @@ function AdventureState:update(dt)
         if self.startGoT >= StartCountdown.GO_TIME then self.startGoT = nil end
     end
 
+    self.zoom:update(dt)
     -- ── Nivel superado: un momento de celebración y se sale ───────────────────
     if self.won then
         self.wonT = self.wonT + dt
@@ -1043,6 +1047,9 @@ function AdventureState:_renderScene()
         L1.x, L1.y, L1.facing, L1.on = p.x, p.y, p.facing, p.lightOn and not p.dying
         lit = Darkness.build(self.level, self.camX, self.camY, src, self.enemies)
     end
+    -- (el ZOOM — src/fx/CameraZoom.lua —: agranda lo que está en el mundo, alrededor del jugador; el HUD no)
+    self.zoom:focus(self.player.x - self.camX, self.player.y - self.camY)
+    self.zoom:push()
     local scene = SceneLayers.draw(self.level, self.camX, self.camY, self.sceneCanvas, self.enemies, self._actorsFn,
                                    self.demo and self.demo.noSky)      -- (la escena terminada: src/fx/Edge.lua)
 
@@ -1057,6 +1064,7 @@ function AdventureState:_renderScene()
     Carry.drawPrompt(self.player, self.enemies, self.camX, self.camY)      -- (la ayuda de "coger": systems/Carry)
     if not self.demo then Entities.renderOverlays(self.enemies, self.camX, self.camY, self.player, love.timer.getDelta()) end   -- (carteles)
     self.player.drawMashPrompt(self.player, self.camX, self.camY)          -- (machacar: tragado por una planta / en hielo)
+    self.zoom:pop()
 
     -- ── Debug hitboxes (F1) ───────────────────────────────────────────────────
     if DEBUG_HITBOX then

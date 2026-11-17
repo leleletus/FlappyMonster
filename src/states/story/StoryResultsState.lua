@@ -1,11 +1,13 @@
 -- src/states/story/StoryResultsState.lua
 -- MODO HISTORIA: RESULTADOS de un nivel superado. Basada en la de la ronda online (mismo estilo
 -- vivo: título que rebota, rayos de luz, confeti y fuegos, música de victoria, tics del conteo),
--- adaptada a UN jugador: un solo PEDESTAL, de la altura y el color de la NOTA, sobre el que cae el
--- monstruo; a la derecha las líneas entran deslizándose y sus puntos suben contando (tiempo, vidas
--- perdidas, golpes, enemigos, estrellas → total /100 y puntos); al final la NOTA se estampa en el
--- pedestal (src/story/Score.lua). S y A: fiesta completa; B: confeti; D: trombón triste.
--- Luego, si los hay: mejor nota, premio y la nota del MUNDO (al vencer a su jefe).
+-- adaptada a UN jugador. El monstruo cae al SUELO y espera NERVIOSO (cada vez más) mientras a la derecha las líneas
+-- entran deslizándose y sus puntos suben contando (tiempo, vidas perdidas, golpes, enemigos, estrellas → total /100 y
+-- puntos); se agacha aguantando la respiración, el suelo tiembla y EMERGE el PEDESTAL de la altura y el color de la NOTA
+-- llevándolo encima, y la NOTA se estampa en él (src/story/Score.lua). Hasta entonces nada (ni el pedestal ni el color
+-- de los rayos) dice la nota (el usuario, 2026-11-17). S y A: fiesta completa; B: confeti; D: trombón triste.
+-- Luego, si los hay, bajo los puntos en la misma columna: mejor nota, premio y la nota del MUNDO (al vencer a su jefe);
+-- los botones, debajo de todo (antes los premios caían bajo el suelo y los botones los tapaban).
 -- ENTER / toque: durante la animación la salta; después, vuelve al mapa.
 --   args = { level = id, result = (AdventureState), summary = (Run.complete), map = args del mapa, color = {r,g,b},
 --            returnTo = estado al que se vuelve (por defecto 'story_map'; la campaña Flappy: 'flappy_map'),
@@ -19,7 +21,8 @@ local L = require 'src/core/Lang'
 
 local StoryResultsState = BaseState:new()
 
-local T_TITLE, T_PODIUM, T_FALL = 0.15, 0.6, 0.95
+local T_TITLE, T_FALL = 0.15, 0.6
+local RISE_T, HOLD_T = 0.6, 0.4      -- el pedestal sale del suelo; agachado aguantando la respiración antes
 local T_ROWS, ROW_GAP, COUNT = 1.0, 0.28, 0.6
 local GRADE = {
     S = { h = 210, col = { 1, 0.82, 0.2 }, dark = { 0.62, 0.45, 0.05 } },
@@ -81,7 +84,8 @@ function StoryResultsState:enter(args)
     }
     self.tTotal = T_ROWS + #self.rows * ROW_GAP + COUNT + 0.2           -- la fila del total
     self.tPoints = self.tTotal + 0.9                                    -- la de los puntos
-    self.tStamp = self.tPoints + 1.0                                    -- la nota, al pedestal
+    self.tRise = self.tPoints + 1.0                                     -- el pedestal sale del suelo
+    self.tStamp = self.tRise + RISE_T + 0.1                             -- la nota, al pedestal
     self.extra = {}
     local function add(text, col) self.extra[#self.extra + 1] = { text, col } end
     if s.record then add(L('story.results.record'), { 1, 0.95, 0.3 }) end
@@ -113,7 +117,7 @@ function StoryResultsState:enter(args)
     self.mood = (s.grade == 'S' or s.grade == 'A' or s.grade == 'B') and 'happy' or (s.grade == 'C' and 'meh')
                 or ((s.rating or 0) < 25 and 'dead' or 'sad')
     self.t, self.tick, self.fwTimer = 0, 0, 0.4
-    self.landed, self.stamped = false, false
+    self.landed, self.stamped, self.risen = false, false, false
     self.fx = Celebration.new()
     Sound.stopMusic()
     -- (el volumen sale del CATÁLOGO — tools/music/levels.py —: antes iba fijo a 0.6 / 0.4, puesto para la pista prestada, y
@@ -136,6 +140,27 @@ function StoryResultsState:_btnRects()
     return { { x = x, y = y, w = BTN_W, h = BTN_H }, { x = x + BTN_W + BTN_GAP, y = y, w = BTN_W, h = BTN_H } }
 end
 
+-- Alto del pedestal a los t s: 0 (bajo el suelo) hasta tRise; luego sale con un rebote hasta el de su nota
+function StoryResultsState:podiumHeight(t)
+    if t < self.tRise then return 0 end
+    return math.floor(self.g.h * easeOutBack((t - self.tRise) / RISE_T) + 0.5)
+end
+
+-- La COLUMNA de la derecha: las líneas, el total, los puntos y debajo los extras (premios…), todo por encima de los
+-- botones. Las filas se estrechan si hay muchos extras; los extras, a letra más pequeña si aún no caben.
+function StoryResultsState:_layout(podiumRight)
+    local bx = math.max(podiumRight + 50, WINDOW_W - 680)
+    local btnY = self:_btnRects()[1].y
+    local y0, nEx = 150, #self.extra
+    local exS = 3
+    local exH = nEx * 30
+    local nRows = #self.rows + 2
+    local rowH = math.floor((btnY - 16 - y0 - exH - (nEx > 0 and 10 or 0)) / nRows)
+    if rowH < 40 then exS, exH = 2, nEx * 20; rowH = math.floor((btnY - 16 - y0 - exH - (nEx > 0 and 10 or 0)) / nRows) end
+    rowH = math.max(36, math.min(50, rowH))
+    return { bx = bx, bw = WINDOW_W - bx - 40, y0 = y0, rowH = rowH, exY = y0 + nRows * rowH + 16, exS = exS, exLine = exS * 10 }
+end
+
 function StoryResultsState:_continue(retry)
     if self.t < self.tEnd then self.t = self.tEnd; return end         -- (primero: saltar la animación)
     Sound.play('select')
@@ -154,12 +179,18 @@ function StoryResultsState:update(dt)
         Sound.play('jump', 1.1, 0.6)
     end
     -- tics mientras cuentan las líneas, el total y los puntos
-    if t > T_ROWS + 0.3 and t < self.tStamp then
+    if t > T_ROWS + 0.3 and t < self.tRise - HOLD_T then
         self.tick = self.tick - dt
         if self.tick <= 0 then
             self.tick = 0.07
             Sound.play('tick', 1 + (t - T_ROWS) * 0.18, 0.5)
         end
+    end
+    -- el PEDESTAL sale del suelo (retumba)
+    if not self.risen and t >= self.tRise then
+        self.risen = true
+        Sound.play('caveRumble', 1.2, 0.8)
+        Sound.play('boxPush', 0.8, 0.7)
     end
     -- la NOTA se estampa en el pedestal
     if not self.stamped and t >= self.tStamp then
@@ -218,6 +249,22 @@ local function drawSprite(img, x, y, sc, face, outline)
     love.graphics.draw(img, x, y, 0, sc * face, sc, ox, oy)
 end
 
+-- Polvo del suelo al salir el pedestal: bloques a los dos lados que salen, suben un poco y se apagan (solo dibujo)
+function StoryResultsState:_drawDust(cx, w, a)
+    if a > 0.9 then return end
+    local k = a / 0.9
+    for i = 1, 6 do
+        for side = -1, 1, 2 do
+            local d = (8 + i * 9) * easeOutCubic(k) + i * 3
+            local px = math.floor(cx + side * (w / 2 + d))
+            local py = math.floor(FLOOR_Y - 6 - (i % 3) * 7 * k - 10 * k)
+            local sz = math.max(2, math.floor((10 - i) * (1 - k * 0.6)))
+            love.graphics.setColor(0.8, 0.76, 0.7, 0.75 * (1 - k))
+            love.graphics.rectangle('fill', px - math.floor(sz / 2), py - math.floor(sz / 2), sz, sz)
+        end
+    end
+end
+
 function StoryResultsState:drawHero(cx, top, t)
     local sc, ih = 5, 16
     local baseY = top - ih * sc / 2 + 4
@@ -230,13 +277,17 @@ function StoryResultsState:drawHero(cx, top, t)
     love.graphics.setBlendMode('alpha')
     local outline = { 0.95, 0.95, 1, 0.9 }
     local img, face, x, y = sprites[3], 1, cx, baseY
-    if t < T_FALL + 0.6 then                                          -- cayendo al pedestal
+    if t < T_FALL + 0.6 then                                          -- cayendo al suelo
         y = -80 + (baseY + 80) * easeOutBounce((t - T_FALL) / 0.6)
-    elseif t < self.tStamp then                                       -- NERVIOSO esperando la nota
+    elseif t >= self.tRise - HOLD_T and t < self.tStamp then          -- agachado, aguantando la respiración (y sube)
+        img = imgCrouch
+        x = cx + math.floor(math.sin(t * 70) * 1.5 + 0.5)
+    elseif t < self.tStamp then                                       -- NERVIOSO esperando la nota, cada vez más
         local w = t - T_FALL
-        img = sprites[(math.floor(w * 7) % 2 == 0) and 1 or 3]          -- golpecitos con el pie
-        face = (math.floor(w / 0.7) % 2 == 0) and 1 or -1               -- mira a un lado y a otro
-        x = cx + math.floor(math.sin(w * 40) * 1.5 + 0.5)               -- tiembla
+        local p = clamp01((t - T_FALL - 0.6) / math.max(0.1, self.tRise - HOLD_T - T_FALL - 0.6))
+        img = sprites[(math.floor(w * (6 + 8 * p)) % 2 == 0) and 1 or 3]           -- golpecitos con el pie, más rápidos
+        face = (math.floor(w / (0.7 - 0.35 * p)) % 2 == 0) and 1 or -1              -- mira a un lado y a otro
+        x = cx + math.floor(math.sin(w * 40) * (1 + 2 * p) + 0.5)                   -- tiembla
         y = baseY - math.abs(math.sin(w * math.pi * 2)) * ((math.floor(w / 0.5) % 3 == 0) and 10 or 0)
     else
         local a = t - self.tStamp
@@ -281,10 +332,13 @@ function StoryResultsState:render()
         love.graphics.rectangle('fill', 0, i * WINDOW_H / 18, WINDOW_W, WINDOW_H / 18 + 1)
     end
     -- Rayos de luz detrás del pedestal
-    local ra = easeOutCubic((t - T_PODIUM) / 1.2)
+    local ra = easeOutCubic((t - T_FALL) / 1.2)
+    local podH = self:podiumHeight(t)
     if ra > 0 then
-        local px, py = cx, FLOOR_Y - g.h - 40
-        local rc = self.celebrate and { 1, 0.9, 0.45 } or { 0.6, 0.6, 0.7 }
+        local px, py = cx, FLOOR_Y - podH - 40
+        -- (gris hasta la nota: el color no la adelanta)
+        local kc = self.celebrate and clamp01((t - self.tStamp) / 0.5) or 0
+        local rc = { 0.6 + 0.4 * kc, 0.6 + 0.3 * kc, 0.7 - 0.25 * kc }
         for i = 0, 13 do
             local ang = t * 0.25 + i * (math.pi * 2 / 14)
             love.graphics.setColor(rc[1], rc[2], rc[3], 0.07 * ra)
@@ -312,12 +366,13 @@ function StoryResultsState:render()
     local sa = clamp01((t - T_TITLE - 0.35) / 0.3)
     shadowText(self.args.name or Worlds.levelName(self.args.level or ''), 0, 104, WINDOW_W, 'center', c, sa)
 
-    -- El PEDESTAL (uno: modo de un jugador) y el monstruo encima
-    local rise = easeOutBack((t - T_PODIUM) / 0.55)
+    -- El PEDESTAL (uno: modo de un jugador): sale del suelo con la nota, temblando, con polvo a los lados
     local w = 150
-    if t >= T_PODIUM then
-        local h = g.h * rise
-        local x, y = cx - w / 2, FLOOR_Y - h
+    if t >= self.tRise then
+        local h = podH
+        local shake = (t < self.tRise + RISE_T) and math.floor(math.sin(t * 90) * 2 + 0.5) or 0
+        local x, y = cx - w / 2 + shake, FLOOR_Y - h
+        self:_drawDust(cx, w, t - self.tRise)
         love.graphics.setColor(g.dark); love.graphics.rectangle('fill', x, y, w, h)
         love.graphics.setColor(g.col); love.graphics.rectangle('fill', x + 6, y, w - 12, h)
         love.graphics.setColor(1, 1, 1, 0.35); love.graphics.rectangle('fill', x + 6, y, w - 12, 6)
@@ -329,12 +384,11 @@ function StoryResultsState:render()
             PixelFont.shadow(letter, math.floor(cx - PixelFont.width(letter, s) / 2), math.floor(y + h / 2 - PixelFont.height(s) / 2), s, 1)
         end
     end
-    if t >= T_FALL then self:drawHero(cx, FLOOR_Y - g.h, t) end
+    if t >= T_FALL then self:drawHero(cx, FLOOR_Y - podH, t) end
 
     -- Las líneas: entran deslizándose y cuentan
-    local bx = math.max(cx + w / 2 + 50, WINDOW_W - 680)
-    local bw = WINDOW_W - bx - 40
-    local y0, rowH = 170, 50
+    local lay = self:_layout(cx + w / 2)
+    local bx, bw, y0, rowH = lay.bx, lay.bw, lay.y0, lay.rowH
     love.graphics.setFont(FONT_MED)
     for i, row in ipairs(self.rows) do
         local rt = T_ROWS + (i - 1) * ROW_GAP
@@ -375,10 +429,11 @@ function StoryResultsState:render()
         if t >= et then
             local k = easeOutBack((t - et) / 0.4)
             local blink = (i == 1 and self.sum.record) and (0.75 + 0.25 * math.sin(t * 9)) or 1
-            local s = 3
+            local s = lay.exS
             local tw = PixelFont.width(e[1], s)
+            while s > 1 and tw > bw do s = s - 1; tw = PixelFont.width(e[1], s) end      -- (un texto largo: más pequeño)
             love.graphics.push()
-            love.graphics.translate(bx + bw / 2, FLOOR_Y + 30 + (i - 1) * 30)
+            love.graphics.translate(math.floor(bx + bw / 2), lay.exY + (i - 1) * lay.exLine)
             love.graphics.scale(k, k)
             PixelFont.shadow(e[1], math.floor(-tw / 2), 0, s, blink, e[2])
             love.graphics.pop()

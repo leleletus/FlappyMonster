@@ -57,6 +57,13 @@ round at speed), emitted by the player (`PlayerAdventure` → `PlayerAdventure.f
 `shake_big`, `shake_roar`; not `shake_tick`) also makes the controller vibrate with the same strength and fall-off
 (`src/core/Rumble.lua`).
 
+## Camera zoom (2026-11-17)
+
+`src/fx/CameraZoom.lua`: `z:to(k, secs)` (smooth), `z:update(dt)`, `z:focus(sx, sy)`, `z:push()` … `z:pop()`,
+`z:point(sx, sy)` for HUD text placed over the world. It scales the finished scene canvas, so the camera and the
+simulation never change. Used by the goal arrival (`AdventureState.WIN_ZOOM`, see `docs/story/story-mode.md`);
+reusable for any other moment (`AdventureState.zoom`).
+
 ## History
 
 - 0.5.182 (optimisation round): the `elseif` chain became the `EMIT` table. It exposed a hidden bug: `snow_burst` was

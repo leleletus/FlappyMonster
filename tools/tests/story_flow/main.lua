@@ -1326,10 +1326,24 @@ function love.update(dt)
             tostring(CAN.musicMid), tostring(CAN.musicF), tostring(CAN.musicB)))
         Run.data.done, Run.data.open = CAN.keep, CAN.keepOpen
         -- REINTENTAR desde los resultados: CONTINUAR / REINTENTAR; REINTENTAR vuelve a entrar en el mismo nivel
+        -- (con TODOS los extras a la vez: récord, ganancia, premio, mundo + su premio, desbloqueo — los botones no deben
+        --  taparlos —)
         gStateMachine:change('story_results', { level = W1[1].id, result = { time = 90, deaths = 1, hits = 2, kills = 3, killable = 6, stars = 1, starsTotal = 4 },
-            summary = { rating = 80, grade = 'B', parts = {}, points = 100 }, map = { world = 1, node = 1 }, color = { 0.36, 0.62, 0.36 } })
+            summary = { rating = 80, grade = 'B', parts = {}, points = 100, record = true, gain = 40, reward = { lives = 1 },
+                        world = { grade = 'A', reward = { points = 500 } }, unlocked = 'extreme' },
+            map = { world = 1, node = 1 }, color = { 0.36, 0.62, 0.36 } })
         go('retry1')
     elseif step == 'retry1' and t - T > 0.5 then
+        -- RESULTADOS (2026-11-17): el pedestal no sale (ni dice la nota) hasta acabar de contar; luego sale con su alto;
+        -- los extras, encima de los botones
+        local lay = st:_layout(st:_podiumX() + 75)
+        local btnY = st:_btnRects()[1].y
+        local exBottom = lay.exY + #st.extra * lay.exLine
+        local hidden = st:podiumHeight(st.tPoints + 0.5) == 0 and st:podiumHeight(st.tRise - 0.01) == 0
+        local grown = st:podiumHeight(st.tStamp + 1) == st.g.h
+        check('resultados_orden', #st.extra == 6 and exBottom <= btnY and hidden and grown,
+            ('extras %d, el último acaba en y=%d y los botones empiezan en y=%d · pedestal escondido al contar=%s, luego alto %d (quiere %d)'):format(
+            #st.extra, exBottom, btnY, tostring(hidden), st:podiumHeight(st.tStamp + 1), st.g.h))
         st.t = st.tEnd + 0.1
         pressNext('nav_right'); go('retry2')
     elseif step == 'retry2' and t - T > 0.2 then

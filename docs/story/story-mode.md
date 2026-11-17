@@ -82,6 +82,9 @@ Harness `story_flow` `copiar`.
   `finish` / `secret_exit` cells connected to the touched one) leaves the level: a hop with a white flash, spins
   narrowing, and vanishes in gold sparkles. Wins without a flag (boss, Boss Rush) only burst the enemies. Single
   player only: online the finish belongs to the Race mode and the enemies are shared. Test: `run.sh mechanics ONLY=meta`.
+- **Camera zoom** (`src/fx/CameraZoom.lua`, reusable): on winning the scene zooms to ×`WIN_ZOOM` (1.25) around the
+  player over `WIN_ZOOM_T` s. Drawing only: the finished scene canvas is scaled when put on screen (world overlays —
+  darkness, shards, prompts — inside the same transform; the HUD outside; damage/point popups follow via `zoom:point`).
 
 - **3.83.2 — NOTHING GAINED IN A LEVEL IS SAVED UNTIL IT IS FINISHED** (user's rule, after an exploit: enter, grab the
   extra life, leave by the pause menu, repeat forever). `AdventureState.finished` (set when `onFinish` is called: the
@@ -197,6 +200,15 @@ line in `Worlds.lua`, its branch in the map generator and, if it gives something
   `restartGame` (no difficulty today; Xtra Extreme until 0.5.25) the whole game restarts. The map shows the lives and a notice after a Game Over.
 
 ## Results, grades, rewards
+
+**Reveal and layout (2026-11-17, the user):** the pedestal used to stand there from the start with its final height and
+colour (it gave the grade away), and the extras (record, rewards, world grade, unlock) were drawn under the floor where
+the CONTINUE / RETRY buttons covered them (the player never saw what they won). Now the monster lands on the FLOOR and
+waits nervous (faster foot taps, more trembling as the count goes on), crouches holding its breath (`HOLD_T`), the floor
+rumbles and the pedestal EMERGES from it (`tRise`, `RISE_T`, dust at both sides) carrying it up, then the grade is
+stamped (`tStamp`). The rays stay grey until the grade. The extras go in the right column under POINTS
+(`StoryResultsState:_layout`: rows shrink, then the extras' text, so everything ends above the buttons).
+`podiumHeight(t)` = 0 until `tRise`. Harness `story_flow` `resultados_orden` (all six extras at once).
 
 **Retry (2026-11-03):** once the results animation ends, two buttons: CONTINUE (to the map) and RETRY (the same level again:
 the map opens with `replay` and enters the node by itself). Also RETRY in the single-player pause menu (any level:
