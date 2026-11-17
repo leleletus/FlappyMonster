@@ -306,4 +306,7 @@ sets `mechanisms/metronome`, `traps/clapspikes`, `mechanisms/beatspring`; the or
   SWITCH (beat 1 of a phrase, `BeatClock.offSwitch`; the user, 2026-11-14 — first it was any beat) launches `high`
   (×2.1 the jump, ~7 tiles) with the crystal clink (`beepSwitch`) and a burst; otherwise `low` (×1.1, ~2 tiles). A
   ring appears with the first warning beep and closes with each (beats 6, 7, 8: rings 1-3; ring 4 inside the window). `interact` stays side-effect free: the client predicts it with its
-  own clock.
+  own clock. Launching, the star SQUASHES onto its spring with the base fixed on the floor (2026-11-17, the user: the base
+  used to jump up 2 art px because `squash.png` sat two rows higher than `idle.png`; fixed in
+  `tools/art/world/make_starway_objects.py` `STAR_SQUASH`), so its face does not rise either: `B.padTop` (the base
+  trampoline's `PAD_TOP`, overridable per class) = 7 / 7.

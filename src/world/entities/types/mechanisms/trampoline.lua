@@ -65,7 +65,8 @@ function Tramp:canLaunchEntity() return self.state == 'ready' or self.state == '
 -- Caja sólida = lo que se ve del sprite (sube un poco al extenderse)
 function Tramp:getOuterBounds(into)
     local T  = TILE_PX
-    local top = (self:isExtended() and PAD_TOP.extended or PAD_TOP.normal) * S
+    local pad = self.padTop or PAD_TOP                    -- (una clase con otro dibujo pone el suyo: el de compás)
+    local top = (self:isExtended() and pad.extended or pad.normal) * S
     local ox, oy = self.x - T / 2, self.y - T / 2
     local side = S                            -- columnas 1..14 del sprite
     local d = self.dir

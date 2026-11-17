@@ -13,6 +13,9 @@ local Tramp     = require('src/world/entities/types/mechanisms/trampoline').Base
 local B = Entity.extend(Tramp)
 B.animId = 'mechanisms/beatspring'
 B.wantsLevel = true
+-- (al lanzar, la estrella se APLASTA sobre su muelle sin despegarse del suelo — squash.png, base en la última fila —: su
+--  cara no sube como la del trampolín, que se estira; el usuario, 2026-11-17)
+B.padTop = { normal = 7, extended = 7 }
 function B.loadAssets() B.anims(B) end
 
 -- ¿Cae JUSTO en el cambio de bloques?

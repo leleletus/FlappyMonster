@@ -8,7 +8,7 @@
 #   4  Trampolín de compás   una estrella sobre un muelle: caer en ella EN el pulso (±0,1 s) lanza muy alto; fuera del
 #                            pulso, un saltito; un aro que se cierra marca el pulso
 # Solo VISTA PREVIA (nada va a assets/ hasta que el usuario lo apruebe):
-#   /home/mtvemo/FlappyMonster_pruebas/via_estelar/objetos/  sprites.png · funcionamiento.png · escena.gif
+#   ~/FlappyMonster_pruebas/via_estelar/objetos/  sprites.png · funcionamiento.png · escena.gif
 #   Desde la raíz del repo:  /usr/bin/python3 tools/art/world/make_starway_objects.py
 import os, sys
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'lib'))
@@ -24,7 +24,7 @@ import make_jungle_sky as J
 import make_starway_sky as SW
 sys.argv = _argv
 
-PREV = '/home/mtvemo/FlappyMonster_pruebas/via_estelar/objetos'
+PREV = os.path.expanduser('~/FlappyMonster_pruebas/via_estelar/objetos')
 K = 4                                   # escala del arte (como los tiles: 16 px de arte = una casilla de 64)
 rgb = J.rgb
 
@@ -133,7 +133,9 @@ STAR_IDLE = [
     '.....cCCCCc.....',
     '...BBBBBBBBBB...',
 ]
-STAR_SQUASH = ['................'] * 3 + [
+# (la base del muelle, en la MISMA fila que en reposo — la última —: al estirarse no se despega del suelo; antes iba dos
+#  filas más arriba y la estrella entera subía; el usuario, 2026-11-17)
+STAR_SQUASH = ['................'] * 5 + [
     '.......oo.......',
     '......olyo......',
     '.ooooolyyooooo..',
@@ -145,7 +147,7 @@ STAR_SQUASH = ['................'] * 3 + [
     '.....cCCCCc.....',
     '.....cCCCCc.....',
     '...BBBBBBBBBB...',
-] + ['................'] * 2
+]
 STAR_SQUASH = STAR_SQUASH[:16]
 
 
