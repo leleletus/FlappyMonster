@@ -9,7 +9,7 @@ phases and three new high-tide attacks; every pufferfish (small + giant) gets it
 **Architecture:** all fight logic stays in `src/world/entities/types/bosses/giantpuffer.lua` (shared by single
 player, server, client); everything the client draws travels in `netPackExtra`. The whirlpool is a sideways current
 through the existing air system (`src/world/systems/Push.lua`, `pushAt`), already predicted online. Skins use the
-anim-set `variants` + `isleArt` pattern of the Mole (`src/world/entities/types/enemies/mole.lua:77-81`).
+anim-set `variants` + `isleArt` pattern of the Mole (`src/world/entities/types/enemies/mole.lua`, `Mole:isle` / `Mole:anims`).
 
 **Tech Stack:** LÖVE 11 / LuaJIT; Python 3 + Pillow for the art generator.
 
@@ -195,7 +195,7 @@ anim-set `variants` + `isleArt` pattern of the Mole (`src/world/entities/types/e
 **Files:**
 - Modify: `assets/anim/enemies/pufferfish.json` (`variants`: each island `{from: puffer_fish-Sheet.png, to:
   <isla>-Sheet.png}`), `src/world/entities/types/enemies/pufferfish.lua` (`isleArt = true`;
-  `Puffer:isle(level)` + `Puffer:anims()` like `mole.lua:77-81`, base = `costa`), `giantpuffer.lua` (same `anims()`
+  `Puffer:isle(level)` + `Puffer:anims()` like `Mole:isle` / `Mole:anims` in `src/world/entities/types/enemies/mole.lua`, base = `costa`), `giantpuffer.lua` (same `anims()`
   override + spine image per island, loaded in `loadAssets`), `docs/gameplay/carry-and-push.md` § Islands (pufferfish
   listed), `docs/art/asset-layout.md`, `docs/entities/enemies.md` pufferfish entry, `version.txt` (0.5.237).
 

@@ -425,6 +425,13 @@ function GP:enter(st)
     if st == 'swim' then self.opened = false end
 end
 
+-- Turnos con un aliado (Xtra extremo): la bola solo cuenta como ataque en su primer bote; si no, el otro se quedaba
+-- toda la marea baja sin poder coletear (revisión 2026-11-16)
+function GP:isAttacking()
+    if self.state == 'ball' then return (self.deadTimer or 0) < BALL_FIRST end
+    return Boss.isAttacking(self)
+end
+
 -- Bola de púas: el primer bote en el sitio
 function GP:enterBall()
     self:enter('ball')
@@ -615,7 +622,7 @@ function GP:updateBoss(dt, level)
             Entity.emitFx('gp_land', self.x, self:feetY())
         end
         if math.abs(self.vx) > 20 then self.facing = (self.vx > 0) and 1 or -1 end
-        self:prick(level, HIT_PUFF)
+        if t >= BALL_FIRST then self:prick(level, HIT_PUFF) end     -- (el primer bote avisa: aún no pincha)
 
     elseif st == 'gasp' then
         self:physics(level, dt); self:friction(level, dt)
@@ -727,12 +734,14 @@ function GP:updateIntro(dt, level, t)
 end
 
 -- ── Red ───────────────────────────────────────────────────────────────────────
--- { fase, marca x, y, ráfaga, línea de la embestida x, y, ocasión gastada 0/1, hueco del aro·1000,
+-- { fase, marca x, y, ráfaga, línea de la embestida x, y, ocasión gastada 0/1, hueco del aro·1000, vy (la pose de la
+--   bola y del coletazo sale de ella),
 --   nPúas, {id, x, y, ángulo·1000, t·100}…, nOlas, {id, x, y, dir}… }
-local NB = 8
+local NB = 9
 function GP:netPackExtra()
     local out = { self.phase or 1, self.markX or 0, self.markY or 0, self.burst or 0,
-                  self.lineX or 0, self.lineY or 0, self.opened and 1 or 0, math.floor((self.gapA or 0) * 1000), #self.spines }
+                  self.lineX or 0, self.lineY or 0, self.opened and 1 or 0, math.floor((self.gapA or 0) * 1000),
+                  math.floor(self.vy or 0), #self.spines }
     for _, s in ipairs(self.spines) do
         out[#out + 1] = s.id; out[#out + 1] = math.floor(s.x); out[#out + 1] = math.floor(s.y)
         out[#out + 1] = math.floor(s.a * 1000); out[#out + 1] = math.floor(s.t * 100)
@@ -763,6 +772,7 @@ function GP:netApplyExtra(a, b, f)
     self.phase, self.markX, self.markY, self.burst = b[1], b[2], b[3], b[4]
     self.rage = (self.phase or 1) >= 2
     self.lineX, self.lineY, self.opened, self.gapA = b[5], b[6], b[7] == 1, (b[8] or 0) / 1000
+    self.vy = b[9] or 0
     local prevS, prevW = {}, {}
     if type(a[NB + 1]) == 'number' then
         local ls, k = readList(a, NB + 1, 5)
