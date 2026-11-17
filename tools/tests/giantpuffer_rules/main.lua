@@ -14,6 +14,8 @@
 --   una_ocasion UNA ocasión por marea baja: tras el golpe, bola de púas (no se le daña, pincha) y no boquea hasta el agua
 --   bola        la bola rebota dentro de la zona (3 casillas en la fase 1), no se para, pincha, con el agua nada
 --   ultima_ocasion golpe justo cuando vuelve el agua: bola → nada; la ocasión no vuelve hasta nadar
+--   ola_suelo   al caer de un coletazo, dos olas de púas por el suelo; de pie -1, saltándola nada; se acaban en la
+--               pared y en el borde de la superficie; fase 3: otra pareja 0,35 s después
 --   derrota     el último golpe: se deshincha y queda APLASTADO también aturdido (no vuelve de golpe a su forma),
 --               huye de un salto que atraviesa el suelo (libera la zona) y se va del todo
 --   peces       enfadado y nadando suelta peces globo, tantos a la vez como diga la dificultad (Difícil 3, Fácil 1),
@@ -434,6 +436,89 @@ function cases.ultima_ocasion()
             tostring(seen.ball), boss.state, tostring(openedBeforeSwim), tostring(boss.opened == false), tostring(regasp)))
 end
 
+-- OLA DE PÚAS por el suelo al caer de cada coletazo: dos (izquierda y derecha) a {500, 560, 620} px/s; quita 1 a quien
+-- está de pie en su camino, no a quien la salta; se para en la pared y donde se acaba la superficie; fase 3: otra pareja
+-- 0,35 s después
+local function landFlop(level, boss)
+    boss:enter('flop')
+    boss.deadTimer = 0.2
+    boss.vx, boss.vy, boss.onGround = 0, 0, true
+    boss:update(DT, level)
+end
+
+function cases.ola_suelo()
+    local level, es, boss = arena()
+    putBoss(boss, 22)
+    local pa = playerAt(level, 27)
+    level.players = { pa }
+    boss.levelRef = level
+    pa.invT = 9
+    landFlop(level, boss)
+    local n, dirs = #(boss.waves or {}), {}
+    for _, w in ipairs(boss.waves or {}) do dirs[w.dir] = true end
+    local x0 = {}
+    for _, w in ipairs(boss.waves or {}) do x0[w.id] = w.x end
+    -- velocidad
+    for _ = 1, 15 do boss:updateWaves(level, DT) end
+    local spd = 0
+    for _, w in ipairs(boss.waves or {}) do spd = math.max(spd, math.abs(w.x - x0[w.id]) / (15 * DT)) end
+    -- de pie en su camino: -1
+    local hp0 = pa.hp
+    pa.invT = 0
+    for _ = 1, 60 do
+        pa.vx, pa.vy = 0, 0
+        boss:updateWaves(level, DT)
+        if pa.hp < hp0 then break end
+    end
+    local hitStand = pa.hp == hp0 - 1
+    -- saltándola (pies 0,8 casillas por encima): nada
+    local level2, es2, boss2 = arena()
+    putBoss(boss2, 22)
+    local pb = playerAt(level2, 27)
+    level2.players = { pb }
+    boss2.levelRef = level2
+    pb.invT = 9
+    landFlop(level2, boss2)
+    pb.invT = 0
+    local hpB = pb.hp
+    local ob = pb:getOuterBounds()
+    for _ = 1, 60 do
+        pb.y = (FLOOR - 1) * T - 0.8 * T - ob.h / 2
+        boss2:updateWaves(level2, DT)
+    end
+    local jumped = pb.hp == hpB
+    -- en la pared de la zona se acaba
+    for _ = 1, 240 do boss2:updateWaves(level2, DT) end
+    local wallGone = #boss2.waves == 0
+    -- donde se acaba la superficie (la plataforma de la izquierda: x 11-15 casillas, fila 9)
+    boss2.waves = { { id = 50, x = 12 * T, y = 8 * T, dir = 1, t = 0, hit = {} } }
+    local lastX = 0
+    for _ = 1, 60 do
+        if boss2.waves[1] then lastX = boss2.waves[1].x end
+        boss2:updateWaves(level2, DT)
+    end
+    local edgeGone = #boss2.waves == 0 and lastX <= 15.5 * T
+    -- fase 3: cuatro, la segunda pareja 0,35 s después
+    local level3, es3, boss3 = arena()
+    putBoss(boss3, 22)
+    level3.players = {}
+    boss3.levelRef = level3
+    boss3.phase = 3
+    landFlop(level3, boss3)
+    local first = #(boss3.waves or {})
+    local secondAt, t = nil, 0
+    for _ = 1, 40 do
+        t = t + DT
+        boss3:update(DT, level3)
+        if not secondAt and (boss3.waveN or 0) >= 4 then secondAt = t end
+    end
+    check('ola_suelo', n == 2 and dirs[1] and dirs[-1] and math.abs(spd - 500) < 25 and hitStand and jumped and wallGone
+        and edgeGone and first == 2 and secondAt and math.abs(secondAt - 0.35) < 0.05,
+        ('olas %d (izq=%s der=%s) a %.0f px/s; de pie: -1=%s; saltándola sin daño=%s; en la pared se acaba=%s; en el borde de la plataforma=%s (x %.1f); fase 3: %d y la segunda pareja a %.2f s'):format(
+            n, tostring(dirs[-1]), tostring(dirs[1]), spd, tostring(hitStand), tostring(jumped), tostring(wallGone),
+            tostring(edgeGone), lastX / T, first, secondAt or -1))
+end
+
 function cases.derrota()
     local level, es, boss = arena()
     putBoss(boss, 22)
@@ -565,7 +650,7 @@ end
 
 function love.load(arg)
     local only = os.getenv('CASE')
-    for _, n in ipairs({ 'varado', 'coletazo', 'marea', 'hincha', 'puas', 'resaca', 'fases', 'una_ocasion', 'bola', 'ultima_ocasion', 'derrota', 'red', 'pez_chico', 'peces' }) do
+    for _, n in ipairs({ 'varado', 'coletazo', 'marea', 'hincha', 'puas', 'resaca', 'fases', 'una_ocasion', 'bola', 'ultima_ocasion', 'ola_suelo', 'derrota', 'red', 'pez_chico', 'peces' }) do
         if not only or only == n then
             local ok, err = xpcall(cases[n], debug.traceback)
             if not ok then check(n, false, 'error: ' .. tostring(err)) end

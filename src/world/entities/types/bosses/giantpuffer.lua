@@ -85,6 +85,13 @@ local BALL_VX    = 260                          -- px/s de lado, hacia el jugado
 local BALL_STEER = 1.5                          -- 1/s: lo que tarda en torcer hacia él
 local BALL_FIRST = 0.4                          -- s: el primer bote, en el sitio (y parpadea: aviso)
 local BALL_G     = 2200                         -- (la gravedad de la física compartida, Snow)
+-- OLA DE PÚAS por el suelo al caer de cada coletazo (izquierda y derecha, se salta)
+local WAVE_SPD   = { 500, 560, 620 }
+local WAVE_H     = 0.6 * T                      -- alto (se salta con un salto normal)
+local WAVE_W     = 24
+local WAVE_LIFE  = 3
+local WAVE_2ND   = 0.35                         -- fase 3: la segunda pareja, tantos s después
+local HIT_WAVE   = { 1, 300, -380, 0.15, 0 }
 local PUFF_R     = 6.4 * MS                     -- radio que pincha hinchado (el cuerpo y media púa: no pincha "por el aire")
 
 -- Golpes a los jugadores: { vida, vx, vy, s sin control, s aturdido }
@@ -136,6 +143,7 @@ function GP:initBoss()
     self.rage, self.phase = false, 1
     self.opened = false                              -- (la ocasión de esta marea baja ya se gastó)
     self.spines, self.nextId = {}, 0
+    self.waves, self.waveN = {}, 0
     self.atkT, self.graceT, self.burst = 0, 0, 0
     self.markX, self.markY = math.floor(self.x), math.floor(self:feetY())
     self.summonKey = 'gp' .. self.col .. ',' .. self.row
@@ -212,6 +220,47 @@ function GP:updateSpines(level, dt)
                 if not s.hit[pa] and overlap(pa:getOuterBounds(), box) then
                     if strike(pa, HIT_SPINE, (math.cos(s.a) >= 0) and 1 or -1, require('src/player/DamageSource').of(self, 'projectile')) then
                         s.hit[pa] = true
+                        Sound.play('pufferPrick', 0.8)
+                    end
+                end
+            end
+        end
+    end
+end
+
+-- ── Ola de púas por el suelo ──────────────────────────────────────────────────
+-- (y = la cara de arriba de la superficie en la que cayó)
+function GP:waveBox(w) return { x = w.x - WAVE_W / 2, y = w.y - WAVE_H, w = WAVE_W, h = WAVE_H } end
+
+function GP:fireWave(level)
+    local y = math.floor(self:feetY())
+    for _, d in ipairs({ -1, 1 }) do
+        self.nextId = self.nextId % 999 + 1
+        self.waves[#self.waves + 1] = { id = self.nextId, x = self.x + d * self.outerW * 0.4, y = y, dir = d, t = 0, hit = {} }
+    end
+    self.waveN = (self.waveN or 0) + 2
+    Sound.play('pufferPrick', 0.5)
+end
+
+function GP:updateWaves(level, dt)
+    local spd = WAVE_SPD[self:ph()]
+    local zx0, zx1 = self:zoneBounds()
+    for i = #self.waves, 1, -1 do
+        local w = self.waves[i]
+        w.t = w.t + dt
+        w.x = w.x + w.dir * spd * dt
+        local front = w.x + w.dir * WAVE_W / 2
+        -- se acaba: vieja, en una pared (de la zona o un bloque) o donde ya no hay superficie debajo
+        local gone = w.t >= WAVE_LIFE or front < zx0 or front > zx1 or level:collisionAt(front, w.y - WAVE_H / 2) ~= nil
+            or level:landingCross(w.x, w.y - 6, w.y + 6) == nil
+        if gone then
+            table.remove(self.waves, i)
+        else
+            local box = self:waveBox(w)
+            for _, pa in ipairs(level.players or {}) do
+                if not w.hit[pa] and not pa.dying and pa.alive ~= false and overlap(pa:getOuterBounds(), box) then
+                    if strike(pa, HIT_WAVE, w.dir, require('src/player/DamageSource').of(self, 'projectile')) then
+                        w.hit[pa] = true
                         Sound.play('pufferPrick', 0.8)
                     end
                 end
@@ -303,7 +352,7 @@ end
 
 function GP:defeat()
     self.hp, self.inv, self.ghost = 0, 0, false
-    self.spines = {}
+    self.spines, self.waves, self.wave2T = {}, {}, nil
     for _, e in ipairs(self.levelRef and self:minions(self.levelRef) or {}) do
         if e.alive and e.state ~= 'dry_die' then e.state, e.deadTimer, e.vx, e.vy = 'dry_die', 0, 0, 0 end
     end
@@ -337,8 +386,13 @@ function GP:enterBall()
     Entity.emitFx('puffer_pop', self.x, self.y)
 end
 
--- Cae al suelo: boquea (la ocasión) o, si ya se gastó la de esta marea, bola
-function GP:landed()
+-- Cae al suelo: ola de púas; boquea (la ocasión) o, si ya se gastó la de esta marea, bola
+function GP:landed(level)
+    self.waveN = 0
+    if level then
+        self:fireWave(level)
+        self.wave2T = (self:ph() >= 3) and WAVE_2ND or nil
+    end
     if self.opened then self:enterBall(); return end
     self:enter('gasp')
     Sound.play('stunned')
@@ -351,6 +405,11 @@ function GP:updateBoss(dt, level)
     self.deadTimer = self.deadTimer + dt
     if self.graceT > 0 then self.graceT = math.max(0, self.graceT - dt) end
     self:updateSpines(level, dt)
+    self:updateWaves(level, dt)
+    if self.wave2T then
+        self.wave2T = self.wave2T - dt
+        if self.wave2T <= 1e-6 then self.wave2T = nil; if self:isActive() then self:fireWave(level) end end
+    end
     local st, t, ph = self.state, self.deadTimer, self:ph()
 
     if st == 'fight' then self:resume(level); return end
@@ -426,7 +485,7 @@ function GP:updateBoss(dt, level)
             self.vx = 0
             Sound.play('kingFlop', 1.4)
             Entity.emitFx('gp_land', self.x, self:feetY())
-            self:landed()
+            self:landed(level)
         end
 
     elseif st == 'ball' then
@@ -476,7 +535,7 @@ function GP:updateBoss(dt, level)
             Sound.play('kingFlop', 1.4)
             Entity.emitFx('gp_land', self.x, self:feetY())
             Entity.emitFx('shake_small', self.x, self.y)
-            self:landed()
+            self:landed(level)
         end
 
     elseif st == 'dying_deflate' then
@@ -684,6 +743,14 @@ function GP:render(camX, camY)
             love.graphics.draw(spineImg, math.floor(s.x - camX), math.floor(s.y - camY), s.a, 4, 4,
                                spineImg:getWidth() / 2, spineImg:getHeight() / 2)
         end
+        -- olas por el suelo: tres púas de punta hacia arriba, la del medio más alta
+        for _, w in ipairs(self.waves or {}) do
+            for i = -1, 1 do
+                local hk = (i == 0) and 1 or 0.7
+                love.graphics.draw(spineImg, math.floor(w.x + i * 9 - camX), math.floor(w.y - camY), -math.pi / 2,
+                                   4 * hk, 4, 0, spineImg:getHeight() / 2)
+            end
+        end
     end
     love.graphics.setColor(1, 1, 1, 1)
 end
@@ -696,6 +763,9 @@ function GP:debugBoxes()
     end
     for _, s in ipairs(self.spines or {}) do
         local b = self:spineBox(s); b.kind = 'hazard'; out[#out + 1] = b
+    end
+    for _, w in ipairs(self.waves or {}) do
+        local b = self:waveBox(w); b.kind = 'hazard'; out[#out + 1] = b
     end
     return out
 end
