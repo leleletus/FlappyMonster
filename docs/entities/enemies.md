@@ -266,6 +266,13 @@ sprite's pixel grid.
   belly, forked orange tail that flaps between the swim frames, spines that are PART of the sprite (short half
   inflated, long inflated; not a separate ring); B "Arrecife" and C "Coral" stay in the script. Same 4 frames 16x16,
   no code change. The old restyle script is retired (`FlappyMonster_originals/herramientas_retiradas/`).
+  **One look per island** (0.5.237, the user: "with its own detail, like the Crabbies"; designs approved 2026-11-16):
+  `isleArt` (prop `isle`, Auto = the level's island); the coast keeps the user's sheet, the other islands are anim-set
+  variants `assets/images/enemies/pufferfish/<isle>-Sheet.png` from `tools/art/enemies/make_puffer_skins.py` — river
+  fish (pradera), armoured plates and rivets (fortaleza), frost and ice spines (nieve), dark with glowing spots and a
+  lure (cueva), basalt with magma cracks (volcan), poison-dart bands (jungla), star specks (estelar). Same silhouette
+  in every frame (only the cave lure adds pixels), so animations and hitboxes are unchanged. The Giant Pufferfish
+  uses the same variants.
   (0.5.31, the user) CHUBBIER (swim ry 4.5), the pectoral fin swings up / down with the tail between the swim
   frames, and the eye is one colour (black 2x2, no white).
   (0.5.33, the user: deflated it "looked very puffed", and the spines "looked dirty") DEFLATED IT IS A NORMAL FISH:

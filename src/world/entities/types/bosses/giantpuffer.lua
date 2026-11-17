@@ -129,11 +129,30 @@ local PUFFER_POOL = 5                           -- los que el nivel prepara (el 
 local SPAWN_EVERY = 3.0                         -- s nadando entre un pez y el siguiente
 local DEATH = { dying_deflate = true, dying_daze = true, dying_flee = true }
 
-local SPINE_IMG = 'assets/images/bosses/giantpuffer/spine.png'
-local spineImg
+-- Aspecto por ISLA (`isleArt`, prop `isle`; 2026-11-16): las animaciones del pez pequeño de esa isla y su púa
+-- (<isla>-spine.png; la de la costa, spine.png)
+local Isles = require 'src/world/level/Isles'
+local SPINE_DIR = 'assets/images/bosses/giantpuffer/'
+local spineImgs = {}
+local function spineFor(isle)
+    if not spineImgs[isle] and love and love.graphics then
+        spineImgs[isle] = love.graphics.newImage(SPINE_DIR .. ((isle == 'costa') and 'spine.png' or (isle .. '-spine.png')))
+    end
+    return spineImgs[isle]
+end
 function GP.loadAssets()
     GP.anims(GP)
-    if love and love.graphics and not spineImg then spineImg = love.graphics.newImage(SPINE_IMG) end
+    spineFor('costa')
+end
+function GP:isle()
+    local f = type(self.props) == 'table' and self.props.isle or nil
+    if f and f ~= 'auto' and Isles.NAMES[f] then return f end
+    return self.levelRef and Isles.of(self.levelRef, f) or 'costa'
+end
+function GP:anims()
+    if type(self.props) ~= 'table' then return Entity.anims(self) end
+    local isle = self:isle()
+    return require('src/fx/Anim').load(self.animId, isle ~= 'costa' and isle or nil)
 end
 function GP.sizePx() return 16 * MS, 16 * MS end
 
@@ -907,7 +926,8 @@ function GP:render(camX, camY)
     if dizzy then BossFx.stars(hx, hy, 6 * MS, 1.4 * MS, 5, alpha, 'front') end
     -- Enfadado: los símbolos de enfado de todos los jefes
     BossFx.anger(self, self.rage and self:isActive(), self.x - camX, self.y - camY - 7 * MS)
-    -- Púas
+    -- Púas (las de su isla)
+    local spineImg = spineFor(self:isle())
     if spineImg then
         love.graphics.setColor(1, 1, 1, 1)
         for _, s in ipairs(self.spines or {}) do
@@ -948,6 +968,7 @@ return {
                .. 'y (fases 2-3) hace un remolino; varado da coletazos con olas de púas y, al caer, boquea: solo entonces '
                .. 'se le puede golpear (pisotón 1, ground pound 2), una vez por marea baja — después, bola de púas.',
     class = GP,
+    isleArt = true,            -- (su aspecto por isla: prop `isle`, Isles; la cala de la costa, el de siempre)
     boss = { title = 'PEZ GLOBO GIGANTE' },
     hide = Boss.HIDE,
     defaults = { points = 30 },

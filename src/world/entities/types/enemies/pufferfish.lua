@@ -41,9 +41,20 @@ local Puffer = Entity.extend(Entity, {
 })
 Puffer.renderFront = true
 Puffer.freezeFloats = true      -- (congelado: el bloque de hielo flota donde estaba)
+Puffer.wantsLevel = true        -- (su isla: Isles.of, con el nivel — BossZones.link —)
 
 Puffer.animId = 'enemies/pufferfish'
 function Puffer.loadAssets() Puffer.anims(Puffer) end
+
+-- La isla (su aspecto: `isleArt`, prop `isle`; 2026-11-16, tools/art/enemies/make_puffer_skins.py). La hoja base es
+-- la de la COSTA (la del usuario); las demás islas, variantes del conjunto de animaciones
+local Isles = require 'src/world/level/Isles'
+function Puffer:isle(level) return Isles.of(level or self.levelRef, self.props and self.props.isle) end
+function Puffer:anims()
+    if type(self.props) ~= 'table' then return Entity.anims(self) end   -- (la clase, sin isla: la base)
+    local isle = (self.props.isle and self.props.isle ~= 'auto') and self.props.isle or (self.levelRef and self:isle()) or 'costa'
+    return require('src/fx/Anim').load(self.animId, isle ~= 'costa' and isle or nil)
+end
 
 function Puffer.sizePx() return 16 * S, 16 * S end
 
@@ -197,6 +208,7 @@ return {
                .. 'Sigue el nivel del agua; en seco bota y coletea y, si tarda en volver al agua, se muere.',
     class = Puffer,
     inBlockOk = true,          -- (atraviesa los bloques: dentro de uno no es un aviso)
+    isleArt = true,            -- (su aspecto por isla: prop `isle`, Isles)
     hide = { 'movement', 'attach', 'patrol', 'turnAtEdges', 'bobAmp', 'pauses', 'onTouch', 'stompable', 'points',
              'dropOnSight', 'detectRange', 'respawn' },
     defaults = { movement = 'walk', speed = 45, stompable = false, points = 0, onTouch = 'none', pauses = false },

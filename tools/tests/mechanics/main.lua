@@ -2910,6 +2910,16 @@ function cases.islas_arte()
             for _, e in ipairs(es) do e.levelRef = e.levelRef or lv; draws(e, ty .. '/' .. isle) end
         end
     end
+    -- el pez globo (pequeño y gigante) lleva la hoja de su isla; la costa, la del usuario (sin variante)
+    for _, ty in ipairs({ 'pufferfish', 'giantpuffer' }) do
+        if not EntityTypes.get(ty).isleArt then fail(ty .. ' sin isleArt') end
+        for _, isle in ipairs({ 'nieve', 'costa' }) do
+            local e = require('src/world/entities/Entities').create({ type = ty, col = 8, row = 8, props = { isle = isle } })
+            local v = e:anims() and e:anims().variant
+            local want = isle; if isle == 'costa' then want = nil end
+            if v ~= want then fail(ty .. '/' .. isle .. ' carga la variante ' .. tostring(v)) end
+        end
+    end
     check('islas_arte', #bad == 0,
         ('%d islas (%s) · %d tipos de familia andan · isleArt: %s · fallos: %s'):format(#Isles.IDS, table.concat(Isles.IDS, ','), walked,
             table.concat(isleTypes, ','), #bad == 0 and 'ninguno' or table.concat(bad, ' | ')))

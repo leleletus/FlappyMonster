@@ -12,7 +12,7 @@ and describe the real thing in the system's page.
 
 | What | Page |
 |---|---|
-| **Giant Pufferfish rework + pufferfish island skins (2026-11-16):** one opening per low tide + spike ball, floor spine waves, rings with a gap, charge, whirlpool, 3 phases (**fight built 0.5.236**, not played); per-island pufferfish skins (preview pending the user's approval) | [giantpuffer-rework](giantpuffer-rework.md) · [plan](giantpuffer-rework-plan.md) |
+| **Giant Pufferfish rework + pufferfish island skins (2026-11-16):** one opening per low tide + spike ball, floor spine waves, rings with a gap, charge, whirlpool, 3 phases (**fight built 0.5.236**, not played); per-island pufferfish skins (approved and **built 0.5.237**) | [giantpuffer-rework](giantpuffer-rework.md) · [plan](giantpuffer-rework-plan.md) |
 | **Starway, second wave (2026-11-15):** the faster level Pulsar (140 BPM), the bonus Star Stage, the boss level Sanctuary of the Beat (**built 0.5.230**, not played); ceiling / wall clap spikes and the orbiting stars (built); the double-jump rule for beep formations; **five boss ideas for the user to pick** (not built) | [estelar-levels-2](estelar-levels-2.md) |
 | **The level Starway / Vía Estelar (2026-11-14):** 420 × 48, six zones and a 72-chamber maze with crystal doors, all to the music; Free Play (**built 0.5.225**, waiting for the user to play it) | [via-estelar-level](via-estelar-level.md) |
 | **Starway rhythm objects (2026-11-14):** 10 objects, hazards and enemies that act on other parts of the beat (every beat, backbeat, kick, offbeats, 3-over-4, song sections) for the level Vía Estelar; the user picked metronome platform, clap spikes and on-beat star spring (**built 0.5.224**) | [starway-rhythm-objects](starway-rhythm-objects.md) |

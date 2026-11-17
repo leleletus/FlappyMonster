@@ -77,3 +77,5 @@ state + x + phase. Protocol 61; 129 for the rework.
   per low tide, killed in 2 low tides with ground pounds. Rework B (chosen over a pure patch and over a new
   structure): one opening per low tide + spike ball, floor waves, rings with a gap, charge, whirlpool, 3 phases,
   HP 10 → 6. Not yet played by the user.
+- 0.5.237 one look per island (`isleArt`, the small pufferfish's island variants + `<isle>-spine.png`); the cove is
+  Coast, so the fight looks as before.
