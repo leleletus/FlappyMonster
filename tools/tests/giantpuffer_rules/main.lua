@@ -15,6 +15,7 @@
 --   fases       6 de vida; fase 2 con 4 (enfadado), fase 3 con 2; un nivel viejo con rageAt 0.5: fase 2 con 3
 --   una_ocasion UNA ocasión por marea baja: tras el golpe, bola de púas (no se le daña, pincha) y no boquea hasta el agua
 --   bola        la bola rebota dentro de la zona (3 casillas en la fase 1), no se para, pincha, con el agua nada
+--   bola_baja   la bola en una plataforma con el jugador debajo baja a por él (la atraviesa)
 --   ultima_ocasion golpe justo cuando vuelve el agua: bola → nada; la ocasión no vuelve hasta nadar
 --   ola_suelo   al caer de un coletazo, dos olas de púas por el suelo; de pie -1, saltándola nada; se acaban en la
 --               pared y en el borde de la superficie; fase 3: otra pareja 0,35 s después
@@ -525,6 +526,26 @@ end
 
 -- La última ocasión: le pegas boqueando justo cuando ya vuelve el agua → bola → nada; la ocasión se gasta y no se
 -- recupera hasta que nada (y nunca vuelve a boquear esa marea)
+-- La bola sobre una plataforma con el jugador DEBAJO baja a por él (atraviesa la plataforma; si no, se quedaba
+-- botando encima toda la marea: boss_frames 2026-11-16)
+function cases.bola_baja()
+    local level, es, boss = arena()
+    local pa = playerAt(level, 14)
+    level.players = { pa }
+    boss.levelRef = level
+    boss.x, boss.y = 13 * T, 8 * T - boss.outerH / 2
+    boss.vx, boss.vy, boss.onGround = 0, 0, true
+    boss.opened = true
+    boss:enter('ball')
+    local floorY, low, t, downAt = (FLOOR - 1) * T, false, 0, nil
+    stepAll(level, es, { pa }, 4, function()
+        t = t + DT
+        pa.invT = 9; pa.x, pa.vx = 13.5 * T, 0
+        if boss:feetY() >= floorY - 4 then downAt = t; return true end
+    end)
+    check('bola_baja', downAt ~= nil, ('en la plataforma con el jugador debajo: llega al suelo a los %.2f s'):format(downAt or -1))
+end
+
 function cases.ultima_ocasion()
     local level, es, boss = arena()
     tideTo(level, 'rise', 0)
@@ -662,15 +683,29 @@ function cases.red()
     local level, es, boss = arena()
     putBoss(boss, 20)
     boss.phase, boss.rage, boss.markX, boss.markY, boss.burst = 2, true, 999, 777, 2
+    boss.lineX, boss.lineY, boss.opened, boss.gapA = 1234, 567, true, 2.345
     boss.spines = { { id = 5, x = 100, y = 200, a = 1.25, t = 0.4, hit = {} }, { id = 6, x = 300, y = 210, a = -2, t = 0.1, hit = {} } }
+    boss.waves = { { id = 7, x = 800, y = 768, dir = -1, t = 0.2, hit = {} }, { id = 8, x = 1100, y = 768, dir = 1, t = 0.2, hit = {} },
+                   { id = 9, x = 1300, y = 512, dir = 1, t = 0.1, hit = {} } }
     local b = boss:netPackExtra()
     local c = Entities.create({ type = 'giantpuffer', col = 20, row = 12, props = {} })
     c:netApplyExtra(b, b, 1)
     local ok = c.rage and c:ph() == 2 and c.markX == 999 and c.markY == 777 and c.burst == 2 and #c.spines == 2
+        and c.lineX == 1234 and c.lineY == 567 and c.opened == true and math.abs((c.gapA or 0) - 2.345) < 0.002
+        and #(c.waves or {}) == 3
     for i, s in ipairs(boss.spines) do
         local q = c.spines[i]
         if not q or math.abs(q.x - s.x) > 1 or math.abs(q.y - s.y) > 1 or math.abs(q.a - s.a) > 0.002 then ok = false end
     end
+    for i, w in ipairs(boss.waves) do
+        local q = (c.waves or {})[i]
+        if not q or math.abs(q.x - w.x) > 1 or q.y ~= w.y or q.dir ~= w.dir then ok = false end
+    end
+    -- el remolino tira igual en el cliente (estado y x llegan en la instantánea)
+    boss:enter('whirl'); c.state, c.x = 'whirl', boss.x
+    local probe = { inWater = true }
+    local ps, pc = boss:pushAt(boss.x - 5 * T, boss.y, probe), c:pushAt(boss.x - 5 * T, boss.y, probe)
+    ok = ok and ps ~= nil and ps == pc
     c.x, c.y, c.state, c.inv = boss.x, boss.y, 'gasp', 0
     boss:enter('gasp'); boss.inv = 0
     local gob = boss:getOuterBounds()
@@ -761,7 +796,7 @@ end
 
 function love.load(arg)
     local only = os.getenv('CASE')
-    for _, n in ipairs({ 'varado', 'coletazo', 'marea', 'hincha', 'aro_hueco', 'embestida', 'remolino', 'resaca', 'fases', 'una_ocasion', 'bola', 'ultima_ocasion', 'ola_suelo', 'derrota', 'red', 'pez_chico', 'peces' }) do
+    for _, n in ipairs({ 'varado', 'coletazo', 'marea', 'hincha', 'aro_hueco', 'embestida', 'remolino', 'resaca', 'fases', 'una_ocasion', 'bola', 'bola_baja', 'ultima_ocasion', 'ola_suelo', 'derrota', 'red', 'pez_chico', 'peces' }) do
         if not only or only == n then
             local ok, err = xpcall(cases[n], debug.traceback)
             if not ok then check(n, false, 'error: ' .. tostring(err)) end

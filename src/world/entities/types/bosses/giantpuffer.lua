@@ -5,23 +5,25 @@
 -- La pelea va con la MAREA: la arena es una cala con una inundación conectada a la zona (`flood`, control 'boss'),
 -- que sube y baja sola durante la pelea (un ciclo puro del tiempo: igual online). Al bajar, el agua ARRASTRA hacia un
 -- lado (la RESACA: prop `undertow` de la inundación, Floods.currentAt) y se ve espuma corriendo hacia allí.
--- El pez hace lo que le deja el agua EN SU SITIO:
--- REGLA DE DAÑO (0.5.31, el usuario: "casi imposible"; como los peces globo pequeños): DESHINCHADO NO HACE DAÑO.
--- Solo pinchan las púas (hinchado y sus ráfagas) y aplasta si cae del coletazo JUSTO encima de ti (lo marca antes).
---   · MAREA ALTA (con agua): NADA hacia el jugador (tocarlo no hace nada) y ataca, siempre avisando:
---       (cerca se hincha, lejos dispara; nunca se hincha dos veces seguidas)
---       1. SE HINCHA cerca de ti ('puff_warn' tiembla a medio hinchar → 'puffed' con las púas fuera: tocarlo = 1 de
---          vida y empujón fuerte → 'deflate').
---       2. RÁFAGA DE PÚAS ('spines_warn' parpadea a medio hinchar → 'spines'): dos ráfagas en corro (tres enfadado,
---          a golpe de 3+3+2 como "Resaca", su música); cada púa 1 de vida y un empujón; se paran en la pared.
---   · MAREA BAJA (sin agua: la marea baja del todo): VARADO. Va hacia el jugador a COLETAZOS ('flop_wind' marca dónde
---     caerá → 'flop': un salto deshinchado hacia ti; solo hace daño si te cae encima) y al caer se queda BOQUEANDO ('gasp', estrellitas): es lo ÚNICO vulnerable
---     → pisotón 1 / ground pound 2, un golpe por ocasión (después se hincha de golpe y se aparta: 'hurt_puff').
---     Encima de él, si no está boqueando, solo se rebota.
---   · ENFADADO (por debajo de `rageAt`): ráfagas de más púas, se hincha más rato, coletazos más seguidos, nada más
---     rápido; símbolos de enfado sobre la cabeza.
---   · SEGUNDA FASE (enfadado): suelta PECES GLOBO pequeños (súbditos de reserva, def.summons) mientras nada — más
---     cuanto más difícil (PUFFERS) —; no se les puede matar, solo esquivar, y mueren en seco con la marea baja.
+-- El pez hace lo que le deja el agua EN SU SITIO (REHECHO 2026-11-16, el usuario: "un jefe miserable": con ground
+-- pounds seguidos tras sus coletazos se le bajaba en 2 mareas bajas; docs/design/giantpuffer-rework.md):
+-- REGLA DE DAÑO (0.5.31): DESHINCHADO NO HACE DAÑO. Pinchan las púas (hinchado, bola, embestida, aros, olas) y aplasta
+-- si cae del coletazo JUSTO encima de ti (lo marca antes).
+--   · 6 de vida, TRES FASES: fase 2 con ≤ 4 (`rageAt`, enfadado), fase 3 con ≤ 2 (`phase3At`). Ritmo por fase.
+--   · MAREA ALTA (con agua): NADA hacia el jugador (tocarlo no hace nada) y ataca, siempre avisando, nunca el mismo
+--     ataque dos veces seguidas (GP:pickAttack):
+--       1. SE HINCHA cerca ('puff_warn' → 'puffed' → 'deflate').
+--       2. AROS DE PÚAS ('spines_warn' → 'spines'): {12, 14, 16} púas con un HUECO de 3 que gira de un aro al
+--          siguiente (el primero, al lado contrario del jugador), a golpe de 3+3+2.
+--       3. EMBESTIDA ('charge_warn': una línea en el agua que sigue al jugador y se fija 0,2 s antes → 'charge': cruza
+--          por ella con las púas fuera hasta la pared o la superficie). Fase 3: detrás, aros (combo).
+--       4. REMOLINO (fases 2-3: 'whirl_warn' → 'whirl'): tira DE LADO hacia él a quien está en el agua (GP:pushAt, el
+--          aire de systems/Push: igual en la predicción online) y luego se hincha.
+--   · MAREA BAJA (sin agua): VARADO. Coletazos hacia el jugador ('flop_wind' marca → 'flop'); al caer suelta una OLA DE
+--     PÚAS por el suelo a cada lado (se salta; fase 3, dos) y queda BOQUEANDO ('gasp'): lo ÚNICO vulnerable (pisotón 1 /
+--     ground pound 2). UNA OCASIÓN POR MAREA BAJA (`opened`): tras el golpe se hace BOLA DE PÚAS ('ball': rebota por
+--     la cala hacia el jugador, pincha, no se le puede dañar) hasta que llega el agua.
+--   · SEGUNDA FASE en adelante: suelta PECES GLOBO pequeños (súbditos de reserva, def.summons) mientras nada.
 -- Entrada: cae del cielo en la cala (la marea empieza baja), se hincha y se deshincha. Derrota (0.5.32, el usuario):
 -- se deshincha y se queda APLASTADO ('dying_deflate'), aturdido así ('dying_daze'; antes volvía de golpe a su forma), y
 -- se va de un SALTO hacia delante que lo atraviesa todo ('dying_flee': como la entrada del Espejo al revés — sube,
@@ -596,7 +598,15 @@ function GP:updateBoss(dt, level)
         local want = (t >= BALL_FIRST and pa) and ((pa.x >= self.x) and BALL_VX or -BALL_VX) or 0
         self.vx = self.vx + (want - self.vx) * math.min(1, BALL_STEER * dt)
         local vx0 = self.vx
+        -- (cayendo con el jugador más abajo: atraviesa las plataformas hasta su altura — si no, se quedaba botando
+        -- encima de una plataforma toda la marea —)
+        self.passY = nil
+        if pa and self.vy > 0 then
+            local foot = pa.y + pa:getOuterBounds().h / 2
+            if foot > self:feetY() + T / 2 then self.passY = foot - T / 2 end
+        end
         local hit = self:physics(level, dt)
+        self.passY = nil
         if hit == 'wall' then self.vx = -vx0 end
         if self.onGround then
             self.vy = -math.sqrt(2 * BALL_G * BALL_H[ph] * T)
@@ -717,33 +727,57 @@ function GP:updateIntro(dt, level, t)
 end
 
 -- ── Red ───────────────────────────────────────────────────────────────────────
--- { enfadado 0/1, marca x, y, ráfaga, nPúas, {id, x, y, ángulo·1000, t·100}… }
-local NB = 4
+-- { fase, marca x, y, ráfaga, línea de la embestida x, y, ocasión gastada 0/1, hueco del aro·1000,
+--   nPúas, {id, x, y, ángulo·1000, t·100}…, nOlas, {id, x, y, dir}… }
+local NB = 8
 function GP:netPackExtra()
-    local out = { self.phase or 1, self.markX or 0, self.markY or 0, self.burst or 0, #self.spines }
+    local out = { self.phase or 1, self.markX or 0, self.markY or 0, self.burst or 0,
+                  self.lineX or 0, self.lineY or 0, self.opened and 1 or 0, math.floor((self.gapA or 0) * 1000), #self.spines }
     for _, s in ipairs(self.spines) do
         out[#out + 1] = s.id; out[#out + 1] = math.floor(s.x); out[#out + 1] = math.floor(s.y)
         out[#out + 1] = math.floor(s.a * 1000); out[#out + 1] = math.floor(s.t * 100)
+    end
+    local waves = self.waves or {}
+    out[#out + 1] = #waves
+    for _, w in ipairs(waves) do
+        out[#out + 1] = w.id; out[#out + 1] = math.floor(w.x); out[#out + 1] = math.floor(w.y); out[#out + 1] = w.dir
     end
     return out
 end
 
 local readList = require('src/world/entities/base/NetList').read      -- (listas planas del estado propio)
 
+-- Lista por id de la instantánea anterior (para interpolar)
+local function byId(list)
+    local out = {}
+    for _, e in ipairs(list) do if e[1] then out[e[1]] = e end end
+    return out
+end
+local function lerp(o, x, y, f)
+    if o and type(o[2]) == 'number' and type(o[3]) == 'number' then return o[2] + (x - o[2]) * f, o[3] + (y - o[3]) * f end
+    return x, y
+end
+
 function GP:netApplyExtra(a, b, f)
     if type(b[1]) ~= 'number' then return end
     self.phase, self.markX, self.markY, self.burst = b[1], b[2], b[3], b[4]
     self.rage = (self.phase or 1) >= 2
-    local prev = {}
+    self.lineX, self.lineY, self.opened, self.gapA = b[5], b[6], b[7] == 1, (b[8] or 0) / 1000
+    local prevS, prevW = {}, {}
     if type(a[NB + 1]) == 'number' then
-        for _, e in ipairs(readList(a, NB + 1, 5)) do if e[1] then prev[e[1]] = e end end
+        local ls, k = readList(a, NB + 1, 5)
+        prevS, prevW = byId(ls), byId((readList(a, k, 4)))
     end
+    local ls, k = readList(b, NB + 1, 5)
     self.spines = {}
-    for _, e in ipairs(readList(b, NB + 1, 5)) do
-        local x, y = e[2], e[3]
-        local o = prev[e[1]]
-        if o and type(o[2]) == 'number' and type(o[3]) == 'number' then x, y = o[2] + (x - o[2]) * f, o[3] + (y - o[3]) * f end
+    for _, e in ipairs(ls) do
+        local x, y = lerp(prevS[e[1]], e[2], e[3], f)
         self.spines[#self.spines + 1] = { id = e[1], x = x, y = y, a = e[4] / 1000, t = e[5] / 100, hit = {} }
+    end
+    self.waves = {}
+    for _, e in ipairs((readList(b, k, 4))) do
+        local x = lerp(prevW[e[1]], e[2], e[3], f)
+        self.waves[#self.waves + 1] = { id = e[1], x = x, y = e[3], dir = e[4], t = 0, hit = {} }
     end
 end
 
@@ -900,8 +934,9 @@ end
 local G = 'Pez Globo Gigante'
 return {
     name = 'giantpuffer', label = 'Pez Globo Gigante', category = 'Jefes',
-    description = 'El pez globo en grande, con la marea: nadando se hincha y dispara púas; varado da coletazos '
-               .. 'y, al caer, boquea: solo entonces se le puede golpear (pisotón 1, ground pound 2).',
+    description = 'El pez globo en grande, con la marea: nadando se hincha, dispara aros de púas con un hueco, embiste '
+               .. 'y (fases 2-3) hace un remolino; varado da coletazos con olas de púas y, al caer, boquea: solo entonces '
+               .. 'se le puede golpear (pisotón 1, ground pound 2), una vez por marea baja — después, bola de púas.',
     class = GP,
     boss = { title = 'PEZ GLOBO GIGANTE' },
     hide = Boss.HIDE,
