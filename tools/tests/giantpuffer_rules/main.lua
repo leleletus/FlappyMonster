@@ -8,6 +8,7 @@
 --   hincha      con el jugador cerca, en el agua: avisa (tiembla) y se hincha; hinchado pincha -1
 --   aro_hueco   aros de {12,14,16} púas con un hueco de 3 que gira; en el hueco a salvo; 2 aros en la fase 1; pared
 --   embestida   aviso 0,8 s con línea (se fija 0,2 s antes), cruza a 700 px/s pinchando sin salir del agua; fase 3: aros
+--   remolino    fases 2-3: tira de lado hacia él a quien está en el agua; fuera del agua nada; ni peces ni cajas
 --   resaca      mientras el agua BAJA arrastra al jugador quieto hacia la derecha (≈ la velocidad de la resaca);
 --               con el agua quieta arriba, no; al empezar a arrastrar suena el aviso y salta el cartel "¡RESACA!"
 --               (f.alertAt) si el jugador está cerca, lejos no, y se quita al dejar de bajar
@@ -39,6 +40,7 @@ local Entities = require 'src/world/entities/Entities'
 local BossZones = require 'src/world/systems/BossZones'
 local Floods = require 'src/world/systems/Floods'
 local PlayerAdventure = require 'src/player/PlayerAdventure'
+local Push = require 'src/world/systems/Push'
 local T = TILE_PX
 local DT = 1 / 60
 local FLOOR = 13
@@ -81,6 +83,7 @@ local function stepAll(level, es, players, secs, each)
     for _ = 1, math.floor(secs * 60) do
         level.players = players
         level.solidBodies = Entities.solidBodies(es)
+        level.pushers = Push.collect(es)                -- (lo que empuja: como systems/Sim)
         Floods.advance(level, DT)
         for k in pairs(stub.state) do stub.state[k] = false end
         for _, pa in ipairs(players) do pa:update(DT, level) end
@@ -317,6 +320,47 @@ function cases.embestida()
         and hit and not above and ended == 'deflate' and after == 'spines_warn',
         ('aviso %.2f s; la línea sigue=%s y se fija=%s; velocidad %.0f px/s; pincha=%s; asoma del agua=%s; acaba en %s; fase 3 → %s'):format(
             warnLen or -1, tostring(followed), tostring(lockedOk), maxSp, tostring(hit), tostring(above), tostring(ended), tostring(after)))
+end
+
+-- REMOLINO (fases 2 y 3): aviso, y 1,6 s tirando de lado hacia él a quien está EN EL AGUA ({0, 220, 280} px/s); fuera
+-- del agua, nada; a los peces y a las cajas, nada; en la fase 1 nunca lo elige
+function cases.remolino()
+    local level, es, boss = arena()
+    tideTo(level, 'hold', 5.9)
+    putBoss(boss, 24); boss.y = (FLOOR - 1) * T - 2 * T
+    boss.phase, boss.rage = 2, true
+    local pa = playerAt(level, 16, 11)
+    level.players = { pa }
+    boss.levelRef = level
+    boss:enter('whirl')
+    local x0 = pa.x
+    stepAll(level, es, { pa }, 1.5, function() pa.invT = 9; boss.atkT = -99 end)
+    local pulled = (pa.x - x0) / T
+    -- fuera del agua (en la plataforma del centro, siempre seca): nada
+    local level2, es2, boss2 = arena()
+    tideTo(level2, 'hold', 5.9)
+    putBoss(boss2, 24); boss2.y = (FLOOR - 1) * T - 2 * T
+    boss2.phase, boss2.rage = 2, true
+    local pb = PlayerAdventure:new(20.5 * T, 5 * T - 60)
+    level2.players = { pb }
+    for _ = 1, 30 do pb:update(DT, level2) end
+    boss2.levelRef = level2
+    boss2:enter('whirl')
+    local xb = pb.x
+    stepAll(level2, es2, { pb }, 1.5, function() pb.invT = 9; boss2.atkT = -99 end)
+    local dry = math.abs(pb.x - xb) / T
+    -- un pez globo: nada
+    local fish = Entities.create({ type = 'pufferfish', col = 18, row = 11, props = {} })
+    local fx = boss:pushAt(fish.x, fish.y, fish)
+    -- ¿cuándo lo elige?
+    local p1, p2 = false, false
+    boss.phase = 1
+    for _ = 1, 300 do boss.lastAtk = nil; if boss:pickAttack(false) == 'whirl' then p1 = true end end
+    boss.phase = 2
+    for _ = 1, 300 do boss.lastAtk = nil; if boss:pickAttack(false) == 'whirl' then p2 = true end end
+    check('remolino', pulled >= 1.5 and dry < 0.2 and not fx and not p1 and p2,
+        ('en el agua tira %.1f casillas hacia él; fuera del agua %.2f; a un pez: %s; lo elige en la fase 1=%s, en la 2=%s'):format(
+            pulled, dry, tostring(fx), tostring(p1), tostring(p2)))
 end
 
 function cases.resaca()
@@ -717,7 +761,7 @@ end
 
 function love.load(arg)
     local only = os.getenv('CASE')
-    for _, n in ipairs({ 'varado', 'coletazo', 'marea', 'hincha', 'aro_hueco', 'embestida', 'resaca', 'fases', 'una_ocasion', 'bola', 'ultima_ocasion', 'ola_suelo', 'derrota', 'red', 'pez_chico', 'peces' }) do
+    for _, n in ipairs({ 'varado', 'coletazo', 'marea', 'hincha', 'aro_hueco', 'embestida', 'remolino', 'resaca', 'fases', 'una_ocasion', 'bola', 'ultima_ocasion', 'ola_suelo', 'derrota', 'red', 'pez_chico', 'peces' }) do
         if not only or only == n then
             local ok, err = xpcall(cases[n], debug.traceback)
             if not ok then check(n, false, 'error: ' .. tostring(err)) end

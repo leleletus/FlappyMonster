@@ -38,7 +38,7 @@ local BossFx = require 'src/fx/BossFx'
 
 local GP = Entity.extend(Boss, {
     ATTACKS  = { puff_warn = true, puffed = true, spines_warn = true, spines = true, flop_wind = true, flop = true,
-                 ball = true, charge_warn = true, charge = true },
+                 ball = true, charge_warn = true, charge = true, whirl_warn = true, whirl = true },
     OPENINGS = { gasp = true },
     debugColor = { 1, 0.85, 0.35 },
     hitbox = { outerW = 11 / 16, outerH = 10 / 16, innerW = 10 / 16, innerH = 9 / 16 },    -- (el pez gordito: 0.5.31)
@@ -99,6 +99,11 @@ local CHARGE_WARN = 0.8
 local CHARGE_LOCK = 0.2                         -- últimos s del aviso: la línea ya no sigue al jugador
 local CHARGE_SPD  = { 700, 800, 900 }
 local CHARGE_MAX  = 2.0                         -- s como mucho cruzando
+-- REMOLINO (fases 2 y 3): gira en el sitio (aviso) y tira DE LADO hacia él de quien está en el agua (el aire de
+-- systems/Push, como la resaca: igual en la predicción online), y luego se hincha
+local WHIRL_WARN = 1.0
+local WHIRL_T    = 1.6
+local WHIRL_PULL = { 0, 220, 280 }              -- px/s (menos que nadar: se puede escapar)
 local PUFF_R     = 6.4 * MS                     -- radio que pincha hinchado (el cuerpo y media púa: no pincha "por el aire")
 
 -- Golpes a los jugadores: { vida, vx, vy, s sin control, s aturdido }
@@ -338,6 +343,28 @@ function GP:aimFlop(level)
     return math.floor(tx), math.floor(top or zy1)
 end
 
+-- ── Elegir ataque (nadando) ───────────────────────────────────────────────────
+-- Cerca: se hincha; si no (o si lo último fue hincharse): aros, embestida o (fases 2-3) remolino; nunca el mismo dos
+-- veces seguidas
+local FAR1, FAR2 = { 'spines', 'charge' }, { 'spines', 'charge', 'whirl' }
+function GP:pickAttack(near)
+    if near and self.lastAtk ~= 'puff' then return 'puff' end
+    local opts = {}
+    for _, a in ipairs((self:ph() >= 2) and FAR2 or FAR1) do if a ~= self.lastAtk then opts[#opts + 1] = a end end
+    return opts[math.random(#opts)]
+end
+
+-- El tirón del remolino (systems/Push): solo a JUGADORES (sin `def`) en el agua, dentro de la zona; solo de lado.
+-- Usa lo que llega en las instantáneas (estado, x, fase): el cliente lo predice igual
+function GP:pushAt(x, y, o)
+    if self.state ~= 'whirl' or not o or o.def ~= nil or not o.inWater then return nil end
+    local zx0, zx1 = self:zoneBounds()
+    if x < zx0 or x > zx1 then return nil end
+    local dx = self.x - x
+    if math.abs(dx) < 12 then return nil end
+    return ((dx > 0) and 1 or -1) * WHIRL_PULL[self:ph()], 0, 1
+end
+
 -- ── Estados que sabe hacer el cuerpo ─────────────────────────────────────────
 local SPIKY = { puffed = true, spines = true, hurt_puff = true, ball = true, charge = true }   -- (con las púas fuera)
 function GP:isActive() return Boss.isActive(self) and not DEATH[self.state] end
@@ -452,15 +479,11 @@ function GP:updateBoss(dt, level)
             self.atkT = 0
             -- (cerca: se hincha; lejos: aros o embestida — nunca el mismo ataque dos veces seguidas)
             local near = pa and math.abs(pa.x - self.x) + math.abs(pa.y - self.y) < PUFF_NEAR
-            local pick
-            if near and self.lastAtk ~= 'puff' then pick = 'puff'
-            else
-                local opts = {}
-                for _, a in ipairs({ 'spines', 'charge' }) do if a ~= self.lastAtk then opts[#opts + 1] = a end end
-                pick = opts[math.random(#opts)]
-            end
+            local pick = self:pickAttack(near)
             self.lastAtk = pick
-            if pick == 'charge' then
+            if pick == 'whirl' then
+                self:enter('whirl_warn')
+            elseif pick == 'charge' then
                 self:enter('charge_warn')
                 self.lineX, self.lineY = math.floor(tx), math.floor(ty)
             else
@@ -483,6 +506,17 @@ function GP:updateBoss(dt, level)
                 self.burst = 0
                 self:enter('spines')
             end
+        end
+
+    elseif st == 'whirl_warn' or st == 'whirl' then
+        -- quieto en el agua, girando; después del tirón, se hincha
+        self.vx, self.vy = self.vx * (1 - 4 * dt), self.vy * (1 - 4 * dt)
+        self:physics(level, dt, not self:wet(level))
+        if st == 'whirl_warn' and t >= WHIRL_WARN then
+            self:enter('whirl')
+            Sound.play('undertowAlert', 0.8)
+        elseif st == 'whirl' and t >= WHIRL_T then
+            self:enter('puff_warn'); Sound.play('pufferWarn', 0.55)
         end
 
     elseif st == 'charge_warn' then
@@ -737,6 +771,10 @@ function GP:pose()
     elseif SPIKY[st] then
         name, at = 'puffed', t
         if t < 0.15 then k = 1 + 0.15 * math.sin(t / 0.15 * math.pi) end
+    elseif st == 'whirl_warn' or st == 'whirl' then
+        -- girando sobre sí mismo (medio hinchado al avisar)
+        name, at = (st == 'whirl_warn') and 'half' or 'swim', now * 6
+        rot = (st == 'whirl') and (now * 9 % (2 * math.pi)) or math.sin(now * 14) * 0.2
     elseif st == 'deflate' or st == 'dying_deflate' then
         name, at = 'deflate', t
         if st == 'dying_deflate' then sy = math.max(FLAT, 1 - (1 - FLAT) * math.min(1, t / DEFLATE_D)) end
@@ -787,6 +825,16 @@ function GP:render(camX, camY)
         local blink = (math.floor(now * 12) % 2 == 0) and 0.95 or 0.55
         love.graphics.setColor(1, 0.85, 0.3, blink * alpha)
         BossFx.target(now * 1.2, math.floor(self.markX - camX), math.floor(self.markY - camY - 16), 8, 8)
+    end
+    -- Remolino: espuma en espiral alrededor (más grande y rápida tirando)
+    if (st == 'whirl_warn' or st == 'whirl') and not EDITOR_VIEW then
+        local pull = st == 'whirl'
+        love.graphics.setColor(0.85, 0.95, 1, (pull and 0.85 or 0.5) * alpha)
+        for i = 0, 17 do
+            local a = i * 0.7 + now * (pull and 5 or 2)
+            local r = 5 * MS + (i % 6) * 1.6 * MS
+            love.graphics.rectangle('fill', math.floor(x + math.cos(a) * r) - 4, math.floor(y + math.sin(a) * r * 0.6) - 4, 8, 8)
+        end
     end
     -- Línea de la embestida (por dónde cruzará): cuadritos que parpadean, del pez a su punta
     if st == 'charge_warn' and self.lineX and not EDITOR_VIEW then
